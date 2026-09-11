@@ -1,14 +1,18 @@
 {
   "name": "Nav Beacon",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "dockerComposeFile": "compose.yaml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/Nav-Beacon",
 
   // OpenSpec reports anonymous usage and checks npm for a newer release on
   // every run; this project sends nothing out and pins the version in the
   // lockfile, so both are off. The one variable turns off both.
   "containerEnv": {
-    "OPENSPEC_TELEMETRY": "0"
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "ASPNETCORE_HTTP_PORTS": "5080",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "OPENSPEC_TELEMETRY": "0",
+    "ConnectionStrings__NavBeacon": "Host=database;Database=navbeacon;Username=postgres;SSL Mode=Disable"
   },
 
   // The OpenSpec skills invoke the bare `openspec` binary. It is a
@@ -19,7 +23,10 @@
   },
 
   "features": {
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0"
+    }
   },
 
   // Persist Claude state from the host. Codex state remains container-local;
@@ -39,12 +46,13 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "anthropic.claude-code",
-        "openai.chatgpt"
+        "openai.chatgpt",
+        "ms-dotnettools.csdevkit"
       ]
     }
   },
 
-  "forwardPorts": [1455, 4200, 4300, 4400],
+  "forwardPorts": [1455, 4200, 4300, 4400, 5080],
 
   "portsAttributes": {
     "1455": {
@@ -63,9 +71,13 @@
     "4400": {
       "label": "Production build (offline journey)",
       "onAutoForward": "silent"
+    },
+    "5080": {
+      "label": "Commander service",
+      "onAutoForward": "silent"
     }
   },
 
   "remoteUser": "node",
-  "postCreateCommand": "node --version && python3 --version && pnpm --version && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium firefox"
+  "postCreateCommand": "node --version && python3 --version && pnpm --version && dotnet --version && pnpm install --frozen-lockfile && pnpm run server:restore && pnpm run server:build && pnpm run server:migrate && pnpm run server:test && pnpm exec playwright install --with-deps chromium firefox"
 }

@@ -23,7 +23,7 @@ same `index.html`, so before 2026-08-27 every address a crawler fetched carried:
 - no `<meta name="description">` at all, which leaves a search engine to invent a snippet from
   whatever text it can scrape;
 - no canonical link, so the production site, every pull-request preview under
-  `darksession.github.io/Elite-Dangerous-Ship-Builder-Preview/pr-*/` and the four addresses above
+  `darksession.github.io/Nav-Beacon-Preview/pr-*/` and the four addresses above
   were so many flavours of the same page with nothing saying which one is the page;
 - no Open Graph or Twitter card, so a link pasted into Discord — which is where a build link
   actually gets pasted — unfurled as a bare URL;

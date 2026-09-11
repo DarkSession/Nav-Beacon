@@ -1,0 +1,49 @@
+<ednb-layer
+  [open]="open() && !view().deletionConfirmation"
+  [title]="view().title"
+  [dismissLabel]="view().dismiss"
+  (dismissed)="dismissed.emit()"
+>
+  <div class="account-dialog">
+    @if (view().commanderName; as commanderName) {
+      <p class="account-dialog__commander">{{ commanderName }}</p>
+    }
+
+    @if (view().status; as status) {
+      <ednb-status-notice [tone]="status.tone" [message]="status.message" />
+    }
+
+    <ul class="account-dialog__data-use">
+      @for (line of view().dataUse; track line) {
+        <li>{{ line }}</li>
+      }
+    </ul>
+
+    @if (view().actions.length > 0) {
+      <div class="account-dialog__actions">
+        @for (action of view().actions; track action.kind) {
+          <ednb-action-button
+            [label]="action.label"
+            [emphasis]="action.emphasis"
+            [busy]="action.busy"
+            [busyLabel]="action.busy ? action.label : null"
+            [disabled]="action.busy"
+            (activated)="actionSelected.emit(action.kind)"
+          />
+        }
+      </div>
+    }
+  </div>
+</ednb-layer>
+
+<ednb-confirm-dialog
+  [open]="open() && view().deletionConfirmation"
+  [title]="view().deletionTitle"
+  [description]="view().deletionDescription"
+  [confirmLabel]="view().deletionConfirm"
+  [cancelLabel]="view().deletionCancel"
+  [dismissLabel]="view().dismiss"
+  [destructive]="true"
+  (confirmed)="deletionConfirmed.emit()"
+  (cancelled)="deletionCancelled.emit()"
+/>

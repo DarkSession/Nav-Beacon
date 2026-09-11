@@ -1,0 +1,27 @@
+services:
+  workspace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspaces/Nav-Beacon:cached
+    command: sleep infinity
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: postgres:18-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
+    environment:
+      POSTGRES_DB: navbeacon
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d navbeacon']
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+volumes:
+  postgres-data:

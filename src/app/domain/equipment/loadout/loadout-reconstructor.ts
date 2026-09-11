@@ -1,4 +1,5 @@
 import { getPersonalModification } from '@elite-dangerous-almanac/core/equipment/modifications';
+import { getPersonalWeaponBySymbol } from '@elite-dangerous-almanac/core/equipment/weapons';
 import type { EquipmentLoadout, ModificationSlots } from '../loadout-link/equipment-loadout';
 import { publishedSuitGrades } from '../readings/suit-readings';
 import { publishedWeaponGrades } from '../readings/weapon-readings';
@@ -35,7 +36,7 @@ export function reconstructLoadout(stored: StoredLoadoutV1): LoadoutReconstructi
   }
 
   const suitModifications = resolveSlots(stored.suitModifications);
-  if (suitModifications === null) {
+  if (suitModifications === null || !fitsTarget(suitModifications, 'suit')) {
     return { ok: false, reason: 'The suit holds a modification this Almanac does not carry.' };
   }
 
@@ -61,8 +62,16 @@ export function reconstructLoadout(stored: StoredLoadoutV1): LoadoutReconstructi
       };
     }
 
+    const weapon = getPersonalWeaponBySymbol(fitted.symbol);
+    if (weapon === null || weapon.slot !== mount.kind) {
+      return {
+        ok: false,
+        reason: `The weapon "${fitted.symbol}" does not fit ${mount.key}.`,
+      };
+    }
+
     const modifications = resolveSlots(fitted.modifications);
-    if (modifications === null) {
+    if (modifications === null || !fitsTarget(modifications, 'weapon')) {
       return {
         ok: false,
         reason: `The weapon "${fitted.symbol}" holds a modification this Almanac does not carry.`,
@@ -80,6 +89,18 @@ export function reconstructLoadout(stored: StoredLoadoutV1): LoadoutReconstructi
       weapons,
     },
   };
+}
+
+/**
+ * Whether every fitted recipe is one the package installs on this equipment.
+ *
+ * `target` is the package's own answer, so a suit recipe in a weapon slot is
+ * refused without this file holding an opinion about which recipe goes where.
+ */
+function fitsTarget(slots: ModificationSlots, target: 'suit' | 'weapon'): boolean {
+  return slots.every(
+    (symbol) => symbol === null || getPersonalModification(symbol)?.target === target,
+  );
 }
 
 /**

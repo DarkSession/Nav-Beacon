@@ -1,43 +1,43 @@
 ## 1. Constitutional and project foundation
 
-- [ ] 1.1 Amend `CONSTITUTION.md` to version 11.0.0 and update `AGENTS.md` with the local-first,
+- [x] 1.1 Amend `CONSTITUTION.md` to version 11.0.0 and update `AGENTS.md` with the local-first,
       optional-server, security-expiry, .NET coverage and NuGet maturity rules from the design; add the
       `commander` capability group to the documented OpenSpec layout; verify the constitution names all
       eight invalidated specifications and both files pass the repository Markdown formatter.
-- [ ] 1.2 Add a .NET 10 solution with one ASP.NET Core application and unit and integration test
+- [x] 1.2 Add a .NET 10 solution with one ASP.NET Core application and unit and integration test
       projects under `server/`; verify `dotnet restore`, `dotnet build --no-restore` and `dotnet test
 --no-build` pass.
-- [ ] 1.3 Add only the ASP.NET Core, EF Core, Npgsql, coverage and test packages required by this
+- [x] 1.3 Add only the ASP.NET Core, EF Core, Npgsql, coverage and test packages required by this
       change; verify NuGet registration metadata shows each selected release is at least seven days old,
       the dependency audit reports no known vulnerability and no Redis, SignalR or messaging package is
       present; if a younger security fix is required, first record the advisory and exact-version
       exception under the project dependency policy.
-- [ ] 1.4 Add local PostgreSQL configuration, secret placeholders and a container-based development
+- [x] 1.4 Add local PostgreSQL configuration, secret placeholders and a container-based development
       service without committed credentials; verify a fresh environment starts the database and the
       server health check succeeds.
-- [ ] 1.5 Add server restore, formatting, build, test and 80% line, branch and method coverage checks
+- [x] 1.5 Add server restore, formatting, build, test and 80% line, branch and method coverage checks
       to the repository and CI gates; verify a deliberate coverage failure fails the main check and the
       restored test makes the gate pass.
 
 ## 2. Data model and protection
 
-- [ ] 2.1 Implement the EF Core model for Commander accounts, OAuth attempts, sessions, synchronised
+- [x] 2.1 Implement the EF Core model for Commander accounts, OAuth attempts, sessions, synchronised
       records, owned ships, journal cursors, account revisions and data-protection keys; verify
       PostgreSQL integration tests enforce every primary key, foreign key, unique key, cascade,
       session lifetime, server content time and exact tombstone shape in the design.
-- [ ] 2.2 Add the initial EF Core migration and database startup check; verify the migration applies
+- [x] 2.2 Add the initial EF Core migration and database startup check; verify the migration applies
       to an empty PostgreSQL database and rolls back without a manual schema change.
-- [ ] 2.3 Implement the exact ship, equipment, tombstone and owned-ship JSON contracts plus the
+- [x] 2.3 Implement the exact ship, equipment, tombstone and owned-ship JSON contracts plus the
       bounded package-backed Node validator; verify contract tests reject unknown fields, duplicate
       listing fields, notes, source relations, local revisions, device claims, derived values, unknown
       identities, invalid hull-slot, engineering, suit, mount, grade and modification combinations,
       over-limit bodies and every field excluded by 020/FR-012 and 020/FR-015; verify the 30-second
       record-validator deadline refuses at the boundary, 64 KiB output is accepted, one byte more is
       refused, and a timeout, crash or non-zero exit refuses the complete batch.
-- [ ] 2.4 Configure a shared PostgreSQL ASP.NET Core Data Protection key ring with required
+- [x] 2.4 Configure a shared PostgreSQL ASP.NET Core Data Protection key ring with required
       production encryption-at-rest settings; verify two test server instances can unprotect the same
       protected value and startup fails when production key protection is absent.
-- [ ] 2.5 Add structured and access-log filtering before callback logging; verify successful and failed
+- [x] 2.5 Add structured and access-log filtering before callback logging; verify successful and failed
       requests log no Customer ID, Commander name, token, OAuth code, OAuth state,
       browser-correlation value, anti-forgery value, cookie, query string, journal body, build data or
       loadout data, record name, record UUID, `ShipId` or package diagnostic text and record only the
@@ -52,7 +52,7 @@
       remove used and expired state rows; verify a callback without the starting browser's correlation
       cookie atomically consumes the attempt, creates no session, starts no upload and cannot be replayed
       by the starting browser; verify the account interface states that a fresh sign-in is required.
-- [ ] 3.2 Implement hashed opaque sessions, secure cookie settings and anti-forgery checks; verify
+- [x] 3.2 Implement hashed opaque sessions, secure cookie settings and anti-forgery checks; verify
       HTTP tests prove tokens never reach the browser and cross-site state-changing requests fail.
 - [ ] 3.3 Implement session, sign-in callback and sign-out endpoints with base-relative return
       addresses; verify contract tests cover anonymous, pending, signed-in, revoked, 30-day renewable and

@@ -1,32 +1,23 @@
 <!--
-Sync Impact Report (10.0.0)
-- Version change: 9.1.0 -> 10.0.0 (MAJOR)
-- Modified principles: IX. Specification Before Implementation — redefined. The principle
-  named one tool's phase sequence, and one artefact convention, as the obligation. The
-  obligation is that behaviour is agreed in writing before it is built, and that a
-  specification says what the application does rather than what a change did to it. The
-  principle states that, and names the two artefacts that carry it: a standing capability
-  specification, and a change that proposes a difference to one.
-- Modified sections: Development Workflow — where specifications live, and where the
-  design and contract documents of the features already built live:
-  `openspec/changes/archive/<NNN>-<short-name>/`, which code and specifications cite by
-  path. They are read, not extended.
-- Rationale: the repository plans with OpenSpec. Its model is a standing specification per
-  capability plus changes in flight, rather than one directory per unit of work. A
-  requirement therefore belongs to the capability it constrains, not to the feature that
-  happened to introduce it, and a reader asking what the application does reads one file
-  rather than reconstructing it from fifteen.
-- Not adopted, deliberately: keeping the process artefacts. The plans, task lists,
-  research notes, quickstarts, data models and checklists recorded how each feature was
-  produced, which git already records. The designs and contracts moved with their
-  citations rewritten, because those state decisions the code still depends on.
-- Invalidated-spec review: every specification written under the old principle. The
-  fifteen feature specifications were rewritten as twenty-five capability specifications
-  at new addresses, which is why this is a MAJOR amendment. No obligation on the
-  application changes: no exclusion moves, no count moves, and every requirement in force
-  before this amendment is in force after it, at its new address. The one exception is
-  recorded as a withdrawal beside the feature that carried it.
-- Follow-up TODOs: none.
+Sync Impact Report (11.0.0)
+- Version change: 10.0.0 -> 11.0.0 (MAJOR)
+- Modified principles: I. Local-First with Optional Commander Services — permits an
+  optional same-origin API, Frontier authentication and selected remote persistence while
+  anonymous planning stays local and offline-capable. V. Works on Desktop, Tablet and
+  Mobile — permits security credentials to expire without adding a user-interface time
+  limit. VIII. Tested Before It Ships — applies an 80% line, branch and method coverage
+  floor to the .NET unit and integration suites together.
+- Modified sections: Technology Constraints and Development Workflow — add .NET 10,
+  ASP.NET Core, EF Core, PostgreSQL, NuGet maturity checks and a separate same-origin API.
+- Rationale: optional Commander accounts let Commanders synchronise selected planning
+  records and read a feature-specific fleet projection across devices. The anonymous tools
+  remain local-first and do not depend on the service.
+- Invalidated-spec review: eight capability specifications need the accepted deltas in
+  change 020: `ship-builder/build-lifecycle`,
+  `equipment-builder/loadout-persistence`, `equipment-builder/loadout-assembly`,
+  `ship-builder/build-link`, `ship-builder/slef-exchange`, `platform/journal-files`,
+  `platform/published-addresses` and `platform/application-delivery`.
+- Follow-up TODOs: apply and archive the eight delta specifications with change 020.
 -->
 
 # Nav Beacon Constitution
@@ -37,26 +28,30 @@ build metrics, and hand the build to other tools as SLEF.
 
 ## Core Principles
 
-### I. Client-Side Only (NON-NEGOTIABLE)
+### I. Local-First with Optional Commander Services (NON-NEGOTIABLE)
 
-The application is a static, client-side single-page application. There is no
-backend, no application server, no database and no application API of our own.
-Every capability — hull and module catalogues, engineering, build metrics, save,
-load, import and export — MUST run in the browser.
+Every anonymous planning capability runs in the browser and remains independent
+of the optional Commander service. A same-origin application API MAY provide
+Frontier authentication, cross-device records and other accepted Commander
+capabilities. A Commander MUST NOT need an account to use a planning tool.
 
 Consequences that follow from this and MUST be honoured:
 
-- Build state lives in the browser (in-memory, `localStorage`) or in a URL. It
-  is never uploaded. **In a URL it lives in the fragment, and nowhere else.** A
+- Anonymous build state lives in the browser (in-memory, `localStorage`) or in a
+  URL. **In a URL it lives in the fragment, and nowhere else.** A
   fragment is not sent with the request; a path or query is. So a build in a
   query would be written to the access log of whatever host serves the files, and
   sent to third parties in the `Referer` header of any link a Commander follows —
   which is uploading it, whoever owns the log. This holds whether or not the
   document at that address was prerendered: prerendering renders addresses, and a
   build is not one. Moving build state out of the fragment requires amending this
-  principle rather than reading an exception into it.
-- The application MUST be deployable as static files to any static host.
-- Every capability MUST remain usable offline after first load. **Assets the
+  principle rather than reading an exception into it. A valid reconstructed
+  record MAY enter the separate same-origin synchronisation flow after the
+  browser stores it.
+- The Angular application MUST build as static files. Production MAY serve those
+  files beside a separate same-origin API.
+- Every non-Commander capability MUST remain usable offline after first load.
+  Cached Commander records MUST remain readable offline. **Assets the
   application serves from its own origin MAY be fetched at runtime** rather than
   bundled into the initial load — hull illustrations, schematics and anything
   else whose weight would make the first load pay for artwork the Commander has
@@ -65,15 +60,17 @@ Consequences that follow from this and MUST be honoured:
   MUST NOT block or degrade any capability, MUST show its absence as a temporary
   one rather than as a fault or a permanent gap, and MUST arrive once the network
   returns without the Commander reloading the application.
-- No accounts, no authentication, no server-side persistence and no server-side
-  sharing. A build is shared by handing someone a URL or a SLEF payload.
-- No telemetry, analytics or third-party network beacons, and **no automatic or
-  programmatic request to any origin other than the one the application is served
-  from**. Runtime asset requests to the application's own origin are permitted by
-  the clause above. A Commander MAY explicitly navigate to identified external
-  documentation or an issue tracker; that navigation MUST follow a deliberate
-  action, MUST be identified as leaving the application and MUST NOT include build
-  data. Any other outbound request needs an amendment to this constitution.
+- Remote persistence MUST store only fields named by an accepted requirement.
+  Notes, URL fragments, SLEF documents and selected journal files MUST NOT enter
+  remote storage.
+- Browser code MUST make programmatic requests only to its own origin. A
+  Commander MAY deliberately navigate to Frontier for authentication or to
+  identified external documentation or an issue tracker. Such navigation MUST
+  identify the destination and MUST NOT include build, loadout or note data.
+- The server MAY contact only Frontier, and only for accepted Commander
+  capabilities the Commander requests. Any other outbound request needs an
+  amendment to this constitution.
+- Telemetry, analytics and third-party network beacons remain prohibited.
 
 ### II. The Almanac Is the Source of Truth (NON-NEGOTIABLE)
 
@@ -206,7 +203,7 @@ fallback.
   AA ratios for text and for the non-text elements that carry meaning; touch
   targets MUST meet the AA target-size rule; motion MUST respect
   `prefers-reduced-motion`.
-- **The two time limits, and why they are excluded.** When a newer version has
+- **The two user-interface time limits, and why they are excluded.** When a newer version has
   been published, the application announces a restart and then carries it out.
   The announcement offers nothing that calls the restart off, so a Commander who
   needs longer than the announcement stands cannot have it. The session that
@@ -217,7 +214,12 @@ fallback.
   than claimed. **Applying an update is the application's only mechanism that
   imposes a time limit.** Introducing one anywhere else MUST amend this
   principle rather than read itself into this exclusion, and no other capability
-  MUST impose a limit on how long a Commander has to act.
+  MUST impose a limit on how long a Commander has to act. Frontier OAuth state
+  MUST be invalid at ten minutes from sign-in start. Sessions and access
+  credentials MAY expire for security. A security expiry MUST NOT discard local
+  work, close a local interaction or add another WCAG 2.2.1 exclusion. The
+  application MUST request authentication again only when a protected network
+  action needs it.
 - Because criteria at level A and AA are excluded, the application MUST NOT claim
   unqualified WCAG 2.2 AA conformance. Wherever conformance is stated — in the
   interface, in documentation or in a specification — all eight excluded criteria
@@ -313,10 +315,13 @@ improvised screen by screen, and not deferred until the domain is finished.
 
 Correctness is enforced by the build, not by inspection.
 
-- Unit test coverage MUST be at least **80%** — statements, branches, functions
-  and lines. The threshold is enforced by the test runner, and a build that
-  falls below it fails. Lowering the threshold to make a build pass is
-  prohibited.
+- Angular unit test coverage MUST be at least **80%** — statements, branches,
+  functions and lines. .NET coverage, over the unit and integration suites
+  together, MUST be at least **80%** — lines, branches and methods. A
+  database-backed boundary is covered by the suite that exercises it, so the
+  server floor reads both suites rather than one. The thresholds are enforced by
+  the test runners, and a build that falls below them fails. Lowering a
+  threshold to make a build pass is prohibited.
 - Coverage is a floor, not a goal. Domain logic — build state, engineering,
   persistence, import and export — is expected to sit well above it, and
   coverage MUST NOT be manufactured with tests that assert nothing.
@@ -328,9 +333,9 @@ Correctness is enforced by the build, not by inspection.
   browser. A journey is not covered until it passes in both.
 - The end-to-end suite MUST include an automated accessibility check over every
   screen, under principle V. A violation fails the build like any other test.
-- `pnpm run check` — format, typecheck, build, unit tests with coverage, and the
-  Playwright suite — MUST pass before a change is proposed for merge, and MUST
-  pass in CI.
+- `pnpm run check` — format, typecheck, build, unit tests with coverage, server
+  restore, format, build and tests, and the Playwright suite — MUST pass before a
+  change is proposed for merge, and MUST pass in CI.
 - A bug fix starts with a failing test that reproduces the bug.
 - Tests MUST NOT be skipped, quarantined or deleted to get a build green. A
   genuinely flaky test is a defect to fix, not to mute.
@@ -363,9 +368,12 @@ an implementation.
   in strict mode.
 - **Package manager**: pnpm. `pnpm-lock.yaml` is committed, and installs in CI
   use `--frozen-lockfile`.
-- **Runtime**: Node.js per `.nvmrc` / `package.json#engines` for tooling; modern
-  evergreen browsers for the app itself, on desktop, tablet and mobile. The dev
-  container in `.devcontainer/` is the reference environment.
+- **Runtime**: Node.js per `.nvmrc` / `package.json#engines` for tooling; .NET 10
+  LTS for the server; modern evergreen browsers for the app itself, on desktop,
+  tablet and mobile. The dev container in `.devcontainer/` is the reference
+  environment.
+- **Server**: one ASP.NET Core application with EF Core and PostgreSQL. API
+  instances hold no required process-local Commander state.
 - **Data dependency**: `@elite-dangerous-almanac/core`, which is ESM-only and
   side-effect free.
 - **Testing**: Vitest via the Angular unit-test builder, with coverage
@@ -373,18 +381,21 @@ an implementation.
   desktop, tablet portrait, tablet landscape, mobile portrait and mobile
   landscape projects configured in `playwright.config.ts`, each run in Chromium
   and in Firefox — ten projects, covering the three viewport classes in both
-  orientations principle V requires.
+  orientations principle V requires; .NET unit and PostgreSQL integration tests
+  for the server, with their combined line, branch and method coverage enforced
+  at 80%.
 - **Design system**: one component library under `src/app/ui/`, with design
   tokens defined in the global stylesheet layer and one dark theme built from
   them. It is versioned in this repository, and this repository is the source of
   truth for any external design tool it synchronises with (principle VII).
-- **Build output**: static assets only, and a prerendered document is one of them.
+- **Build output**: static Angular assets and a separate same-origin server. A
+  prerendered document is one of the static assets.
   The build MAY render a route to HTML at build time; it MUST NOT render one per
   request. The distinction is where the rendering happens, not what it produces: a
   prerendered document is written by `pnpm run build` from the pinned
   `@elite-dangerous-almanac/core`, is served as a file by any static host, and is
-  identical for every Commander who asks for that address. Per-request rendering
-  needs an application server, which principle I forbids.
+  identical for every Commander who asks for that address. The server MUST NOT
+  render an Angular document per request. Commander data MUST NOT be prerendered.
   A prerendered document MUST NOT embed Commander data, and it MUST NOT carry
   runtime environment configuration baked into the bundle. What it may state is
   what the address is about, which is game data the package already owns.
@@ -400,7 +411,12 @@ an implementation.
   design and contract documents of the features already built. They are read,
   not extended.
 - `pnpm run check` — format check, typecheck, build, unit tests with coverage,
-  and the Playwright suite — MUST pass before a change is proposed for merge.
+  server restore, format, build and tests, and the Playwright suite — MUST pass
+  before a change is proposed for merge.
+- NuGet package versions MUST be exact. A release MUST be at least seven days
+  old when selected. Its publication time MUST be verified through NuGet
+  registration metadata. A younger security fix MAY be selected only with an
+  advisory-named exact-version exception that is removed after seven days.
 - Tests accompany domain logic, and each user story's primary journey gets an
   end-to-end test across the three form factors.
 - **Functionality is specified per capability, never per screen.** A capability
@@ -442,4 +458,4 @@ to justify itself against them; when it cannot, the simpler option wins. An
 amendment's rationale is recorded in the change that makes it; this document
 states the principles as they stand now, not the history of how they got here.
 
-**Version**: 10.0.0 | **Ratified**: 2026-08-12 | **Last Amended**: 2026-09-06
+**Version**: 11.0.0 | **Ratified**: 2026-08-12 | **Last Amended**: 2026-09-11
