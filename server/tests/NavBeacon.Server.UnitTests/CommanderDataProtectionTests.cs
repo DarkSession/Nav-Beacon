@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using NavBeacon.Server.Security;
 
@@ -18,7 +17,7 @@ public sealed class CommanderDataProtectionTests
     var error = Assert.Throws<InvalidOperationException>(() =>
       services.AddCommanderDataProtection(
         new ConfigurationBuilder().Build(),
-        new EnvironmentStub(Environments.Production)
+        new TestHostEnvironment(Environments.Production)
       )
     );
 
@@ -41,7 +40,7 @@ public sealed class CommanderDataProtectionTests
     var error = Assert.Throws<InvalidOperationException>(() =>
       new ServiceCollection().AddCommanderDataProtection(
         configuration,
-        new EnvironmentStub(Environments.Production)
+        new TestHostEnvironment(Environments.Production)
       )
     );
 
@@ -78,7 +77,7 @@ public sealed class CommanderDataProtectionTests
 
     var builder = new ServiceCollection().AddCommanderDataProtection(
       configuration,
-      new EnvironmentStub(Environments.Production)
+      new TestHostEnvironment(Environments.Production)
     );
 
     Assert.NotNull(builder);
@@ -89,20 +88,9 @@ public sealed class CommanderDataProtectionTests
   {
     var builder = new ServiceCollection().AddCommanderDataProtection(
       new ConfigurationBuilder().Build(),
-      new EnvironmentStub(Environments.Development)
+      new TestHostEnvironment(Environments.Development)
     );
 
     Assert.NotNull(builder);
-  }
-
-  private sealed class EnvironmentStub(string environmentName) : IHostEnvironment
-  {
-    public string EnvironmentName { get; set; } = environmentName;
-
-    public string ApplicationName { get; set; } = "NavBeacon.Server.UnitTests";
-
-    public string ContentRootPath { get; set; } = Directory.GetCurrentDirectory();
-
-    public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
   }
 }

@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using NavBeacon.Server.Accounts;
+using NavBeacon.Server.Configuration;
 using NavBeacon.Server.Fleet;
 using NavBeacon.Server.Frontier;
 using NavBeacon.Server.Logging;
@@ -11,13 +13,11 @@ using NavBeacon.Server.Validation;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddCommanderLogging();
 
-var connectionString = builder.Configuration.GetConnectionString("NavBeacon");
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-  throw new InvalidOperationException("ConnectionStrings:NavBeacon is required.");
-}
+var settings = ServerConfiguration.Read(builder.Configuration, builder.Environment);
 
-builder.Services.AddDbContext<NavBeaconDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<NavBeaconDbContext>(options =>
+  options.UseNpgsql(settings.ConnectionString)
+);
 builder.Services.AddCommanderDataProtection(builder.Configuration, builder.Environment);
 builder.Services.Configure<FrontierOptions>(
   builder.Configuration.GetSection(FrontierOptions.SectionName)
@@ -51,6 +51,31 @@ builder.Services.AddAntiforgery(options =>
   options.Cookie.SameSite = SameSiteMode.Strict;
   options.Cookie.Path = "/";
 });
+// The edge terminates TLS and forwards the original scheme and client address.
+// Only the addresses the deployment names are believed.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+  options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+  if (settings.KnownProxies.Count == 0 && settings.KnownNetworks.Count == 0)
+  {
+    return;
+  }
+
+  options.KnownProxies.Clear();
+  options.KnownIPNetworks.Clear();
+  foreach (var proxy in settings.KnownProxies)
+  {
+    options.KnownProxies.Add(proxy);
+  }
+  foreach (var network in settings.KnownNetworks)
+  {
+    options.KnownIPNetworks.Add(network);
+  }
+});
+if (settings.RequireHttps)
+{
+  builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
+}
 builder.Services.AddScoped<DatabaseStartupCheck>();
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
@@ -68,6 +93,13 @@ var pathBase = builder.Configuration["PathBase"];
 if (!string.IsNullOrWhiteSpace(pathBase))
 {
   app.UsePathBase(pathBase);
+}
+
+app.UseForwardedHeaders();
+if (settings.RequireHttps)
+{
+  app.UseHsts();
+  app.UseHttpsRedirection();
 }
 
 app.UseRouting();
