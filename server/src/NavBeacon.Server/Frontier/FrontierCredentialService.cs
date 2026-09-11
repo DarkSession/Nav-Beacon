@@ -16,8 +16,25 @@ public sealed class FrontierCredentialService(
     "Frontier tokens v1"
   );
 
-  public async Task<string?> GetAccessTokenAsync(
+  /// <summary>
+  /// The account's access token, refreshed only when it has expired.
+  /// </summary>
+  public Task<string?> GetAccessTokenAsync(long customerId, CancellationToken cancellationToken) =>
+    ReadAsync(customerId, false, cancellationToken);
+
+  /// <summary>
+  /// The account's access token after one refresh, whatever the stored token
+  /// says about its own expiry. Frontier refusing a token it has not expired is
+  /// the one case that needs this (020/FR-013).
+  /// </summary>
+  public Task<string?> RefreshAccessTokenAsync(
     long customerId,
+    CancellationToken cancellationToken
+  ) => ReadAsync(customerId, true, cancellationToken);
+
+  private async Task<string?> ReadAsync(
+    long customerId,
+    bool forceRefresh,
     CancellationToken cancellationToken
   )
   {
@@ -36,7 +53,7 @@ public sealed class FrontierCredentialService(
       return null;
     }
 
-    if (account.AccessTokenExpiresAt > timeProvider.GetUtcNow())
+    if (!forceRefresh && account.AccessTokenExpiresAt > timeProvider.GetUtcNow())
     {
       await transaction.CommitAsync(cancellationToken);
       return tokenProtector.Unprotect(account.ProtectedAccessToken);

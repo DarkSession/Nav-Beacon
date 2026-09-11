@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NavBeacon.Server.Accounts;
+using NavBeacon.Server.Fleet;
 using NavBeacon.Server.Frontier;
 using NavBeacon.Server.Logging;
 using NavBeacon.Server.Persistence;
@@ -24,14 +25,21 @@ builder.Services.Configure<FrontierOptions>(
 builder.Services.Configure<RecordValidationOptions>(
   builder.Configuration.GetSection(RecordValidationOptions.SectionName)
 );
+builder.Services.Configure<FleetProjectionOptions>(
+  builder.Configuration.GetSection(FleetProjectionOptions.SectionName)
+);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpClient<IFrontierClient, FrontierClient>();
+builder.Services.AddHttpClient<ILiveJournalClient, LiveJournalClient>();
 builder.Services.AddScoped<OAuthStateService>();
 builder.Services.AddScoped<OAuthCallbackService>();
 builder.Services.AddScoped<FrontierCredentialService>();
 builder.Services.AddScoped<CommanderSessionService>();
 builder.Services.AddScoped<CommanderAccountDeletionService>();
 builder.Services.AddScoped<RecordSynchronisationService>();
+builder.Services.AddScoped<FleetService>();
+builder.Services.AddSingleton<IRefreshDelay, RefreshDelay>();
+builder.Services.AddSingleton<FleetProjector>();
 builder.Services.AddSingleton<RecordValidator>();
 builder.Services.AddSingleton<CommanderEventLog>();
 builder.Services.AddAntiforgery(options =>
@@ -67,6 +75,7 @@ app.UseCommanderAccessLogging();
 app.MapHealthChecks("/health");
 app.MapAccountEndpoints();
 app.MapRecordEndpoints();
+app.MapFleetEndpoints();
 
 app.Run();
 
