@@ -99,7 +99,7 @@
 
 - [ ] 5.1 Add a typed, base-relative account and record API client with no new client-generation
       dependency; verify unit tests resolve requests correctly at root and sub-path base addresses.
-- [ ] 5.2 Extend browser persistence with remote revisions, account cursors and pending operations
+- [x] 5.2 Extend browser persistence with remote revisions, account cursors and pending operations
       plus unbound, Customer-bound and local-only record states while keeping device claims and notes
       local; verify migration tests preserve every supported record and never serialise a note into a
       request.
