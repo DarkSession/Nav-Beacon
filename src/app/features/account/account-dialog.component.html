@@ -6,18 +6,35 @@
 >
   <div class="account-dialog">
     @if (view().commanderName; as commanderName) {
-      <p class="account-dialog__commander">{{ commanderName }}</p>
+      <p class="account-dialog__commander">
+        <span class="account-dialog__commander-label">{{ view().commanderLabel }}</span>
+        <span class="account-dialog__commander-name">{{ commanderName }}</span>
+      </p>
     }
 
     @if (view().status; as status) {
       <ednb-status-notice [tone]="status.tone" [message]="status.message" />
     }
 
-    <ul class="account-dialog__data-use">
-      @for (line of view().dataUse; track line) {
-        <li>{{ line }}</li>
-      }
-    </ul>
+    <!--
+      What the account holds, stated in the place the account is offered from.
+      It is drawn in every state, including the anonymous one, so a Commander
+      reads it before signing in rather than after (020/FR-005).
+    -->
+    <section class="account-dialog__data" [attr.aria-labelledby]="dataUseId">
+      <h3 class="account-dialog__heading" [id]="dataUseId">{{ view().dataUseTitle }}</h3>
+      <ul class="account-dialog__data-use">
+        @for (line of view().dataUse; track line) {
+          <li>{{ line }}</li>
+        }
+      </ul>
+    </section>
+
+    <!--
+      Which of these actions need a network, said whether or not there is one.
+      Local planning never waits on it (020/FR-022).
+    -->
+    <p class="account-dialog__network">{{ view().networkNotice }}</p>
 
     @if (view().actions.length > 0) {
       <div class="account-dialog__actions">
@@ -26,7 +43,7 @@
             [label]="action.label"
             [emphasis]="action.emphasis"
             [busy]="action.busy"
-            [busyLabel]="action.busy ? action.label : null"
+            [busyLabel]="action.busy ? view().busyLabel : null"
             [disabled]="action.busy"
             (activated)="actionSelected.emit(action.kind)"
           />

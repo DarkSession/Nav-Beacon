@@ -49,11 +49,12 @@
 }
 
 <!--
-  The four layers that talk to a Commander about the session they are in
-  rather than about a screen: Help · About, the two halves of the update
-  announcement, and the statement that the application is waiting for a screen.
+  The five layers that talk to a Commander about the session they are in
+  rather than about a screen: Help · About, the Commander account, the two
+  halves of the update announcement, and the statement that the application is
+  waiting for a screen.
 
-  All four are mounted in a browser only, and this is the one place in this
+  All five are mounted in a browser only, and this is the one place in this
   template that asks which. Each of them is a closed `<dialog>` until something
   opens it, so rendering them into a generated document draws nothing, moves
   nothing and costs a Commander no frame — but two of them state the version
@@ -81,6 +82,23 @@
     [view]="help.view()"
     [dismissLabel]="help.dismissLabel()"
     (dismissed)="help.closeDialog()"
+  />
+
+  <!--
+    The Commander account, beside the frame for the same reason help is: an
+    account belongs to the session rather than to a screen. Browser-only, and
+    eager rather than deferred, because the modal is also where a refused
+    sign-in callback and an expired session are stated, and a chunk fetched on
+    activation is a request that has nothing to say when the network is the
+    thing that failed (020/FR-001, 020/FR-003).
+  -->
+  <ednb-account-dialog
+    [open]="account.open()"
+    [view]="account.view()"
+    (dismissed)="account.closeDialog()"
+    (actionSelected)="account.select($event)"
+    (deletionConfirmed)="account.confirmDeletion()"
+    (deletionCancelled)="account.cancelDeletion()"
   />
 
   <!--

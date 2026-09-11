@@ -88,9 +88,10 @@ export class AccountStore {
       return;
     }
     this.#antiForgeryToken = null;
+    // Account state and the fleet cache go; planning records and current work
+    // stay, and remain usable without an account (020/FR-003).
     this.#local.clearSession();
     this.#state.set({ kind: 'anonymous' });
-    this.#open.set(false);
   }
 
   requestDeletion(): void {
@@ -107,6 +108,21 @@ export class AccountStore {
     }
   }
 
+  /**
+   * Deletes the account, local side first.
+   *
+   * The browser clears its account state, its fleet cache, its synchronisation
+   * state and its pending remote operations and marks the retained planning
+   * records local-only in one local transaction, and sends the authenticated
+   * deletion only once that transaction has committed. The order is what makes
+   * every outcome the same outcome for a Commander: a committed server deletion
+   * and a lost response both leave this browser anonymous, with its planning
+   * records kept and local-only, and nothing queued to upload (020/FR-006,
+   * 020/FR-024).
+   *
+   * A refused local transaction sends nothing. The failure is stated, the
+   * session and its records are untouched, and deletion can be attempted again.
+   */
   async deleteAccount(): Promise<void> {
     const account = accountFrom(this.#state());
     if (account === null || this.#antiForgeryToken === null) {
@@ -120,9 +136,12 @@ export class AccountStore {
     const token = this.#antiForgeryToken;
     this.#antiForgeryToken = null;
     this.#state.set({ kind: 'deleting' });
+    // The answer is not read. A refusal and a lost response leave this browser
+    // in the state the local transaction already committed, and a Commander
+    // who signs in again gets an empty account or another chance to delete —
+    // which the server decides, not this browser.
     await this.#api.deleteAccount(token);
     this.#state.set({ kind: 'anonymous' });
-    this.#open.set(false);
   }
 
   markAuthorisationExpired(): void {

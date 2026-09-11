@@ -32,9 +32,11 @@ import {
   type ShellAction,
   type ShellStatus,
 } from './ui/components/app-frame/app-frame';
+import { AccountPresenter } from './application/account/account.presenter';
 import { HelpPresenter } from './application/help/help.presenter';
 import { NavigationWaitingStore } from './application/navigation/navigation-waiting.store';
 import { ServedDocumentStore } from './application/navigation/served-document.store';
+import { AccountDialog } from './features/account/account-dialog.component';
 import { HelpDialog } from './features/help/help-dialog.component';
 import { RenderingTarget } from './platform/browser/rendering-target';
 import { EmptyBenchService } from './application/equipment/empty-bench.service';
@@ -57,6 +59,16 @@ export const LIBRARY_ACTION = 'library.open';
 /** The shell action that opens the Help · About modal, named once. */
 export const HELP_ACTION = 'help.open';
 
+/**
+ * The shell action that opens the Commander account modal, named once.
+ *
+ * One action for every account state. It is drawn on every screen because an
+ * account belongs to the session rather than to a tool, and a Commander reaches
+ * sign-in, sign-out, what the account holds and account deletion from wherever
+ * they happen to be (020/FR-001).
+ */
+export const ACCOUNT_ACTION = 'account.open';
+
 /** The shell action that starts the application over on a newer version. */
 export const UPDATE_ACTION = 'app.update';
 
@@ -77,6 +89,7 @@ export const UPDATE_ACTION = 'app.update';
 @Component({
   selector: 'app-root',
   imports: [
+    AccountDialog,
     AppFrame,
     BuildLibraryPage,
     ExportDialog,
@@ -102,6 +115,7 @@ export class App {
   readonly #emptyBench = inject(EmptyBenchService);
   readonly #active = inject(ActiveBuildStore);
   readonly help = inject(HelpPresenter);
+  readonly account = inject(AccountPresenter);
   /**
    * Whether a Commander is looking at this, or the build is rendering it.
    *
@@ -213,6 +227,14 @@ export class App {
         emphasis: 'secondary' as const,
       },
       ...(first === undefined ? [] : [{ ...first, startsGroup: true }, ...rest]),
+      {
+        id: ACCOUNT_ACTION,
+        // The Commander's own name once there is one, which is what names the
+        // account everywhere else, and the account's own name before that.
+        label: this.account.actionLabel(),
+        description: this.account.actionDescription(),
+        emphasis: 'quiet' as const,
+      },
       {
         id: HELP_ACTION,
         label: this.help.actionLabel(),
@@ -429,6 +451,14 @@ export class App {
   readonly exchangeWanted = computed(() => this.#slef.layer() !== 'none');
 
   constructor() {
+    // The account state is read once, in a browser, when the session starts.
+    // A generated document has no session to read and no origin to ask, and a
+    // Commander who never signs in pays one refused request for the answer that
+    // they are anonymous — which every tool then goes on working without.
+    if (this.interactive) {
+      this.account.initialise();
+    }
+
     this.#router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         this.#path.set(event.urlAfterRedirects);
@@ -621,6 +651,10 @@ export class App {
       // The bench is what this clears, and the application layer is how the
       // shell reaches it: the frame draws tabs and imports no screen.
       this.#emptyBench.start();
+      return;
+    }
+    if (id === ACCOUNT_ACTION) {
+      this.account.openDialog();
       return;
     }
     if (id === HELP_ACTION) {

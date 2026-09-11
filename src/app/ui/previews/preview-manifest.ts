@@ -257,6 +257,7 @@ import { ShipIdentityFields } from '../outfitting/ship-identity-fields';
 import { UnavailableFact } from '../outfitting/unavailable-fact';
 import { DiagnosticList } from '../technical/diagnostic-list';
 import { InlineLink } from '../components/inline-link/inline-link';
+import { AccountDialog } from '../../features/account/account-dialog.component';
 import { HelpDialog } from '../../features/help/help-dialog.component';
 import { SaveBuildDialog } from '../../features/build-workspace/save-build.dialog';
 import { HELP_MANIFEST } from '../../platform/build/help-manifest.generated';
@@ -4653,6 +4654,346 @@ registerPreview({
       'A missing or mismatched artifact fails generation; it is never a state the modal renders.',
     ),
     notApplicable('disabled', 'Help is either open or closed; it has no disabled state.'),
+  ],
+});
+
+// ---------------------------------------------------------------------------
+// Feature 020 — the Commander account
+//
+// One modal, eight states. The five required manifest states cannot name eight
+// screen states between them, so the dialog is declared three times — once for
+// the account's ordinary life, once for a session that cannot be used, and once
+// for the deletion question — and each declaration names the screen state its
+// fixture draws. Registering the same production component under a second id is
+// what `tab-group-segmented` already does for a second set of renderings.
+//
+// Every fixture reads its words from the bundled English catalogue, so a
+// reworded account message reaches the catalogue page and the product together.
+// ---------------------------------------------------------------------------
+
+/** One account view model, with the parts every state shares filled in. */
+function accountView(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    title: BUNDLED_ENGLISH['account.title'],
+    commanderLabel: BUNDLED_ENGLISH['account.commander.label'],
+    commanderName: null,
+    status: null,
+    dataUseTitle: BUNDLED_ENGLISH['account.data.title'],
+    dataUse: [
+      BUNDLED_ENGLISH['account.data.identity'],
+      BUNDLED_ENGLISH['account.data.credentials'],
+      BUNDLED_ENGLISH['account.data.records'],
+      BUNDLED_ENGLISH['account.data.fleet'],
+      BUNDLED_ENGLISH['account.data.frontier'],
+      BUNDLED_ENGLISH['account.data.destination'],
+    ],
+    networkNotice: BUNDLED_ENGLISH['account.network.notice'],
+    actions: [],
+    deletionConfirmation: false,
+    deletionTitle: BUNDLED_ENGLISH['account.delete.title'],
+    deletionDescription: BUNDLED_ENGLISH['account.delete.description'],
+    deletionConfirm: BUNDLED_ENGLISH['account.delete.confirm'],
+    deletionCancel: BUNDLED_ENGLISH['action.cancel'],
+    dismiss: BUNDLED_ENGLISH['action.close'],
+    ...overrides,
+  };
+}
+
+/** The name a catalogue page shows in place of a Commander's own. */
+const PREVIEW_COMMANDER = 'CMDR Preview';
+
+const SIGN_IN_ACTION = {
+  label: BUNDLED_ENGLISH['account.sign-in'],
+  kind: 'sign-in',
+  emphasis: 'primary',
+  busy: false,
+};
+
+const SIGNED_IN_ACTIONS = [
+  {
+    label: BUNDLED_ENGLISH['account.sign-out'],
+    kind: 'sign-out',
+    emphasis: 'secondary',
+    busy: false,
+  },
+  {
+    label: BUNDLED_ENGLISH['account.delete.action'],
+    kind: 'delete',
+    emphasis: 'danger',
+    busy: false,
+  },
+];
+
+/** What every state of this modal is held to, whichever declaration draws it. */
+const ACCOUNT_DIALOG_EXPECTATIONS: readonly string[] = [
+  'one dialog, named by its visible title, over an inert capability',
+  'states what the account holds before it offers to sign in',
+  'states which actions need a network without blocking local work',
+  'wide viewports centre a bounded dialog; narrow ones raise a full-width sheet',
+  'every action clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+  'the same reading order at desktop, tablet and mobile width, in both orientations',
+  'no meaning carried by tone alone: every notice says it in words',
+];
+
+const ACCOUNT_DIALOG_SEMANTICS = {
+  role: 'dialog',
+  visibleNameMatchesAccessibleName: true,
+  // The modal is mounted and open or mounted and closed; it draws no control
+  // with a collapsed form for an `aria-expanded` to describe.
+  exposedStates: ['busy'],
+  relationships: ['label', 'description'],
+  textEquivalents: ['session state, in a sentence rather than by tone'],
+} as const;
+
+registerPreview({
+  componentId: 'account-dialog',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'empty',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Signed in.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: { tone: 'success', message: BUNDLED_ENGLISH['account.status.signed-in'] },
+          actions: SIGNED_IN_ACTIONS,
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'names the Commander and offers sign-out beside deletion'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+      true,
+    ),
+    // Anonymous.
+    state(
+      'empty',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'info', message: BUNDLED_ENGLISH['account.status.anonymous'] },
+          actions: [SIGN_IN_ACTION],
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'states that every planning tool works without an account'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Redirect pending.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.redirect-pending'] },
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'names Frontier as the service it is sending the Commander to',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Correlation refused.
+    state(
+      'error',
+      {
+        open: true,
+        view: accountView({
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.correlation-refused'],
+          },
+          actions: [SIGN_IN_ACTION],
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'offers a fresh sign-in and states that local work is unchanged',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'account-dialog-session',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog-session', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Offline.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['account.status.offline'] },
+          actions: [
+            {
+              label: BUNDLED_ENGLISH['action.retry'],
+              kind: 'retry',
+              emphasis: 'primary',
+              busy: false,
+            },
+          ],
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'states that local work is safe and offers another attempt'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'A session state always has a sentence to state. The modal with nothing to say about the session is the anonymous state, declared under account-dialog.',
+    ),
+    // Sign-out.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.signing-out'] },
+          actions: [
+            {
+              label: BUNDLED_ENGLISH['account.sign-out'],
+              kind: 'sign-out',
+              emphasis: 'secondary',
+              busy: true,
+            },
+          ],
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'keeps the action’s own label while it reports itself busy'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Expired session or authorisation.
+    state(
+      'error',
+      {
+        open: true,
+        view: accountView({
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.session-expired'],
+          },
+          actions: [SIGN_IN_ACTION],
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'asks for authentication again without discarding local work or closing anything open',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'account-dialog-deletion',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog-deletion', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Account-deletion confirmation.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.delete-confirmation'],
+          },
+          deletionConfirmation: true,
+        }),
+      },
+      [
+        'one confirmation layer, named by its visible question, over an inert capability',
+        'states what the server removes and what stays on this device',
+        'the destructive answer is a button a Commander presses; dismissal cancels',
+        'both answers clear the 44 CSS-pixel target baseline and wrap rather than overflowing',
+        'the same reading order at desktop, tablet and mobile width, in both orientations',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'The confirmation always states the question and both answers; a version of it with nothing to confirm is not a state.',
+    ),
+    // Deletion in progress.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.deleting'] },
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the deletion is under way and offers no action',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Refused local cleanup.
+    state(
+      'error',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'error',
+            message: BUNDLED_ENGLISH['account.status.delete-local-failed'],
+          },
+          actions: SIGNED_IN_ACTIONS,
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the account was not deleted and leaves it available for another attempt',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
   ],
 });
 
