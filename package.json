@@ -86,6 +86,7 @@
     "postcss-scss": "^4.0.9",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
+    "vite": "^8.2.2",
     "vitest": "^4.1.11"
   }
 }
