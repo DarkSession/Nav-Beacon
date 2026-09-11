@@ -19,6 +19,7 @@ import { routes } from './app.routes';
 import { RetentionService } from './application/build-library/retention.service';
 import { NavigationWaitingStore } from './application/navigation/navigation-waiting.store';
 import { ServedDocumentStore } from './application/navigation/served-document.store';
+import { RecordSynchronisationCoordinator } from './application/synchronisation/record-synchronisation.coordinator';
 import { RouteTitleStrategy } from './features/shared/route-title.strategy';
 import { provideLocalization } from './i18n/i18n.providers';
 import { RenderingTarget } from './platform/browser/rendering-target';
@@ -170,6 +171,23 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       if (inject(RenderingTarget).isBrowser) {
         inject(RetentionService).sweep();
+      }
+    }),
+    // The account's records, exchanging for as long as the application runs.
+    //
+    // An initializer rather than something a screen does, for two reasons. The
+    // first merge belongs to the account becoming signed in rather than to a
+    // library being opened, so a Commander who signs in from the shipyard has
+    // their records merged from there (020/FR-008). And the protection a live
+    // page owes its open records is owed while the page is live, not while a
+    // particular screen is drawn (020/FR-025).
+    //
+    // Not in the build's renderer, for the reason the sweep gives: there is no
+    // Commander at build time, no session and no record to protect
+    // (015/FR-001).
+    provideAppInitializer(() => {
+      if (inject(RenderingTarget).isBrowser) {
+        inject(RecordSynchronisationCoordinator).start();
       }
     }),
     // The application's only service worker, and its only cache owner.

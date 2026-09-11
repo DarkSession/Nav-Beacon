@@ -1,4 +1,5 @@
 import { Injector, computed, effect, signal } from '@angular/core';
+import { RecordSynchronisationStore } from '../synchronisation/record-synchronisation.store';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { PageLifecycleAdapter } from '../../platform/browser/page-lifecycle.adapter';
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
@@ -62,8 +63,15 @@ export class WorkingRecordAutosave {
    * silence.
    */
   readonly paused = computed(() => {
+    const held = this.#subject.autosaveRecordId();
     const on = this.#pausedOn();
-    return on !== null && on === this.#subject.autosaveRecordId();
+    if (on !== null && on === held) {
+      return true;
+    }
+    // The same pause, reached from the account rather than from another tab: a
+    // synchronised device deleted the record this page holds, so the work stays
+    // and nothing is written to it until the Commander answers (020/FR-010).
+    return held !== null && this.#sync.pausedRecords().includes(held);
   });
 
   readonly #subject: WorkingRecordSubject;
@@ -71,6 +79,7 @@ export class WorkingRecordAutosave {
   readonly #lifecycle: PageLifecycleAdapter;
   readonly #uuid: UuidAdapter;
   readonly #clock: ClockAdapter;
+  readonly #sync: RecordSynchronisationStore;
   /** Captured at construction so `start()` can create its watcher from anywhere. */
   readonly #injector: Injector;
 
@@ -80,6 +89,7 @@ export class WorkingRecordAutosave {
     lifecycle: PageLifecycleAdapter,
     uuid: UuidAdapter,
     clock: ClockAdapter,
+    sync: RecordSynchronisationStore,
     injector: Injector,
   ) {
     this.#subject = subject;
@@ -87,6 +97,7 @@ export class WorkingRecordAutosave {
     this.#lifecycle = lifecycle;
     this.#uuid = uuid;
     this.#clock = clock;
+    this.#sync = sync;
     this.#injector = injector;
   }
 
@@ -116,9 +127,25 @@ export class WorkingRecordAutosave {
       { injector: this.#injector },
     );
 
+    // A pause that arrives from the account rather than from another tab is
+    // still a pause this page has to state: the work is usable, nothing is
+    // being written to it, and the Commander resumes it deliberately
+    // (020/FR-010).
+    const remotePause = effect(
+      () => {
+        const held = this.#subject.autosaveRecordId();
+        if (held !== null && this.#sync.pausedRecords().includes(held)) {
+          this.#clearTimer();
+          this.#subject.setPersistence('record-deleted-externally');
+        }
+      },
+      { injector: this.#injector },
+    );
+
     return () => {
       stopLifecycle();
       watcher.destroy();
+      remotePause.destroy();
       this.#clearTimer();
     };
   }
@@ -146,6 +173,14 @@ export class WorkingRecordAutosave {
    */
   resume(): void {
     this.#pausedOn.set(null);
+    const held = this.#subject.autosaveRecordId();
+    if (held !== null) {
+      // For a remote deletion, resuming is an overwrite: the work goes back
+      // under the same application record identity at a revision newer than the
+      // marker. The store answers nothing at all while the browser is anonymous
+      // or while no conflict stands on this record (020/FR-010).
+      void this.#sync.resumeRecord(held);
+    }
     this.#writeNow(true);
   }
 
@@ -244,6 +279,10 @@ export class WorkingRecordAutosave {
 
     if (written.ok) {
       this.#subject.setPersistence('saved');
+      // The record is in browser storage, so it may now enter the account's own
+      // exchange. Nothing is queued while the browser is anonymous, and nothing
+      // about this write waits on the network (020/FR-007, 020/FR-011).
+      void this.#sync.recordSaved(recordId);
       return true;
     }
 

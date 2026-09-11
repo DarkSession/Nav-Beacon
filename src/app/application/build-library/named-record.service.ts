@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { RecordSynchronisationStore } from '../synchronisation/record-synchronisation.store';
 import type { LocalRecord } from '../../domain/records/local-record';
 import type { RecordPayload } from '../../domain/records/local-record.serializer';
 import { LocksUnavailableError, WebLocksAdapter } from '../../platform/browser/web-locks.adapter';
@@ -61,6 +62,7 @@ export class NamedRecordService {
   readonly #records = inject(LocalRecordRepository);
   readonly #locks = inject(WebLocksAdapter);
   readonly #uuid = inject(UuidAdapter);
+  readonly #sync = inject(RecordSynchronisationStore);
 
   /** Whether an in-place replacement can be made safely in this browser. */
   get canOverwrite(): boolean {
@@ -91,7 +93,7 @@ export class NamedRecordService {
 
     const read = this.#records.open(id);
     return read.ok && read.value !== null
-      ? { kind: 'saved', record: read.value.record }
+      ? this.#synchronised({ kind: 'saved', record: read.value.record })
       : { kind: 'failed', code: 'failed' };
   }
 
@@ -172,7 +174,14 @@ export class NamedRecordService {
   /** Removes one record. Only ever called after an explicit confirmation. */
   async remove(recordId: string): Promise<NamedSaveResult> {
     const removed = this.#records.remove(recordId);
-    return removed.ok ? { kind: 'missing' } : { kind: 'failed', code: removed.code };
+    if (!removed.ok) {
+      return { kind: 'failed', code: removed.code };
+    }
+    // Deleting a synchronised record deletes the remote one. Nothing is queued
+    // while the browser is anonymous, and the local removal has already
+    // happened whatever the network does (020/FR-010, 020/FR-011).
+    void this.#sync.recordDeleted(recordId);
+    return { kind: 'missing' };
   }
 
   /**
@@ -215,7 +224,7 @@ export class NamedRecordService {
 
     const reread = this.#records.open(request.recordId);
     return reread.ok && reread.value !== null
-      ? { kind: 'saved', record: reread.value.record }
+      ? this.#synchronised({ kind: 'saved', record: reread.value.record })
       : { kind: 'failed', code: 'failed' };
   }
 
@@ -251,7 +260,11 @@ export class NamedRecordService {
     if (recordId === null || recordId === savedInto || this.#records.isNamed(recordId)) {
       return;
     }
-    this.#records.remove(recordId);
+    if (this.#records.remove(recordId).ok) {
+      // The record the save replaced is gone from this browser, so the account
+      // stops holding it too (020/FR-010).
+      void this.#sync.recordDeleted(recordId);
+    }
   }
 
   /** The read-check-write that runs inside the lock. */
@@ -293,7 +306,23 @@ export class NamedRecordService {
 
     const reread = this.#records.open(request.recordId);
     return reread.ok && reread.value !== null
-      ? { kind: 'saved', record: reread.value.record }
+      ? this.#synchronised({ kind: 'saved', record: reread.value.record })
       : { kind: 'failed', code: 'failed' };
+  }
+
+  /**
+   * Offers a record browser storage has just accepted to the account.
+   *
+   * Every named write passes through here, and only after the bytes are stored:
+   * a record the browser has not persisted may not enter a request, and a
+   * fragment, a SLEF document and a journal line never become one at all
+   * (020/FR-007, 020/FR-012, 020/FR-021).
+   *
+   * Nothing here waits on the network, and nothing here is queued while the
+   * browser is anonymous (020/FR-011).
+   */
+  #synchronised(result: NamedSaveResult & { kind: 'saved' }): NamedSaveResult {
+    void this.#sync.recordSaved(result.record.id);
+    return result;
   }
 }

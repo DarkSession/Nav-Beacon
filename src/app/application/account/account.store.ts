@@ -31,9 +31,22 @@ export class AccountStore {
   readonly #state = signal<AccountState>({ kind: 'loading' });
   readonly #open = signal(false);
   readonly #antiForgeryToken = signal<string | null>(null);
+  readonly #signedOut = signal(0);
 
   readonly state = this.#state.asReadonly();
   readonly open = this.#open.asReadonly();
+
+  /**
+   * Rises once each time an account leaves this browser deliberately.
+   *
+   * Sign-out and account deletion both raise it; an expired session and an
+   * unreachable service do not, because neither is a Commander saying the
+   * account is done with here. Read rather than called, because what has to
+   * happen next is the record synchronisation store forgetting what this page
+   * was saying about the account — and this store may not reach for that store,
+   * which already reads this one (020/FR-003).
+   */
+  readonly signedOutRevision = this.#signedOut.asReadonly();
 
   /**
    * What an authenticated request needs, or `null` where there is no session.
@@ -114,6 +127,7 @@ export class AccountStore {
     // stay, and remain usable without an account (020/FR-003).
     this.#local.clearSession();
     this.#state.set({ kind: 'anonymous' });
+    this.#signedOut.update((revision) => revision + 1);
   }
 
   requestDeletion(): void {
@@ -165,6 +179,7 @@ export class AccountStore {
     // the server decides, not this browser.
     await this.#api.deleteAccount(token).catch(() => false);
     this.#state.set({ kind: 'anonymous' });
+    this.#signedOut.update((revision) => revision + 1);
   }
 
   markAuthorisationExpired(): void {

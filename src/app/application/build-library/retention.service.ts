@@ -91,6 +91,13 @@ export class RetentionService {
    * An unreadable record is never removed here. Its instant cannot be read, so
    * its age is a guess, and a guess is not something to delete a Commander's
    * work on: it stays listed, exactly as it stays listed everywhere else.
+   *
+   * Nothing is sent. A local sweep removes this browser's copy and never the
+   * account's: the service runs the remote period from its own receipt time and
+   * expires a remote autosave only after that period and the protection
+   * deadline have both passed. A browser whose clock is days fast would
+   * otherwise delete, from every one of a Commander's devices, a record none of
+   * them had finished with (020/FR-025).
    */
   sweep(): void {
     const listed = this.#records.list();

@@ -277,6 +277,20 @@ export class RecordSynchronisationStore {
     await this.#triggered(() => {});
   }
 
+  /**
+   * A live page resuming its own autosave, for a caller holding no session.
+   *
+   * The credential-free form of `resume`, for the autosave itself: it holds a
+   * record and knows nothing about accounts, and an anonymous page resuming
+   * simply writes again (020/FR-010).
+   */
+  async resumeRecord(recordId: string): Promise<ConflictResolution> {
+    const credentials = this.#account.credentials();
+    return credentials === null
+      ? { kind: 'unknown' }
+      : this.resume(recordId, credentials);
+  }
+
   async #triggered(change: (customerId: string) => void): Promise<void> {
     const credentials = this.#account.credentials();
     if (credentials === null) {
