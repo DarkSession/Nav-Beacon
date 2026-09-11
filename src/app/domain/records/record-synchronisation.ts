@@ -158,7 +158,10 @@ export function changeBody(change: RecordChange): Record<string, unknown> {
  * skip the part it could not read (020/FR-012, 020/FR-026).
  */
 export function parseAcceptedResponse(value: unknown): SynchronisationResponse {
-  if (!isObject(value) || !hasExactKeys(value, ['accountRevision', 'results', 'records', 'tombstones'])) {
+  if (
+    !isObject(value) ||
+    !hasExactKeys(value, ['accountRevision', 'results', 'records', 'tombstones'])
+  ) {
     return { kind: 'unavailable' };
   }
   const accountRevision = value['accountRevision'];

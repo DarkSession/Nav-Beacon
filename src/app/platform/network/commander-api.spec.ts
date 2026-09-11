@@ -308,7 +308,12 @@ describe('the Commander API client', () => {
   describe('state-changing requests', () => {
     it.each([
       ['signs out', (api: CommanderApi) => api.signOut('token-1'), 'api/session/sign-out', 'POST'],
-      ['deletes the account', (api: CommanderApi) => api.deleteAccount('token-1'), 'api/account', 'DELETE'],
+      [
+        'deletes the account',
+        (api: CommanderApi) => api.deleteAccount('token-1'),
+        'api/account',
+        'DELETE',
+      ],
     ])('%s with the anti-forgery header', async (_case, call, path, method) => {
       const { api, view } = client(ROOT);
       view.answers = [json({})];
@@ -337,9 +342,7 @@ describe('the Commander API client', () => {
   describe('exchanging record changes', () => {
     it('sends the cursor, the changes and the anti-forgery header', async () => {
       const { api, view } = client(SUB_PATH);
-      view.answers = [
-        json({ accountRevision: 4, results: [], records: [], tombstones: [] }),
-      ];
+      view.answers = [json({ accountRevision: 4, results: [], records: [], tombstones: [] })];
       const record = toRemoteRecord(namedRecord());
 
       await api.synchroniseRecords(
@@ -383,10 +386,7 @@ describe('the Commander API client', () => {
         }),
       ];
 
-      const response = await api.synchroniseRecords(
-        { sinceRevision: 12, changes: [] },
-        'token-1',
-      );
+      const response = await api.synchroniseRecords({ sinceRevision: 12, changes: [] }, 'token-1');
 
       expect(response).toMatchObject({
         kind: 'accepted',
@@ -409,7 +409,9 @@ describe('the Commander API client', () => {
             status: 409,
             code: 'conflict',
             accountRevision: 12,
-            results: [{ index: 0, outcome: 'conflict', id: FIXTURE_IDS.named, revision: 9, record: null }],
+            results: [
+              { index: 0, outcome: 'conflict', id: FIXTURE_IDS.named, revision: 9, record: null },
+            ],
           },
           409,
         ),

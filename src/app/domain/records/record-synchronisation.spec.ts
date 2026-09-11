@@ -38,9 +38,7 @@ describe('the record synchronisation contract', () => {
     });
 
     it('omits a base revision a first upload does not have', () => {
-      expect(
-        changeBody({ type: 'write', record: RECORD() as never, baseRevision: null }),
-      ).toEqual({
+      expect(changeBody({ type: 'write', record: RECORD() as never, baseRevision: null })).toEqual({
         type: 'write',
         record: RECORD(),
       });
@@ -127,10 +125,16 @@ describe('the record synchronisation contract', () => {
       ],
       ['a result that is not an object', ACCEPTED({ results: ['applied'] })],
       ['a stream that is not a list', ACCEPTED({ records: {} })],
-      ['a stream entry with an unknown field', ACCEPTED({ records: [{ revision: 1, record: {}, extra: 1 }] })],
+      [
+        'a stream entry with an unknown field',
+        ACCEPTED({ records: [{ revision: 1, record: {}, extra: 1 }] }),
+      ],
       ['a stream entry with no revision', ACCEPTED({ records: [{ revision: null, record: {} }] })],
       ['tombstones that are not a list', ACCEPTED({ tombstones: {} })],
-      ['a tombstone with an unknown field', ACCEPTED({ tombstones: [{ id: FIXTURE_IDS.named, revision: 1, extra: 1 }] })],
+      [
+        'a tombstone with an unknown field',
+        ACCEPTED({ tombstones: [{ id: FIXTURE_IDS.named, revision: 1, extra: 1 }] }),
+      ],
     ])('refuses the whole response for %s', (_case, body) => {
       expect(parseAcceptedResponse(body)).toEqual({ kind: 'unavailable' });
     });
@@ -163,7 +167,9 @@ describe('the record synchronisation contract', () => {
     it('reads a deletion conflict as the account holding a marker', () => {
       const refusal = parseRefusal(409, {
         code: 'conflict',
-        results: [{ index: 0, outcome: 'conflict', id: FIXTURE_IDS.named, revision: 9, record: null }],
+        results: [
+          { index: 0, outcome: 'conflict', id: FIXTURE_IDS.named, revision: 9, record: null },
+        ],
       });
 
       expect(refusal).toMatchObject({ results: [{ remote: { kind: 'deleted' } }] });

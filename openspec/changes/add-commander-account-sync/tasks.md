@@ -97,17 +97,17 @@
 
 ## 5. Angular record synchronisation
 
-- [ ] 5.1 Add a typed, base-relative account and record API client with no new client-generation
+- [x] 5.1 Add a typed, base-relative account and record API client with no new client-generation
       dependency; verify unit tests resolve requests correctly at root and sub-path base addresses.
 - [x] 5.2 Extend browser persistence with remote revisions, account cursors and pending operations
       plus unbound, Customer-bound and local-only record states while keeping device claims and notes
       local; verify migration tests preserve every supported record and never serialise a note into a
       request.
-- [ ] 5.3 Implement first-sign-in merge and later synchronisation triggers in framework-agnostic
+- [x] 5.3 Implement first-sign-in merge and later synchronisation triggers in framework-agnostic
       stores; verify tests cover local-only, remote-only, same-name, same-identity equal and divergent,
       offline, lost committed responses and interrupted local commits without silent loss or duplicate
       revisions.
-- [ ] 5.4 Implement shared overwrite, keep-both and cancel handling for stale writes and remote
+- [x] 5.4 Implement shared overwrite, keep-both and cancel handling for stale writes and remote
       deletion conflicts; verify overwrite supersedes the marker under the old identity, keep-both
       retains it and mints an identity, and cancel retains it while marking the local copy local-only and
       clearing the pending operation; verify an unchanged active record survives remote deletion,

@@ -36,10 +36,7 @@ export type RemoteAdoption =
  * its ident and then to the hull the build names, so a record written by
  * another version is still listed under something a Commander can read.
  */
-export function adoptRemoteRecord(
-  record: RemoteRecord,
-  context: AdoptionContext,
-): RemoteAdoption {
+export function adoptRemoteRecord(record: RemoteRecord, context: AdoptionContext): RemoteAdoption {
   const envelope = {
     id: record.id,
     kind: record.kind,

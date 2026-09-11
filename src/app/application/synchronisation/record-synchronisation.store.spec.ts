@@ -222,8 +222,22 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 12,
           results: [
-            { index: 0, outcome: 'applied', id: FIXTURE_IDS.named, revision: 11, remote: null, code: null },
-            { index: 1, outcome: 'applied', id: FIXTURE_IDS.loadout, revision: 12, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 11,
+              remote: null,
+              code: null,
+            },
+            {
+              index: 1,
+              outcome: 'applied',
+              id: FIXTURE_IDS.loadout,
+              revision: 12,
+              remote: null,
+              code: null,
+            },
           ],
           records: [{ revision: 10, record: renamed(REMOTE_ONLY_ID, 'From another device') }],
         }),
@@ -247,7 +261,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 6,
           results: [
-            { index: 0, outcome: 'applied', id: FIXTURE_IDS.named, revision: 6, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 6,
+              remote: null,
+              code: null,
+            },
           ],
           records: [{ revision: 5, record: renamed(REMOTE_ONLY_ID, 'Anaconda explorer') }],
         }),
@@ -267,7 +288,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 9,
           results: [
-            { index: 0, outcome: 'unchanged', id: FIXTURE_IDS.named, revision: 7, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'unchanged',
+              id: FIXTURE_IDS.named,
+              revision: 7,
+              remote: null,
+              code: null,
+            },
           ],
           records: [{ revision: 7, record: remoteOf(NAMED_RECORD_V1, FIXTURE_IDS.named) }],
         }),
@@ -293,9 +321,7 @@ describe('the record synchronisation store', () => {
 
       await store.mergeFirstSignIn(CREDENTIALS);
 
-      expect(lastRequest().changes).toEqual([
-        expect.objectContaining({ type: 'write' }),
-      ]);
+      expect(lastRequest().changes).toEqual([expect.objectContaining({ type: 'write' })]);
       expect(lastRequest().changes[0]).toMatchObject({
         record: expect.objectContaining({ id: FIXTURE_IDS.loadout }),
       });
@@ -430,8 +456,22 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 2,
           results: [
-            { index: 4, outcome: 'applied', id: FIXTURE_IDS.named, revision: 2, remote: null, code: null },
-            { index: 0, outcome: 'not-applied', id: null, revision: null, remote: null, code: null },
+            {
+              index: 4,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 2,
+              remote: null,
+              code: null,
+            },
+            {
+              index: 0,
+              outcome: 'not-applied',
+              id: null,
+              revision: null,
+              remote: null,
+              code: null,
+            },
           ],
         }),
       );
@@ -527,7 +567,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 5,
           results: [
-            { index: 0, outcome: 'unchanged', id: FIXTURE_IDS.named, revision: 5, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'unchanged',
+              id: FIXTURE_IDS.named,
+              revision: 5,
+              remote: null,
+              code: null,
+            },
           ],
           records: [{ revision: 5, record: remoteOf(NAMED_RECORD_V1, FIXTURE_IDS.named) }],
         }),
@@ -574,7 +621,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 5,
           results: [
-            { index: 0, outcome: 'applied', id: FIXTURE_IDS.named, revision: 5, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 5,
+              remote: null,
+              code: null,
+            },
           ],
         }),
       );
@@ -593,7 +647,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 5,
           results: [
-            { index: 0, outcome: 'unchanged', id: FIXTURE_IDS.named, revision: 5, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'unchanged',
+              id: FIXTURE_IDS.named,
+              revision: 5,
+              remote: null,
+              code: null,
+            },
           ],
         }),
       );
@@ -676,7 +737,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 10,
           results: [
-            { index: 0, outcome: 'applied', id: FIXTURE_IDS.named, revision: 10, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 10,
+              remote: null,
+              code: null,
+            },
           ],
         }),
       );
@@ -749,9 +817,9 @@ describe('the record synchronisation store', () => {
     });
 
     it('answers nothing for an identity with no conflict standing', async () => {
-      await expect(
-        store.resolve(FIXTURE_IDS.working, 'overwrite', CREDENTIALS),
-      ).resolves.toEqual({ kind: 'unknown' });
+      await expect(store.resolve(FIXTURE_IDS.working, 'overwrite', CREDENTIALS)).resolves.toEqual({
+        kind: 'unknown',
+      });
     });
 
     it('states a conflict whose remote version this browser cannot read', async () => {
@@ -884,7 +952,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 9,
           results: [
-            { index: 0, outcome: 'applied', id: FIXTURE_IDS.named, revision: 9, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 9,
+              remote: null,
+              code: null,
+            },
           ],
         }),
       );
@@ -960,9 +1035,7 @@ describe('the record synchronisation store', () => {
       expect(lastRequest().changes).toEqual([
         expect.objectContaining({ type: 'write', baseRevision: null }),
       ]);
-      expect(
-        lastRequest().changes.every((change) => change.type !== 'delete'),
-      ).toBe(true);
+      expect(lastRequest().changes.every((change) => change.type !== 'delete')).toBe(true);
     });
 
     it('cancels by leaving the marker and making the local copy local-only', async () => {
@@ -995,7 +1068,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 5,
           results: [
-            { index: 0, outcome: 'applied', id: FIXTURE_IDS.named, revision: 5, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 5,
+              remote: null,
+              code: null,
+            },
           ],
           tombstones: [{ id: FIXTURE_IDS.named, revision: 5 }],
         }),
@@ -1044,7 +1124,14 @@ describe('the record synchronisation store', () => {
         code: 'cross-account-record',
         accountRevision: 2,
         results: [
-          { index: 0, outcome: 'refused', id: FIXTURE_IDS.named, revision: null, remote: null, code: 'cross-account-record' },
+          {
+            index: 0,
+            outcome: 'refused',
+            id: FIXTURE_IDS.named,
+            revision: null,
+            remote: null,
+            code: 'cross-account-record',
+          },
         ],
       });
 
@@ -1066,7 +1153,14 @@ describe('the record synchronisation store', () => {
         code: 'record-too-large',
         accountRevision: null,
         results: [
-          { index: 0, outcome: 'refused', id: FIXTURE_IDS.named, revision: null, remote: null, code: 'record-too-large' },
+          {
+            index: 0,
+            outcome: 'refused',
+            id: FIXTURE_IDS.named,
+            revision: null,
+            remote: null,
+            code: 'record-too-large',
+          },
         ],
       });
 
@@ -1087,7 +1181,14 @@ describe('the record synchronisation store', () => {
         code: 'invalid-record',
         accountRevision: null,
         results: [
-          { index: 0, outcome: 'refused', id: FIXTURE_IDS.named, revision: null, remote: null, code: 'invalid-record' },
+          {
+            index: 0,
+            outcome: 'refused',
+            id: FIXTURE_IDS.named,
+            revision: null,
+            remote: null,
+            code: 'invalid-record',
+          },
         ],
       });
 
@@ -1096,7 +1197,9 @@ describe('the record synchronisation store', () => {
       api.answers.push(accepted());
       await store.synchronise(CREDENTIALS);
 
-      expect(store.status()).toMatchObject({ failure: { reason: 'refused', code: 'invalid-record' } });
+      expect(store.status()).toMatchObject({
+        failure: { reason: 'refused', code: 'invalid-record' },
+      });
       expect(lastRequest().changes).toHaveLength(0);
       expect(commanderState().pendingOperations).toHaveLength(1);
     });
@@ -1117,7 +1220,14 @@ describe('the record synchronisation store', () => {
         accepted({
           accountRevision: 2,
           results: [
-            { index: 0, outcome: 'unchanged', id: FIXTURE_IDS.working, revision: 2, remote: null, code: null },
+            {
+              index: 0,
+              outcome: 'unchanged',
+              id: FIXTURE_IDS.working,
+              revision: 2,
+              remote: null,
+              code: null,
+            },
           ],
         }),
       );
@@ -1148,6 +1258,60 @@ describe('the record synchronisation store', () => {
       store.queueUpload(FIXTURE_IDS.working, CREDENTIALS.customerId);
 
       expect(commanderState().pendingOperations).toHaveLength(0);
+    });
+  });
+
+  describe('the triggers a record path calls', () => {
+    beforeEach(async () => {
+      // Signed in first, with nothing to merge, so each trigger is the only
+      // thing the exchange after it carries.
+      api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+      await TestBed.inject(AccountStore).refreshSession();
+      TestBed.tick();
+      await Promise.resolve();
+      await Promise.resolve();
+      seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      api.requests.length = 0;
+    });
+
+    it('sends a saved record', async () => {
+      await store.recordSaved(FIXTURE_IDS.named);
+
+      expect(lastRequest().changes).toEqual([expect.objectContaining({ type: 'write' })]);
+    });
+
+    it('sends a deleted record', async () => {
+      await store.recordDeleted(FIXTURE_IDS.named);
+
+      expect(lastRequest().changes).toEqual([
+        { type: 'delete', id: FIXTURE_IDS.named, baseRevision: null },
+      ]);
+    });
+
+    it('renews a live page’s record', async () => {
+      await store.recordLive(FIXTURE_IDS.named);
+
+      expect(lastRequest().changes).toEqual([{ type: 'renew', id: FIXTURE_IDS.named }]);
+    });
+
+    it('pulls on an explicit retry', async () => {
+      await store.refresh();
+
+      expect(lastRequest().changes).toHaveLength(0);
+    });
+  });
+
+  describe('while the browser is anonymous', () => {
+    it('queues nothing and asks for nothing', async () => {
+      seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+
+      await store.recordSaved(FIXTURE_IDS.named);
+      await store.recordDeleted(FIXTURE_IDS.named);
+      await store.recordLive(FIXTURE_IDS.named);
+      await store.refresh();
+
+      expect(api.requests).toHaveLength(0);
+      expect(storage.entries.has(EDNB_COMMANDER_STATE_KEY)).toBe(false);
     });
   });
 

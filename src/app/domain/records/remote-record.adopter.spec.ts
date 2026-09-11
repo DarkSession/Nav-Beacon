@@ -150,6 +150,8 @@ describe('one record under a second identity', () => {
   });
 
   it('cannot copy a loadout the package no longer carries', () => {
-    expect(copyLocalRecord(local(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit), identity)).toBeNull();
+    expect(
+      copyLocalRecord(local(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit), identity),
+    ).toBeNull();
   });
 });

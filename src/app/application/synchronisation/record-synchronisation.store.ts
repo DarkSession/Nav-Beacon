@@ -246,6 +246,46 @@ export class RecordSynchronisationStore {
     this.#queue(recordId, customerId, 'renew');
   }
 
+  /**
+   * The triggers, for callers that hold a record rather than a session.
+   *
+   * Each is a local change followed by one exchange, and each does nothing at
+   * all while the browser is anonymous: an anonymous tool needs no account and
+   * queues nothing (constitution I, 020/FR-007).
+   */
+  async recordSaved(recordId: string): Promise<void> {
+    await this.#triggered((customerId) => {
+      this.queueUpload(recordId, customerId);
+    });
+  }
+
+  async recordDeleted(recordId: string): Promise<void> {
+    await this.#triggered((customerId) => {
+      this.queueDelete(recordId, customerId);
+    });
+  }
+
+  /** One live page's record, kept protected while the service is reachable. */
+  async recordLive(recordId: string): Promise<void> {
+    await this.#triggered((customerId) => {
+      this.renewProtection(recordId, customerId);
+    });
+  }
+
+  /** A record library opening, or an explicit retry by the Commander. */
+  async refresh(): Promise<void> {
+    await this.#triggered(() => {});
+  }
+
+  async #triggered(change: (customerId: string) => void): Promise<void> {
+    const credentials = this.#account.credentials();
+    if (credentials === null) {
+      return;
+    }
+    change(credentials.customerId);
+    await this.synchronise(credentials);
+  }
+
   /** Exchanges what this browser owes, and takes what the account has. */
   async synchronise(credentials: AccountCredentials): Promise<void> {
     if (this.#running !== null) {
@@ -338,7 +378,12 @@ export class RecordSynchronisationStore {
       removed.push(conflict.recordId);
     }
 
-    this.#commitLocal(conflict.customerId, accepted, removed, this.#operationsFor(conflict.recordId));
+    this.#commitLocal(
+      conflict.customerId,
+      accepted,
+      removed,
+      this.#operationsFor(conflict.recordId),
+    );
     this.#release(conflict.recordId);
     this.#queue(copyId, conflict.customerId, 'upload');
     await this.synchronise(credentials);
