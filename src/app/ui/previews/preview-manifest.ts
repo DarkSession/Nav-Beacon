@@ -259,6 +259,7 @@ import { DiagnosticList } from '../technical/diagnostic-list';
 import { InlineLink } from '../components/inline-link/inline-link';
 import { AccountDialog } from '../../features/account/account-dialog.component';
 import { SynchronisationPanel } from '../../features/build-library/synchronisation-panel.component';
+import { OwnedShipsPanel } from '../../features/build-library/owned-ships-panel.component';
 import { HelpDialog } from '../../features/help/help-dialog.component';
 import { SaveBuildDialog } from '../../features/build-workspace/save-build.dialog';
 import { HELP_MANIFEST } from '../../platform/build/help-manifest.generated';
@@ -5542,6 +5543,322 @@ registerPreview({
     notApplicable(
       'disabled',
       'The layer is open or closed. Its answers carry their own busy and disabled states; the layer has none.',
+    ),
+  ],
+});
+
+// ---------------------------------------------------------------------------
+// Feature 020 — the owned ships, inside the stored-build layer
+//
+// One panel, nine states. The five required manifest states cannot name nine
+// screen states between them, so the panel is declared three times — once for
+// what the fleet is, once for what journal coverage says about it, and once for
+// what the account or the installed game data has to answer first — and each
+// declaration names the screen state its fixture draws. The same reason the
+// account region beside it is declared three times.
+//
+// Every fixture reads its words from the bundled English catalogue, so a
+// reworded sentence reaches the catalogue page and the product together. The
+// package refusal is the exception, and deliberately so: its code, constraint
+// and path are the game data's own answer, and no catalogue owns them.
+// ---------------------------------------------------------------------------
+
+const PREVIEW_SHIP = 'Bright Anvil';
+const PREVIEW_HULL = 'Anaconda';
+const PREVIEW_DAY = '14 Aug 2026';
+
+/** One owned-ships view model, with the parts every state shares filled in. */
+function fleetView(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    state: 'current',
+    heading: BUNDLED_ENGLISH['fleet.title'],
+    status: { tone: 'success', message: BUNDLED_ENGLISH['fleet.status.current'] },
+    detail: null,
+    coverage: null,
+    listLabel: BUNDLED_ENGLISH['fleet.list.label'],
+    chosenLabel: BUNDLED_ENGLISH['fleet.list.chosen'],
+    ships: [
+      {
+        id: '12',
+        label: PREVIEW_SHIP,
+        detail: `${PREVIEW_HULL}, from the journal of ${PREVIEW_DAY}`,
+        selected: false,
+      },
+    ],
+    emptyLabel: null,
+    selectedLabel: null,
+    facts: [],
+    unresolved: [],
+    refusal: null,
+    refresh: BUNDLED_ENGLISH['fleet.refresh'],
+    refreshing: false,
+    signIn: null,
+    copy: null,
+    ...overrides,
+  };
+}
+
+/** The facts of the chosen ship, read off the build the package rebuilt. */
+const FLEET_FACTS = [
+  { id: 'hull', label: BUNDLED_ENGLISH['fleet.fact.hull'], value: PREVIEW_HULL, unit: '' },
+  { id: 'ident', label: BUNDLED_ENGLISH['fleet.fact.ident'], value: 'BA-01', unit: '' },
+  { id: 'source', label: BUNDLED_ENGLISH['fleet.fact.source'], value: PREVIEW_DAY, unit: '' },
+];
+
+/**
+ * The package's own refusal, as a catalogue page shows it.
+ *
+ * No message, which is what the pinned package publishes for every locale but
+ * English. The sentence beside it is this application's own statement of that
+ * absence; the code, constraint and path are the package's answer, unchanged.
+ */
+const FLEET_REFUSAL = {
+  heading: BUNDLED_ENGLISH['fleet.refusal.title'],
+  message: null,
+  absentMessage: BUNDLED_ENGLISH['fleet.refusal.no-message'],
+  facts: [
+    { id: 'code', label: BUNDLED_ENGLISH['fleet.refusal.code'], value: 'slot-unknown', unit: '' },
+    {
+      id: 'constraint',
+      label: BUNDLED_ENGLISH['fleet.refusal.constraint'],
+      value: 'slots',
+      unit: '',
+    },
+    {
+      id: 'path',
+      label: BUNDLED_ENGLISH['fleet.refusal.path'],
+      value: 'Modules[4].Slot',
+      unit: '',
+    },
+  ],
+};
+
+/** What every state of this region is held to, whichever declaration draws it. */
+const FLEET_EXPECTATIONS: readonly string[] = [
+  'what the fleet is, in a sentence, never a tone on its own',
+  'no meaning carried by colour: every notice says it in words',
+  'the same reading order at desktop, tablet and mobile width, in both orientations',
+  'every action clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+  'nothing here claims a refresh completed unless the service answered one',
+  'an owned ship is read-only: the only action on one takes a copy',
+];
+
+const FLEET_SEMANTICS = {
+  role: 'group',
+  visibleNameMatchesAccessibleName: true,
+  exposedStates: [],
+  relationships: ['label', 'description'],
+  textEquivalents: ['the state of the fleet, in a sentence rather than by tone'],
+} as const;
+
+registerPreview({
+  componentId: 'owned-ships',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships', FLEET_SEMANTICS, ['default', 'empty', 'loading', 'error']),
+  states: [
+    // Current, with a ship chosen and its facts beside it.
+    state(
+      'default',
+      {
+        view: fleetView({
+          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+          ships: [
+            {
+              id: '12',
+              label: PREVIEW_SHIP,
+              detail: `${PREVIEW_HULL}, from the journal of ${PREVIEW_DAY}`,
+              selected: true,
+            },
+          ],
+          selectedLabel: `About ${PREVIEW_SHIP}`,
+          facts: FLEET_FACTS,
+          copy: BUNDLED_ENGLISH['fleet.copy'],
+        }),
+      },
+      [...FLEET_EXPECTATIONS, 'names the chosen ship in visible text and offers the copy'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    // No confirmed ships.
+    state(
+      'empty',
+      {
+        view: fleetView({
+          state: 'empty',
+          status: { tone: 'info', message: BUNDLED_ENGLISH['fleet.status.empty'] },
+          ships: [],
+          emptyLabel: BUNDLED_ENGLISH['fleet.list.empty'],
+        }),
+      },
+      [...FLEET_EXPECTATIONS, 'states that no journal loadout event confirms a ship yet'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Loading.
+    state(
+      'loading',
+      {
+        view: fleetView({
+          state: 'loading',
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['fleet.status.loading'] },
+          ships: [],
+          emptyLabel: BUNDLED_ENGLISH['fleet.list.empty'],
+        }),
+      },
+      [...FLEET_EXPECTATIONS, 'states that the account is being read, and claims nothing yet'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Failed refresh.
+    state(
+      'error',
+      {
+        view: fleetView({
+          state: 'failed',
+          status: { tone: 'error', message: BUNDLED_ENGLISH['fleet.status.failed.frontier'] },
+          detail: BUNDLED_ENGLISH['fleet.detail.last-accepted'],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states why the refresh stopped and that the ships already accepted still stand',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its refresh carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'owned-ships-coverage',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships-coverage', FLEET_SEMANTICS, ['default', 'error']),
+  states: [
+    // Incomplete coverage, with a ship the installed package will not rebuild.
+    state(
+      'default',
+      {
+        view: fleetView({
+          state: 'incomplete',
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.incomplete'] },
+          detail: BUNDLED_ENGLISH['fleet.detail.pending'],
+          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+          unresolved: [
+            {
+              id: 'refused-19',
+              message:
+                'The installed game data cannot rebuild one ship: Unknown module symbol Int_Powerplant_Size9_Class6.',
+            },
+          ],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that journal history cannot confirm the whole fleet, and names what it read',
+        'lists a ship the installed game data will not rebuild rather than dropping it',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'empty',
+      'Incomplete coverage is a statement about a fleet that has ships in it. With none, the state is the empty one beside it.',
+    ),
+    notApplicable('loading', 'Coverage is what an answer carried. Nothing about it waits.'),
+    // Waiting for Frontier.
+    state(
+      'error',
+      {
+        view: fleetView({
+          state: 'waiting',
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.waiting'] },
+          detail: 'The next attempt is permitted from 14 Aug 2026, 09:41.',
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that Frontier holds the next refresh, and when another attempt is permitted',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its refresh carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'owned-ships-account',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships-account', FLEET_SEMANTICS, ['default', 'empty', 'error']),
+  states: [
+    // Expired Frontier authorisation.
+    state(
+      'default',
+      {
+        view: fleetView({
+          state: 'authorisation-expired',
+          status: {
+            tone: 'error',
+            message: BUNDLED_ENGLISH['fleet.status.authorisation-expired'],
+          },
+          detail: BUNDLED_ENGLISH['fleet.detail.last-accepted'],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that a fresh sign-in comes first, and that the ships already accepted stand',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Sign-in required.
+    state(
+      'empty',
+      {
+        view: fleetView({
+          state: 'sign-in-required',
+          status: { tone: 'info', message: BUNDLED_ENGLISH['fleet.status.sign-in-required'] },
+          ships: [],
+          refresh: null,
+          signIn: BUNDLED_ENGLISH['account.sign-in'],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that planning works without an account, and offers the sign-in',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'loading',
+      'What the account owes is known the moment it is asked. Nothing about it waits.',
+    ),
+    // A package identity the installed game data refused.
+    state(
+      'error',
+      {
+        view: fleetView({
+          state: 'package-refused',
+          status: { tone: 'error', message: BUNDLED_ENGLISH['fleet.status.package-refused'] },
+          detail: BUNDLED_ENGLISH['fleet.detail.last-accepted'],
+          refusal: FLEET_REFUSAL,
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'shows the installed game data own refusal unchanged: its code, its constraint and its path',
+        'states in this application own words that the game data gives no reason in this language',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its actions carry their own busy and disabled states; the region has none.',
     ),
   ],
 });

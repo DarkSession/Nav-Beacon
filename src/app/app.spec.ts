@@ -28,6 +28,7 @@ import {
   type CommanderApiPort,
   type CommanderSessionResult,
 } from './platform/network/commander-api';
+import type { FleetResponse } from './domain/commander/fleet/fleet-answer';
 import type { SynchronisationResponse } from './domain/records/record-synchronisation';
 import { EDNB_UPDATE_APPLIED_KEY } from './platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from './platform/storage/storage.spec-helpers';
@@ -47,6 +48,20 @@ class AbsentCommanderApi implements CommanderApiPort {
 
   async startSignIn(): Promise<boolean> {
     return false;
+  }
+
+  /**
+   * The fleet is not what these tests are about.
+   *
+   * Unavailable is the honest answer for a test with no origin to read from,
+   * and it is the one answer that lets the fleet store claim nothing.
+   */
+  async readFleet(): Promise<FleetResponse> {
+    return { kind: 'unavailable' };
+  }
+
+  async refreshFleet(): Promise<FleetResponse> {
+    return { kind: 'unavailable' };
   }
 
   async readSession(): Promise<CommanderSessionResult> {

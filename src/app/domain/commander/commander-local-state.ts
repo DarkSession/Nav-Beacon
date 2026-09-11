@@ -1,3 +1,5 @@
+import { parseFleetCache, withFleetCached, type CachedFleet } from './fleet/fleet-cache';
+
 export const COMMANDER_LOCAL_STATE_FORMAT = 'ednb.commander-state';
 
 /**
@@ -64,7 +66,8 @@ export interface CommanderLocalState {
   readonly format: typeof COMMANDER_LOCAL_STATE_FORMAT;
   readonly version: typeof COMMANDER_LOCAL_STATE_VERSION;
   readonly account: CachedCommanderAccount | null;
-  readonly fleetCache: readonly never[];
+  /** The last accepted owned fleet, per Customer ID, readable offline. */
+  readonly fleetCache: readonly CachedFleet[];
   /** The last accepted account revision, per Customer ID. */
   readonly accountCursors: Readonly<Record<string, number>>;
   readonly pendingOperations: readonly PendingRemoteOperation[];
@@ -121,10 +124,10 @@ export function parseCommanderLocalState(value: unknown): CommanderLocalState | 
   }
 
   const account = parseAccount(stored['account']);
-  const fleetCache = stored['fleetCache'];
-  if (account === undefined || !Array.isArray(fleetCache) || fleetCache.length > 0) {
+  if (account === undefined) {
     return null;
   }
+  const fleetCache = parseFleetCache(stored['fleetCache']);
 
   const accountCursors = readCursors(stored['accountCursors']);
   const pendingOperations = readOperations(stored['pendingOperations']);
@@ -141,7 +144,7 @@ export function parseCommanderLocalState(value: unknown): CommanderLocalState | 
     format: COMMANDER_LOCAL_STATE_FORMAT,
     version: COMMANDER_LOCAL_STATE_VERSION,
     account,
-    fleetCache: [],
+    fleetCache,
     accountCursors,
     pendingOperations,
     recordBindings,
@@ -152,6 +155,20 @@ export function parseCommanderLocalState(value: unknown): CommanderLocalState | 
 /** The account revision this browser last accepted for one Commander. */
 export function accountCursor(state: CommanderLocalState, customerId: string): number {
   return state.accountCursors[customerId] ?? 0;
+}
+
+/**
+ * Takes the fleet one settled answer stated, for one account.
+ *
+ * Nothing else in this value moves. A fleet is not a record: it binds nothing,
+ * queues nothing and carries no revision, so caching one cannot change which
+ * account a saved build belongs to (020/FR-022).
+ */
+export function withFleetAccepted(
+  state: CommanderLocalState,
+  fleet: CachedFleet,
+): CommanderLocalState {
+  return { ...state, fleetCache: withFleetCached(state.fleetCache, fleet) };
 }
 
 /** One record's binding, or `null` where the record is unbound. */

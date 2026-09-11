@@ -163,14 +163,14 @@
 - [x] 7.1 Map a validated owned-ship payload through the existing persistence domain services into
       `ShipLoadout`; verify package-backed tests cover complete models and reject unsupported or
       unresolvable identities without retaining a replacement value.
-- [ ] 7.2 Add a fleet store with browser caching and refresh status; verify an offline unit test can
+- [x] 7.2 Add a fleet store with browser caching and refresh status; verify an offline unit test can
       read the last accepted fleet and cannot claim that a network refresh completed.
-- [ ] 7.3 Add the owned-ships view to the Ship Builder stored-build layer with responsive, localised
+- [x] 7.3 Add the owned-ships view to the Ship Builder stored-build layer with responsive, localised
       design-system parts; verify tests cover every state in the screen inventory, package refusal
       feedback in each supported locale and an unchanged advertised route set at desktop, tablet and
       mobile widths in both orientations, with touch-sized actions and 200% text; add component previews
       for every state.
-- [ ] 7.4 Implement copy-to-builder with a fresh application record identity and no write back to the
+- [x] 7.4 Implement copy-to-builder with a fresh application record identity and no write back to the
       owned ship; verify an end-to-end test changes and deletes the copied plan while the fleet entry
       remains unchanged.
 - [ ] 7.5 Update the common help-route coverage record for the account dialog, account-deletion

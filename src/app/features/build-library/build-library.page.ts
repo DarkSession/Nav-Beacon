@@ -50,6 +50,10 @@ import { Layer } from '../../ui/components/layer/layer';
 import type { SavedBuild } from '../../ui/components/saved-build-card/saved-build-card';
 import { StatusNotice } from '../../ui/components/status/status-notice';
 import { SynchronisationPanel } from './synchronisation-panel.component';
+import { OwnedShipsPanel } from './owned-ships-panel.component';
+import { TabGroup, type TabItem } from '../../ui/components/tab-group/tab-group';
+import { FleetPresenter } from '../../application/fleet/fleet.presenter';
+import { FleetCopyService } from '../../application/fleet/fleet-copy.service';
 import { NAVIGATION_ROUTES } from '../shared/app-navigation';
 import type { ConflictChoice } from '../../domain/commander/record-conflict';
 
@@ -99,7 +103,9 @@ interface PendingDelete {
     RecordManager,
     ResponsiveRecordList,
     StatusNotice,
+    OwnedShipsPanel,
     SynchronisationPanel,
+    TabGroup,
     TextField,
   ],
   templateUrl: './build-library.page.html',
@@ -127,6 +133,8 @@ export class BuildLibraryPage {
   readonly #sync = inject(RecordSynchronisationStore);
   readonly #synchronisation = inject(RecordSynchronisationCoordinator);
   readonly #syncPresenter = inject(SynchronisationPresenter);
+  readonly #fleetPresenter = inject(FleetPresenter);
+  readonly #fleetCopy = inject(FleetCopyService);
 
   /**
    * Conflicts the Commander has waved away for this visit.
@@ -173,6 +181,32 @@ export class BuildLibraryPage {
   readonly deleteCancelLabel = this.#messages.messageSignal('library.delete.cancel');
   readonly searchLabel = this.#messages.messageSignal('library.search.label');
   readonly nothingChosen = this.#messages.messageSignal('library.chosen.none');
+  readonly viewsLabel = this.#messages.messageSignal('library.view.label');
+
+  /**
+   * Which of the layer's two views is showing.
+   *
+   * The stored builds are what this layer has always been, so they are what it
+   * opens on. The fleet is the other thing a Commander keeps ships in, and it
+   * is reached from here rather than from an address of its own: the layer has
+   * none, and the ships behind it are one account's, so an address would resolve
+   * to a different fleet for every Commander who opened it (design decision 10).
+   */
+  readonly #shownView = signal<'records' | 'ships'>('records');
+  readonly shownView = this.#shownView.asReadonly();
+
+  readonly views = computed<readonly TabItem[]>(() => [
+    { id: 'records', label: this.#messages.message('library.title') },
+    { id: 'ships', label: this.#messages.message('fleet.title') },
+  ]);
+
+  /** The chosen view said in words, so the choice is not a tint alone. */
+  readonly viewChosenLabel = computed(
+    () => this.views().find((view) => view.id === this.shownView())?.label ?? '',
+  );
+
+  /** Everything the owned-ships view draws. */
+  readonly fleetView = this.#fleetPresenter.view;
 
   readonly isEmpty = this.#library.isEmpty;
   readonly status = this.#library.status;
@@ -795,6 +829,56 @@ export class BuildLibraryPage {
 
   #hullName(symbol: string): string {
     return this.#gameText.shipName(symbol).text ?? symbol;
+  }
+
+  /** Shows the stored builds, or the ships the Commander owns. */
+  chooseView(id: string): void {
+    this.#failure.set(null);
+    this.#shownView.set(id === 'ships' ? 'ships' : 'records');
+  }
+
+  /** Chooses the owned ship the facts and the copy action are about. */
+  chooseShip(shipId: string): void {
+    const parsed = Number(shipId);
+    if (!Number.isInteger(parsed)) {
+      return;
+    }
+    this.#fleetPresenter.choose(parsed);
+  }
+
+  /** Asks the account's fleet service to read more journal. */
+  refreshFleet(): void {
+    void this.#fleetPresenter.refresh();
+  }
+
+  /** Opens the account panel, which is where a sign-in is asked for. */
+  signInForFleet(): void {
+    this.#fleetPresenter.signIn();
+  }
+
+  /**
+   * Takes a copy of the chosen owned ship into the builder.
+   *
+   * A copy, with a record identity of its own. The owned ship is read-only and
+   * nothing here writes to it: what the builder receives is a separate build a
+   * Commander may rename, edit and delete with the fleet entry untouched
+   * (020/FR-017).
+   */
+  async copyOwnedShip(): Promise<void> {
+    this.#failure.set(null);
+    const ship = this.#fleetPresenter.chosen();
+    if (ship === null) {
+      return;
+    }
+
+    const result = await this.#fleetCopy.copy(ship);
+    if (result.kind === 'failed') {
+      this.#failure.set(this.#messages.message('library.open.failed', { reason: result.reason }));
+      return;
+    }
+    if (result.kind === 'committed') {
+      await this.#leaveThrough(NAVIGATION_ROUTES.outfitting);
+    }
   }
 
   /**

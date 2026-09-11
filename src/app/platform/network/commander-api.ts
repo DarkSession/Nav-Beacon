@@ -1,6 +1,11 @@
 import { DOCUMENT } from '@angular/core';
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import {
+  parseFleetAnswer,
+  parseFleetRefusal,
+  type FleetResponse,
+} from '../../domain/commander/fleet/fleet-answer';
+import {
   parseAcceptedResponse,
   parseRefusal,
   synchronisationBody,
@@ -32,6 +37,8 @@ export interface CommanderApiPort {
     request: SynchronisationRequest,
     antiForgeryToken: string,
   ): Promise<SynchronisationResponse>;
+  readFleet(): Promise<FleetResponse>;
+  refreshFleet(antiForgeryToken: string, locale: string): Promise<FleetResponse>;
 }
 
 export const COMMANDER_API = new InjectionToken<CommanderApiPort>('COMMANDER_API', {
@@ -139,6 +146,63 @@ export class CommanderApi implements CommanderApiPort {
       return response.ok ? { kind: 'unavailable' } : parseRefusal(response.status, null);
     }
     return response.ok ? parseAcceptedResponse(body) : parseRefusal(response.status, body);
+  }
+
+  /**
+   * Reads the stored owned fleet.
+   *
+   * It asks Frontier for nothing and changes nothing, so it carries no
+   * anti-forgery token and never answers `waiting`, `failed` or
+   * `authorisation-expired`.
+   */
+  async readFleet(): Promise<FleetResponse> {
+    return this.#fleetRequest('api/fleet', { method: 'GET' });
+  }
+
+  /**
+   * Asks the service to read more journal and commit what it accepts.
+   *
+   * The locale travels in `Accept-Language` and is the one the application is
+   * committed to rather than the one the browser was started with, because the
+   * package diagnostic a refusal carries is asked for in the language the
+   * Commander is reading. The service asks the package for it and answers with
+   * what the package published, or with nothing; nothing here translates a
+   * diagnostic (020/FR-016).
+   */
+  async refreshFleet(antiForgeryToken: string, locale: string): Promise<FleetResponse> {
+    return this.#fleetRequest('api/fleet/refresh', {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': antiForgeryToken, 'Accept-Language': locale },
+    });
+  }
+
+  /**
+   * One fleet request, read before any caller can act on it.
+   *
+   * A request that does not arrive and an answer this browser cannot read are
+   * the same outcome: nothing was confirmed, so nothing may be claimed. The
+   * fleet this browser already accepted stays valid either way (020/FR-018,
+   * 020/FR-022).
+   */
+  async #fleetRequest(path: string, init: RequestInit): Promise<FleetResponse> {
+    let response: Response;
+    try {
+      response = await this.#fetch(path, init);
+    } catch {
+      return { kind: 'unavailable' };
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return response.ok ? { kind: 'unavailable' } : parseFleetRefusal(response.status, null);
+    }
+    if (!response.ok) {
+      return parseFleetRefusal(response.status, body);
+    }
+    const answer = parseFleetAnswer(body);
+    return answer === null ? { kind: 'unavailable' } : { kind: 'answered', answer };
   }
 
   async #stateChangingRequest(

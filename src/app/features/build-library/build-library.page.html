@@ -35,18 +35,51 @@
     }
 
     <!--
-      Where these records stand with the Commander's account, and the one
-      question only they can answer. Drawn above the list, because it is true of
-      every row beneath it (020/FR-011, design decision 10).
+      Which of the two things this layer holds is showing: the builds stored in
+      this browser, or the ships the Commander owns. A segmented control rather
+      than tabs, because each view is the layer's whole body and there is no
+      panel for a tab strip to own. It adds no address: both views live at the
+      screen's own, which is the address this layer has always kept (design
+      decision 10).
     -->
-    <ednb-synchronisation-panel
-      [view]="syncView()"
-      (retryRequested)="retrySynchronisation()"
-      (answered)="answerConflict($event)"
-      (conflictDismissed)="dismissConflict()"
+    <ednb-tab-group
+      class="library__views"
+      [label]="viewsLabel()"
+      [labelVisible]="true"
+      [tabs]="views()"
+      [selectedId]="shownView()"
+      [selectedLabel]="viewChosenLabel()"
+      presentation="segmented"
+      (selected)="chooseView($event)"
     />
 
-    <!--
+    @if (shownView() === 'ships') {
+      <!--
+        The ships the Commander owns, read from the account rather than from
+        this browser. Read-only: the copy action asks for a saved build of its
+        own and nothing here writes to a fleet entry (020/FR-017).
+      -->
+      <ednb-owned-ships-panel
+        [view]="fleetView()"
+        (shipChosen)="chooseShip($event)"
+        (refreshRequested)="refreshFleet()"
+        (signInRequested)="signInForFleet()"
+        (copyRequested)="copyOwnedShip()"
+      />
+    } @else {
+      <!--
+        Where these records stand with the Commander's account, and the one
+        question only they can answer. Drawn above the list, because it is true of
+        every row beneath it (020/FR-011, design decision 10).
+      -->
+      <ednb-synchronisation-panel
+        [view]="syncView()"
+        (retryRequested)="retrySynchronisation()"
+        (answered)="answerConflict($event)"
+        (conflictDismissed)="dismissConflict()"
+      />
+
+      <!--
       The header row: one search field over the records, and the count in
       monospace beside it on the same line, where the reference puts them.
 
@@ -55,46 +88,47 @@
       control and read aloud — a placeholder disappears as soon as somebody
       types, so it cannot be the only name the field has.
     -->
-    <div class="library__header">
-      <ednb-text-field
-        class="library__search"
-        [label]="searchLabel()"
-        [labelHidden]="true"
-        [placeholder]="searchLabel()"
-        [value]="search()"
-        kind="search"
-        (changed)="changeSearch($event)"
-      />
-      <p class="library__count">{{ countText() }}</p>
-    </div>
-
-    @if (isEmpty()) {
-      <div class="library__empty">
-        <h2>{{ emptyTitle() }}</h2>
-        <p>{{ emptyDescription() }}</p>
+      <div class="library__header">
+        <ednb-text-field
+          class="library__search"
+          [label]="searchLabel()"
+          [labelHidden]="true"
+          [placeholder]="searchLabel()"
+          [value]="search()"
+          kind="search"
+          (changed)="changeSearch($event)"
+        />
+        <p class="library__count">{{ countText() }}</p>
       </div>
-    } @else {
-      <ednb-responsive-record-list
-        [label]="listLabel()"
-        [columns]="columns()"
-        [builds]="builds()"
-        [chosen]="chosen()"
-        [unavailable]="unavailable()"
-        [unavailableLabel]="unavailableLabel()"
-        [noMatch]="noMatch() ? noMatchText() : null"
-        (chose)="chooseRecord($event)"
-      />
-    }
 
-    @if (manageReason(); as reason) {
-      <ednb-record-manager
-        class="library__manager"
-        [records]="manageableRecords()"
-        [selected]="selectedForDiscard()"
-        [reason]="reason"
-        (selectionChanged)="changeDiscardSelection($event)"
-        (discardRequested)="discardSelected($event)"
-      />
+      @if (isEmpty()) {
+        <div class="library__empty">
+          <h2>{{ emptyTitle() }}</h2>
+          <p>{{ emptyDescription() }}</p>
+        </div>
+      } @else {
+        <ednb-responsive-record-list
+          [label]="listLabel()"
+          [columns]="columns()"
+          [builds]="builds()"
+          [chosen]="chosen()"
+          [unavailable]="unavailable()"
+          [unavailableLabel]="unavailableLabel()"
+          [noMatch]="noMatch() ? noMatchText() : null"
+          (chose)="chooseRecord($event)"
+        />
+      }
+
+      @if (manageReason(); as reason) {
+        <ednb-record-manager
+          class="library__manager"
+          [records]="manageableRecords()"
+          [selected]="selectedForDiscard()"
+          [reason]="reason"
+          (selectionChanged)="changeDiscardSelection($event)"
+          (discardRequested)="discardSelected($event)"
+        />
+      }
     }
   </section>
 
@@ -102,21 +136,27 @@
        warm on the leading edge, the opening action filled amber on the
        trailing edge, pinned where the surface is compact. Two actions, which is
        what the canvas draws — naming, renaming and saving a copy are the
-       workspace's own SAVE since 2026-08-27 (FR-009). -->
-  <div class="library__footer">
-    @if (chosenActions().length === 0) {
-      <p class="library__footer-hint">{{ nothingChosen() }}</p>
-    } @else {
-      @for (action of chosenActions(); track action.id) {
-        <ednb-action-button
-          class="library__footer-action library__footer-action--{{ action.id }}"
-          [label]="action.label"
-          [emphasis]="action.emphasis"
-          (activated)="commit(action.id)"
-        />
+       workspace's own SAVE since 2026-08-27 (FR-009).
+
+       It commits on a stored record, so it belongs to that view. An owned ship
+       is not deleted and not opened — it is copied — and the fleet view carries
+       that action itself (020/FR-017). -->
+  @if (shownView() === 'records') {
+    <div class="library__footer">
+      @if (chosenActions().length === 0) {
+        <p class="library__footer-hint">{{ nothingChosen() }}</p>
+      } @else {
+        @for (action of chosenActions(); track action.id) {
+          <ednb-action-button
+            class="library__footer-action library__footer-action--{{ action.id }}"
+            [label]="action.label"
+            [emphasis]="action.emphasis"
+            (activated)="commit(action.id)"
+          />
+        }
       }
-    }
-  </div>
+    </div>
+  }
 </ednb-layer>
 
 <ednb-confirm-dialog

@@ -1,0 +1,106 @@
+<section class="fleet" [attr.aria-labelledby]="headingId">
+  <h3 class="fleet__heading" [id]="headingId">{{ view().heading }}</h3>
+
+  <!--
+    What the fleet is, in a sentence. Nothing here says the fleet is current
+    until the service has confirmed it, and every other state says that the
+    ships already accepted are still there (020/FR-018, 020/FR-022).
+  -->
+  <ednb-status-notice
+    class="fleet__status"
+    [tone]="view().status.tone"
+    [message]="view().status.message"
+    [detail]="view().detail"
+  />
+
+  <!--
+    Which journal history the fleet was read from. A fleet that history cannot
+    confirm is stated as incomplete rather than as complete, and the interval
+    is what makes that checkable (020/FR-016).
+  -->
+  @if (view().coverage; as coverage) {
+    <p class="fleet__coverage">{{ coverage }}</p>
+  }
+
+  <!--
+    A ship the installed game data will not rebuild. It is stated with the
+    package's own reason and nothing is put in its place (020/FR-016).
+  -->
+  @for (entry of view().unresolved; track entry.id) {
+    <ednb-status-notice
+      class="fleet__unresolved"
+      [attr.data-fleet-unresolved]="entry.id"
+      tone="warning"
+      [message]="entry.message"
+    />
+  }
+
+  <!--
+    What the package refused, as the package answered it.
+
+    The message is the package's own where it published one. Where it published
+    none — which its API documents for every locale but English — this
+    application states that absence in its own words and shows the structured
+    refusal unchanged. It never writes the reason itself (020/FR-016).
+  -->
+  @if (view().refusal; as refusal) {
+    <section class="fleet__refusal" [attr.aria-labelledby]="refusalId">
+      <h4 class="fleet__refusal-heading" [id]="refusalId">{{ refusal.heading }}</h4>
+      @if (refusal.message) {
+        <p class="fleet__refusal-message">{{ refusal.message }}</p>
+      }
+      @if (refusal.absentMessage) {
+        <p class="fleet__refusal-message">{{ refusal.absentMessage }}</p>
+      }
+      <ednb-fact-list [label]="refusal.heading" [facts]="refusal.facts" />
+    </section>
+  }
+
+  @if (view().state !== 'sign-in-required') {
+    <ednb-collection
+      class="fleet__ships"
+      [label]="view().listLabel"
+      [items]="items()"
+      [selectedLabel]="view().chosenLabel"
+      [emptyLabel]="view().emptyLabel"
+      (activated)="shipChosen.emit($event)"
+    />
+  }
+
+  <!--
+    The facts of the chosen ship, read off the build the package rebuilt. No
+    figure here is worked out by this application (020/FR-016).
+  -->
+  @if (view().selectedLabel; as label) {
+    <h4 class="fleet__facts-heading">{{ label }}</h4>
+    <ednb-fact-list class="fleet__facts" [label]="label" [facts]="view().facts" />
+  }
+
+  <div class="fleet__actions">
+    @if (view().signIn; as signIn) {
+      <ednb-action-button
+        class="fleet__action fleet__action--sign-in"
+        [label]="signIn"
+        emphasis="primary"
+        (activated)="signInRequested.emit()"
+      />
+    }
+    @if (view().refresh; as refresh) {
+      <ednb-action-button
+        class="fleet__action fleet__action--refresh"
+        [label]="refresh"
+        emphasis="secondary"
+        [busy]="view().refreshing"
+        (activated)="refreshRequested.emit()"
+      />
+    }
+    @if (view().copy; as copy) {
+      <ednb-action-button
+        class="fleet__action fleet__action--copy"
+        [label]="copy"
+        emphasis="primary"
+        (activated)="copyRequested.emit()"
+      />
+    }
+  </div>
+</section>

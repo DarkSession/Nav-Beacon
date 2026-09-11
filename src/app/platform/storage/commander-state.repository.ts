@@ -6,12 +6,14 @@ import {
   withRecordBound,
   withRecordForgotten,
   withRecordLocalOnly,
+  withFleetAccepted,
   withSynchronisationCommitted,
   type CachedCommanderAccount,
   type CommanderLocalState,
   type PendingRemoteOperation,
   type SynchronisationCommit,
 } from '../../domain/commander/commander-local-state';
+import { cachedFleetFor, type CachedFleet } from '../../domain/commander/fleet/fleet-cache';
 import { EDNB_COMMANDER_STATE_KEY } from './storage-keys';
 import { LOCAL_STORAGE_PORT, type StorageFailureCode } from './web-storage.port';
 
@@ -69,6 +71,22 @@ export class CommanderStateRepository {
       ),
       recordRevisions: {},
     });
+  }
+
+  /** The last accepted fleet for one Commander, readable with no network. */
+  readFleet(customerId: string): CachedFleet | null {
+    return cachedFleetFor(this.read().fleetCache, customerId);
+  }
+
+  /**
+   * Takes one settled fleet answer.
+   *
+   * Only a settled answer reaches here. A refresh that is waiting, has failed
+   * or has lost its authorisation leaves the fleet this browser already
+   * accepted exactly where it is (020/FR-018).
+   */
+  storeFleet(fleet: CachedFleet): CommanderStateWriteResult {
+    return this.#write(withFleetAccepted(this.read(), fleet));
   }
 
   /** Binds one record to the signed-in Commander. */

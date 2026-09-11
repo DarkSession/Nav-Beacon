@@ -62,11 +62,37 @@ describe('the Commander state a browser keeps', () => {
       { pendingOperations: [{ ...operation(), queuedAt: 'whenever' }] },
     ],
     ['operations that are not a list', { pendingOperations: {} }],
-    ['a fleet cache carrying anything', { fleetCache: ['a ship'] }],
   ];
 
   it.each(refusals)('refuses %s', (_name, overrides) => {
     expect(parseCommanderLocalState({ ...state(), ...overrides })).toBeNull();
+  });
+
+  it('reads the fleet this browser accepted back, under the account it belongs to', () => {
+    const fleet = {
+      customerId: OWNER,
+      acceptedAt: '2026-09-10T08:00:00.000Z',
+      result: 'current',
+      ships: [{ shipId: 12 }],
+      coverage: null,
+    };
+
+    const parsed = parseCommanderLocalState({ ...state(), fleetCache: [fleet] });
+
+    expect(parsed?.fleetCache).toEqual([fleet]);
+  });
+
+  it('drops a fleet entry it cannot read, and keeps the rest of the account state', () => {
+    // The fleet is the one part of this value the browser can ask for again.
+    // Everything else decides which account a record belongs to, so a half-read
+    // one of those refuses the whole value and this does not.
+    const parsed = parseCommanderLocalState({
+      ...state({ recordBindings: { 'record-1': OWNER } }),
+      fleetCache: ['a ship'],
+    });
+
+    expect(parsed?.fleetCache).toEqual([]);
+    expect(parsed?.recordBindings).toEqual({ 'record-1': OWNER });
   });
 
   it('reads a version-1 value, keeping its bindings and its one cursor', () => {
