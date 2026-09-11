@@ -45,7 +45,7 @@
 
 ## 3. Frontier account
 
-- [ ] 3.1 Implement the Frontier OAuth client, single-use state handling, token refresh and profile
+- [x] 3.1 Implement the Frontier OAuth client, single-use state handling, token refresh and profile
       identity read; verify fake-Frontier tests cover success, the ten-minute state boundary, rejected
       state, expired tokens, refresh failure, unchanged local work after expiry, same Customer ID with a
       changed name and rejection of non-Live data; verify two instances accept one callback once and
@@ -54,19 +54,19 @@
       by the starting browser; verify the account interface states that a fresh sign-in is required.
 - [x] 3.2 Implement hashed opaque sessions, secure cookie settings and anti-forgery checks; verify
       HTTP tests prove tokens never reach the browser and cross-site state-changing requests fail.
-- [ ] 3.3 Implement session, sign-in callback and sign-out endpoints with base-relative return
+- [x] 3.3 Implement session, sign-in callback and sign-out endpoints with base-relative return
       addresses; verify contract tests cover anonymous, pending, signed-in, revoked, 30-day renewable and
       180-day absolute expiry, mandatory first-request renewal after 24 hours, expiry from the last
       renewal rather than the last request, no second daily write, opportunistic row removal and
       fleet-cache cleanup.
-- [ ] 3.4 Implement confirmed account deletion as one database transaction; verify an integration
+- [x] 3.4 Implement confirmed account deletion as one database transaction; verify an integration
       test removes identity, tokens, all sessions, remote records, deletion markers, fleet projections
       and cursor metadata while a browser fixture clears account state, fleet cache, sync state and
       pending operations before the request but keeps its planning records local-only; verify committed
       lost-response and uncommitted failure cases both stay anonymous, never upload retained records and
       allow a later sign-in to create or delete the account as applicable; verify a refused local
       cleanup sends no server deletion and leaves the account available for another attempt.
-- [ ] 3.5 Add the frame account action and account dialog with localised design-system components;
+- [x] 3.5 Add the frame account action and account dialog with localised design-system components;
       state the exact account data use there and verify component tests cover every state in the screen
       inventory at desktop, tablet and mobile widths, both orientations, with touch-sized actions and no
       horizontal page scrolling; add component previews for every state and verify each at 200% text.

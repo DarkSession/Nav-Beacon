@@ -293,7 +293,10 @@ describe('AccountDialog', () => {
         }
         const lines = [...element(fixture).querySelectorAll('.account-dialog__data-use li')];
 
-        expect(lines.map((line) => textOf(line)), name).toEqual(DATA_USE);
+        expect(
+          lines.map((line) => textOf(line)),
+          name,
+        ).toEqual(DATA_USE);
       }
     });
 
@@ -413,60 +416,70 @@ describe('AccountDialog', () => {
         }
         const fixture = render(state);
 
-        expect(textOf(query(fixture, '.layer__dismiss')), name).toBe(BUNDLED_ENGLISH['action.close']);
+        expect(textOf(query(fixture, '.layer__dismiss')), name).toBe(
+          BUNDLED_ENGLISH['action.close'],
+        );
       }
     });
   });
 
   describe('at every width, in both orientations', () => {
-    it('draws one reading order, whatever the viewport is', () => {
-      for (const { name, view: state } of STATES) {
-        const drawn = LAYOUT_PROFILES.map((profile) => {
-          const fixture = atViewport(profile, state);
+    /**
+     * One render per state per profile, read three ways.
+     *
+     * The three readings share a render because a render is a whole test bed:
+     * what is asserted is a property of the drawn state at that viewport, and
+     * drawing it three times would say the same thing three times over.
+     */
+    function drawnAt(state: AccountDialogView) {
+      return LAYOUT_PROFILES.map((profile) => {
+        const fixture = atViewport(profile, state);
+        return {
+          profile: profile.name,
           // The relation ids are minted per instance, so they say which render
           // this is rather than what it drew. Everything else is compared.
-          return panel(fixture)
+          markup: panel(fixture)
             .innerHTML.replace(/ id="[^"]*"/g, '')
             .replace(/ aria-labelledby="[^"]*"/g, '')
-            .replace(/ aria-describedby="[^"]*"/g, '');
-        });
+            .replace(/ aria-describedby="[^"]*"/g, ''),
+          controls: controls(fixture).map((control) => ({
+            name: accessibleName(control),
+            target: getComputedStyle(control).minBlockSize,
+          })),
+        };
+      });
+    }
+
+    // One test per state rather than one loop over them, so a state that
+    // regresses is named by the test that failed.
+    it.each(STATES.map((entry) => [entry.name, entry.view] as const))(
+      'draws %s the same way at every profile, with the same touch-sized controls',
+      (name, state) => {
+        const drawn = drawnAt(state);
 
         // One DOM at every profile. Nothing about this surface is decided by
         // reading the viewport in TypeScript, so the width a Commander happens
         // to be at cannot drop a control, reorder a region or say less.
-        expect(new Set(drawn).size, name).toBe(1);
-      }
-    });
+        expect(new Set(drawn.map((entry) => entry.markup)).size, name).toBe(1);
 
-    it('offers the same controls at every profile, by the same names', () => {
-      for (const { name, view: state } of STATES) {
-        const named = LAYOUT_PROFILES.map((profile) =>
-          controls(atViewport(profile, state)).map((control) => accessibleName(control)),
-        );
+        for (const entry of drawn) {
+          expect(
+            entry.controls.map((control) => control.name),
+            `${name} at ${entry.profile}`,
+          ).toEqual(drawn[0].controls.map((control) => control.name));
+          expect(entry.controls.length, `${name} at ${entry.profile}`).toBeGreaterThan(0);
 
-        for (const [index, profile] of LAYOUT_PROFILES.entries()) {
-          expect(named[index], `${name} at ${profile.name}`).toEqual(named[0]);
-          expect(named[index].length, `${name} at ${profile.name}`).toBeGreaterThan(0);
-        }
-      }
-    });
-
-    it('holds every action to the design system’s target baseline', () => {
-      for (const { name, view: state } of STATES) {
-        for (const profile of LAYOUT_PROFILES) {
-          const fixture = atViewport(profile, state);
-          for (const control of controls(fixture)) {
+          for (const control of entry.controls) {
             // The baseline is a token in `rem`, so the target grows with the
-            // text rather than holding a pixel box at 200% (2.75rem = 44 CSS
+            // text rather than holding a pixel box at 200% (2.75rem is 44 CSS
             // pixels at the default text size).
-            expect(
-              getComputedStyle(control).minBlockSize,
-              `${name} at ${profile.name}: ${control.className}`,
-            ).toBe('var(--ednb-target-size)');
+            expect(control.target, `${name} at ${entry.profile}: ${control.name}`).toBe(
+              'var(--ednb-target-size)',
+            );
           }
         }
-      }
-    });
+      },
+    );
   });
 
   describe('what keeps the page from scrolling sideways', () => {
@@ -493,7 +506,11 @@ describe('AccountDialog', () => {
 
     it('wraps the long words it does not own — a Commander name and a sentence', () => {
       const fixture = render(STATES[3].view);
-      const wrapping = ['.account-dialog__commander', '.account-dialog__data-use', '.account-dialog__network'];
+      const wrapping = [
+        '.account-dialog__commander',
+        '.account-dialog__data-use',
+        '.account-dialog__network',
+      ];
 
       for (const selector of wrapping) {
         expect(getComputedStyle(query(fixture, selector)).overflowWrap, selector).toBe('anywhere');
@@ -562,9 +579,7 @@ describe('AccountDialog', () => {
       const selected: string[] = [];
       fixture.componentInstance.actionSelected.subscribe((kind) => selected.push(kind));
 
-      for (const control of controls(fixture).filter((node) =>
-        node.classList.contains('action'),
-      )) {
+      for (const control of controls(fixture).filter((node) => node.classList.contains('action'))) {
         control.click();
       }
 

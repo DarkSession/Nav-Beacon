@@ -11,7 +11,11 @@ import {
   type CommanderLocalState,
 } from '../../domain/commander/commander-local-state';
 import { EDNB_COMMANDER_STATE_KEY } from '../../platform/storage/storage-keys';
-import { MemoryStorage, provideMemoryStorage, quotaError } from '../../platform/storage/storage.spec-helpers';
+import {
+  MemoryStorage,
+  provideMemoryStorage,
+  quotaError,
+} from '../../platform/storage/storage.spec-helpers';
 
 const ACCOUNT = { customerId: '900001', commanderName: 'CMDR Jameson' };
 
@@ -191,6 +195,16 @@ describe('AccountStore', () => {
       expect(stored(storage).recordBindings['record-1']).toBe(ACCOUNT.customerId);
     });
 
+    it('stays open to say the browser is anonymous once the session has ended', async () => {
+      const { store } = await signedIn();
+      store.openDialog();
+
+      await store.signOut();
+
+      expect(store.open()).toBe(true);
+      expect(store.state()).toEqual({ kind: 'anonymous' });
+    });
+
     it('keeps the Commander signed in when the service refuses the sign-out', async () => {
       const context = await signedIn();
       context.api.signOutSucceeds = false;
@@ -296,6 +310,19 @@ describe('AccountStore', () => {
       expect(context.api.calls).toContain('delete-account');
       expect(context.store.state()).toEqual({ kind: 'anonymous' });
       expect(stored(context.storage).recordBindings['record-1']).toBe('local-only');
+    });
+
+    it('stays open to say the browser is anonymous once the account is gone', async () => {
+      const { store } = await signedIn();
+      store.openDialog();
+      store.requestDeletion();
+
+      await store.deleteAccount();
+
+      // The outcome is stated where the question was asked. A layer that closed
+      // itself would leave a Commander with nothing said about what happened.
+      expect(store.open()).toBe(true);
+      expect(store.state()).toEqual({ kind: 'anonymous' });
     });
 
     it('deletes nothing for a browser that is not signed in', async () => {

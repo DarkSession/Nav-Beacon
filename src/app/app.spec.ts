@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
-import { App, HELP_ACTION } from './app';
+import { ACCOUNT_ACTION, App, HELP_ACTION } from './app';
 import { routes } from './app.routes';
 import { EquipmentBenchPage } from './features/equipment/equipment-bench.page';
 import { LoadoutStore } from './application/equipment/loadout.store';
@@ -20,10 +20,46 @@ import { BUNDLED_ENGLISH, type MessageCatalogue } from './i18n/locale-registry';
 import germanCatalogue from './i18n/locales/de.json';
 import { LocaleStore } from './i18n/locale.store';
 import { AnnouncementService } from './ui/announcements/announcement.service';
+import { AccountPresenter } from './application/account/account.presenter';
 import { HelpPresenter } from './application/help/help.presenter';
 import { HELP_MANIFEST } from './platform/build/help-manifest.generated';
+import {
+  COMMANDER_API,
+  type CommanderApiPort,
+  type CommanderSessionResult,
+} from './platform/network/commander-api';
 import { EDNB_UPDATE_APPLIED_KEY } from './platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from './platform/storage/storage.spec-helpers';
+
+/**
+ * A Commander service that is simply not there.
+ *
+ * The shell reads the account state once when a browser session starts, and a
+ * unit test has no origin to read it from. Answering "unavailable" here is what
+ * that request means in this environment, and it keeps the shell's own tests
+ * off the network.
+ */
+class AbsentCommanderApi implements CommanderApiPort {
+  callbackResult(): null {
+    return null;
+  }
+
+  async startSignIn(): Promise<boolean> {
+    return false;
+  }
+
+  async readSession(): Promise<CommanderSessionResult> {
+    return { kind: 'unavailable' };
+  }
+
+  async signOut(): Promise<boolean> {
+    return false;
+  }
+
+  async deleteAccount(): Promise<boolean> {
+    return false;
+  }
+}
 
 describe('App', () => {
   beforeEach(async () => {
@@ -32,7 +68,11 @@ describe('App', () => {
       // The shell holds the update store, which reads the session area for the
       // marker a restart leaves behind. In-memory here, so a test never sees a
       // marker another test wrote.
-      providers: [provideLocalization(), ...provideMemoryStorage(new MemoryStorage())],
+      providers: [
+        provideLocalization(),
+        ...provideMemoryStorage(new MemoryStorage()),
+        { provide: COMMANDER_API, useValue: new AbsentCommanderApi() },
+      ],
     }).compileComponents();
   });
 
@@ -308,6 +348,51 @@ describe('App', () => {
     // rather than as one of a row of glyphs.
     const marked = fixture.componentInstance.actions().filter(({ symbol }) => symbol);
     expect(marked.map(({ id }) => id)).toEqual([HELP_ACTION]);
+  });
+
+  it('offers the Commander account from the frame, at both widths', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const account = fixture.componentInstance.actions().filter(({ id }) => id === ACCOUNT_ACTION);
+
+    // One entry, named in words and described for a reader. An account belongs
+    // to the session rather than to a screen, so the frame carries the one way
+    // to it and no capability draws a second (020/FR-001).
+    expect(account.length).toBe(1);
+    expect(account[0].label).toBe(BUNDLED_ENGLISH['account.action']);
+    expect(account[0].description).toBe(BUNDLED_ENGLISH['account.action.description']);
+    expect(account[0].symbol).toBeUndefined();
+
+    const named = (selector: string) =>
+      [...(fixture.nativeElement as HTMLElement).querySelectorAll(selector)].map((control) =>
+        control.textContent?.trim(),
+      );
+
+    // Both compositions: the wide row and the folded layer a narrow bar draws.
+    expect(named('.frame__actions .action__label')).toContain(BUNDLED_ENGLISH['account.action']);
+    expect(named('.action-layer__panel .action__label')).toContain(
+      BUNDLED_ENGLISH['account.action'],
+    );
+  });
+
+  it('opens the account modal when the frame reports the account action', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const account = TestBed.inject(AccountPresenter);
+
+    // Mounted beside the frame, like help, rather than inside a capability,
+    // and mounted before anything asks for it.
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('ednb-account-dialog'),
+    ).not.toBeNull();
+    expect(account.open()).toBe(false);
+
+    fixture.componentInstance.selectAction('nothing.claims.this');
+    expect(account.open()).toBe(false);
+
+    fixture.componentInstance.selectAction(ACCOUNT_ACTION);
+    expect(account.open()).toBe(true);
   });
 
   it('opens the modal when the frame reports the help action, and nothing else', () => {

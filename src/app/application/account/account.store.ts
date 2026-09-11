@@ -136,11 +136,12 @@ export class AccountStore {
     const token = this.#antiForgeryToken;
     this.#antiForgeryToken = null;
     this.#state.set({ kind: 'deleting' });
-    // The answer is not read. A refusal and a lost response leave this browser
-    // in the state the local transaction already committed, and a Commander
-    // who signs in again gets an empty account or another chance to delete —
-    // which the server decides, not this browser.
-    await this.#api.deleteAccount(token);
+    // The answer is not read, and a request that never comes back is not an
+    // error here either. A refusal and a lost response both leave this browser
+    // in the state the local transaction already committed, and a Commander who
+    // signs in again gets an empty account or another chance to delete — which
+    // the server decides, not this browser.
+    await this.#api.deleteAccount(token).catch(() => false);
     this.#state.set({ kind: 'anonymous' });
   }
 
