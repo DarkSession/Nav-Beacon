@@ -1,12 +1,5 @@
-using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using NavBeacon.Server.Frontier;
 
 namespace NavBeacon.Server.IntegrationTests;
 
@@ -16,24 +9,24 @@ public sealed class AccountEndpointTests(PostgreSqlDatabaseFixture database)
   [Fact]
   public async Task SignInSessionAntiforgeryAndSignOutUseOnlyBrowserSafeValues()
   {
-    var frontier = new FakeFrontierClient();
+    var frontier = new FakeFrontierClient
+    {
+      Authentication = FakeFrontierClient.Identity(
+        40_001,
+        "Test Commander",
+        DateTimeOffset.UtcNow
+      ),
+    };
     var logs = new CapturingLoggerProvider();
-    using var factory = CreateFactory(frontier, logs);
-    using var client = factory.CreateClient(
-      new WebApplicationFactoryClientOptions
-      {
-        AllowAutoRedirect = false,
-        BaseAddress = new Uri("https://localhost"),
-        HandleCookies = true,
-      }
-    );
+    using var server = new CommanderTestServer(database, frontier, logs: logs);
+    using var client = server.CreateClient();
 
     using var start = await client.PostAsync("api/auth/frontier", content: null);
     Assert.Equal(HttpStatusCode.OK, start.StatusCode);
     using var startJson = JsonDocument.Parse(await start.Content.ReadAsStringAsync());
     var location = new Uri(startJson.RootElement.GetProperty("authorisationUri").GetString()!);
     Assert.Equal("auth.frontierstore.net", location.Host);
-    var state = QueryValue(location, "state");
+    var state = CommanderTestServer.QueryValue(location, "state");
     var correlationCookie = start.Headers
       .GetValues("Set-Cookie")
       .Single(value => value.StartsWith("__Host-NavBeacon-OAuth=", StringComparison.Ordinal));
@@ -86,7 +79,7 @@ public sealed class AccountEndpointTests(PostgreSqlDatabaseFixture database)
     Assert.Equal("/?account=fresh-sign-in-required", replay.Headers.Location?.ToString());
     Assert.Equal(1, frontier.AuthenticationCalls);
 
-    var logText = string.Join('\n', logs.Entries);
+    var logText = logs.Text;
     Assert.Contains(
       "EventCategory=oauth-callback ResultCode=sign-in-complete RouteTemplate=api/auth/frontier/callback",
       logText,
@@ -112,92 +105,6 @@ public sealed class AccountEndpointTests(PostgreSqlDatabaseFixture database)
     )
     {
       Assert.DoesNotContain(protectedValue, logText, StringComparison.Ordinal);
-    }
-  }
-
-  private WebApplicationFactory<Program> CreateFactory(
-    IFrontierClient frontier,
-    ILoggerProvider loggerProvider
-  ) =>
-    new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-    {
-      builder.UseSetting("ConnectionStrings:NavBeacon", database.ConnectionString);
-      builder.UseSetting("Frontier:ClientId", "client-id");
-      builder.UseSetting("Frontier:ClientSecret", "client-secret");
-      builder.UseSetting(
-        "Frontier:RedirectUri",
-        "https://localhost/api/auth/frontier/callback"
-      );
-      builder.ConfigureTestServices(services =>
-      {
-        services.RemoveAll<IFrontierClient>();
-        services.AddSingleton(frontier);
-        services.AddLogging(logging => logging.AddProvider(loggerProvider));
-      });
-    });
-
-  private static string QueryValue(Uri address, string name) =>
-    address
-      .Query.TrimStart('?')
-      .Split('&', StringSplitOptions.RemoveEmptyEntries)
-      .Select(part => part.Split('=', 2))
-      .Where(part => Uri.UnescapeDataString(part[0]) == name)
-      .Select(part => Uri.UnescapeDataString(part[1]))
-      .Single();
-
-  private sealed class FakeFrontierClient : IFrontierClient
-  {
-    public int AuthenticationCalls { get; private set; }
-
-    public Uri CreateAuthorisationUri(string state) =>
-      new($"https://auth.frontierstore.net/auth?state={Uri.EscapeDataString(state)}");
-
-    public Task<FrontierAuthentication?> AuthenticateAsync(
-      string authorisationCode,
-      CancellationToken cancellationToken
-    )
-    {
-      AuthenticationCalls++;
-      return Task.FromResult<FrontierAuthentication?>(
-        new FrontierAuthentication(
-          new FrontierTokens(
-            "access-token",
-            "refresh-token",
-            DateTimeOffset.UtcNow.AddHours(1)
-          ),
-          new FrontierIdentity(40_001, "Test Commander")
-        )
-      );
-    }
-
-    public Task<FrontierTokens?> RefreshAsync(
-      string refreshToken,
-      CancellationToken cancellationToken
-    ) => Task.FromResult<FrontierTokens?>(null);
-  }
-
-  private sealed class CapturingLoggerProvider : ILoggerProvider
-  {
-    public ConcurrentBag<string> Entries { get; } = [];
-
-    public ILogger CreateLogger(string categoryName) => new CapturingLogger(Entries);
-
-    public void Dispose() { }
-
-    private sealed class CapturingLogger(ConcurrentBag<string> entries) : ILogger
-    {
-      public IDisposable? BeginScope<TState>(TState state)
-        where TState : notnull => null;
-
-      public bool IsEnabled(LogLevel logLevel) => true;
-
-      public void Log<TState>(
-        LogLevel logLevel,
-        EventId eventId,
-        TState state,
-        Exception? exception,
-        Func<TState, Exception?, string> formatter
-      ) => entries.Add(formatter(state, exception));
     }
   }
 }

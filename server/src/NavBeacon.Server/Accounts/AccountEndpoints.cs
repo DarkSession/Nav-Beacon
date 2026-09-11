@@ -10,6 +10,12 @@ public static class AccountEndpoints
   public const string SignInRoute = "api/auth/frontier";
   public const string CallbackRoute = "api/auth/frontier/callback";
 
+  // The browser reads the state to decide what local Commander data it may keep.
+  public const string AnonymousState = "anonymous";
+  public const string PendingState = "pending";
+  public const string SignedInState = "signed-in";
+  public const string ExpiredState = "expired";
+
   public static IEndpointRouteBuilder MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
   {
     endpoints.MapPost(SignInRoute, StartSignInAsync);
@@ -22,11 +28,13 @@ public static class AccountEndpoints
 
   private static async Task<IResult> StartSignInAsync(
     OAuthStateService states,
+    CommanderSessionService sessions,
     IFrontierClient frontier,
     HttpResponse response,
     CancellationToken cancellationToken
   )
   {
+    await sessions.RemoveExpiredAsync(cancellationToken);
     var start = await states.StartAsync(cancellationToken);
     CommanderCookies.AppendOAuthCorrelation(response, start);
     return Results.Ok(
@@ -91,14 +99,25 @@ public static class AccountEndpoints
     CancellationToken cancellationToken
   )
   {
-    var access = await sessions.AuthenticateAsync(
-      CommanderCookies.ReadSession(request),
-      cancellationToken
-    );
+    var secret = CommanderCookies.ReadSession(request);
+    var access = await sessions.AuthenticateAsync(secret, cancellationToken);
     if (access is null)
     {
       CommanderCookies.DeleteSession(response);
-      return Results.Json(new { signedIn = false }, statusCode: StatusCodes.Status401Unauthorized);
+      var presentedSession = !string.IsNullOrWhiteSpace(secret);
+      return Results.Json(
+        new
+        {
+          signedIn = false,
+          state = presentedSession
+            ? ExpiredState
+            : request.Cookies.ContainsKey(CommanderCookies.OAuthCorrelationName)
+              ? PendingState
+              : AnonymousState,
+          clearFleetCache = presentedSession,
+        },
+        statusCode: StatusCodes.Status401Unauthorized
+      );
     }
 
     var tokens = antiforgery.GetAndStoreTokens(request.HttpContext);
@@ -106,6 +125,8 @@ public static class AccountEndpoints
       new
       {
         signedIn = true,
+        state = SignedInState,
+        clearFleetCache = false,
         customerId = access.CustomerId.ToString(CultureInfo.InvariantCulture),
         commanderName = access.CommanderName,
         antiForgeryToken = tokens.RequestToken,

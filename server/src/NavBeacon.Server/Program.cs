@@ -47,6 +47,14 @@ await using (var scope = app.Services.CreateAsyncScope())
   await databaseCheck.ValidateAsync();
 }
 
+// The application may be served under a sub-path, so every return address the
+// server sends is relative to that base.
+var pathBase = builder.Configuration["PathBase"];
+if (!string.IsNullOrWhiteSpace(pathBase))
+{
+  app.UsePathBase(pathBase);
+}
+
 app.UseRouting();
 app.UseCommanderAccessLogging();
 app.MapHealthChecks("/health");

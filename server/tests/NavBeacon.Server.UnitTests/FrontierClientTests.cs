@@ -73,8 +73,11 @@ public sealed class FrontierClientTests
     );
   }
 
-  [Fact]
-  public async Task ExplicitLegacyProfileIsRejected()
+  [Theory]
+  [InlineData("legacy")]
+  [InlineData("Legacy")]
+  [InlineData("beta")]
+  public async Task AProfileThatIsNotLiveIsRejected(string gameVersion)
   {
     var client = CreateClient(
       new QueueHandler(
@@ -84,11 +87,32 @@ public sealed class FrontierClientTests
           """
         ),
         Json("""{"customer_id":123456789}"""),
-        Json("""{"gameVersion":"legacy","commander":{"name":"Test Commander"}}""")
+        Json("{\"gameVersion\":\"" + gameVersion + "\",\"commander\":{\"name\":\"Test Commander\"}}")
       )
     );
 
     Assert.Null(await client.AuthenticateAsync("code", CancellationToken.None));
+  }
+
+  [Fact]
+  public async Task AProfileFrontierMarksLiveIsAccepted()
+  {
+    var client = CreateClient(
+      new QueueHandler(
+        Json(
+          """
+          {"access_token":"access-token","refresh_token":"refresh-token","expires_in":3600}
+          """
+        ),
+        Json("""{"customer_id":123456789}"""),
+        Json("""{"gameVersion":"Live","commander":{"name":"Test Commander"}}""")
+      )
+    );
+
+    var result = await client.AuthenticateAsync("code", CancellationToken.None);
+
+    Assert.NotNull(result);
+    Assert.Equal("Test Commander", result.Identity.CommanderName);
   }
 
   [Theory]

@@ -103,6 +103,96 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
     Assert.Equal(0, frontier.AuthenticationCalls);
     Assert.Empty(await context.CommanderAccounts.ToListAsync(CancellationToken.None));
     Assert.Empty(await context.Sessions.ToListAsync(CancellationToken.None));
+    Assert.Empty(await context.SynchronisedRecords.ToListAsync(CancellationToken.None));
+    Assert.Empty(await context.OAuthAttempts.ToListAsync(CancellationToken.None));
+  }
+
+  [Fact]
+  public async Task AStateFrontierNeverIssuedIsRefused()
+  {
+    var clock = new ManualTimeProvider(InitialTime);
+    await using var context = database.CreateContext();
+    var states = new OAuthStateService(context, clock);
+    var frontier = new FakeFrontierClient();
+    var callback = new OAuthCallbackService(
+      states,
+      frontier,
+      context,
+      new EphemeralDataProtectionProvider()
+    );
+
+    var refused = await callback.CompleteAsync(
+      "state-nobody-issued",
+      "correlation-nobody-issued",
+      "code",
+      CancellationToken.None
+    );
+
+    Assert.Equal(OAuthCallbackResult.FreshSignInRequired, refused.Result);
+    Assert.Null(refused.Identity);
+    Assert.Equal(0, frontier.AuthenticationCalls);
+    Assert.Empty(await context.Sessions.ToListAsync(CancellationToken.None));
+  }
+
+  [Fact]
+  public async Task AnExpiredStateIsRefusedAndLeavesStoredWorkUnchanged()
+  {
+    var clock = new ManualTimeProvider(InitialTime);
+    var protection = new EphemeralDataProtectionProvider();
+    var protector = protection.CreateProtector("Frontier tokens v1");
+    await using var context = database.CreateContext();
+    var account = Account(20_005, protector, clock.GetUtcNow().AddHours(1));
+    account.RecordRevision = 7;
+    context.CommanderAccounts.Add(account);
+    var recordId = Guid.NewGuid();
+    context.SynchronisedRecords.Add(
+      new SynchronisedRecord
+      {
+        CustomerId = 20_005,
+        RecordId = recordId,
+        Revision = 7,
+        RecordKind = "ship",
+        Name = "Local work",
+        Payload = "{\"kept\":true}",
+        CreatedAt = clock.GetUtcNow(),
+        BrowserModifiedAt = clock.GetUtcNow(),
+        ServerContentAt = clock.GetUtcNow(),
+      }
+    );
+    await context.SaveChangesAsync(CancellationToken.None);
+    var states = new OAuthStateService(context, clock);
+    var frontier = new FakeFrontierClient
+    {
+      Authentication = FakeFrontierClient.Identity(20_005, "Changed name", clock.GetUtcNow()),
+    };
+    var callback = new OAuthCallbackService(states, frontier, context, protection);
+    var start = await states.StartAsync(CancellationToken.None);
+    clock.Advance(OAuthStateService.Lifetime);
+
+    var refused = await callback.CompleteAsync(
+      start.State,
+      start.BrowserCorrelation,
+      "code",
+      CancellationToken.None
+    );
+
+    Assert.Equal(OAuthCallbackResult.FreshSignInRequired, refused.Result);
+    Assert.Equal(0, frontier.AuthenticationCalls);
+    Assert.Empty(await context.Sessions.ToListAsync(CancellationToken.None));
+    Assert.Empty(await context.OAuthAttempts.ToListAsync(CancellationToken.None));
+    context.ChangeTracker.Clear();
+    var storedRecord = await context.SynchronisedRecords.SingleAsync(
+      item => item.CustomerId == 20_005 && item.RecordId == recordId,
+      CancellationToken.None
+    );
+    var storedAccount = await context.CommanderAccounts.SingleAsync(
+      item => item.CustomerId == 20_005,
+      CancellationToken.None
+    );
+    Assert.Contains("kept", storedRecord.Payload, StringComparison.Ordinal);
+    Assert.Equal("Local work", storedRecord.Name);
+    Assert.Equal(7, storedAccount.RecordRevision);
+    Assert.Equal("Test Commander", storedAccount.CommanderName);
   }
 
   [Fact]
@@ -114,7 +204,7 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
     var states = new OAuthStateService(context, clock);
     var frontier = new FakeFrontierClient
     {
-      Authentication = Authentication(20_001, "First name", clock.GetUtcNow()),
+      Authentication = FakeFrontierClient.Identity(20_001, "First name", clock.GetUtcNow()),
     };
     var callback = new OAuthCallbackService(states, frontier, context, protection);
     var first = await states.StartAsync(CancellationToken.None);
@@ -135,7 +225,7 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
     );
     account.RecordRevision = 12;
     await context.SaveChangesAsync(CancellationToken.None);
-    frontier.Authentication = Authentication(20_001, "Changed name", clock.GetUtcNow());
+    frontier.Authentication = FakeFrontierClient.Identity(20_001, "Changed name", clock.GetUtcNow());
     var second = await states.StartAsync(CancellationToken.None);
 
     Assert.Equal(
@@ -217,16 +307,6 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
     Assert.Equal(0, frontier.RefreshCalls);
   }
 
-  private static FrontierAuthentication Authentication(
-    long customerId,
-    string name,
-    DateTimeOffset now
-  ) =>
-    new(
-      new FrontierTokens("access-token", "refresh-token", now.AddHours(1)),
-      new FrontierIdentity(customerId, name)
-    );
-
   private static CommanderAccount Account(
     long customerId,
     IDataProtector protector,
@@ -240,42 +320,4 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
       ProtectedRefreshToken = protector.Protect("refresh-token"),
       AccessTokenExpiresAt = accessTokenExpiresAt,
     };
-
-  private sealed class ManualTimeProvider(DateTimeOffset current) : TimeProvider
-  {
-    public override DateTimeOffset GetUtcNow() => current;
-
-    public void Advance(TimeSpan duration) => current += duration;
-  }
-
-  private sealed class FakeFrontierClient : IFrontierClient
-  {
-    public FrontierAuthentication? Authentication { get; set; }
-
-    public FrontierTokens? RefreshedTokens { get; set; }
-
-    public int AuthenticationCalls { get; private set; }
-
-    public int RefreshCalls { get; private set; }
-
-    public Uri CreateAuthorisationUri(string state) => new("https://auth.frontierstore.net/auth");
-
-    public Task<FrontierAuthentication?> AuthenticateAsync(
-      string authorisationCode,
-      CancellationToken cancellationToken
-    )
-    {
-      AuthenticationCalls++;
-      return Task.FromResult(Authentication);
-    }
-
-    public Task<FrontierTokens?> RefreshAsync(
-      string refreshToken,
-      CancellationToken cancellationToken
-    )
-    {
-      RefreshCalls++;
-      return Task.FromResult(RefreshedTokens);
-    }
-  }
 }

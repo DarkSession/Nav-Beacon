@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using NavBeacon.Server.Persistence;
 using Npgsql;
 
@@ -43,10 +44,11 @@ public sealed class PostgreSqlDatabaseFixture : IAsyncLifetime
     await context.Database.MigrateAsync();
   }
 
-  public NavBeaconDbContext CreateContext()
+  public NavBeaconDbContext CreateContext(params IInterceptor[] interceptors)
   {
     var options = new DbContextOptionsBuilder<NavBeaconDbContext>()
       .UseNpgsql(ConnectionString)
+      .AddInterceptors(interceptors)
       .Options;
     return new NavBeaconDbContext(options);
   }

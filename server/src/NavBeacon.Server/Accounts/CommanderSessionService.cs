@@ -36,10 +36,11 @@ public sealed class CommanderSessionService(NavBeaconDbContext database, TimePro
     return new CreatedCommanderSession(secret, session.AbsoluteExpiresAt);
   }
 
-  public async Task<CommanderSessionAccess?> AuthenticateAsync(
-    string? secret,
-    CancellationToken cancellationToken
-  )
+  /// <summary>
+  /// Removes expired session rows, which a sign-in start and every protected
+  /// request do rather than a background job.
+  /// </summary>
+  public async Task RemoveExpiredAsync(CancellationToken cancellationToken)
   {
     var now = timeProvider.GetUtcNow();
     await database
@@ -47,6 +48,15 @@ public sealed class CommanderSessionService(NavBeaconDbContext database, TimePro
         session.RenewableExpiresAt <= now || session.AbsoluteExpiresAt <= now
       )
       .ExecuteDeleteAsync(cancellationToken);
+  }
+
+  public async Task<CommanderSessionAccess?> AuthenticateAsync(
+    string? secret,
+    CancellationToken cancellationToken
+  )
+  {
+    var now = timeProvider.GetUtcNow();
+    await RemoveExpiredAsync(cancellationToken);
     if (string.IsNullOrWhiteSpace(secret))
     {
       return null;
