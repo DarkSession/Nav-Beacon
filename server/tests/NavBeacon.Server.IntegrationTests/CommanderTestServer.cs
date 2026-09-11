@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using NavBeacon.Server.Fleet;
 using NavBeacon.Server.Frontier;
 using NavBeacon.Server.Persistence;
 
@@ -60,6 +61,52 @@ internal sealed class FakeFrontierClient : IFrontierClient
     );
 }
 
+/// <summary>One dated Live journal response per read, in the order the test queues them.</summary>
+internal sealed class FakeJournalClient : ILiveJournalClient
+{
+  private readonly Dictionary<DateOnly, Queue<JournalRead>> reads = [];
+
+  public List<DateOnly> Requested { get; } = [];
+
+  public JournalRead Fallback { get; set; } =
+    new(JournalReadOutcome.Empty, string.Empty, null);
+
+  public FakeJournalClient Queue(DateOnly date, JournalRead read)
+  {
+    if (!reads.TryGetValue(date, out var queued))
+    {
+      queued = new Queue<JournalRead>();
+      reads[date] = queued;
+    }
+    queued.Enqueue(read);
+    return this;
+  }
+
+  public FakeJournalClient Complete(DateOnly date, params string[] lines) =>
+    Queue(
+      date,
+      new JournalRead(JournalReadOutcome.Complete, string.Join('\n', lines), null)
+    );
+
+  public FakeJournalClient Incomplete(DateOnly date, params string[] lines) =>
+    Queue(
+      date,
+      new JournalRead(JournalReadOutcome.Incomplete, string.Join('\n', lines), null)
+    );
+
+  public Task<JournalRead> ReadAsync(
+    DateOnly date,
+    IJournalAuthorisation authorisation,
+    CancellationToken cancellationToken
+  )
+  {
+    Requested.Add(date);
+    return Task.FromResult(
+      reads.TryGetValue(date, out var queued) && queued.Count > 0 ? queued.Dequeue() : Fallback
+    );
+  }
+}
+
 internal sealed class CapturingLoggerProvider : ILoggerProvider
 {
   public ConcurrentBag<string> Entries { get; } = [];
@@ -102,7 +149,8 @@ internal sealed class CommanderTestServer : IDisposable
     CapturingLoggerProvider? logs = null,
     string? pathBase = null,
     IInterceptor? interceptor = null,
-    IReadOnlyDictionary<string, string>? settings = null
+    IReadOnlyDictionary<string, string>? settings = null,
+    ILiveJournalClient? journal = null
   )
   {
     factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -125,6 +173,11 @@ internal sealed class CommanderTestServer : IDisposable
       {
         services.RemoveAll<IFrontierClient>();
         services.AddSingleton<IFrontierClient>(frontier);
+        if (journal is not null)
+        {
+          services.RemoveAll<ILiveJournalClient>();
+          services.AddSingleton(journal);
+        }
         if (clock is not null)
         {
           services.RemoveAll<TimeProvider>();

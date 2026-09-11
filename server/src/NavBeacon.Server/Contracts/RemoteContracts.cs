@@ -106,11 +106,36 @@ public sealed class WeaponContract
   public required IReadOnlyList<string?> Modifications { get; init; }
 }
 
+/// <summary>
+/// The package-produced ship model the fleet service stores, and nothing
+/// beside it. The roll quality an ordinary engineering block carries is absent
+/// on purpose: an owned ship states a completed grade, and 020/FR-015 excludes
+/// the quality figure from fleet storage.
+/// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class OwnedShipPayloadContract
 {
   public required string HullSymbol { get; init; }
   public string? ShipName { get; init; }
   public string? ShipIdent { get; init; }
-  public required IReadOnlyList<ModuleContract> Modules { get; init; }
+  public required IReadOnlyList<OwnedShipModuleContract> Modules { get; init; }
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed class OwnedShipModuleContract
+{
+  public required string Slot { get; init; }
+  public required string Symbol { get; init; }
+  public bool? Enabled { get; init; }
+  public int? Priority { get; init; }
+  public PreEngineeredContract? PreEngineered { get; init; }
+  public OwnedShipEngineeringContract? Engineering { get; init; }
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed class OwnedShipEngineeringContract
+{
+  public string? Blueprint { get; init; }
+  public int Grade { get; init; }
+  public string? Experimental { get; init; }
 }

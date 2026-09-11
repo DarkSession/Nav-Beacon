@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using NavBeacon.Server.Contracts;
 using NavBeacon.Server.Validation;
 
 namespace NavBeacon.Server.Fleet;
@@ -144,6 +145,16 @@ public sealed class FleetProjector
     foreach (var ship in ships.EnumerateArray())
     {
       if (!ship.TryGetProperty("model", out var model) || model.ValueKind != JsonValueKind.Object)
+      {
+        return null;
+      }
+      // The exact stored contract, read once more before PostgreSQL sees it, so
+      // a field 020/FR-015 excludes cannot reach the fleet through the command.
+      try
+      {
+        RemoteContractJson.ParseOwnedShip(model);
+      }
+      catch (JsonException)
       {
         return null;
       }

@@ -203,7 +203,6 @@ public sealed class RemoteContractJsonTests
           "engineering":{
             "blueprint":"FSD_LongRange",
             "grade":1,
-            "quality":1,
             "experimental":null
           }
         }]
@@ -228,8 +227,60 @@ public sealed class RemoteContractJsonTests
     Assert.Null(module.PreEngineered?.Experimental);
     Assert.Equal("FSD_LongRange", module.Engineering?.Blueprint);
     Assert.Equal(1, module.Engineering?.Grade);
-    Assert.Equal(1, module.Engineering?.Quality);
     Assert.Null(module.Engineering?.Experimental);
+  }
+
+  [Fact]
+  public void Owned_ship_rejects_the_engineering_quality_020_FR_015_excludes()
+  {
+    using var document = JsonDocument.Parse(
+      """
+      {
+        "hullSymbol":"SideWinder",
+        "shipName":null,
+        "shipIdent":null,
+        "modules":[{
+          "slot":"FrameShiftDrive",
+          "symbol":"Int_Hyperdrive_Size2_Class1",
+          "enabled":true,
+          "priority":0,
+          "preEngineered":null,
+          "engineering":{
+            "blueprint":"FSD_LongRange",
+            "grade":1,
+            "quality":1,
+            "experimental":null
+          }
+        }]
+      }
+      """
+    );
+
+    Assert.Throws<JsonException>(() => RemoteContractJson.ParseOwnedShip(document.RootElement));
+  }
+
+  [Fact]
+  public void Owned_ship_requires_a_slot_and_a_module_symbol()
+  {
+    using var document = JsonDocument.Parse(
+      """
+      {
+        "hullSymbol":"SideWinder",
+        "shipName":null,
+        "shipIdent":null,
+        "modules":[{
+          "slot":"",
+          "symbol":"Int_Hyperdrive_Size2_Class1",
+          "enabled":null,
+          "priority":null,
+          "preEngineered":null,
+          "engineering":null
+        }]
+      }
+      """
+    );
+
+    Assert.Throws<JsonException>(() => RemoteContractJson.ParseOwnedShip(document.RootElement));
   }
 
   [Fact]

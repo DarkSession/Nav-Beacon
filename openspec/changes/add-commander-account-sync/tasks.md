@@ -130,30 +130,30 @@
 
 ## 6. Live journal and owned fleet service
 
-- [ ] 6.1 Implement a small Live CAPI client for dated journal responses, empty days, incomplete
+- [x] 6.1 Implement a small Live CAPI client for dated journal responses, empty days, incomplete
       responses, authorisation refresh, cancellation and bounded retry; verify fake-Frontier tests cover
       each HTTP outcome, three-attempt limit, one-second and two-second delays, short and long
       `Retry-After`, 60-second fallback, single token refresh, next-permitted-time calculation and the
       inclusive 25 MiB response bound.
-- [ ] 6.2 Implement a streaming journal framer and one bounded Node projection command that hands
+- [x] 6.2 Implement a streaming journal framer and one bounded Node projection command that hands
       candidate Live `Loadout` lines unchanged to `inspectSlef`; verify fixtures cover malformed lines,
       unknown events, non-Live events, malformed-line and package refusal without cursor advancement,
       module engineering, ship names and idents; verify the inclusive 1 MiB line, 100-line and 4 MiB
       batch, ten-batch request, 30-second process and 4 MiB output bounds plus hard-bound failures;
       verify another batch starts before its bound, the next refresh resumes after ten batches, package
       refusals use the requested supported locale and no diagnostic string is stored.
-- [ ] 6.3 Implement the 14-day initial cursor and transactional date-and-line continuation; verify
+- [x] 6.3 Implement the 14-day initial cursor and transactional date-and-line continuation; verify
       integration tests prove line `n` advances to `n + 1`, a complete empty day advances to the next UTC
       date at line zero, an incomplete day does not advance to the next date, a repeated line is
       idempotent and two server instances cannot refresh one account together; verify stored import
       metadata contains only the four items allowed by 020/FR-015, including the last `StoredShips`
       tuple and completeness result.
-- [ ] 6.4 Implement owned-ship upsert by `(CustomerId, ShipId)`, `ShipyardSell` removal and
+- [x] 6.4 Implement owned-ship upsert by `(CustomerId, ShipId)`, `ShipyardSell` removal and
       `StoredShips` reconciliation in date-line order; verify equal-timestamp lines use line order,
       earlier and equal cursor replays have no effect, later `Loadout` replaces one projection, known
       sold ships leave, incomplete comparison state is retained without missing ship IDs and no raw
       event or excluded field remains after commit.
-- [ ] 6.5 Implement authenticated fleet read and refresh endpoints; verify tests cover current,
+- [x] 6.5 Implement authenticated fleet read and refresh endpoints; verify tests cover current,
       empty, incomplete, waiting, failed and expired-authorisation results while preserving the last
       accepted fleet after failure; verify package feedback uses the request locale; verify one Commander
       session cannot read, refresh or change another Commander's fleet.

@@ -157,11 +157,13 @@ public sealed class FleetService(
       }
       if (!complete)
       {
+        // The day is still being written, so the cursor stays on it. A refresh
+        // that stopped on the ten-batch bound has more of it left to read.
         await SaveNextPermittedAsync(cursor, read.NextPermittedRefreshAt, cancellationToken);
         return await SettledAsync(
           customerId,
           cursor,
-          false,
+          day.Stopped,
           read.NextPermittedRefreshAt is null ? null : FleetResults.Waiting,
           cancellationToken
         );
@@ -379,15 +381,15 @@ public sealed class FleetService(
         ApplyLoadout(context, ships, loadout);
         break;
       case SaleOperation sale:
-      {
-        var sold = ships.SingleOrDefault(ship => ship.ShipId == sale.ShipId);
-        if (sold is not null && Later(sale.Date, sale.Line, sold))
         {
-          database.OwnedShips.Remove(sold);
-          ships.Remove(sold);
+          var sold = ships.SingleOrDefault(ship => ship.ShipId == sale.ShipId);
+          if (sold is not null && Later(sale.Date, sale.Line, sold))
+          {
+            database.OwnedShips.Remove(sold);
+            ships.Remove(sold);
+          }
+          break;
         }
-        break;
-      }
       case StoredShipsOperation stored:
         ApplyStoredShips(context, ships, stored);
         break;

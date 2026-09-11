@@ -52,11 +52,26 @@ public static class RemoteContractJson
   public static OwnedShipPayloadContract ParseOwnedShip(JsonElement element)
   {
     var ship = element.Deserialize<OwnedShipPayloadContract>(Options);
-    if (ship is null || string.IsNullOrWhiteSpace(ship.HullSymbol))
+    if (
+      ship is null
+      || string.IsNullOrWhiteSpace(ship.HullSymbol)
+      || ship.Modules.Any(module =>
+        string.IsNullOrWhiteSpace(module.Slot) || string.IsNullOrWhiteSpace(module.Symbol)
+      )
+    )
     {
       throw new JsonException("The owned-ship payload is invalid.");
     }
     return ship;
+  }
+
+  /// <summary>
+  /// Reads one owned-ship model, so nothing outside 020/FR-015 reaches storage.
+  /// </summary>
+  public static OwnedShipPayloadContract ParseOwnedShip(string json)
+  {
+    using var document = JsonDocument.Parse(json);
+    return ParseOwnedShip(document.RootElement);
   }
 
   private static RemoteShipRecordContract ValidateShip(RemoteShipRecordContract? record)

@@ -89,6 +89,8 @@ internal sealed class SignedInCommander(HttpClient client, string antiForgeryTok
 
   public HttpClient Client => client;
 
+  public string AntiForgeryToken => antiForgeryToken;
+
   public static async Task<SignedInCommander> SignInAsync(
     CommanderTestServer server,
     FakeFrontierClient frontier,

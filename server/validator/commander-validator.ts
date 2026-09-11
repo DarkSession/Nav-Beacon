@@ -164,7 +164,8 @@ function refusedAgainstLine(
       continue;
     }
     return {
-      code: getModuleBySymbol(module.Item) === null ? 'unknown-identity' : 'unsupported-combination',
+      code:
+        getModuleBySymbol(module.Item) === null ? 'unknown-identity' : 'unsupported-combination',
       constraint: null,
       path: null,
       message: null,
