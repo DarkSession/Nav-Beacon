@@ -12,16 +12,7 @@
     "version": 1,
     "suitFamily": "utilitysuit",
     "suitGrade": 1,
-    "suitModifications": [
-      null,
-      null,
-      null,
-      null
-    ],
-    "weapons": [
-      null,
-      null,
-      null
-    ]
+    "suitModifications": [null, null, null, null],
+    "weapons": [null, null, null]
   }
 }

@@ -414,6 +414,33 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
   }
 
   [Fact]
+  public async Task AValidatorThatCannotRunRefusesTheBatchBeforeAnyWrite()
+  {
+    var frontier = new FakeFrontierClient();
+    using var server = new CommanderTestServer(
+      database,
+      frontier,
+      new ManualTimeProvider(InitialTime),
+      settings: new Dictionary<string, string>
+      {
+        ["RecordValidation:Command"] = "a-command-that-does-not-exist",
+      }
+    );
+    using var commander = await SignInAsync(server, frontier, 70_017);
+
+    var refused = await commander.SynchroniseAsync(
+      RecordFixtures.Request(0, RecordFixtures.Write(RecordFixtures.Ship(Guid.NewGuid())))
+    );
+
+    Assert.Equal(HttpStatusCode.ServiceUnavailable, refused.Status);
+    Assert.Equal("validation-unavailable", refused.Code);
+    await using var context = database.CreateContext();
+    Assert.Empty(
+      await context.SynchronisedRecords.AsNoTracking().Where(r => r.CustomerId == 70_017).ToListAsync()
+    );
+  }
+
+  [Fact]
   public async Task ACancelledRequestWritesNothing()
   {
     using var server = NewServer(out var frontier, out var clock);

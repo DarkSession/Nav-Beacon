@@ -99,6 +99,32 @@ export function reconstructFromSnapshot(snapshot: BuildSnapshotV1): Reconstructi
   return { ok: true, loadout };
 }
 
+/**
+ * Whether the package fitted every module the snapshot named, where it named it.
+ *
+ * Reconstruction is deliberately forgiving: the package populates a fixed mount
+ * from the hull default whenever the stored entry is absent or does not belong
+ * there, and for a build a Commander is editing that default is ordinary build
+ * state. A boundary that may keep nothing it did not receive needs the opposite
+ * answer, so this asks the package two questions and takes both verbatim — does
+ * it call any slot unknown or any module incompatible, and does every stored
+ * identity come back fitted where it was stored. A substituted default fails the
+ * second question and is the whole reason this check exists.
+ */
+export function fittedAsStored(snapshot: BuildSnapshotV1, loadout: ShipLoadout): boolean {
+  if (
+    loadout
+      .validation()
+      .issues.some((issue) => issue.code === 'unknownSlot' || issue.code === 'incompatibleModule')
+  ) {
+    return false;
+  }
+  return snapshot.modules.every((module) => {
+    const fitted = loadout.fittedModuleAt(module.slot);
+    return fitted !== null && fitted.symbol.toLowerCase() === module.symbol.toLowerCase();
+  });
+}
+
 type ModuleResult =
   | { readonly ok: true; readonly value: LoadoutModule }
   | { readonly ok: false; readonly failure: ReconstructionFailure; readonly reason: string };

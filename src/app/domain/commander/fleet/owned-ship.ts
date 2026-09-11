@@ -1,0 +1,366 @@
+import type { LoadoutIssue } from '@elite-dangerous-almanac/core/ships/loadout-validation';
+import { getModuleBySymbol } from '@elite-dangerous-almanac/core/ships/modules';
+import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
+import {
+  BUILD_SNAPSHOT_FORMAT,
+  BUILD_SNAPSHOT_VERSION,
+  type BuildSnapshotV1,
+} from '../../ships/build/build-snapshot';
+import { parseBuildSnapshotV1 } from '../../ships/build/build-snapshot.parser';
+import {
+  fittedAsStored,
+  reconstructFromSnapshot,
+  type ReconstructionFailure,
+} from '../../ships/build/build-snapshot.reconstructor';
+
+/**
+ * One owned ship as the fleet service holds it, and the way back to a build.
+ *
+ * The payload is the package-produced ship model plus the two facts the service
+ * adds to it: the Frontier `ShipId` that identifies the ship inside one account,
+ * and the journal date-line tuple the model was read from (020/FR-015). There is
+ * no name, note, record identity or revision, because an owned ship is not an
+ * application record; and there is no calculated value, cargo capacity, hull or
+ * module value, rebuy, hot state, fuel, health, ammunition, engineer, blueprint
+ * ID, engineering quality or modifier block, because every one of those is
+ * either the package's to derive from the model or a field 020/FR-015 excludes.
+ *
+ * The model is deliberately the shape local persistence already stores, so it
+ * travels the reconstruction path a saved build travels — the snapshot parser
+ * and `reconstructFromSnapshot` — rather than a second private one. What is
+ * different is what a failure may leave behind. A stored build the package
+ * defaults a mount on is ordinary build state; an owned ship is a statement
+ * about a Commander's real ship, so a model the package does not fit exactly is
+ * refused whole and nothing partial or substituted is kept (020/FR-016).
+ */
+export interface OwnedShipPayload {
+  /** Frontier's own ship identity, unique within one Commander account. */
+  readonly shipId: number;
+  /** The UTC journal date the model was read from, as `YYYY-MM-DD`. */
+  readonly sourceDate: string;
+  /** The zero-based journal line the model was read from. */
+  readonly sourceLine: number;
+  readonly model: OwnedShipModel;
+}
+
+/** The package-produced ship model, and nothing beside it. */
+export interface OwnedShipModel {
+  readonly hullSymbol: string;
+  readonly shipName: string | null;
+  readonly shipIdent: string | null;
+  readonly modules: readonly OwnedShipModule[];
+}
+
+/** One fitted module of an owned ship. */
+export interface OwnedShipModule {
+  /** The game's own slot key. */
+  readonly slot: string;
+  readonly symbol: string;
+  /** `null` is an absent field, which the package treats as on. */
+  readonly enabled: boolean | null;
+  /** The zero-based power-priority group, 0–4, or `null` when absent. */
+  readonly priority: number | null;
+  readonly preEngineered: OwnedShipPreEngineered | null;
+  readonly engineering: OwnedShipEngineering | null;
+}
+
+/** The tuple that identifies one pre-engineered article in the package catalogue. */
+export interface OwnedShipPreEngineered {
+  readonly symbol: string;
+  readonly blueprint: string;
+  readonly grade: number;
+  readonly acquisition: string;
+  readonly experimental: string | null;
+}
+
+/**
+ * The engineering an owned module carries.
+ *
+ * A completed grade, with no roll quality beside it: an owned ship is a ship a
+ * Commander has already engineered, so the roll is finished by the time the
+ * journal states it, and 020/FR-015 excludes the quality figure from storage.
+ */
+export interface OwnedShipEngineering {
+  /** The blueprint's `fdname`, or `null` where the engineering names none. */
+  readonly blueprint: string | null;
+  /** The completed blueprint grade, 1–5. */
+  readonly grade: number;
+  /** The experimental effect's `fdname`, or `null`. */
+  readonly experimental: string | null;
+}
+
+/** One owned ship, reconstructed through the package. */
+export interface OwnedShip {
+  readonly shipId: number;
+  readonly sourceDate: string;
+  readonly sourceLine: number;
+  /**
+   * The build itself. Names and derived figures are read from here through the
+   * package — `BuildMetrics.of(loadout)` and the package's own catalogues — so
+   * this application keeps no second copy of either (design, decision 8).
+   */
+  readonly loadout: ShipLoadout;
+}
+
+/**
+ * Why an owned-ship payload did not become a build.
+ *
+ * `malformed` is the contract gate: the payload is not the owned-ship shape, or
+ * carries a field 020/FR-015 excludes. The three reconstruction failures are the
+ * package's own answers, carried under its own names.
+ * `unsupported-combination` is the fourth: the package built something, but not
+ * what the payload named, so what it built is a replacement rather than the
+ * Commander's ship.
+ */
+export type OwnedShipMappingFailure =
+  'malformed' | ReconstructionFailure | 'unsupported-combination';
+
+export type OwnedShipMappingResult =
+  | { readonly ok: true; readonly ship: OwnedShip }
+  | {
+      readonly ok: false;
+      readonly failure: OwnedShipMappingFailure;
+      /** The package's own words where the package spoke. Never a translation. */
+      readonly reason: string;
+      /** The package's structured diagnostics, verbatim, where it published any. */
+      readonly issues: readonly LoadoutIssue[];
+    };
+
+/**
+ * A completed roll, in the figure the package reads.
+ *
+ * The stored model states a completed grade and no quality (020/FR-015), so
+ * reconstruction states the completed roll rather than a figure nobody
+ * computed.
+ */
+const COMPLETED_QUALITY = 1;
+
+const PAYLOAD_KEYS = ['shipId', 'sourceDate', 'sourceLine', 'model'] as const;
+const MODEL_KEYS = ['hullSymbol', 'shipName', 'shipIdent', 'modules'] as const;
+const MODULE_KEYS = [
+  'slot',
+  'symbol',
+  'enabled',
+  'priority',
+  'preEngineered',
+  'engineering',
+] as const;
+const PRE_ENGINEERED_KEYS = [
+  'symbol',
+  'blueprint',
+  'grade',
+  'acquisition',
+  'experimental',
+] as const;
+const ENGINEERING_KEYS = ['blueprint', 'grade', 'experimental'] as const;
+
+/**
+ * Reads one owned-ship payload and rebuilds it through the package.
+ *
+ * The payload arrives validated, and is read here as untrusted input anyway: a
+ * stale cache, another browser tab or a service the package has moved past can
+ * all produce something that is JSON and is not a ship. The exact key sets are
+ * the boundary — an excluded field does not arrive and get ignored, it refuses
+ * the ship — and every value check beyond them belongs to the snapshot parser
+ * and the package.
+ */
+export function mapOwnedShip(value: unknown): OwnedShipMappingResult {
+  const payload = parsePayload(value);
+  if (!payload.ok) {
+    return payload;
+  }
+
+  const parsed = parseBuildSnapshotV1(payload.snapshot);
+  if (!parsed.ok) {
+    return refusal('malformed', parsed.reason);
+  }
+
+  const rebuilt = reconstructFromSnapshot(parsed.snapshot);
+  if (!rebuilt.ok) {
+    return refusal(rebuilt.failure, rebuilt.reason);
+  }
+
+  if (!fittedAsStored(parsed.snapshot, rebuilt.loadout)) {
+    const refused = refusedFit(parsed.snapshot, rebuilt.loadout);
+    return refusal(refused.failure, refused.reason, refused.issues);
+  }
+
+  return {
+    ok: true,
+    ship: {
+      shipId: payload.shipId,
+      sourceDate: payload.sourceDate,
+      sourceLine: payload.sourceLine,
+      loadout: rebuilt.loadout,
+    },
+  };
+}
+
+type PayloadResult =
+  | {
+      readonly ok: true;
+      readonly shipId: number;
+      readonly sourceDate: string;
+      readonly sourceLine: number;
+      /** The model in the shape the snapshot parser reads, still unchecked. */
+      readonly snapshot: unknown;
+    }
+  | Extract<OwnedShipMappingResult, { readonly ok: false }>;
+
+function parsePayload(value: unknown): PayloadResult {
+  if (!isRecord(value) || !hasExactKeys(value, PAYLOAD_KEYS)) {
+    return refusal('malformed', 'The owned ship has an unknown or missing field.');
+  }
+  if (!isIndex(value['shipId'])) {
+    return refusal('malformed', 'The owned ship carries no Frontier ship identity.');
+  }
+  if (!isJournalDate(value['sourceDate']) || !isIndex(value['sourceLine'])) {
+    return refusal('malformed', 'The owned ship carries no journal date and line.');
+  }
+
+  const model = value['model'];
+  if (!isRecord(model) || !hasExactKeys(model, MODEL_KEYS) || !Array.isArray(model['modules'])) {
+    return refusal('malformed', 'The owned-ship model has an unknown or missing field.');
+  }
+
+  const modules: unknown[] = [];
+  for (const entry of model['modules']) {
+    if (
+      !isRecord(entry) ||
+      !hasExactKeys(entry, MODULE_KEYS) ||
+      !isExactNullableObject(entry['preEngineered'], PRE_ENGINEERED_KEYS) ||
+      !isExactNullableObject(entry['engineering'], ENGINEERING_KEYS)
+    ) {
+      return refusal('malformed', 'An owned module has an unknown or missing field.');
+    }
+    modules.push(snapshotModule(entry));
+  }
+
+  return {
+    ok: true,
+    shipId: value['shipId'],
+    sourceDate: value['sourceDate'],
+    sourceLine: value['sourceLine'],
+    snapshot: {
+      format: BUILD_SNAPSHOT_FORMAT,
+      version: BUILD_SNAPSHOT_VERSION,
+      shipSymbol: model['hullSymbol'],
+      shipName: model['shipName'],
+      shipIdent: model['shipIdent'],
+      modules,
+    },
+  };
+}
+
+/** One module, moved into the snapshot shape field by field and checked there. */
+function snapshotModule(module: Record<string, unknown>): unknown {
+  const engineering = module['engineering'];
+
+  return {
+    slot: module['slot'],
+    symbol: module['symbol'],
+    enabled: module['enabled'],
+    priority: module['priority'],
+    preEngineered: module['preEngineered'],
+    engineering: isRecord(engineering)
+      ? {
+          blueprint: engineering['blueprint'],
+          grade: engineering['grade'],
+          quality: COMPLETED_QUALITY,
+          experimental: engineering['experimental'],
+        }
+      : engineering,
+  };
+}
+
+/**
+ * What the package said about a model it did not fit as stated.
+ *
+ * Its own diagnostics where it published any, and otherwise the module that did
+ * not come back. A substituted hull default leaves a valid build and no
+ * diagnostic at all, which is exactly the case a Commander needs told: the ship
+ * on the page would otherwise carry a module the ship does not have.
+ *
+ * Which of the two refusals it is, is a question for the package rather than
+ * for its prose: a module symbol it does not carry is an identity this
+ * installation cannot resolve, and one it carries but will not fit here is a
+ * combination it does not support. Asking the catalogue keeps the answer the
+ * package's, the way the SLEF path asks it whether a hull exists rather than
+ * reading the word "hull" out of an exception.
+ */
+function refusedFit(
+  snapshot: BuildSnapshotV1,
+  loadout: ShipLoadout,
+): {
+  readonly failure: OwnedShipMappingFailure;
+  readonly reason: string;
+  readonly issues: readonly LoadoutIssue[];
+} {
+  const issues = loadout
+    .validation()
+    .issues.filter((issue) => issue.code === 'unknownSlot' || issue.code === 'incompatibleModule');
+  const first = issues[0];
+  if (first !== undefined) {
+    return { failure: 'unsupported-combination', reason: first.message, issues };
+  }
+
+  const substituted = snapshot.modules.find((module) => {
+    const fitted = loadout.fittedModuleAt(module.slot);
+    return fitted === null || fitted.symbol.toLowerCase() !== module.symbol.toLowerCase();
+  });
+  if (substituted === undefined) {
+    return {
+      failure: 'unsupported-combination',
+      reason: 'The package did not fit this owned ship as the journal states it.',
+      issues,
+    };
+  }
+  if (getModuleBySymbol(substituted.symbol) === null) {
+    return {
+      failure: 'unknown-identity',
+      reason: `This installation carries no module "${substituted.symbol}".`,
+      issues,
+    };
+  }
+
+  return {
+    failure: 'unsupported-combination',
+    reason: `The package did not fit "${substituted.symbol}" in slot "${substituted.slot}".`,
+    issues,
+  };
+}
+
+function refusal(
+  failure: OwnedShipMappingFailure,
+  reason: string,
+  issues: readonly LoadoutIssue[] = [],
+): Extract<OwnedShipMappingResult, { readonly ok: false }> {
+  return { ok: false, failure, reason, issues };
+}
+
+function isExactNullableObject(value: unknown, keys: readonly string[]): boolean {
+  return value === null || (isRecord(value) && hasExactKeys(value, keys));
+}
+
+function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isIndex(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+/** A UTC calendar date, in the spelling a journal filename and cursor use. */
+function isJournalDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
+    return false;
+  }
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed) && new Date(parsed).toISOString().startsWith(value);
+}

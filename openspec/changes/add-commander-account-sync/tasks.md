@@ -73,22 +73,22 @@
 
 ## 4. Cross-device record service
 
-- [ ] 4.1 Implement the account revision stream and synchronisation request validation; verify
+- [x] 4.1 Implement the account revision stream and synchronisation request validation; verify
       integration tests return only records and tombstones after the supplied account revision; verify
       a mixed batch is atomic, returns one indexed result per change and leaves the cursor unchanged on
       any invalid, cross-account or conflicting change; verify a lost committed response retries as
       no-ops without another revision.
-- [ ] 4.2 Implement conditional record writes with database revisions; verify concurrent PostgreSQL
+- [x] 4.2 Implement conditional record writes with database revisions; verify concurrent PostgreSQL
       tests accept one stale pair of writes and return both versions for overwrite, keep-both or cancel;
       verify equality covers every live-contract field, a changed name or named state conflicts,
       identical stale content is a no-op and cancel clears the pending operation by making the local
       version local-only.
-- [ ] 4.3 Implement record deletion markers, the remote protection deadline and unnamed-record
+- [x] 4.3 Implement record deletion markers, the remote protection deadline and unnamed-record
       expiry; verify an online live page renews protection, expiry waits for both deadlines and an
       offline live page receives a conflict without losing its local record; verify server time controls
       first upload and later content expiry despite skewed device clocks, and renewal changes no content
       or account revision.
-- [ ] 4.4 Implement the authenticated synchronisation endpoint with body limits and Problem Details
+- [x] 4.4 Implement the authenticated synchronisation endpoint with body limits and Problem Details
       error codes; verify API tests cover each record kind, the 64 KiB record bound, the 100-change and
       1 MiB batch bounds, atomic refusal, unsupported versions, unauthorised access, cancellation and
       database failure; verify 65,536 bytes, 100 changes and 1,048,576 bytes are accepted while one

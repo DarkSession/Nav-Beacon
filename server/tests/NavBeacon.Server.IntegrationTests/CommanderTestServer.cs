@@ -101,7 +101,8 @@ internal sealed class CommanderTestServer : IDisposable
     TimeProvider? clock = null,
     CapturingLoggerProvider? logs = null,
     string? pathBase = null,
-    IInterceptor? interceptor = null
+    IInterceptor? interceptor = null,
+    IReadOnlyDictionary<string, string>? settings = null
   )
   {
     factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -113,6 +114,11 @@ internal sealed class CommanderTestServer : IDisposable
       if (pathBase is not null)
       {
         builder.UseSetting("PathBase", pathBase);
+      }
+
+      foreach (var setting in settings ?? new Dictionary<string, string>())
+      {
+        builder.UseSetting(setting.Key, setting.Value);
       }
 
       builder.ConfigureTestServices(services =>

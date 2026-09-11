@@ -3,7 +3,10 @@ import { parseStoredLoadout } from '../equipment/loadout/stored-loadout.serializ
 import { reconstructLoadout } from '../equipment/loadout/loadout-reconstructor';
 import type { BuildSnapshotV1 } from '../ships/build/build-snapshot';
 import { parseBuildSnapshotV1 } from '../ships/build/build-snapshot.parser';
-import { reconstructFromSnapshot } from '../ships/build/build-snapshot.reconstructor';
+import {
+  fittedAsStored,
+  reconstructFromSnapshot,
+} from '../ships/build/build-snapshot.reconstructor';
 import type { LocalRecordKind } from './local-record';
 
 export const REMOTE_RECORD_FORMAT = 'ednb.remote-record';
@@ -130,7 +133,7 @@ export function parseRemoteRecord(value: unknown): RemoteRecordParseResult {
     }
     const rebuilt = reconstructFromSnapshot(parsed.snapshot);
     if (!rebuilt.ok) return failed(rebuilt.reason);
-    if (!validRemoteBuild(parsed.snapshot, rebuilt.loadout)) {
+    if (!fittedAsStored(parsed.snapshot, rebuilt.loadout)) {
       return failed('The package did not accept the remote hull-slot combination.');
     }
     return { ok: true, record: { ...envelope, tool, build: parsed.snapshot } };
@@ -169,23 +172,6 @@ function isExactBuild(value: unknown): boolean {
       isExactNullableObject(module['preEngineered'], PRE_ENGINEERED_KEYS) &&
       isExactNullableObject(module['engineering'], ENGINEERING_KEYS),
   );
-}
-
-function validRemoteBuild(
-  snapshot: BuildSnapshotV1,
-  loadout: Extract<ReturnType<typeof reconstructFromSnapshot>, { readonly ok: true }>['loadout'],
-): boolean {
-  if (
-    loadout
-      .validation()
-      .issues.some((issue) => issue.code === 'unknownSlot' || issue.code === 'incompatibleModule')
-  ) {
-    return false;
-  }
-  return snapshot.modules.every((module) => {
-    const fitted = loadout.fittedModuleAt(module.slot);
-    return fitted !== null && fitted.symbol.toLowerCase() === module.symbol.toLowerCase();
-  });
 }
 
 function isExactLoadout(value: unknown): value is StoredLoadoutV1 {

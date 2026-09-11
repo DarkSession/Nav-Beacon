@@ -33,7 +33,7 @@ public static class RecordEndpoints
     }
     catch (AntiforgeryValidationException)
     {
-      return Refusal(StatusCodes.Status400BadRequest, RecordErrorCodes.InvalidAntiForgery);
+      return Refusal(RecordErrorCodes.InvalidAntiForgery);
     }
 
     var access = await sessions.AuthenticateAsync(
@@ -43,25 +43,19 @@ public static class RecordEndpoints
     if (access is null)
     {
       CommanderCookies.DeleteSession(response);
-      return Refusal(StatusCodes.Status401Unauthorized, RecordErrorCodes.Unauthorised);
+      return Refusal(RecordErrorCodes.Unauthorised);
     }
 
     var body = await ReadBoundedBodyAsync(request, cancellationToken);
     if (body is null)
     {
-      return Refusal(
-        StatusCodes.Status413PayloadTooLarge,
-        RecordErrorCodes.RequestTooLarge
-      );
+      return Refusal(RecordErrorCodes.RequestTooLarge);
     }
 
     var read = RecordRequestReader.Read(body.Value);
     if (read.Request is null)
     {
       return Refusal(
-        read.Code == RecordErrorCodes.RequestTooLarge
-          ? StatusCodes.Status413PayloadTooLarge
-          : StatusCodes.Status400BadRequest,
         read.Code!,
         read.Index is null ? null : Withheld(read.ChangeCount, read.Index, read.Code!)
       );
@@ -80,7 +74,6 @@ public static class RecordEndpoints
       {
         return validation.Failure == RecordValidationFailure.Refused
           ? Refusal(
-            StatusCodes.Status400BadRequest,
             RecordErrorCodes.InvalidRecord,
             Withheld(
               read.Request.Changes.Count,
@@ -88,10 +81,7 @@ public static class RecordEndpoints
               RecordErrorCodes.InvalidRecord
             )
           )
-          : Refusal(
-            StatusCodes.Status503ServiceUnavailable,
-            RecordErrorCodes.ValidationUnavailable
-          );
+          : Refusal(RecordErrorCodes.ValidationUnavailable);
       }
     }
 
@@ -107,10 +97,7 @@ public static class RecordEndpoints
     }
     catch (Exception failure) when (failure is DbException or DbUpdateException)
     {
-      return Refusal(
-        StatusCodes.Status500InternalServerError,
-        RecordErrorCodes.SynchronisationFailed
-      );
+      return Refusal(RecordErrorCodes.SynchronisationFailed);
     }
   }
 
@@ -155,14 +142,7 @@ public static class RecordEndpoints
   }
 
   private static IResult Refused(RecordSynchronisationOutcome outcome) =>
-    Refusal(
-      outcome.Code == RecordErrorCodes.CrossAccountRecord
-        ? StatusCodes.Status403Forbidden
-        : StatusCodes.Status409Conflict,
-      outcome.Code!,
-      ChangeResults(outcome.Results),
-      outcome.AccountRevision
-    );
+    Refusal(outcome.Code!, ChangeResults(outcome.Results), outcome.AccountRevision);
 
   private static JsonArray ChangeResults(IReadOnlyList<ChangeResult> results)
   {
@@ -236,7 +216,6 @@ public static class RecordEndpoints
     };
 
   private static IResult Refusal(
-    int statusCode,
     string code,
     JsonArray? results = null,
     long? accountRevision = null
@@ -253,10 +232,22 @@ public static class RecordEndpoints
     }
     return TypedResults.Problem(
       title: Title(code),
-      statusCode: statusCode,
+      statusCode: Status(code),
       extensions: extensions
     );
   }
+
+  private static int Status(string code) =>
+    code switch
+    {
+      RecordErrorCodes.Unauthorised => StatusCodes.Status401Unauthorized,
+      RecordErrorCodes.RequestTooLarge => StatusCodes.Status413PayloadTooLarge,
+      RecordErrorCodes.CrossAccountRecord => StatusCodes.Status403Forbidden,
+      RecordErrorCodes.Conflict => StatusCodes.Status409Conflict,
+      RecordErrorCodes.ValidationUnavailable => StatusCodes.Status503ServiceUnavailable,
+      RecordErrorCodes.SynchronisationFailed => StatusCodes.Status500InternalServerError,
+      _ => StatusCodes.Status400BadRequest,
+    };
 
   private static string Title(string code) =>
     code switch
