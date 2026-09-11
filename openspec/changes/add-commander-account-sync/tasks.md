@@ -179,10 +179,10 @@ run policy:specs` resolves every governing reference and help route.
 
 ## 8. Deployment and full verification
 
-- [ ] 8.1 Add production configuration checks for PostgreSQL, Frontier OAuth, shared key protection,
+- [x] 8.1 Add production configuration checks for PostgreSQL, Frontier OAuth, shared key protection,
       trusted proxy headers, HTTPS and request limits; verify the server refuses production startup when
       each required setting is absent or unsafe.
-- [ ] 8.2 Add deployment guidance for same-origin routing, EF migration execution, horizontal
+- [x] 8.2 Add deployment guidance for same-origin routing, EF migration execution, horizontal
       instances, key-ring backup and rollback order; verify every command against the local disposable
       deployment with two API instances.
 - [ ] 8.3 Register 020/FR-001 through 020/FR-026 in the end-to-end coverage ledger and add journeys
