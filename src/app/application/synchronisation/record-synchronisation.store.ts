@@ -286,9 +286,7 @@ export class RecordSynchronisationStore {
    */
   async resumeRecord(recordId: string): Promise<ConflictResolution> {
     const credentials = this.#account.credentials();
-    return credentials === null
-      ? { kind: 'unknown' }
-      : this.resume(recordId, credentials);
+    return credentials === null ? { kind: 'unknown' } : this.resume(recordId, credentials);
   }
 
   async #triggered(change: (customerId: string) => void): Promise<void> {

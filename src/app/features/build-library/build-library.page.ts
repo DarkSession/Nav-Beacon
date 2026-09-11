@@ -25,6 +25,9 @@ import { RecordInvalidationService } from '../../application/build-library/recor
 import { RecordOpenService } from '../../application/build-library/record-open.service';
 import { LoadoutOpenService } from '../../application/equipment/loadout-open.service';
 import { RetentionService } from '../../application/build-library/retention.service';
+import { RecordSynchronisationCoordinator } from '../../application/synchronisation/record-synchronisation.coordinator';
+import { RecordSynchronisationStore } from '../../application/synchronisation/record-synchronisation.store';
+import { SynchronisationPresenter } from '../../application/synchronisation/synchronisation.presenter';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import { Formatters } from '../../i18n/formatters/formatters';
@@ -46,7 +49,9 @@ import { TextField } from '../../ui/components/text-field/text-field';
 import { Layer } from '../../ui/components/layer/layer';
 import type { SavedBuild } from '../../ui/components/saved-build-card/saved-build-card';
 import { StatusNotice } from '../../ui/components/status/status-notice';
+import { SynchronisationPanel } from './synchronisation-panel.component';
 import { NAVIGATION_ROUTES } from '../shared/app-navigation';
+import type { ConflictChoice } from '../../domain/commander/record-conflict';
 
 /**
  * One action the committing footer offers on the record that was chosen.
@@ -94,6 +99,7 @@ interface PendingDelete {
     RecordManager,
     ResponsiveRecordList,
     StatusNotice,
+    SynchronisationPanel,
     TextField,
   ],
   templateUrl: './build-library.page.html',
@@ -118,6 +124,34 @@ export class BuildLibraryPage {
   readonly #gameText = inject(GameTextPresenter);
   readonly #router = inject(Router);
   readonly #presence = inject(LibraryPresence);
+  readonly #sync = inject(RecordSynchronisationStore);
+  readonly #synchronisation = inject(RecordSynchronisationCoordinator);
+  readonly #syncPresenter = inject(SynchronisationPresenter);
+
+  /**
+   * Conflicts the Commander has waved away for this visit.
+   *
+   * Dismissing the question is not one of the three answers. The conflict
+   * stands, both versions stay exactly as they are, and the account's own state
+   * still says how many records are waiting — what is set aside is the layer,
+   * not the decision (020/FR-009, 020/FR-010).
+   */
+  readonly #setAside = signal<readonly string[]>([]);
+
+  /**
+   * What this browser can say about the account's copy of these records.
+   *
+   * The library is one of the moments the design synchronises at, so the
+   * exchange is asked for when the layer is raised and what it answers is
+   * stated here (020/FR-011, design decision 6).
+   */
+  readonly syncView = computed(() => {
+    const view = this.#syncPresenter.view();
+    const conflict = view.conflict;
+    return conflict !== null && this.#setAside().includes(conflict.recordId)
+      ? { ...view, conflict: null }
+      : view;
+  });
 
   /**
    * What a journal import stored, when one opened this layer.
@@ -382,6 +416,38 @@ export class BuildLibraryPage {
       this.#invalidation.revision();
       this.#library.refresh();
     });
+
+    // A record library opening is one of the moments the account exchanges at.
+    // It does nothing at all while the browser is anonymous, and it never makes
+    // the list wait on a network (020/FR-011, design decision 6).
+    void this.#synchronisation.refresh();
+  }
+
+  /** An explicit retry of an exchange that did not leave this browser current. */
+  retrySynchronisation(): void {
+    void this.#synchronisation.refresh();
+  }
+
+  /** The Commander's answer to the conflict the panel is asking about. */
+  answerConflict(choice: ConflictChoice): void {
+    const conflict = this.syncView().conflict;
+    if (conflict !== null) {
+      void this.#synchronisation.resolve(conflict.recordId, choice);
+    }
+  }
+
+  /**
+   * Leaves the conflict standing.
+   *
+   * Dismissal is not one of the three answers. Both versions stay exactly as
+   * they are and the question is asked again the next time the library is
+   * opened (020/FR-009, 020/FR-010).
+   */
+  dismissConflict(): void {
+    const conflict = this.syncView().conflict;
+    if (conflict !== null) {
+      this.#setAside.update((standing) => [...standing, conflict.recordId]);
+    }
   }
 
   /**
@@ -498,6 +564,11 @@ export class BuildLibraryPage {
     // 017/FR-008).
     this.#letGoOf(pending.recordId);
 
+    // A deletion the Commander confirmed is a deletion of the account's copy
+    // too. Nothing is queued while the browser is anonymous, and the local
+    // removal has already happened (020/FR-010, 020/FR-011).
+    void this.#sync.recordDeleted(pending.recordId);
+
     this.#invalidation.announceDelete(pending.recordId);
     this.#library.refresh();
   }
@@ -518,6 +589,7 @@ export class BuildLibraryPage {
         // Selected deliberately, one by one, so the same rule applies as to a
         // single confirmed deletion.
         this.#letGoOf(id);
+        void this.#sync.recordDeleted(id);
         this.#invalidation.announceDelete(id);
       }
     }

@@ -1,0 +1,67 @@
+<section class="sync" [attr.aria-labelledby]="headingId">
+  <h3 class="sync__heading" [id]="headingId">{{ view().heading }}</h3>
+
+  <!--
+    Where the account stands, in a sentence. A device is never said to be
+    current until the service has confirmed it, and a failure says what is
+    still owed rather than leaving it to be guessed (020/FR-011).
+  -->
+  <ednb-status-notice
+    class="sync__status"
+    [tone]="view().status.tone"
+    [message]="view().status.message"
+    [detail]="view().detail"
+  />
+
+  <!--
+    What is true of sets of records rather than of the exchange: the ones this
+    browser keeps for another account, the ones it keeps for nobody, and the
+    ones the account holds in a form this version cannot open (020/FR-012,
+    020/FR-024).
+  -->
+  @for (note of view().notes; track note.id) {
+    <ednb-status-notice
+      class="sync__note"
+      [attr.data-sync-note]="note.id"
+      [tone]="note.tone"
+      [message]="note.message"
+    />
+  }
+
+  @if (view().retry; as retry) {
+    <div class="sync__actions">
+      <ednb-action-button
+        [label]="retry"
+        emphasis="secondary"
+        (activated)="retryRequested.emit()"
+      />
+    </div>
+  }
+</section>
+
+@if (view().conflict; as conflict) {
+  <ednb-layer
+    [open]="true"
+    [title]="conflict.title"
+    [description]="conflict.description"
+    [detail]="conflict.recordLabel"
+    [dismissLabel]="conflict.dismiss"
+    (dismissed)="conflictDismissed.emit()"
+  >
+    <!--
+      Three answers, each a control a Commander presses. Dismissing the layer
+      answers nothing and changes nothing: the conflict still stands, and both
+      versions are still there (020/FR-009, 020/FR-010).
+    -->
+    <div class="sync__answers">
+      @for (answer of conflict.answers; track answer.choice) {
+        <ednb-action-button
+          class="sync__answer sync__answer--{{ answer.choice }}"
+          [label]="answer.label"
+          [emphasis]="answer.emphasis"
+          (activated)="answered.emit(answer.choice)"
+        />
+      }
+    </div>
+  </ednb-layer>
+}

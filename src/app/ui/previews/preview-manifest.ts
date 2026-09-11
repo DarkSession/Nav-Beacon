@@ -258,6 +258,7 @@ import { UnavailableFact } from '../outfitting/unavailable-fact';
 import { DiagnosticList } from '../technical/diagnostic-list';
 import { InlineLink } from '../components/inline-link/inline-link';
 import { AccountDialog } from '../../features/account/account-dialog.component';
+import { SynchronisationPanel } from '../../features/build-library/synchronisation-panel.component';
 import { HelpDialog } from '../../features/help/help-dialog.component';
 import { SaveBuildDialog } from '../../features/build-workspace/save-build.dialog';
 import { HELP_MANIFEST } from '../../platform/build/help-manifest.generated';
@@ -5212,5 +5213,335 @@ registerPreview({
     state('disabled', { label: 'Select or drop journal files', disabled: true }, [
       'exposes the disabled state natively on the file control',
     ]),
+  ],
+});
+
+// ---------------------------------------------------------------------------
+// Feature 020 — the record libraries' account region
+//
+// One panel, ten states. The five required manifest states cannot name ten
+// screen states between them, so the panel is declared three times — once for
+// where the account stands, once for what is true of sets of records, and once
+// for the question only a Commander can answer — and each declaration names the
+// screen state its fixture draws. Registering one production component under a
+// second id is what `tab-group-segmented` already does for a second set of
+// renderings.
+//
+// Every fixture reads its words from the bundled English catalogue, so a
+// reworded sentence reaches the catalogue page and the product together.
+// ---------------------------------------------------------------------------
+
+/** One panel view model, with the parts every state shares filled in. */
+function synchronisationView(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    heading: BUNDLED_ENGLISH['sync.title'],
+    status: { tone: 'info', message: BUNDLED_ENGLISH['sync.status.local-only'] },
+    detail: null,
+    retry: null,
+    notes: [],
+    conflict: null,
+    ...overrides,
+  };
+}
+
+/** The instant and the counts a catalogue page shows in place of a Commander's own. */
+const PREVIEW_INSTANT = '12 Sep 2026, 09:41';
+const PREVIEW_RECORD = 'Deep space explorer';
+
+function synchronisationConflict(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    recordId: 'preview-record',
+    title: BUNDLED_ENGLISH['sync.conflict.stale.title'],
+    description: BUNDLED_ENGLISH['sync.conflict.stale.description'],
+    recordLabel: `Record: ${PREVIEW_RECORD}`,
+    answers: [
+      {
+        choice: 'overwrite',
+        label: BUNDLED_ENGLISH['sync.conflict.overwrite'],
+        emphasis: 'primary',
+      },
+      {
+        choice: 'keep-both',
+        label: BUNDLED_ENGLISH['sync.conflict.keep-both'],
+        emphasis: 'secondary',
+      },
+      {
+        choice: 'cancel',
+        label: BUNDLED_ENGLISH['sync.conflict.cancel'],
+        emphasis: 'secondary',
+      },
+    ],
+    dismiss: BUNDLED_ENGLISH['action.close'],
+    ...overrides,
+  };
+}
+
+/** What every state of this region is held to, whichever declaration draws it. */
+const SYNCHRONISATION_EXPECTATIONS: readonly string[] = [
+  'the account state is a sentence, never a tone on its own',
+  'no meaning carried by colour: every notice says it in words',
+  'the same reading order at desktop, tablet and mobile width, in both orientations',
+  'every action clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+  'nothing here claims the device is current until the service has confirmed it',
+];
+
+const SYNCHRONISATION_SEMANTICS = {
+  role: 'group',
+  visibleNameMatchesAccessibleName: true,
+  exposedStates: [],
+  relationships: ['label', 'description'],
+  textEquivalents: ['account state, in a sentence rather than by tone'],
+} as const;
+
+registerPreview({
+  componentId: 'record-synchronisation',
+  group: 'Library',
+  component: SynchronisationPanel,
+  contract: contract('record-synchronisation', SYNCHRONISATION_SEMANTICS, [
+    'default',
+    'empty',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Current.
+    state(
+      'default',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'success',
+            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+          },
+        }),
+      },
+      [...SYNCHRONISATION_EXPECTATIONS, 'names the instant the service confirmed this device at'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Local only.
+    state(
+      'empty',
+      { view: synchronisationView() },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that the records stay in this browser and that an account is optional',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // First merge.
+    state(
+      'loading',
+      {
+        view: synchronisationView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['sync.status.merging'] },
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that the first exchange after a sign-in is running',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Failed.
+    state(
+      'error',
+      {
+        view: synchronisationView({
+          status: { tone: 'error', message: BUNDLED_ENGLISH['sync.status.failed.offline'] },
+          detail: '2 changes are still waiting.',
+          retry: BUNDLED_ENGLISH['action.retry'],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that local work is safe, says what is still owed and offers another attempt',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the account is doing. Its retry carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'record-synchronisation-records',
+  group: 'Library',
+  component: SynchronisationPanel,
+  contract: contract('record-synchronisation-records', SYNCHRONISATION_SEMANTICS, [
+    'default',
+    'empty',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Account-bound: records this browser keeps for another Commander.
+    state(
+      'default',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'success',
+            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+          },
+          notes: [
+            {
+              id: 'account-bound',
+              tone: 'info',
+              message: '2 records belong to another Commander account and stay in this browser.',
+            },
+          ],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that another account’s records stay here and never reach this one',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Local-only: records that need an explicit new save or copy.
+    state(
+      'empty',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'success',
+            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+          },
+          notes: [
+            {
+              id: 'local-only',
+              tone: 'info',
+              message:
+                '3 records are kept in this browser only. Save or copy one again to synchronise it.',
+            },
+          ],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that a local-only record needs an explicit new save or copy',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Pending.
+    state(
+      'loading',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'warning',
+            message: '2 changes waiting to reach your account. Your records are saved here.',
+          },
+        }),
+      },
+      [...SYNCHRONISATION_EXPECTATIONS, 'states what is owed without blocking any local work'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Unsupported remote version.
+    state(
+      'error',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'success',
+            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+          },
+          notes: [
+            {
+              id: 'unsupported-version',
+              tone: 'warning',
+              message: 'Your account holds 1 record this version of Nav Beacon cannot open.',
+            },
+          ],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that the account holds a record this version cannot open, and keeps it',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the account is doing. Its retry carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'record-synchronisation-conflict',
+  group: 'Layers',
+  component: SynchronisationPanel,
+  contract: contract('record-synchronisation-conflict', SYNCHRONISATION_SEMANTICS, [
+    'default',
+    'error',
+  ]),
+  states: [
+    // Stale-write conflict.
+    state(
+      'default',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'warning',
+            message: '1 record needs your answer before it can synchronise.',
+          },
+          conflict: synchronisationConflict(),
+        }),
+      },
+      [
+        'one layer, named by its visible question, over an inert library',
+        'names the record the question is about',
+        'offers overwrite, keep both and cancel; dismissal answers nothing',
+        'states that neither version is removed until the Commander chooses',
+        'every answer clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+        'the same reading order at desktop, tablet and mobile width, in both orientations',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'A conflict layer always names a record and offers three answers; a version of it with nothing to answer is not a state.',
+    ),
+    notApplicable(
+      'loading',
+      'The question is asked once the exchange has already answered. Nothing about the layer waits.',
+    ),
+    // Remote deletion conflict.
+    state(
+      'error',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'warning',
+            message: '1 record needs your answer before it can synchronise.',
+          },
+          conflict: synchronisationConflict({
+            title: BUNDLED_ENGLISH['sync.conflict.deleted.title'],
+            description: BUNDLED_ENGLISH['sync.conflict.deleted.description'],
+          }),
+        }),
+      },
+      [
+        'one layer, named by its visible question, over an inert library',
+        'states that the account no longer holds the record and this browser still does',
+        'states that the open work stays whichever answer is chosen',
+        'offers overwrite, keep both and cancel; dismissal answers nothing',
+        'every answer clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The layer is open or closed. Its answers carry their own busy and disabled states; the layer has none.',
+    ),
   ],
 });

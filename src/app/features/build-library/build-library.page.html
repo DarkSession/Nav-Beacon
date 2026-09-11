@@ -35,6 +35,18 @@
     }
 
     <!--
+      Where these records stand with the Commander's account, and the one
+      question only they can answer. Drawn above the list, because it is true of
+      every row beneath it (020/FR-011, design decision 10).
+    -->
+    <ednb-synchronisation-panel
+      [view]="syncView()"
+      (retryRequested)="retrySynchronisation()"
+      (answered)="answerConflict($event)"
+      (conflictDismissed)="dismissConflict()"
+    />
+
+    <!--
       The header row: one search field over the records, and the count in
       monospace beside it on the same line, where the reference puts them.
 

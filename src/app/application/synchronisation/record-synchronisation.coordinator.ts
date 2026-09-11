@@ -1,4 +1,4 @@
-import { Injectable, effect, inject } from '@angular/core';
+import { Injectable, Injector, effect, inject } from '@angular/core';
 import type { ConflictChoice, ConflictResolution } from '../../domain/commander/record-conflict';
 import type { RecordTool } from '../../domain/records/local-record';
 import { ConnectivityAdapter } from '../../platform/browser/connectivity.adapter';
@@ -48,6 +48,8 @@ export class RecordSynchronisationCoordinator {
   readonly #tab = inject(TabDescriptorRepository);
   readonly #build = inject(ActiveBuildStore);
   readonly #loadout = inject(LoadoutStore);
+  /** Captured at construction so `start()` can create its watcher from anywhere. */
+  readonly #injector = inject(Injector);
 
   #timer: ReturnType<typeof setInterval> | null = null;
 
@@ -74,15 +76,18 @@ export class RecordSynchronisationCoordinator {
    * still a live page holding that record (020/FR-025).
    */
   start(): () => void {
-    const watcher = effect(() => {
-      // Read as signals, so the renewal is put again the moment the page comes
-      // back online, signs in, or takes up another record.
-      this.#connectivity.online();
-      this.#account.credentials();
-      this.#build.autosaveRecordId();
-      this.#loadout.autosaveRecordId();
-      this.renewProtection();
-    });
+    const watcher = effect(
+      () => {
+        // Read as signals, so the renewal is put again the moment the page comes
+        // back online, signs in, or takes up another record.
+        this.#connectivity.online();
+        this.#account.credentials();
+        this.#build.autosaveRecordId();
+        this.#loadout.autosaveRecordId();
+        this.renewProtection();
+      },
+      { injector: this.#injector },
+    );
 
     this.#timer = setInterval(() => this.renewProtection(), PROTECTION_CHECK_MS);
 

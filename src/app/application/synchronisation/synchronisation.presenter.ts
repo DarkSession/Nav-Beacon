@@ -1,0 +1,280 @@
+import { Injectable, computed, inject } from '@angular/core';
+import {
+  accountCursor,
+  type RecordAccountBinding,
+} from '../../domain/commander/commander-local-state';
+import type { ConflictChoice, RecordConflict } from '../../domain/commander/record-conflict';
+import { Formatters } from '../../i18n/formatters/formatters';
+import type { MessageKey } from '../../i18n/locale-registry';
+import { MessageService } from '../../i18n/message.service';
+import { ClockAdapter } from '../../platform/browser/clock.adapter';
+import { CommanderStateRepository } from '../../platform/storage/commander-state.repository';
+import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
+import type { StatusTone } from '../../ui/components/status/status-notice';
+import { AccountStore } from '../account/account.store';
+import type { SynchronisationFailure } from './record-synchronisation.store';
+import { RecordSynchronisationStore } from './record-synchronisation.store';
+
+/** One answer a Commander can give to a record conflict. */
+export interface ConflictAnswer {
+  readonly choice: ConflictChoice;
+  readonly label: string;
+  readonly emphasis: 'primary' | 'secondary' | 'danger';
+}
+
+/** The layer that asks about one record the account and this browser disagree on. */
+export interface ConflictView {
+  readonly recordId: string;
+  readonly title: string;
+  readonly description: string;
+  /** Which record it is about, in the Commander's own words where they named it. */
+  readonly recordLabel: string;
+  readonly answers: readonly ConflictAnswer[];
+  readonly dismiss: string;
+}
+
+/** One sentence about a set of records, drawn under the account's own state. */
+export interface SynchronisationNote {
+  readonly id: string;
+  readonly tone: StatusTone;
+  readonly message: string;
+}
+
+/** Everything the record library says about the account's own copy. */
+export interface SynchronisationPanelView {
+  readonly heading: string;
+  readonly status: { readonly tone: StatusTone; readonly message: string };
+  /** Supporting detail for the state, where the state has one. */
+  readonly detail: string | null;
+  /** The label of the explicit retry, or `null` where there is nothing to retry. */
+  readonly retry: string | null;
+  readonly notes: readonly SynchronisationNote[];
+  readonly conflict: ConflictView | null;
+}
+
+/**
+ * What the record libraries say about the Commander's account, in words.
+ *
+ * Ten states in one view model, so the library draws the same region whatever
+ * the account is doing: where the records are, what is owed, what failed and
+ * what needs an answer. A state with nothing to add to a region leaves the
+ * region out rather than moving the ones around it.
+ *
+ * Presentation only. Every decision about what a record *is* belongs to the
+ * synchronisation store below it (constitution III).
+ *
+ * Nothing here is carried by tone. Each sentence says what it means, and the
+ * tone is a second rendering of it (011/FR-010).
+ */
+@Injectable({ providedIn: 'root' })
+export class SynchronisationPresenter {
+  readonly #messages = inject(MessageService);
+  readonly #formatters = inject(Formatters);
+  readonly #clock = inject(ClockAdapter);
+  readonly #account = inject(AccountStore);
+  readonly #sync = inject(RecordSynchronisationStore);
+  readonly #state = inject(CommanderStateRepository);
+  readonly #records = inject(LocalRecordRepository);
+
+  readonly view = computed<SynchronisationPanelView>(() => {
+    const status = this.#sync.status();
+    const credentials = this.#account.credentials();
+    const conflicts = this.#sync.conflicts();
+
+    return {
+      heading: this.#messages.message('sync.title'),
+      status: this.#statusOf(status.kind === 'inactive' || credentials === null ? null : status),
+      detail: this.#detailOf(status),
+      retry: status.kind === 'failed' ? this.#messages.message('action.retry') : null,
+      notes: this.#notes(credentials?.customerId ?? null),
+      conflict: conflicts.length === 0 ? null : this.#conflictView(conflicts[0]),
+    };
+  });
+
+  /** Whether anything on this surface is waiting for the Commander. */
+  readonly hasConflict = computed(() => this.#sync.hasConflicts());
+
+  #statusOf(
+    status: ReturnType<RecordSynchronisationStore['status']> | null,
+  ): SynchronisationPanelView['status'] {
+    if (status === null) {
+      // Anonymous, or signed in with no exchange attempted yet. Both are the
+      // same sentence: the records are in this browser and nowhere else
+      // (020/FR-007).
+      return { tone: 'info', message: this.#messages.message('sync.status.local-only') };
+    }
+    switch (status.kind) {
+      case 'synchronising':
+        return {
+          tone: 'loading',
+          message: this.#messages.message(
+            this.#firstMerge() ? 'sync.status.merging' : 'sync.status.synchronising',
+          ),
+        };
+      case 'current':
+        return {
+          tone: 'success',
+          message: this.#messages.message('sync.status.current', {
+            when: this.#instant(status.at),
+          }),
+        };
+      case 'pending':
+        return {
+          tone: 'warning',
+          message: this.#messages.message('sync.status.pending', {
+            count: this.#formatters.integer(status.changes),
+          }),
+        };
+      case 'conflicted':
+        return {
+          tone: 'warning',
+          message: this.#messages.message('sync.status.conflicted', {
+            count: this.#formatters.integer(status.conflicts),
+          }),
+        };
+      case 'failed':
+        return { tone: 'error', message: this.#messages.message(failureKey(status.failure)) };
+      default:
+        return { tone: 'info', message: this.#messages.message('sync.status.local-only') };
+    }
+  }
+
+  /**
+   * What is still owed, beside a failure that says why.
+   *
+   * A failed exchange never claims the device is current, and it says how much
+   * is still waiting rather than leaving the count to be guessed (020/FR-011).
+   */
+  #detailOf(status: ReturnType<RecordSynchronisationStore['status']>): string | null {
+    if (status.kind !== 'failed' || status.changes === 0) {
+      return null;
+    }
+    return this.#messages.message('sync.status.failed.pending', {
+      count: this.#formatters.integer(status.changes),
+    });
+  }
+
+  /** Whether the account has never accepted a response in this browser. */
+  #firstMerge(): boolean {
+    const customerId = this.#account.credentials()?.customerId ?? null;
+    return customerId !== null && accountCursor(this.#state.read(), customerId) === 0;
+  }
+
+  /**
+   * The sentences about sets of records, rather than about the exchange.
+   *
+   * Read from the stored bindings, which is where a record's account state
+   * lives. The read is not a signal, so it is taken again whenever the exchange
+   * state or the session changes — which is when a binding can have changed
+   * (020/FR-024).
+   */
+  #notes(customerId: string | null): readonly SynchronisationNote[] {
+    const bindings: Readonly<Record<string, RecordAccountBinding>> =
+      this.#state.read().recordBindings;
+    const values = Object.values(bindings);
+    const notes: SynchronisationNote[] = [];
+
+    const localOnly = values.filter((binding) => binding === 'local-only').length;
+    if (localOnly > 0) {
+      notes.push({
+        id: 'local-only',
+        tone: 'info',
+        message: this.#messages.message('sync.note.local-only', {
+          count: this.#formatters.integer(localOnly),
+        }),
+      });
+    }
+
+    const elsewhere = values.filter(
+      (binding) => binding !== 'local-only' && binding !== customerId,
+    ).length;
+    if (elsewhere > 0) {
+      notes.push({
+        id: 'account-bound',
+        tone: 'info',
+        message: this.#messages.message('sync.note.account-bound', {
+          count: this.#formatters.integer(elsewhere),
+        }),
+      });
+    }
+
+    const unreadable = this.#sync.unreadable().length;
+    if (unreadable > 0) {
+      notes.push({
+        id: 'unsupported-version',
+        tone: 'warning',
+        message: this.#messages.message('sync.note.unsupported-version', {
+          count: this.#formatters.integer(unreadable),
+        }),
+      });
+    }
+
+    return notes;
+  }
+
+  #conflictView(conflict: RecordConflict): ConflictView {
+    const deletion = conflict.kind === 'remote-deletion';
+    return {
+      recordId: conflict.recordId,
+      title: this.#messages.message(
+        deletion ? 'sync.conflict.deleted.title' : 'sync.conflict.stale.title',
+      ),
+      description: this.#messages.message(
+        deletion ? 'sync.conflict.deleted.description' : 'sync.conflict.stale.description',
+      ),
+      recordLabel: this.#messages.message('sync.conflict.record', {
+        name: this.#recordName(conflict.recordId),
+      }),
+      answers: [
+        {
+          choice: 'overwrite',
+          label: this.#messages.message('sync.conflict.overwrite'),
+          emphasis: 'primary',
+        },
+        {
+          choice: 'keep-both',
+          label: this.#messages.message('sync.conflict.keep-both'),
+          emphasis: 'secondary',
+        },
+        {
+          choice: 'cancel',
+          label: this.#messages.message('sync.conflict.cancel'),
+          emphasis: 'secondary',
+        },
+      ],
+      dismiss: this.#messages.message('action.close'),
+    };
+  }
+
+  /** The Commander's own name for the record, or what an unnamed one is called. */
+  #recordName(recordId: string): string {
+    const opened = this.#records.open(recordId);
+    const name = opened.ok ? (opened.value?.record.name ?? null) : null;
+    return name ?? this.#messages.message('library.record.unnamed');
+  }
+
+  #instant(iso: string): string {
+    const parsed = new Date(iso);
+    return Number.isFinite(parsed.getTime())
+      ? this.#formatters.dateTime(parsed)
+      : this.#formatters.dateTime(this.#clock.now());
+  }
+}
+
+/** Why one exchange did not leave this browser current, as a message key. */
+function failureKey(failure: SynchronisationFailure): MessageKey {
+  switch (failure.reason) {
+    case 'offline':
+      return 'sync.status.failed.offline';
+    case 'signed-out':
+      return 'sync.status.failed.signed-out';
+    case 'storage':
+      return 'sync.status.failed.storage';
+    case 'refused':
+      return 'sync.status.failed.refused';
+    case 'bound':
+      return 'sync.status.failed.bound';
+    default:
+      return 'sync.status.failed.service';
+  }
+}

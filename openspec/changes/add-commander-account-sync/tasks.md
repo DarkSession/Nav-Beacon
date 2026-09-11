@@ -113,17 +113,17 @@
       clearing the pending operation; verify an unchanged active record survives remote deletion,
       pauses autosave and uses overwrite on explicit resume, while an unclaimed unchanged copy is
       removed.
-- [ ] 5.5 Connect ship-build and equipment-loadout named saves, autosaves, deletes and seven-day
+- [x] 5.5 Connect ship-build and equipment-loadout named saves, autosaves, deletes and seven-day
       expiry to the shared synchronisation store; verify existing anonymous persistence tests still pass
       and signed-in tests synchronise and renew live-page protection for both record kinds without
       sending records bound to another Customer ID; verify skewed browser clocks cannot expire a remote
       record early.
-- [ ] 5.6 Let a signed-in fragment, SLEF or selected-journal import enter synchronisation only after
+- [x] 5.6 Let a signed-in fragment, SLEF or selected-journal import enter synchronisation only after
       browser reconstruction and record persistence; verify network tests prove the source request and
       import operation send no fragment, SLEF, file, line, event, provenance or capture-only data and
       anonymous opening sends no build data; verify selected-journal ship-build and equipment-loadout
       records both follow this boundary.
-- [ ] 5.7 Add localised current, pending, failed and conflict states to both record libraries with
+- [x] 5.7 Add localised current, pending, failed and conflict states to both record libraries with
       existing design-system parts; verify component tests cover 200% text and all screen-inventory
       states at desktop, tablet and mobile widths in both orientations, with touch-sized actions and no
       colour-only meaning; add component previews for every state.
