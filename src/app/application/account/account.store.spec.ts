@@ -87,9 +87,19 @@ function storedState(): CommanderLocalState {
     version: COMMANDER_LOCAL_STATE_VERSION,
     account: ACCOUNT,
     fleetCache: [],
-    syncRevision: 42,
-    pendingOperationIds: ['operation-1', 'operation-2'],
+    accountCursors: { [ACCOUNT.customerId]: 42 },
+    pendingOperations: [
+      {
+        id: 'operation-1',
+        customerId: ACCOUNT.customerId,
+        recordId: 'record-1',
+        kind: 'upload',
+        baseRevision: null,
+        queuedAt: '2026-01-02T03:04:05.000Z',
+      },
+    ],
     recordBindings: { 'record-1': ACCOUNT.customerId, 'record-2': 'local-only' },
+    recordRevisions: { 'record-1': 41 },
   };
 }
 
@@ -240,8 +250,8 @@ describe('AccountStore', () => {
       const atRequest = JSON.parse(api.storedAtDeletion ?? '{}') as CommanderLocalState;
       expect(atRequest.account).toBeNull();
       expect(atRequest.fleetCache).toEqual([]);
-      expect(atRequest.syncRevision).toBe(0);
-      expect(atRequest.pendingOperationIds).toEqual([]);
+      expect(atRequest.accountCursors).toEqual({});
+      expect(atRequest.pendingOperations).toEqual([]);
       expect(atRequest.recordBindings).toEqual({
         'record-1': 'local-only',
         'record-2': 'local-only',
@@ -261,7 +271,7 @@ describe('AccountStore', () => {
       expect(context.api.calls).toContain('delete-account');
       expect(context.store.state()).toEqual({ kind: 'anonymous' });
       expect(stored(context.storage).account).toBeNull();
-      expect(stored(context.storage).pendingOperationIds).toEqual([]);
+      expect(stored(context.storage).pendingOperations).toEqual([]);
       expect(stored(context.storage).recordBindings).toEqual({
         'record-1': 'local-only',
         'record-2': 'local-only',
@@ -290,8 +300,8 @@ describe('AccountStore', () => {
       expect(context.store.state()).toEqual({ kind: 'delete-local-failed', account: ACCOUNT });
       // Untouched: the account and its records are both still there.
       expect(stored(context.storage).account).toEqual(ACCOUNT);
-      expect(stored(context.storage).syncRevision).toBe(42);
-      expect(stored(context.storage).pendingOperationIds).toEqual(['operation-1', 'operation-2']);
+      expect(stored(context.storage).accountCursors).toEqual({ [ACCOUNT.customerId]: 42 });
+      expect(stored(context.storage).pendingOperations).toHaveLength(1);
       expect(stored(context.storage).recordBindings['record-1']).toBe(ACCOUNT.customerId);
     });
 
