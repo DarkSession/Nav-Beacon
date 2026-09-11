@@ -10,6 +10,7 @@ import {
   type CommanderApiPort,
   type CommanderSessionResult,
 } from '../../platform/network/commander-api';
+import type { SynchronisationResponse } from '../../domain/records/record-synchronisation';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 
 const ACCOUNT = { customerId: '900001', commanderName: 'CMDR Jameson' };
@@ -40,6 +41,11 @@ class SilentCommanderApi implements CommanderApiPort {
   async deleteAccount(): Promise<boolean> {
     this.calls.push('delete-account');
     return true;
+  }
+
+  async synchroniseRecords(): Promise<SynchronisationResponse> {
+    this.calls.push('synchronise-records');
+    return { kind: 'unavailable' };
   }
 }
 

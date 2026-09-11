@@ -1,5 +1,12 @@
 import { DOCUMENT } from '@angular/core';
 import { Injectable, InjectionToken, inject } from '@angular/core';
+import {
+  parseAcceptedResponse,
+  parseRefusal,
+  synchronisationBody,
+  type SynchronisationRequest,
+  type SynchronisationResponse,
+} from '../../domain/records/record-synchronisation';
 
 export interface CommanderAccountIdentity {
   readonly customerId: string;
@@ -21,6 +28,10 @@ export interface CommanderApiPort {
   readSession(): Promise<CommanderSessionResult>;
   signOut(antiForgeryToken: string): Promise<boolean>;
   deleteAccount(antiForgeryToken: string): Promise<boolean>;
+  synchroniseRecords(
+    request: SynchronisationRequest,
+    antiForgeryToken: string,
+  ): Promise<SynchronisationResponse>;
 }
 
 export const COMMANDER_API = new InjectionToken<CommanderApiPort>('COMMANDER_API', {
@@ -96,6 +107,38 @@ export class CommanderApi implements CommanderApiPort {
 
   async deleteAccount(antiForgeryToken: string): Promise<boolean> {
     return this.#stateChangingRequest('api/account', 'DELETE', antiForgeryToken);
+  }
+
+  /**
+   * Exchanges one batch of record changes against the account revision stream.
+   *
+   * Everything the answer says is read here, before any caller can commit it.
+   * A request that does not arrive, and an answer this browser cannot read,
+   * are the same outcome: nothing was accepted, so nothing may be written
+   * (020/FR-011, 020/FR-026).
+   */
+  async synchroniseRecords(
+    request: SynchronisationRequest,
+    antiForgeryToken: string,
+  ): Promise<SynchronisationResponse> {
+    let response: Response;
+    try {
+      response = await this.#fetch('api/records/synchronise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': antiForgeryToken },
+        body: synchronisationBody(request),
+      });
+    } catch {
+      return { kind: 'unavailable' };
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return response.ok ? { kind: 'unavailable' } : parseRefusal(response.status, null);
+    }
+    return response.ok ? parseAcceptedResponse(body) : parseRefusal(response.status, body);
   }
 
   async #stateChangingRequest(

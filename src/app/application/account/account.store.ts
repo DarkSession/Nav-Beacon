@@ -1,7 +1,13 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import type { CachedCommanderAccount } from '../../domain/commander/commander-local-state';
 import { COMMANDER_API } from '../../platform/network/commander-api';
 import { CommanderStateRepository } from '../../platform/storage/commander-state.repository';
+
+/** What one authenticated request to the Commander service needs. */
+export interface AccountCredentials {
+  readonly customerId: string;
+  readonly antiForgeryToken: string;
+}
 
 export type AccountState =
   | { readonly kind: 'anonymous' }
@@ -24,10 +30,25 @@ export class AccountStore {
   readonly #local = inject(CommanderStateRepository);
   readonly #state = signal<AccountState>({ kind: 'loading' });
   readonly #open = signal(false);
-  #antiForgeryToken: string | null = null;
+  readonly #antiForgeryToken = signal<string | null>(null);
 
   readonly state = this.#state.asReadonly();
   readonly open = this.#open.asReadonly();
+
+  /**
+   * What an authenticated request needs, or `null` where there is no session.
+   *
+   * The token stays here rather than being handed around: everything that
+   * reaches the account's own API reads this, and it empties the moment the
+   * session does (020/FR-004).
+   */
+  readonly credentials = computed<AccountCredentials | null>(() => {
+    const state = this.#state();
+    const token = this.#antiForgeryToken();
+    return state.kind === 'signed-in' && token !== null
+      ? { customerId: state.account.customerId, antiForgeryToken: token }
+      : null;
+  });
 
   async initialise(): Promise<void> {
     const callback = this.#api.callbackResult();
@@ -45,12 +66,12 @@ export class AccountStore {
   async refreshSession(expiryOnAnonymous = true): Promise<void> {
     const result = await this.#api.readSession();
     if (result.kind === 'signed-in') {
-      this.#antiForgeryToken = result.antiForgeryToken;
+      this.#antiForgeryToken.set(result.antiForgeryToken);
       this.#local.storeAccount(result.account);
       this.#state.set({ kind: 'signed-in', account: result.account });
       return;
     }
-    this.#antiForgeryToken = null;
+    this.#antiForgeryToken.set(null);
     if (result.kind === 'unavailable') {
       this.#state.set({ kind: 'offline', account: this.#local.read().account });
       return;
@@ -79,15 +100,16 @@ export class AccountStore {
 
   async signOut(): Promise<void> {
     const current = accountFrom(this.#state());
-    if (current === null || this.#antiForgeryToken === null) {
+    const token = this.#antiForgeryToken();
+    if (current === null || token === null) {
       return;
     }
     this.#state.set({ kind: 'signing-out', account: current });
-    if (!(await this.#api.signOut(this.#antiForgeryToken))) {
+    if (!(await this.#api.signOut(token))) {
       this.#state.set({ kind: 'sign-out-failed', account: current });
       return;
     }
-    this.#antiForgeryToken = null;
+    this.#antiForgeryToken.set(null);
     // Account state and the fleet cache go; planning records and current work
     // stay, and remain usable without an account (020/FR-003).
     this.#local.clearSession();
@@ -125,7 +147,8 @@ export class AccountStore {
    */
   async deleteAccount(): Promise<void> {
     const account = accountFrom(this.#state());
-    if (account === null || this.#antiForgeryToken === null) {
+    const token = this.#antiForgeryToken();
+    if (account === null || token === null) {
       return;
     }
     const cleanup = this.#local.prepareAccountDeletion();
@@ -133,8 +156,7 @@ export class AccountStore {
       this.#state.set({ kind: 'delete-local-failed', account });
       return;
     }
-    const token = this.#antiForgeryToken;
-    this.#antiForgeryToken = null;
+    this.#antiForgeryToken.set(null);
     this.#state.set({ kind: 'deleting' });
     // The answer is not read, and a request that never comes back is not an
     // error here either. A refusal and a lost response both leave this browser

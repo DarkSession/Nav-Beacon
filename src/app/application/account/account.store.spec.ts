@@ -5,6 +5,7 @@ import {
   type CommanderApiPort,
   type CommanderSessionResult,
 } from '../../platform/network/commander-api';
+import type { SynchronisationResponse } from '../../domain/records/record-synchronisation';
 import {
   COMMANDER_LOCAL_STATE_FORMAT,
   COMMANDER_LOCAL_STATE_VERSION,
@@ -77,6 +78,11 @@ class FakeCommanderApi implements CommanderApiPort {
       throw new TypeError('Failed to fetch');
     }
     return this.deletionAnswer;
+  }
+
+  async synchroniseRecords(): Promise<SynchronisationResponse> {
+    this.calls.push('synchronise-records');
+    return { kind: 'unavailable' };
   }
 }
 

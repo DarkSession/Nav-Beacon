@@ -28,6 +28,7 @@ import {
   type CommanderApiPort,
   type CommanderSessionResult,
 } from './platform/network/commander-api';
+import type { SynchronisationResponse } from './domain/records/record-synchronisation';
 import { EDNB_UPDATE_APPLIED_KEY } from './platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from './platform/storage/storage.spec-helpers';
 
@@ -58,6 +59,10 @@ class AbsentCommanderApi implements CommanderApiPort {
 
   async deleteAccount(): Promise<boolean> {
     return false;
+  }
+
+  async synchroniseRecords(): Promise<SynchronisationResponse> {
+    return { kind: 'unavailable' };
   }
 }
 
