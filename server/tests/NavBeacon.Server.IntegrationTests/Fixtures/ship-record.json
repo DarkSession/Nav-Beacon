@@ -1,0 +1,146 @@
+{
+  "format": "ednb.remote-record",
+  "version": 1,
+  "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "tool": "ship",
+  "kind": "working",
+  "createdAt": "2026-09-11T12:00:00.000Z",
+  "modifiedAt": "2026-09-11T12:00:00.000Z",
+  "build": {
+    "format": "ednb.build",
+    "version": 1,
+    "shipSymbol": "SideWinder",
+    "shipName": null,
+    "shipIdent": null,
+    "modules": [
+      {
+        "slot": "SmallHardpoint1",
+        "symbol": "Hpt_PulseLaser_Gimbal_Small",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "SmallHardpoint2",
+        "symbol": "Hpt_PulseLaser_Gimbal_Small",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "Armour",
+        "symbol": "SideWinder_Armour_Grade1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "PowerPlant",
+        "symbol": "Int_Powerplant_Size2_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "MainEngines",
+        "symbol": "Int_Engine_Size2_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "FrameShiftDrive",
+        "symbol": "Int_Hyperdrive_Size2_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "LifeSupport",
+        "symbol": "Int_LifeSupport_Size1_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "PowerDistributor",
+        "symbol": "Int_PowerDistributor_Size1_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "Radar",
+        "symbol": "Int_Sensors_Size1_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "FuelTank",
+        "symbol": "Int_FuelTank_Size1_Class3",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "Slot01_Size2",
+        "symbol": "Int_ShieldGenerator_Size2_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "Slot02_Size2",
+        "symbol": "Int_CargoRack_Size2_Class1",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "Slot05_Size1",
+        "symbol": "Int_SuperCruiseAssist",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "Slot06_Size1",
+        "symbol": "Int_DockingComputer_Advanced",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "PlanetaryApproachSuite",
+        "symbol": "int_planetapproachsuite_advanced",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      },
+      {
+        "slot": "CargoHatch",
+        "symbol": "ModularCargoBayDoor",
+        "enabled": null,
+        "priority": null,
+        "preEngineered": null,
+        "engineering": null
+      }
+    ]
+  }
+}

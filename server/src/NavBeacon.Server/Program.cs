@@ -3,7 +3,9 @@ using NavBeacon.Server.Accounts;
 using NavBeacon.Server.Frontier;
 using NavBeacon.Server.Logging;
 using NavBeacon.Server.Persistence;
+using NavBeacon.Server.Records;
 using NavBeacon.Server.Security;
+using NavBeacon.Server.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddCommanderLogging();
@@ -19,6 +21,9 @@ builder.Services.AddCommanderDataProtection(builder.Configuration, builder.Envir
 builder.Services.Configure<FrontierOptions>(
   builder.Configuration.GetSection(FrontierOptions.SectionName)
 );
+builder.Services.Configure<RecordValidationOptions>(
+  builder.Configuration.GetSection(RecordValidationOptions.SectionName)
+);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpClient<IFrontierClient, FrontierClient>();
 builder.Services.AddScoped<OAuthStateService>();
@@ -26,6 +31,8 @@ builder.Services.AddScoped<OAuthCallbackService>();
 builder.Services.AddScoped<FrontierCredentialService>();
 builder.Services.AddScoped<CommanderSessionService>();
 builder.Services.AddScoped<CommanderAccountDeletionService>();
+builder.Services.AddScoped<RecordSynchronisationService>();
+builder.Services.AddSingleton<RecordValidator>();
 builder.Services.AddSingleton<CommanderEventLog>();
 builder.Services.AddAntiforgery(options =>
 {
@@ -59,6 +66,7 @@ app.UseRouting();
 app.UseCommanderAccessLogging();
 app.MapHealthChecks("/health");
 app.MapAccountEndpoints();
+app.MapRecordEndpoints();
 
 app.Run();
 

@@ -1,0 +1,27 @@
+{
+  "format": "ednb.remote-record",
+  "version": 1,
+  "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "tool": "equipment",
+  "kind": "named",
+  "name": "Ground loadout",
+  "createdAt": "2026-09-11T12:00:00.000Z",
+  "modifiedAt": "2026-09-11T12:00:00.000Z",
+  "loadout": {
+    "format": "ednb.loadout",
+    "version": 1,
+    "suitFamily": "utilitysuit",
+    "suitGrade": 1,
+    "suitModifications": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "weapons": [
+      null,
+      null,
+      null
+    ]
+  }
+}

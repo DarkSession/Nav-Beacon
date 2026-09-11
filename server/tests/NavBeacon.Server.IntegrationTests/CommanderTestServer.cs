@@ -1,10 +1,13 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using NavBeacon.Server.Frontier;
+using NavBeacon.Server.Persistence;
 
 namespace NavBeacon.Server.IntegrationTests;
 
@@ -97,7 +100,8 @@ internal sealed class CommanderTestServer : IDisposable
     FakeFrontierClient frontier,
     TimeProvider? clock = null,
     CapturingLoggerProvider? logs = null,
-    string? pathBase = null
+    string? pathBase = null,
+    IInterceptor? interceptor = null
   )
   {
     factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -124,6 +128,15 @@ internal sealed class CommanderTestServer : IDisposable
         if (logs is not null)
         {
           services.AddLogging(logging => logging.AddProvider(logs));
+        }
+
+        if (interceptor is not null)
+        {
+          services.RemoveAll<DbContextOptions<NavBeaconDbContext>>();
+          services.RemoveAll<DbContextOptions>();
+          services.AddDbContext<NavBeaconDbContext>(options =>
+            options.UseNpgsql(database.ConnectionString).AddInterceptors(interceptor)
+          );
         }
       });
     });
