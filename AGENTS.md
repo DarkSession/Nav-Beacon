@@ -105,6 +105,9 @@ them: renaming them would change bytes a Commander has already saved.
   instances start together, so a server whose schema is behind refuses to start
   rather than serve a schema it does not know. Run `pnpm run server:migrate`
   after adding a migration; the dev container runs it on create.
+  [`docs/commander-service-deployment.md`](./docs/commander-service-deployment.md)
+  carries the settings a production instance requires, the routing the browser's
+  base-relative `api/` address needs, key-ring backup and the rollback order.
 - Package manager is **pnpm**. `pnpm-lock.yaml` is committed; CI installs with
   `--frozen-lockfile`.
 - Run `pnpm run check` before proposing a change: format, typecheck, build, unit
