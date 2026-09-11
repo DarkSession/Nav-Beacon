@@ -8,8 +8,9 @@ import {
 } from '../../ships/build/build-snapshot';
 import { parseBuildSnapshotV1 } from '../../ships/build/build-snapshot.parser';
 import {
-  fittedAsStored,
   reconstructFromSnapshot,
+  substitutedModule,
+  unfitIssues,
   type ReconstructionFailure,
 } from '../../ships/build/build-snapshot.reconstructor';
 
@@ -180,8 +181,8 @@ export function mapOwnedShip(value: unknown): OwnedShipMappingResult {
     return refusal(rebuilt.failure, rebuilt.reason);
   }
 
-  if (!fittedAsStored(parsed.snapshot, rebuilt.loadout)) {
-    const refused = refusedFit(parsed.snapshot, rebuilt.loadout);
+  const refused = refusedFit(parsed.snapshot, rebuilt.loadout);
+  if (refused !== null) {
     return refusal(refused.failure, refused.reason, refused.issues);
   }
 
@@ -274,15 +275,16 @@ function snapshotModule(module: Record<string, unknown>): unknown {
 }
 
 /**
- * What the package said about a model it did not fit as stated.
+ * What the package said about a model it did not fit as stated, or `null`.
  *
- * Its own diagnostics where it published any, and otherwise the module that did
- * not come back. A substituted hull default leaves a valid build and no
- * diagnostic at all, which is exactly the case a Commander needs told: the ship
- * on the page would otherwise carry a module the ship does not have.
+ * The package answers an unusable mount with the hull default, and leaves a
+ * module that belongs nowhere sitting in the slot it was given with a
+ * diagnostic against it. Both are ordinary state for a build being edited and
+ * neither may become an owned ship, so both questions are asked and a refusal
+ * states which one answered.
  *
- * Which of the two refusals it is, is a question for the package rather than
- * for its prose: a module symbol it does not carry is an identity this
+ * Which refusal a substituted module is, is a question for the package rather
+ * than for its prose: a symbol it does not carry is an identity this
  * installation cannot resolve, and one it carries but will not fit here is a
  * combination it does not support. Asking the catalogue keeps the answer the
  * package's, the way the SLEF path asks it whether a hull exists rather than
@@ -295,39 +297,28 @@ function refusedFit(
   readonly failure: OwnedShipMappingFailure;
   readonly reason: string;
   readonly issues: readonly LoadoutIssue[];
-} {
-  const issues = loadout
-    .validation()
-    .issues.filter((issue) => issue.code === 'unknownSlot' || issue.code === 'incompatibleModule');
-  const first = issues[0];
-  if (first !== undefined) {
-    return { failure: 'unsupported-combination', reason: first.message, issues };
+} | null {
+  const issues = unfitIssues(loadout);
+  const substituted = substitutedModule(snapshot, loadout);
+
+  if (substituted !== null) {
+    return getModuleBySymbol(substituted.symbol) === null
+      ? {
+          failure: 'unknown-identity',
+          reason: `This installation carries no module "${substituted.symbol}".`,
+          issues,
+        }
+      : {
+          failure: 'unsupported-combination',
+          reason: `The package did not fit "${substituted.symbol}" in slot "${substituted.slot}".`,
+          issues,
+        };
   }
 
-  const substituted = snapshot.modules.find((module) => {
-    const fitted = loadout.fittedModuleAt(module.slot);
-    return fitted === null || fitted.symbol.toLowerCase() !== module.symbol.toLowerCase();
-  });
-  if (substituted === undefined) {
-    return {
-      failure: 'unsupported-combination',
-      reason: 'The package did not fit this owned ship as the journal states it.',
-      issues,
-    };
-  }
-  if (getModuleBySymbol(substituted.symbol) === null) {
-    return {
-      failure: 'unknown-identity',
-      reason: `This installation carries no module "${substituted.symbol}".`,
-      issues,
-    };
-  }
-
-  return {
-    failure: 'unsupported-combination',
-    reason: `The package did not fit "${substituted.symbol}" in slot "${substituted.slot}".`,
-    issues,
-  };
+  const stated = issues[0];
+  return stated === undefined
+    ? null
+    : { failure: 'unsupported-combination', reason: stated.message, issues };
 }
 
 function refusal(

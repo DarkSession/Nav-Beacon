@@ -173,7 +173,7 @@ describe('owned ships the package cannot resolve', () => {
     expect(result.ok === false && result.reason).toContain('Int_Hyperdrive_Invented');
   });
 
-  it('refuses a slot key the hull does not have, in the package own words', () => {
+  it('refuses a slot key the hull does not have, and carries the package diagnostic', () => {
     const model = withModule(modelOf(ShipLoadout.default('Anaconda')), 'FrameShiftDrive', {
       slot: 'NotARealSlot',
     });
@@ -184,6 +184,36 @@ describe('owned ships the package cannot resolve', () => {
     expect(result.ok === false && result.issues.map((issue) => issue.code)).toContain(
       'unknownSlot',
     );
+    expect(result.ok === false && result.reason).toContain('NotARealSlot');
+  });
+
+  it('refuses a module the package leaves in a mount it does not belong in', () => {
+    // The package keeps this one where the journal put it and says it does not
+    // fit, so no module is missing and its own diagnostic is the whole refusal.
+    const anaconda = ShipLoadout.default('Anaconda');
+    const model = modelOf(anaconda);
+    const utility = anaconda.slots('utility')[0]!.key;
+    const misfitted = {
+      ...model,
+      modules: [
+        ...model.modules,
+        {
+          slot: utility,
+          symbol: 'Hpt_PulseLaser_Fixed_Large',
+          enabled: null,
+          priority: null,
+          preEngineered: null,
+          engineering: null,
+        },
+      ],
+    };
+
+    const result = mapOwnedShip(payloadOf(misfitted));
+
+    expect(result).toMatchObject({ ok: false, failure: 'unsupported-combination' });
+    expect(result.ok === false && result.issues.map((issue) => issue.code)).toEqual([
+      'incompatibleModule',
+    ]);
     expect(result.ok === false && result.reason).toBe(
       result.ok === false ? result.issues[0]!.message : '',
     );

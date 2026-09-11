@@ -1,3 +1,4 @@
+import type { LoadoutIssue } from '@elite-dangerous-almanac/core/ships/loadout-validation';
 import {
   PRE_ENGINEERED_MODULES,
   type PreEngineeredVariant,
@@ -106,23 +107,36 @@ export function reconstructFromSnapshot(snapshot: BuildSnapshotV1): Reconstructi
  * from the hull default whenever the stored entry is absent or does not belong
  * there, and for a build a Commander is editing that default is ordinary build
  * state. A boundary that may keep nothing it did not receive needs the opposite
- * answer, so this asks the package two questions and takes both verbatim — does
- * it call any slot unknown or any module incompatible, and does every stored
- * identity come back fitted where it was stored. A substituted default fails the
- * second question and is the whole reason this check exists.
+ * answer, so it asks the package two questions and takes both verbatim — does it
+ * call any slot unknown or any module incompatible, and does every stored
+ * identity come back fitted where it was stored. A substituted default answers
+ * the second one and is the whole reason this check exists.
+ *
+ * The two questions are published separately as well, because a boundary that
+ * states why it refused a build needs the answers rather than their conjunction.
  */
 export function fittedAsStored(snapshot: BuildSnapshotV1, loadout: ShipLoadout): boolean {
-  if (
-    loadout
-      .validation()
-      .issues.some((issue) => issue.code === 'unknownSlot' || issue.code === 'incompatibleModule')
-  ) {
-    return false;
-  }
-  return snapshot.modules.every((module) => {
-    const fitted = loadout.fittedModuleAt(module.slot);
-    return fitted !== null && fitted.symbol.toLowerCase() === module.symbol.toLowerCase();
-  });
+  return unfitIssues(loadout).length === 0 && substitutedModule(snapshot, loadout) === null;
+}
+
+/** The package's own refusals of a hull-slot combination, in its own words. */
+export function unfitIssues(loadout: ShipLoadout): readonly LoadoutIssue[] {
+  return loadout
+    .validation()
+    .issues.filter((issue) => issue.code === 'unknownSlot' || issue.code === 'incompatibleModule');
+}
+
+/** The first module the package did not fit where the snapshot stored it, or `null`. */
+export function substitutedModule(
+  snapshot: BuildSnapshotV1,
+  loadout: ShipLoadout,
+): SnapshotModuleV1 | null {
+  return (
+    snapshot.modules.find((module) => {
+      const fitted = loadout.fittedModuleAt(module.slot);
+      return fitted === null || fitted.symbol.toLowerCase() !== module.symbol.toLowerCase();
+    }) ?? null
+  );
 }
 
 type ModuleResult =

@@ -160,7 +160,7 @@
 
 ## 7. Commander fleet interface
 
-- [ ] 7.1 Map a validated owned-ship payload through the existing persistence domain services into
+- [x] 7.1 Map a validated owned-ship payload through the existing persistence domain services into
       `ShipLoadout`; verify package-backed tests cover complete models and reject unsupported or
       unresolvable identities without retaining a replacement value.
 - [ ] 7.2 Add a fleet store with browser caching and refresh status; verify an offline unit test can
