@@ -223,10 +223,14 @@ test.describe('module families', () => {
             };
       });
 
+    // Polled on the width itself, not on any width at all. The rail is already
+    // drawn at the profile's own width when the viewport changes, so a poll for
+    // "greater than zero" passes on the layout before the resize.
     await page.setViewportSize({ width: 2020, height: 1100 });
-    await expect.poll(async () => (await railWidth())?.rail ?? 0).toBeGreaterThan(0);
+    await expect
+      .poll(async () => Math.abs(((await railWidth())?.rail ?? 0) - 264))
+      .toBeLessThanOrEqual(2);
     const drawn = (await railWidth())!;
-    expect(Math.abs(drawn.rail - 264)).toBeLessThanOrEqual(2);
 
     // Narrower, it is a share of a narrower column rather than the same 264px
     // taking two fifths of it away from the rows.
