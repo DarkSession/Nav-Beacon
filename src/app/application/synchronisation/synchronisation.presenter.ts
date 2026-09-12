@@ -81,9 +81,22 @@ export class SynchronisationPresenter {
 
     return {
       heading: this.#messages.message('sync.title'),
-      status: this.#statusOf(status.kind === 'inactive' || credentials === null ? null : status),
+      // `inactive` is the whole of what this browser has nothing to say about:
+      // an anonymous page, and a page whose Commander signed out or deleted the
+      // account, which is what puts the status back. Holding no credentials is
+      // not the same thing — a session the service ended leaves a failure whose
+      // own cause emptied them, and that failure is the only statement of why
+      // (020/FR-003, 020/FR-011).
+      status: this.#statusOf(status.kind === 'inactive' ? null : status),
       detail: this.#detailOf(status),
-      retry: status.kind === 'failed' ? this.#messages.message('action.retry') : null,
+      // Offered only where pressing it would exchange something. An exchange
+      // needs credentials, so a retry without them is a control that does
+      // nothing, and offering it would say a Commander can recover here when
+      // what they have to do is sign in again (constitution IV).
+      retry:
+        status.kind === 'failed' && credentials !== null
+          ? this.#messages.message('action.retry')
+          : null,
       notes: this.#notes(this.#knownCustomerId()),
       conflict: conflicts.length === 0 ? null : this.#conflictView(conflicts[0]),
     };

@@ -483,6 +483,43 @@ describe('what the record libraries say about the account', () => {
   });
 
   /**
+   * The failure whose own cause takes the credentials away still says what
+   * happened.
+   *
+   * A 401 means the session is gone, so the session read that follows it
+   * answers anonymous and this browser holds no credentials any more. The
+   * sentence belongs to the exchange that just failed, and putting the one for
+   * a Commander who never signed in in its place would drop the only statement
+   * of why (020/FR-003, 020/FR-011, constitution IV).
+   */
+  it('still says the session ended once the service confirms it is gone', async () => {
+    writeCommanderState(storage);
+    seedRecord();
+    const store = await signedIn();
+    api.session = { kind: 'anonymous' };
+    api.answers.push({
+      kind: 'refused',
+      status: 401,
+      code: 'unauthorised',
+      accountRevision: null,
+      results: [],
+    });
+
+    store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
+    await store.refresh();
+    await settle();
+
+    expect(TestBed.inject(AccountStore).credentials()).toBeNull();
+    const view = presenter().view();
+    expect(view.status.tone).toBe('error');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['sync.status.failed.signed-out']);
+    expect(view.detail).toContain('1');
+    // Nothing left to press: an exchange needs the credentials this browser no
+    // longer holds, so an offered retry would be a button that does nothing.
+    expect(view.retry).toBeNull();
+  });
+
+  /**
    * A browser that will not take the write that takes a refused record out of
    * the next batch says so, rather than naming the record the service refused.
    * The queue keeps offering that record, so the failure a Commander can act on

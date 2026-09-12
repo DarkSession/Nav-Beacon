@@ -71,6 +71,22 @@ internal sealed class FakeJournalClient : ILiveJournalClient
   public JournalRead Fallback { get; set; } =
     new(JournalReadOutcome.Empty, string.Empty, null);
 
+  /// <summary>
+  /// The <c>forceRefresh</c> each read asks its authorisation with, in order.
+  /// </summary>
+  /// <remarks>
+  /// Empty by default, because a queued read needs no token and putting the
+  /// credential service and Frontier in the path of every fleet test would make
+  /// those tests about something they are not. A test about the tokens sets it,
+  /// and what it sets it to is what the real client asks: the stored token
+  /// first, then one forced refresh where Frontier refused that token
+  /// (<see cref="LiveJournalClient" />, 020/FR-013).
+  /// </remarks>
+  public List<bool> AuthorisationQuestions { get; } = [];
+
+  /// <summary>What the authorisation answered, in the order it was asked.</summary>
+  public List<string?> AuthorisationAnswers { get; } = [];
+
   public FakeJournalClient Queue(DateOnly date, JournalRead read)
   {
     if (!reads.TryGetValue(date, out var queued))
@@ -94,16 +110,20 @@ internal sealed class FakeJournalClient : ILiveJournalClient
       new JournalRead(JournalReadOutcome.Incomplete, string.Join('\n', lines), null)
     );
 
-  public Task<JournalRead> ReadAsync(
+  public async Task<JournalRead> ReadAsync(
     DateOnly date,
     IJournalAuthorisation authorisation,
     CancellationToken cancellationToken
   )
   {
     Requested.Add(date);
-    return Task.FromResult(
-      reads.TryGetValue(date, out var queued) && queued.Count > 0 ? queued.Dequeue() : Fallback
-    );
+    foreach (var forceRefresh in AuthorisationQuestions)
+    {
+      AuthorisationAnswers.Add(
+        await authorisation.GetAccessTokenAsync(forceRefresh, cancellationToken)
+      );
+    }
+    return reads.TryGetValue(date, out var queued) && queued.Count > 0 ? queued.Dequeue() : Fallback;
   }
 }
 

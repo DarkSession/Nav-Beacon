@@ -1,5 +1,6 @@
 using System.Net;
 using NavBeacon.Server.Fleet;
+using NavBeacon.Server.Frontier;
 
 namespace NavBeacon.Server.IntegrationTests;
 
@@ -317,6 +318,37 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
     Assert.Equal(12, Assert.Single(mine.Ships)!["shipId"]!.GetValue<long>());
     Assert.Equal(77, Assert.Single(theirs.Ships)!["shipId"]!.GetValue<long>());
     Assert.Equal("Mine", Assert.Single(unchanged.Ships)!["model"]!["shipName"]!.GetValue<string>());
+  }
+
+  /// <summary>
+  /// The two token questions a read asks are two different things, and the
+  /// account answers each with the one it names.
+  /// </summary>
+  /// <remarks>
+  /// A read asks for the stored token first and asks again, forcing a refresh,
+  /// only where Frontier refused that token. Answering the first question with
+  /// a refresh would spend the account's refresh token on every dated read, and
+  /// answering the second with the stored token would hand back the very token
+  /// Frontier had just refused and end the read there (020/FR-013).
+  /// </remarks>
+  [Fact]
+  public async Task AStoredTokenAnswersTheFirstQuestionAndOnlyAForcedOneAsksFrontierAgain()
+  {
+    var journal = new FakeJournalClient();
+    journal.AuthorisationQuestions.AddRange([false, true]);
+    using var server = NewServer(journal, out var frontier);
+    using var commander = await SignIn(server, frontier, 82_017);
+    frontier.RefreshedTokens = new FrontierTokens(
+      "second-access-token",
+      "second-refresh-token",
+      Now.AddHours(1)
+    );
+    await database.SeedCursorAsync(82_017, Today, 0);
+
+    await commander.RefreshFleetAsync();
+
+    Assert.Equal(["access-token", "second-access-token"], journal.AuthorisationAnswers);
+    Assert.Equal(1, frontier.RefreshCalls);
   }
 
   private CommanderTestServer NewServer(
