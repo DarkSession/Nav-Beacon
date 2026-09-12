@@ -26,15 +26,19 @@ public sealed record ServerConfiguration(
 
   /// <summary>
   /// The smallest body limit that still admits a legal synchronisation batch.
+  /// One byte above the batch bound, not equal to it: the endpoint answers a
+  /// request just over the bound with the code that names the bound, and it
+  /// only gets to do that if the transport let the request through. A limit
+  /// equal to the bound would have Kestrel cut off the one request the refusal
+  /// is written for, and the browser would read a bare 413 with no code
+  /// (020/FR-026).
   /// </summary>
-  public const long SmallestRequestBody = RecordSynchronisationLimits.MaximumRequestBytes;
+  public const long SmallestRequestBody = RecordSynchronisationLimits.MaximumRequestBytes + 1;
 
   /// <summary>
-  /// The largest body limit the endpoints tolerate. The limit sits above the
-  /// batch bound so a request just over the bound reaches the endpoint and
-  /// receives the stated error code instead of a bare transport refusal.
+  /// The largest body limit the endpoints tolerate.
   /// </summary>
-  public const long LargestRequestBody = 4 * SmallestRequestBody;
+  public const long LargestRequestBody = 4 * RecordSynchronisationLimits.MaximumRequestBytes;
 
   public static ServerConfiguration Read(
     IConfiguration configuration,

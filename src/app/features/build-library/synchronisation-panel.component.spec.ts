@@ -29,8 +29,13 @@ const LAYOUT_PROFILES = [
 const INSTANT = '12 Sep 2026, 09:41';
 const RECORD = 'Deep space explorer';
 
-/** One catalogue sentence with its count filled in, as the presenter fills it. */
-function counted(key: keyof typeof BUNDLED_ENGLISH, count: number): string {
+/**
+ * One counted catalogue sentence in the form its count calls for, as the
+ * presenter chooses it: the singular spells the one out, the plural carries the
+ * number.
+ */
+function counted(stem: string, count: number): string {
+  const key = `${stem}.${count === 1 ? 'one' : 'many'}` as keyof typeof BUNDLED_ENGLISH;
   return BUNDLED_ENGLISH[key].replace('{{count}}', String(count));
 }
 

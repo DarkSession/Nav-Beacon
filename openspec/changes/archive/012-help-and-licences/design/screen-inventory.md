@@ -113,9 +113,11 @@ accepted requirement rather than to nothing.
 
 This is the exhaustive set required by FR-011. The `helpRouteCoverage` export inside feature 011's
 shared `e2e/coverage-ledger.ts` transcribes it; it does not re-derive it, and it is the only part of
-that file this feature owns. Every row is a current capability shipped by features 001–011, a
-package-backed artwork or value surface named by an accepted screen contract, or a state that
-obscures the application frame. **Frame entry** records whether FR-001's route is visible in that
+that file this feature owns. Every row is a current shipped capability, a package-backed artwork or
+value surface named by an accepted screen contract, or a state that obscures the application frame.
+The rows below 011 are entered by the features that ship them: this table is the register every
+shipped surface is recorded in, which is why it is the one archived table a later change writes
+into (`AGENTS.md`, Development Workflow). **Frame entry** records whether FR-001's route is visible in that
 state; where a dismissible layer covers the frame, help is reached from the capability beneath once
 the layer is dismissed, which is what FR-011 now requires in place of a substitute route. A missing
 capability or applicable surface is a release failure; representative sampling is not sufficient.

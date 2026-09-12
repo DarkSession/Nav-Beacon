@@ -8,7 +8,9 @@ Sync Impact Report (11.0.0)
   limit. VIII. Tested Before It Ships — applies an 80% line, branch and method coverage
   floor to the .NET unit and integration suites together.
 - Modified sections: Technology Constraints and Development Workflow — add .NET 10,
-  ASP.NET Core, EF Core, PostgreSQL, NuGet maturity checks and a separate same-origin API.
+  ASP.NET Core, EF Core, PostgreSQL, NuGet maturity checks and a separate same-origin API,
+  and name the release coverage ledger as the one archived table a later change enters
+  rows into.
 - Rationale: optional Commander accounts let Commanders synchronise selected planning
   records and read a feature-specific fleet projection across devices. The anonymous tools
   remain local-first and do not depend on the service.
@@ -409,7 +411,11 @@ an implementation.
   and changes in flight in `openspec/changes/<change-id>/`. The constitution
   governs them all. `openspec/changes/archive/<NNN>-<short-name>/` holds the
   design and contract documents of the features already built. They are read,
-  not extended.
+  not extended. The release coverage ledger in
+  `012-help-and-licences/design/screen-inventory.md` is the one exception: it
+  registers every shipped surface rather than recording one feature's work, and
+  a change that ships a surface covering the application frame MUST enter its
+  rows there.
 - `pnpm run check` — format check, typecheck, build, unit tests with coverage,
   server restore, format, build and tests, and the Playwright suite — MUST pass
   before a change is proposed for merge.

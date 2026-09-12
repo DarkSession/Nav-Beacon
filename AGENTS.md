@@ -256,7 +256,14 @@ install. The Claude Code flow is `/opsx:explore` (optional) → `/opsx:propose` 
   specification disagree, resolve the mismatch deliberately.
 - `openspec/changes/archive/<NNN>-<short-name>/` holds the design and contract
   documents of the features already built. Source files, tests and
-  specifications cite them by path. Read them; do not extend them.
+  specifications cite them by path. Read them; do not extend them. One table is
+  the exception, because it is a register rather than a record of what one
+  feature did: the release coverage ledger in
+  `012-help-and-licences/design/screen-inventory.md`. Every shipped surface is
+  entered there, whichever feature owns it,
+  `scripts/check-specification-record.mjs` reconciles it against
+  `helpRouteCoverage` in both directions, and a change that ships a surface
+  covering the application frame writes its rows into it.
 - **Two reviews run inside the flow**, by two different subagents, and neither
   waits to be asked. A specification reviewer reads the planning artefacts when
   the task list is written, before you present them. A code reviewer reads the

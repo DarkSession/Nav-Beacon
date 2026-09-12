@@ -1,5 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { FIXTURE_IDS, NAMED_RECORD_V1 } from '../../domain/records/fixtures/records';
+import {
+  FIXTURE_IDS,
+  NAMED_RECORD_V1,
+  WORKING_RECORD_V1,
+} from '../../domain/records/fixtures/records';
 import type { SynchronisationResponse } from '../../domain/records/record-synchronisation';
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
@@ -151,6 +155,54 @@ describe('what the record libraries say about the account', () => {
     expect(view.status.message).toContain('waiting to reach your account');
   });
 
+  /**
+   * The plural half of two counted sentences. Every count behind them is a
+   * filtered length with no bound, so a singular-only form would tell a
+   * Commander with two changes owed that "2 change waiting to reach your
+   * account" — the application's own words, ungrammatical in both shipped
+   * languages (constitution VI).
+   */
+  it('reads the plural of what is owed when more than one change is waiting', async () => {
+    writeCommanderState(storage);
+    seedRecord();
+    storage.entries.set(recordKey(FIXTURE_IDS.working), WORKING_RECORD_V1);
+    const store = await signedIn();
+    api.answers.push({
+      kind: 'accepted',
+      accountRevision: 5,
+      results: [],
+      records: [],
+      unreadableRecords: [],
+      tombstones: [],
+    });
+
+    store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
+    store.queueUpload(FIXTURE_IDS.working, CUSTOMER);
+    await store.refresh();
+    await settle();
+
+    expect(presenter().view().status.message).toBe(
+      BUNDLED_ENGLISH['sync.status.pending.many'].replace('{{count}}', '2'),
+    );
+  });
+
+  it('reads the plural of a note when more than one record is kept here alone', async () => {
+    writeCommanderState(storage, {
+      recordBindings: {
+        [FIXTURE_IDS.named]: 'local-only',
+        [FIXTURE_IDS.working]: 'local-only',
+      },
+    });
+    await signIn(api);
+
+    const localOnly = presenter()
+      .view()
+      .notes.find((note) => note.id === 'local-only');
+    expect(localOnly?.message).toBe(
+      BUNDLED_ENGLISH['sync.note.local-only.many'].replace('{{count}}', '2'),
+    );
+  });
+
   it('says why an exchange failed, what is owed and offers another attempt', async () => {
     writeCommanderState(storage);
     seedRecord();
@@ -291,9 +343,7 @@ describe('what the record libraries say about the account', () => {
     const bound = presenter()
       .view()
       .notes.find((note) => note.id === 'account-bound');
-    expect(bound?.message).toBe(
-      BUNDLED_ENGLISH['sync.note.account-bound'].replace('{{count}}', '1'),
-    );
+    expect(bound?.message).toBe(BUNDLED_ENGLISH['sync.note.account-bound.one']);
   });
 
   it('says the account holds a record this version cannot open, without removing it', async () => {

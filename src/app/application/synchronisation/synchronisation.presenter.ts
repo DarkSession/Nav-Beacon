@@ -132,18 +132,11 @@ export class SynchronisationPresenter {
           }),
         };
       case 'pending':
-        return {
-          tone: 'warning',
-          message: this.#messages.message('sync.status.pending', {
-            count: this.#formatters.integer(status.changes),
-          }),
-        };
+        return { tone: 'warning', message: this.#counted('sync.status.pending', status.changes) };
       case 'conflicted':
         return {
           tone: 'warning',
-          message: this.#messages.message('sync.status.conflicted', {
-            count: this.#formatters.integer(status.conflicts),
-          }),
+          message: this.#counted('sync.status.conflicted', status.conflicts),
         };
       case 'failed':
         return { tone: 'error', message: this.#messages.message(failureKey(status.failure)) };
@@ -162,9 +155,7 @@ export class SynchronisationPresenter {
     if (status.kind !== 'failed' || status.changes === 0) {
       return null;
     }
-    return this.#messages.message('sync.status.failed.pending', {
-      count: this.#formatters.integer(status.changes),
-    });
+    return this.#counted('sync.status.failed.pending', status.changes);
   }
 
   /** Whether the account has never accepted a response in this browser. */
@@ -192,9 +183,7 @@ export class SynchronisationPresenter {
       notes.push({
         id: 'local-only',
         tone: 'info',
-        message: this.#messages.message('sync.note.local-only', {
-          count: this.#formatters.integer(localOnly),
-        }),
+        message: this.#counted('sync.note.local-only', localOnly),
       });
     }
 
@@ -211,9 +200,7 @@ export class SynchronisationPresenter {
       notes.push({
         id: 'account-bound',
         tone: 'info',
-        message: this.#messages.message('sync.note.account-bound', {
-          count: this.#formatters.integer(elsewhere),
-        }),
+        message: this.#counted('sync.note.account-bound', elsewhere),
       });
     }
 
@@ -222,9 +209,7 @@ export class SynchronisationPresenter {
       notes.push({
         id: 'unsupported-version',
         tone: 'warning',
-        message: this.#messages.message('sync.note.unsupported-version', {
-          count: this.#formatters.integer(unreadable),
-        }),
+        message: this.#counted('sync.note.unsupported-version', unreadable),
       });
     }
 
@@ -272,6 +257,22 @@ export class SynchronisationPresenter {
     return name ?? this.#messages.message('library.record.unnamed');
   }
 
+  /**
+   * One of a sentence's two forms, chosen by the count it carries.
+   *
+   * Every one of these counts is a filtered length with no bound, so a single
+   * form would read "2 record is kept in this browser only" to the second
+   * record a Commander keeps. The two catalogues carry `.one` and `.many` for
+   * each, as every other counted sentence in the application does, and the
+   * singular form spells the one out rather than interpolating it
+   * (constitution VI).
+   */
+  #counted(stem: CountedMessageStem, count: number): string {
+    return count === 1
+      ? this.#messages.message(`${stem}.one`)
+      : this.#messages.message(`${stem}.many`, { count: this.#formatters.integer(count) });
+  }
+
   #instant(iso: string): string {
     const parsed = new Date(iso);
     return Number.isFinite(parsed.getTime())
@@ -279,6 +280,19 @@ export class SynchronisationPresenter {
       : this.#formatters.dateTime(this.#clock.now());
   }
 }
+
+/**
+ * A counted sentence, named without the form: both `<stem>.one` and
+ * `<stem>.many` are keys of the catalogue, and which is read depends on the
+ * count.
+ */
+type PairedStem<Key, All> = Key extends `${infer Stem}.one`
+  ? `${Stem}.many` extends All
+    ? Stem
+    : never
+  : never;
+
+type CountedMessageStem = PairedStem<MessageKey, MessageKey>;
 
 /**
  * The sentence for each published bound, named by the bound the service refused

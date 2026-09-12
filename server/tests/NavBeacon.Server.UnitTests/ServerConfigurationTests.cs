@@ -246,7 +246,7 @@ public sealed class ServerConfigurationTests
   }
 
   [Theory]
-  [InlineData("1048575")]
+  [InlineData("1048576")]
   [InlineData("4194305")]
   [InlineData("unbounded")]
   public void ProductionRefusesARequestBodyLimitTheEndpointsCannotServe(string configured)
@@ -254,13 +254,13 @@ public sealed class ServerConfigurationTests
     var error = Refusal(With(ServerConfiguration.MaximumRequestBodyKey, configured));
 
     Assert.Contains(
-      "Kestrel:Limits:MaxRequestBodySize must be a whole number of bytes from 1048576 to 4194304.",
+      "Kestrel:Limits:MaxRequestBodySize must be a whole number of bytes from 1048577 to 4194304.",
       error.Message
     );
   }
 
   [Theory]
-  [InlineData("1048576")]
+  [InlineData("1048577")]
   [InlineData("4194304")]
   public void ProductionAcceptsTheRequestBodyLimitsAtEachBound(string configured)
   {

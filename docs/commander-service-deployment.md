@@ -62,8 +62,9 @@ refresh answers with `projection-unavailable`. Step 6 of _Checking a deployment_
 this.
 
 The body limit stands above the 1 MiB synchronisation batch so a request just over the batch bound
-reaches the endpoint and receives the stated error code. It is between 1,048,576 and 4,194,304
-bytes.
+reaches the endpoint and receives the stated error code rather than a bare transport refusal. It is
+between 1,048,577 and 4,194,304 bytes — one byte above the batch bound at its lowest, because a
+limit equal to the bound would cut off the very request the error code is written for.
 
 One bundle, `commander-validator.mjs`, is the output of `pnpm run server:validator`, and both script
 settings name it. Publish it beside the application and give the instance a Node runtime on its
