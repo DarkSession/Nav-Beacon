@@ -778,7 +778,18 @@ export class RecordSynchronisationStore {
     if (response.code === 'cross-account-record' && recordId !== null) {
       // The account holds that identity for someone else. This browser's copy
       // stays, local-only, with nothing queued (020/FR-024).
-      this.#state.markRecordLocalOnly(recordId);
+      if (!this.#state.markRecordLocalOnly(recordId).ok) {
+        // That write is the only thing that takes the record out of the next
+        // batch, and the service refuses a batch whole on this identity. A
+        // browser that will not take it holds every other record's saves and
+        // deletions behind it, for as long as the queue keeps naming it, so
+        // this page leaves it out and states the failure a Commander can
+        // actually act on (020/FR-011, 020/FR-026).
+        this.#refused.add(recordId);
+        this.#blocked = { reason: 'storage' };
+        this.#fail(customerId, this.#blocked);
+        return;
+      }
       this.#fail(customerId, { reason: 'refused', code: response.code, recordId });
       return;
     }

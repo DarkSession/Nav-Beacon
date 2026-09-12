@@ -1375,6 +1375,47 @@ describe('the record synchronisation store', () => {
       });
     });
 
+    it('leaves out a record another account holds that browser storage would not mark', async () => {
+      api.answers.push({
+        kind: 'refused',
+        status: 403,
+        code: 'cross-account-record',
+        accountRevision: 2,
+        results: [
+          {
+            index: 0,
+            outcome: 'refused',
+            id: FIXTURE_IDS.named,
+            revision: null,
+            remote: null,
+            code: 'cross-account-record',
+          },
+        ],
+      });
+      store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+      // Browser storage stops taking writes while the request is open, so the
+      // local-only mark the refusal calls for is the write it refuses.
+      api.onRequest = () => {
+        storage.writeError = quotaError();
+        api.onRequest = null;
+      };
+
+      await store.synchronise(CREDENTIALS);
+
+      expect(recordBinding(commanderState(), FIXTURE_IDS.named)).toBeNull();
+      expect(store.status()).toMatchObject({ kind: 'failed', failure: { reason: 'storage' } });
+
+      storage.writeError = null;
+      api.answers.push(accepted({ accountRevision: 2 }));
+      await store.synchronise(CREDENTIALS);
+
+      // That mark is the only thing that takes the record out of the next
+      // batch, and the service refuses a batch whole on this identity. Sending
+      // it again would hold every other record's saves and deletions behind it
+      // for as long as the queue names it (020/FR-026).
+      expect(lastRequest().changes).toHaveLength(0);
+    });
+
     it('states the bound a request exceeded and keeps the change pending', async () => {
       api.answers.push({
         kind: 'refused',
