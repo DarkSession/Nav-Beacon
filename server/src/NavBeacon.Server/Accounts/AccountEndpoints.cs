@@ -47,6 +47,12 @@ public static class AccountEndpoints
     CancellationToken cancellationToken
   )
   {
+    // Three things end a callback with nobody signed in: no authorisation code,
+    // which is what a Commander who declined at Frontier comes back with; a
+    // state this browser did not start; and a code Frontier would not exchange.
+    // One outcome covers all three. Naming which would state what happened
+    // between the Commander and Frontier, and a refused state is exactly the
+    // case where this server cannot know that.
     var correlation = request.Cookies[CommanderCookies.OAuthCorrelationName];
     CommanderCookies.DeleteOAuthCorrelation(response);
     if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))

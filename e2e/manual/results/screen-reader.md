@@ -265,10 +265,15 @@ different screen to walk rather than the same one again.
 The automated coverage that does exist for the same requirements is
 `e2e/commander-account.spec.ts`, `e2e/commander-fleet.spec.ts` and
 `e2e/fleet-copy.spec.ts` — the account stubbed at the network boundary and
-every rendered state scanned by axe, every control resolved by its accessible
-name rather than its class, the three conflict answers asserted present with
-the layer dismissible without answering, and a held refresh and a failed one
+every rendered state scanned by axe, every control a Commander acts on resolved
+by its accessible name, the three conflict answers asserted present with the
+layer dismissible without answering, and a held refresh and a failed one
 asserted to state themselves without emptying the list, in all ten projects.
+Two structural assertions are the exception and read a class: that the footer
+which opens, renames and deletes a stored record is not rendered over the fleet
+at all, and that the fleet carries exactly the two actions it carries. Neither
+is about a control a Commander reaches, and an element asserted absent has no
+accessible name to be reached by.
 
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Orientation | Step | Capability / state | Expected                                                                                                                                                | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ----------- | ---- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |

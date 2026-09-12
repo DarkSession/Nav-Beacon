@@ -85,6 +85,16 @@ function namedRecord(): LocalRecord {
   return decoded.record;
 }
 
+/** One settled fleet, in the exact key set the contract publishes. */
+const FLEET = {
+  result: 'current',
+  ships: [],
+  coverage: null,
+  pending: false,
+  failure: null,
+  packageRefusal: null,
+};
+
 const SESSION = {
   signedIn: true,
   customerId: '900001',
@@ -472,6 +482,102 @@ describe('the Commander API client', () => {
       await expect(
         api.synchroniseRecords({ sinceRevision: 0, changes: [] }, 'token-1'),
       ).resolves.toEqual({ kind: 'unavailable' });
+    });
+  });
+  /**
+   * Both fleet addresses, which nothing else in this file exercises.
+   *
+   * The refresh states the locale it wants the package diagnostic in, and the
+   * service reads that header to choose it (020/FR-016). Nothing else carries
+   * that choice, so a refresh that stopped sending the header would leave every
+   * Commander reading English with no test saying so.
+   */
+  describe('the fleet addresses', () => {
+    it.each([
+      ['reads the stored fleet', (api: CommanderApi) => api.readFleet(), 'api/fleet', 'GET'],
+      [
+        'asks for a refresh',
+        (api: CommanderApi) => api.refreshFleet('token-1', 'de'),
+        'api/fleet/refresh',
+        'POST',
+      ],
+    ])('%s at the deployment base', async (_case, call, path, method) => {
+      const { api, view } = client(SUB_PATH);
+      view.answers = [json(FLEET)];
+
+      await expect(call(api)).resolves.toEqual({
+        kind: 'answered',
+        answer: {
+          result: 'current',
+          ships: [],
+          coverage: null,
+          pending: false,
+          failure: null,
+          packageRefusal: null,
+        },
+      });
+      expect(view.exchanges[0]?.address).toBe(`${SUB_PATH}${path}`);
+      expect(view.exchanges[0]?.init.method).toBe(method);
+    });
+
+    it('asks for the diagnostic in the language being read', async () => {
+      const { api, view } = client(ROOT);
+      view.answers = [json(FLEET)];
+
+      await api.refreshFleet('token-1', 'de');
+
+      expect(view.exchanges[0]?.init.headers).toEqual({
+        'X-CSRF-TOKEN': 'token-1',
+        'Accept-Language': 'de',
+      });
+    });
+
+    it('reads the stored fleet without a token and without asking in a language', async () => {
+      const { api, view } = client(ROOT);
+      view.answers = [json(FLEET)];
+
+      await api.readFleet();
+
+      expect(view.exchanges[0]?.init.headers).toBeUndefined();
+    });
+
+    it('reads a refusal by its published code', async () => {
+      const { api, view } = client(ROOT);
+      view.answers = [json({ code: 'unauthorised' }, 401)];
+
+      await expect(api.refreshFleet('token-1', 'en')).resolves.toEqual({
+        kind: 'refused',
+        status: 401,
+        code: 'unauthorised',
+      });
+    });
+
+    it('reads a refusal with no readable body as its status', async () => {
+      const { api, view } = client(ROOT);
+      view.answers = [new Response('not json', { status: 403 })];
+
+      await expect(api.refreshFleet('token-1', 'en')).resolves.toEqual({
+        kind: 'refused',
+        status: 403,
+        code: 'unknown',
+      });
+    });
+
+    it.each([
+      ['an answer this browser cannot read', new Response('not json', { status: 200 })],
+      ['an answer that is missing a field', json({ result: 'current' })],
+    ])('reads %s as unavailable, so nothing new is claimed', async (_case, answer) => {
+      const { api, view } = client(ROOT);
+      view.answers = [answer];
+
+      await expect(api.readFleet()).resolves.toEqual({ kind: 'unavailable' });
+    });
+
+    it('reads a request that never arrives as unavailable', async () => {
+      const { api, view } = client(ROOT);
+      view.failure = new TypeError('Failed to fetch');
+
+      await expect(api.refreshFleet('token-1', 'en')).resolves.toEqual({ kind: 'unavailable' });
     });
   });
 });

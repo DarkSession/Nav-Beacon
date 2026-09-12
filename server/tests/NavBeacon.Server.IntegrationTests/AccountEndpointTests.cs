@@ -107,4 +107,50 @@ public sealed class AccountEndpointTests(PostgreSqlDatabaseFixture database)
       Assert.DoesNotContain(protectedValue, logText, StringComparison.Ordinal);
     }
   }
+
+  /// <summary>
+  /// The three ways a callback can arrive without a Commander signed in: with
+  /// no authorisation code, which is what a Commander who declined at Frontier
+  /// comes back with; with a state this browser did not start; and with a code
+  /// Frontier itself would not exchange. All three send the browser back to the
+  /// application with the same outcome and none of them opens a session.
+  /// </summary>
+  [Theory]
+  [InlineData("declined")]
+  [InlineData("unknown-state")]
+  [InlineData("refused-code")]
+  public async Task ACallbackThatSignsNobodyInOpensNoSession(string cause)
+  {
+    var frontier = new FakeFrontierClient
+    {
+      Authentication =
+        cause == "refused-code"
+          ? null
+          : FakeFrontierClient.Identity(40_010, "Test Commander", DateTimeOffset.UtcNow),
+    };
+    using var server = new CommanderTestServer(database, frontier);
+    using var client = server.CreateClient();
+
+    using var start = await client.PostAsync("api/auth/frontier", content: null);
+    using var startJson = JsonDocument.Parse(await start.Content.ReadAsStringAsync());
+    var location = new Uri(startJson.RootElement.GetProperty("authorisationUri").GetString()!);
+    var state = CommanderTestServer.QueryValue(location, "state");
+    var address = cause switch
+    {
+      // Frontier sends a Commander who declined back with no code at all.
+      "declined" => $"api/auth/frontier/callback?state={Uri.EscapeDataString(state)}",
+      "unknown-state" => "api/auth/frontier/callback?code=authorisation-code&state=never-started",
+      _ => $"api/auth/frontier/callback?code=authorisation-code&state={Uri.EscapeDataString(state)}",
+    };
+
+    using var callback = await client.GetAsync(address);
+
+    Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
+    Assert.Equal("/?account=fresh-sign-in-required", callback.Headers.Location?.ToString());
+    Assert.DoesNotContain(
+      callback.Headers.TryGetValues("Set-Cookie", out var cookies) ? cookies : [],
+      value => value.StartsWith("__Host-NavBeacon-Session=", StringComparison.Ordinal)
+    );
+    Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("api/session")).StatusCode);
+  }
 }

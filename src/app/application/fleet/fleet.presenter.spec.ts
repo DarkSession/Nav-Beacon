@@ -304,6 +304,35 @@ describe('FleetPresenter', () => {
     expect(view.detail).toContain('2026');
   });
 
+  /**
+   * Every published failure, each read as the sentence it is.
+   *
+   * Six failures and four sentences: the two size failures share one because a
+   * Commander does the same thing about both, and the rest are separate because
+   * what stopped the refresh is different in each. A table rather than a chain,
+   * so a failure that started reading as the wrong sentence is caught here
+   * rather than reaching a Commander (020/FR-018, constitution IV).
+   */
+  it.each([
+    ['frontier-unavailable', 'fleet.status.failed.frontier'],
+    ['response-too-large', 'fleet.status.failed.too-large'],
+    ['line-too-large', 'fleet.status.failed.too-large'],
+    ['line-malformed', 'fleet.status.failed.malformed'],
+    ['projection-unavailable', 'fleet.status.failed.projection'],
+  ] as const)('reads the %s failure as its own sentence', async (failure, key) => {
+    writeState();
+    api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+    await signIn();
+    api.refreshes.push(answeredFleet({ result: 'failed', failure }));
+
+    await presenter.refresh();
+
+    const view = presenter.view();
+    expect(view.state).toBe('failed');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH[key]);
+    expect(view.ships.length).toBe(1);
+  });
+
   it('says a failed refresh left the ships already accepted where they were', async () => {
     writeState();
     api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));

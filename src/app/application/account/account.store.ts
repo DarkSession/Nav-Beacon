@@ -14,6 +14,16 @@ export type AccountState =
   | { readonly kind: 'anonymous' }
   | { readonly kind: 'loading' }
   | { readonly kind: 'redirect-pending' }
+  /**
+   * A sign-in came back without signing anybody in.
+   *
+   * The service answers one code for every way that happens — a Commander who
+   * declined at Frontier, a state this browser did not start, and a code
+   * Frontier would not exchange — because it cannot tell a browser which
+   * without saying something about the Commander's session with Frontier that
+   * it has no standing to say. What is offered here is the same in all three:
+   * start again (020/FR-003).
+   */
   | { readonly kind: 'correlation-refused' }
   | { readonly kind: 'signed-in'; readonly account: CachedCommanderAccount }
   | { readonly kind: 'offline'; readonly account: CachedCommanderAccount | null }

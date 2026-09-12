@@ -30,6 +30,14 @@ export class FakeCommanderApi implements CommanderApiPort {
   readonly answers: SynchronisationResponse[] = [];
   session: CommanderSessionResult = { kind: 'anonymous' };
   signedOutCalls = 0;
+  /**
+   * Set to hold every exchange open until it settles.
+   *
+   * An exchange in flight is a state of its own and the panel has a sentence
+   * for it, so a test that needs to read that sentence needs the exchange to
+   * still be running when it reads.
+   */
+  held: Promise<void> | null = null;
   #revision = 0;
 
   callbackResult(): null {
@@ -69,6 +77,9 @@ export class FakeCommanderApi implements CommanderApiPort {
 
   async synchroniseRecords(request: SynchronisationRequest): Promise<SynchronisationResponse> {
     this.requests.push(request);
+    if (this.held !== null) {
+      await this.held;
+    }
     const scripted = this.answers.shift();
     if (scripted !== undefined) {
       return scripted;

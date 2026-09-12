@@ -7,7 +7,6 @@ import type { ConflictChoice, RecordConflict } from '../../domain/commander/reco
 import { Formatters } from '../../i18n/formatters/formatters';
 import type { MessageKey } from '../../i18n/locale-registry';
 import { MessageService } from '../../i18n/message.service';
-import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { CommanderStateRepository } from '../../platform/storage/commander-state.repository';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import type { StatusTone } from '../../ui/components/status/status-notice';
@@ -70,7 +69,6 @@ export interface SynchronisationPanelView {
 export class SynchronisationPresenter {
   readonly #messages = inject(MessageService);
   readonly #formatters = inject(Formatters);
-  readonly #clock = inject(ClockAdapter);
   readonly #account = inject(AccountStore);
   readonly #sync = inject(RecordSynchronisationStore);
   readonly #state = inject(CommanderStateRepository);
@@ -273,11 +271,17 @@ export class SynchronisationPresenter {
       : this.#messages.message(`${stem}.many`, { count: this.#formatters.integer(count) });
   }
 
+  /**
+   * One stored instant, as a Commander reads it.
+   *
+   * A value this browser cannot read stands as it is rather than being replaced
+   * by the current moment. The sentence it goes into says when the account last
+   * confirmed this device, and printing now in its place would state a
+   * confirmation that did not happen then (constitution IV).
+   */
   #instant(iso: string): string {
     const parsed = new Date(iso);
-    return Number.isFinite(parsed.getTime())
-      ? this.#formatters.dateTime(parsed)
-      : this.#formatters.dateTime(this.#clock.now());
+    return Number.isFinite(parsed.getTime()) ? this.#formatters.dateTime(parsed) : iso;
   }
 }
 

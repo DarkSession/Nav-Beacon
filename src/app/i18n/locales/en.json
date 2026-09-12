@@ -1115,7 +1115,7 @@
   "account.status.anonymous": "You are not signed in. Every planning tool works without an account.",
   "account.status.loading": "Reading the account state.",
   "account.status.redirect-pending": "Nav Beacon is sending you to Frontier to sign in.",
-  "account.status.correlation-refused": "This sign-in did not finish in this browser. Start a fresh sign-in.",
+  "account.status.correlation-refused": "This sign-in did not finish. Start a fresh sign-in.",
   "account.status.signed-in": "You are signed in.",
   "account.status.offline": "The account service is unavailable. Your local work is safe.",
   "account.status.session-expired": "Your session expired. Sign in again to synchronise.",

@@ -19,7 +19,11 @@ import { ConnectivityAdapter } from '../../platform/browser/connectivity.adapter
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
 import { COMMANDER_API } from '../../platform/network/commander-api';
 import { recordKey } from '../../platform/storage/storage-keys';
-import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
+import {
+  MemoryStorage,
+  provideMemoryStorage,
+  quotaError,
+} from '../../platform/storage/storage.spec-helpers';
 import { AccountStore } from '../account/account.store';
 import { RecordSynchronisationStore } from './record-synchronisation.store';
 import { SynchronisationPresenter } from './synchronisation.presenter';
@@ -431,6 +435,143 @@ describe('what the record libraries say about the account', () => {
     const notes = presenter().view().notes;
     expect(notes.map((note) => note.id)).toContain('unsupported-version');
     expect(notes.find((note) => note.id === 'unsupported-version')?.tone).toBe('warning');
+  });
+
+  /**
+   * Every remaining reason an exchange can fail, each with its own sentence.
+   *
+   * A Commander whose session ended, whose browser would not take a write and
+   * whose record the service refused are three different situations with three
+   * different answers, and one sentence for all of them would tell two of the
+   * three something that is not so (020/FR-011, constitution IV).
+   */
+  it.each([
+    [
+      'an ended session',
+      { kind: 'refused', status: 401, code: 'unauthorised', accountRevision: null, results: [] },
+      'sync.status.failed.signed-out',
+    ],
+    [
+      'a record the service would not take',
+      {
+        kind: 'refused',
+        status: 400,
+        code: 'invalid-record',
+        accountRevision: null,
+        results: [],
+      },
+      'sync.status.failed.refused',
+    ],
+    [
+      'a refusal this browser has no sentence for',
+      { kind: 'refused', status: 500, code: 'unknown', accountRevision: null, results: [] },
+      'sync.status.failed.service',
+    ],
+  ] as const)('says why an exchange failed on %s', async (_case, answer, key) => {
+    writeCommanderState(storage);
+    seedRecord();
+    const store = await signedIn();
+    api.answers.push(answer as SynchronisationResponse);
+
+    store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
+    await store.refresh();
+    await settle();
+
+    const view = presenter().view();
+    expect(view.status.tone).toBe('error');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH[key]);
+  });
+
+  /**
+   * A browser that will not take the write that takes a refused record out of
+   * the next batch says so, rather than naming the record the service refused.
+   * The queue keeps offering that record, so the failure a Commander can act on
+   * is this browser's storage (020/FR-011, 020/FR-026).
+   */
+  it('says the browser would not take the write when the record cannot be set aside', async () => {
+    writeCommanderState(storage);
+    seedRecord();
+    const store = await signedIn();
+    api.answers.push({
+      kind: 'refused',
+      status: 409,
+      code: 'cross-account-record',
+      accountRevision: null,
+      results: [
+        {
+          index: 0,
+          outcome: 'refused',
+          id: FIXTURE_IDS.named,
+          revision: null,
+          remote: null,
+          code: 'cross-account-record',
+        },
+      ],
+    });
+
+    store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
+    storage.writeError = quotaError();
+    await store.refresh();
+    await settle();
+
+    const view = presenter().view();
+    expect(view.status.tone).toBe('error');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['sync.status.failed.storage']);
+  });
+
+  /**
+   * The first exchange of an account in this browser brings two sets of records
+   * together; every later one carries what changed since. They are different
+   * enough to a Commander watching them that they are different sentences
+   * (020/FR-008).
+   */
+  it.each([
+    ['brings the two sets together on the first exchange', {}, 'sync.status.merging'],
+    [
+      'carries what changed on every exchange after it',
+      { accountCursors: { [CUSTOMER]: 4 } },
+      'sync.status.synchronising',
+    ],
+  ] as const)('says it %s', async (_case, cursors, key) => {
+    writeCommanderState(storage, { accountCursors: {}, ...cursors });
+    seedRecord();
+    TestBed.inject(RecordSynchronisationStore);
+    let release = (): void => {};
+    api.held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await signIn(api);
+
+    const view = presenter().view();
+    expect(view.status.tone).toBe('loading');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH[key]);
+
+    release();
+    api.held = null;
+    await settle();
+  });
+
+  /**
+   * A stored instant this browser cannot read stands as it is.
+   *
+   * The sentence says when the account last confirmed this device. Printing the
+   * current moment in its place would state a confirmation that did not happen
+   * then, which is a claim about the account that is not true (constitution IV).
+   */
+  it('shows an unreadable confirmation instant as it stands', async () => {
+    const clock = TestBed.inject(ClockAdapter) as MovableClock;
+    clock.timestamp = () => 'not-an-instant';
+    writeCommanderState(storage);
+    const store = await signedIn();
+
+    await store.refresh();
+    await settle();
+
+    const view = presenter().view();
+    expect(view.status.message).toBe(
+      BUNDLED_ENGLISH['sync.status.current'].replace('{{when}}', 'not-an-instant'),
+    );
   });
 
   it('never names the Commander by an identifier', async () => {

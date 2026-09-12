@@ -140,8 +140,9 @@ export class FleetStore {
    * When the service last confirmed this fleet, within this page.
    *
    * `null` until a service answer has actually been read. A fleet restored from
-   * browser storage leaves it `null`, which is what stops an offline page from
-   * saying a refresh completed.
+   * browser storage leaves it `null`, and leaves the exchange `idle`; it is the
+   * idle exchange the panel reads, and this records the same fact for a reader
+   * of this store rather than being what any sentence is derived from.
    */
   readonly confirmedAt = this.#confirmedAt.asReadonly();
 

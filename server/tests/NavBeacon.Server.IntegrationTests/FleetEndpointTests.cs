@@ -192,6 +192,32 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
     Assert.Equal("Night Watch", read.Ship(12)["model"]!["shipName"]!.GetValue<string>());
   }
 
+  /// <summary>
+  /// A journal response too large to read is its own failure, and not the one a
+  /// Commander reads as Frontier being unreachable. What stopped the refresh is
+  /// different, so the sentence it produces is different (020/FR-018).
+  /// </summary>
+  [Fact]
+  public async Task AJournalResponseTooLargeToReadIsStatedAsItsOwnFailure()
+  {
+    var journal = new FakeJournalClient();
+    journal.Complete(Yesterday, JournalFixtures.Loadout(12, name: "Night Watch"));
+    journal.Queue(Today, new JournalRead(JournalReadOutcome.ResponseTooLarge, string.Empty, null));
+    using var server = NewServer(journal, out var frontier);
+    using var commander = await SignIn(server, frontier, 82_016);
+    await database.SeedCursorAsync(82_016, Yesterday, 0);
+
+    var failed = await commander.RefreshFleetAsync();
+
+    Assert.Equal(FleetResults.Failed, failed.Result);
+    Assert.Equal(FleetFailures.ResponseTooLarge, failed.Failure);
+    Assert.True(failed.Pending);
+    Assert.Equal(
+      "Night Watch",
+      failed.Ship(12)["model"]!["shipName"]!.GetValue<string>()
+    );
+  }
+
   [Fact]
   public async Task ExpiredFrontierAuthorisationIsStatedOnItsOwn()
   {

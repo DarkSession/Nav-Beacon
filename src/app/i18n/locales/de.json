@@ -1115,7 +1115,7 @@
   "account.status.anonymous": "Du bist nicht angemeldet. Alle Planungswerkzeuge funktionieren ohne Konto.",
   "account.status.loading": "Der Kontostand wird gelesen.",
   "account.status.redirect-pending": "Nav Beacon leitet dich zur Anmeldung an Frontier weiter.",
-  "account.status.correlation-refused": "Diese Anmeldung wurde nicht in diesem Browser beendet. Starte eine neue Anmeldung.",
+  "account.status.correlation-refused": "Diese Anmeldung wurde nicht abgeschlossen. Starte eine neue Anmeldung.",
   "account.status.signed-in": "Du bist angemeldet.",
   "account.status.offline": "Der Kontodienst ist nicht erreichbar. Deine lokale Arbeit ist sicher.",
   "account.status.session-expired": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um abzugleichen.",
