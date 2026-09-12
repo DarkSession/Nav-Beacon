@@ -192,7 +192,7 @@ run policy:specs` resolves every governing reference and help route.
 - [x] 8.4 Add manual screen-reader and actual 400% zoom protocol steps and result records for the
       account dialog, synchronisation conflict and owned-ships view; verify both protocols record
       desktop, tablet and mobile results in both orientations.
-- [ ] 8.5 Run `openspec validate add-commander-account-sync --strict`, `pnpm run policy:specs`, the
+- [x] 8.5 Run `openspec validate add-commander-account-sync --strict`, `pnpm run policy:specs`, the
       server restore, format, build and test commands, and `pnpm run check`; verify every command passes
       with no skipped, focused or quarantined test.
 - [ ] 8.6 Run the required implementation review against the complete diff, fix every actionable
