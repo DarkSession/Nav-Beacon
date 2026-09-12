@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Patterns;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NavBeacon.Server.Logging;
@@ -86,21 +87,68 @@ public sealed class SafeAccessLoggingMiddlewareTests
     Assert.Equal("unmatched", Assert.Single(logger.Entries)["RouteTemplate"]);
   }
 
-  [Fact]
-  public void FrameworkLogsAreDisabled()
+  /// <summary>
+  /// The pipeline the server actually composes, not this method's own.
+  ///
+  /// `WebApplication.CreateBuilder` registers the `Logging` section of
+  /// `appsettings.json` as filter rules before `AddCommanderLogging` is
+  /// reached, and a rule is chosen by the length of the category it names. A
+  /// test that leaves configuration out asserts a property of a pipeline the
+  /// server does not build, so this one reads the shipped file — and adds the
+  /// settings a deployment would reach for to turn framework logging on, which
+  /// is the request that must not be granted (020/FR-003).
+  /// </summary>
+  [Theory]
+  [InlineData("Microsoft.AspNetCore.Hosting.Diagnostics")]
+  [InlineData("Microsoft.AspNetCore.Routing.EndpointMiddleware")]
+  [InlineData("Microsoft.EntityFrameworkCore.Database.Command")]
+  [InlineData("System.Net.Http.HttpClient")]
+  public void FrameworkLogsAreDisabledWhateverTheConfigurationSays(string category)
   {
+    using var provider = LoggingFrom(
+      new Dictionary<string, string?>
+      {
+        ["Logging:LogLevel:Microsoft"] = "Trace",
+        ["Logging:LogLevel:Microsoft.AspNetCore"] = "Information",
+        ["Logging:LogLevel:Microsoft.AspNetCore.Hosting.Diagnostics"] = "Trace",
+        ["Logging:LogLevel:Microsoft.EntityFrameworkCore"] = "Information",
+        ["Logging:LogLevel:System"] = "Trace",
+      }
+    );
+
+    Assert.False(
+      provider.GetRequiredService<ILoggerFactory>().CreateLogger(category).IsEnabled(LogLevel.Critical)
+    );
+  }
+
+  [Fact]
+  public void ThisApplicationsOwnLogsAreNotDisabled()
+  {
+    using var provider = LoggingFrom([]);
+
+    Assert.True(
+      provider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("NavBeacon.Server.Logging.SafeAccessLoggingMiddleware")
+        .IsEnabled(LogLevel.Information)
+    );
+  }
+
+  /// <summary>The server's own composition: the shipped file, then this filter.</summary>
+  private static ServiceProvider LoggingFrom(Dictionary<string, string?> overrides)
+  {
+    var configuration = new ConfigurationBuilder()
+      .AddJsonFile("appsettings.json", optional: false)
+      .AddInMemoryCollection(overrides)
+      .Build();
     var services = new ServiceCollection();
     services.AddLogging(logging =>
     {
+      logging.AddConfiguration(configuration.GetSection("Logging"));
       logging.AddProvider(new EnabledLoggerProvider());
       logging.AddCommanderLogging();
     });
-    using var provider = services.BuildServiceProvider();
-    var factory = provider.GetRequiredService<ILoggerFactory>();
-
-    Assert.False(factory.CreateLogger("Microsoft.AspNetCore.Hosting.Diagnostics").IsEnabled(LogLevel.Critical));
-    Assert.False(factory.CreateLogger("System.Net.Http.HttpClient").IsEnabled(LogLevel.Critical));
-    Assert.True(factory.CreateLogger("NavBeacon.Server.Logging.SafeAccessLoggingMiddleware").IsEnabled(LogLevel.Information));
+    return services.BuildServiceProvider();
   }
 
   private static DefaultHttpContext CallbackContext()

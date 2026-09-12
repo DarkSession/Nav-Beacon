@@ -16,5 +16,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures/**/*.mjs" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The shipped file itself, so the logging test reads what the server reads. -->
+    <None
+      Include="../../src/NavBeacon.Server/appsettings.json"
+      Link="appsettings.json"
+      CopyToOutputDirectory="PreserveNewest"
+    />
   </ItemGroup>
 </Project>
