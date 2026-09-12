@@ -190,6 +190,42 @@ describe('FleetPresenter', () => {
     expect(view.ships.length).toBe(1);
   });
 
+  it('says a refresh that never reached the service is not a confirmed fleet', async () => {
+    writeState();
+    api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+    await signIn();
+    api.offline = true;
+
+    await presenter.refresh();
+
+    // The ships stay listed, and the refresh that never arrived is stated
+    // rather than read as a completed one (020/FR-018, 020/FR-022).
+    const view = presenter.view();
+    expect(view.state).toBe('current');
+    expect(view.status.tone).toBe('warning');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.unavailable']);
+    expect(view.detail).toBe(BUNDLED_ENGLISH['fleet.detail.last-accepted']);
+    expect(view.ships.length).toBe(1);
+  });
+
+  it('says a refresh the service refused is not a confirmed fleet', async () => {
+    writeState();
+    api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+    await signIn();
+    api.refreshes.push({ kind: 'refused', status: 401, code: 'unauthorised' });
+    // The session read that answers the refusal cannot be made either, so the
+    // account keeps what it holds and this test reads the fleet alone.
+    api.session = { kind: 'unavailable' };
+
+    await presenter.refresh();
+
+    const view = presenter.view();
+    expect(view.status.tone).toBe('warning');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.session-expired']);
+    expect(view.detail).toBe(BUNDLED_ENGLISH['fleet.detail.last-accepted']);
+    expect(view.ships.length).toBe(1);
+  });
+
   it('says the Frontier authorisation expired, and offers the sign-in that resumes it', async () => {
     writeState();
     api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));

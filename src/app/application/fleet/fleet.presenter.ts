@@ -214,16 +214,9 @@ export class FleetPresenter {
       case 'loading':
         return { tone: 'loading', message: this.#messages.message('fleet.status.loading') };
       case 'current':
-        return {
-          tone: 'success',
-          message: this.#messages.message(
-            holding?.fromCache === true ? 'fleet.status.cached' : 'fleet.status.current',
-          ),
-        };
       case 'incomplete':
-        return { tone: 'warning', message: this.#messages.message('fleet.status.incomplete') };
       case 'empty':
-        return { tone: 'info', message: this.#messages.message('fleet.status.empty') };
+        return this.#settledStatus(state, holding);
       case 'waiting':
         return { tone: 'warning', message: this.#messages.message('fleet.status.waiting') };
       case 'authorisation-expired':
@@ -236,6 +229,49 @@ export class FleetPresenter {
       default:
         return { tone: 'error', message: this.#failedMessage() };
     }
+  }
+
+  /**
+   * What a fleet this browser holds says, and what the last exchange says.
+   *
+   * A refresh the service never answered leaves the ships listed and states
+   * the failure instead of the settled sentence, because reading it as a
+   * completed refresh would tell a Commander that their journal confirms a
+   * fleet nothing has checked (020/FR-018, 020/FR-022).
+   *
+   * A fleet read out of this browser is the exception. Its own sentence
+   * already says that these are the ships last accepted and that a refresh
+   * needs a network, which is the same fact in the words that fit it.
+   */
+  #settledStatus(state: OwnedShipsState, holding: FleetHolding | null): OwnedShipsView['status'] {
+    if (this.#unanswered() && holding?.fromCache === false) {
+      return { tone: 'warning', message: this.#failedMessage() };
+    }
+    switch (state) {
+      case 'incomplete':
+        return { tone: 'warning', message: this.#messages.message('fleet.status.incomplete') };
+      case 'empty':
+        return { tone: 'info', message: this.#messages.message('fleet.status.empty') };
+      default:
+        return {
+          tone: 'success',
+          message: this.#messages.message(
+            holding?.fromCache === true ? 'fleet.status.cached' : 'fleet.status.current',
+          ),
+        };
+    }
+  }
+
+  /**
+   * Whether the last exchange ended without the service answering the fleet.
+   *
+   * A session that has ended and a service that could not be reached both
+   * leave the held fleet standing and confirm nothing, and neither has a state
+   * of its own while a fleet is held (020/FR-018).
+   */
+  #unanswered(): boolean {
+    const kind = this.#fleet.exchange().kind;
+    return kind === 'session-expired' || kind === 'unavailable';
   }
 
   /** Why the last exchange did not leave this browser current. */
@@ -274,8 +310,15 @@ export class FleetPresenter {
       return this.#messages.message('fleet.detail.pending');
     }
     // Every state that is not current says that the fleet already accepted is
-    // still there, because that is the fact a Commander needs (020/FR-018).
-    if (state === 'failed' || state === 'package-refused' || state === 'authorisation-expired') {
+    // still there, because that is the fact a Commander needs (020/FR-018). A
+    // refresh the service never answered is one of them: the ships stay listed
+    // and the status above says why none of them is confirmed.
+    if (
+      state === 'failed' ||
+      state === 'package-refused' ||
+      state === 'authorisation-expired' ||
+      (this.#unanswered() && holding?.fromCache === false)
+    ) {
       return (holding?.ships.length ?? 0) > 0
         ? this.#messages.message('fleet.detail.last-accepted')
         : null;
