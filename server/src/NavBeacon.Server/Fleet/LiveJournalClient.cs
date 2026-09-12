@@ -129,15 +129,21 @@ public sealed class LiveJournalClient(
 
       attempts++;
       var now = timeProvider.GetUtcNow();
-      if (attempt.RetryAfter > FleetLimits.MaximumInRequestDelay)
-      {
-        return Ended(attempt, now + attempt.RetryAfter.Value);
-      }
+      // The third failure is decided first, because both rules end the read and
+      // only one of them is right about when the next one is permitted. A
+      // `Retry-After` between the in-request bound and the failure delay — 45
+      // seconds, say — is longer than the one and shorter than the other, and
+      // taking it alone would permit the next refresh before the floor
+      // (020/FR-013).
       if (attempts >= FleetLimits.MaximumAttempts)
       {
         var supplied = now + (attempt.RetryAfter ?? TimeSpan.Zero);
         var floor = now + FleetLimits.FailureDelay;
         return Ended(attempt, supplied > floor ? supplied : floor);
+      }
+      if (attempt.RetryAfter > FleetLimits.MaximumInRequestDelay)
+      {
+        return Ended(attempt, now + attempt.RetryAfter.Value);
       }
 
       await delay.WaitAsync(

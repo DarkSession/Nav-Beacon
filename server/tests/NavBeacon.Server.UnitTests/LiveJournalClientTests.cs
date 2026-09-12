@@ -204,7 +204,28 @@ public sealed class LiveJournalClientTests
     var handler = new QueueHandler(
       Text(HttpStatusCode.TooManyRequests, "", TimeSpan.FromSeconds(1)),
       Text(HttpStatusCode.TooManyRequests, "", TimeSpan.FromSeconds(1)),
-      Text(HttpStatusCode.TooManyRequests, "", TimeSpan.FromSeconds(30))
+      Text(HttpStatusCode.TooManyRequests, "", TimeSpan.FromSeconds(90))
+    );
+    var client = Client(handler, out _);
+
+    var read = await client.ReadAsync(Yesterday, new Authorisation(), CancellationToken.None);
+
+    Assert.Equal(Now.AddSeconds(90), read.NextPermittedRefreshAt);
+  }
+
+  /// <summary>
+  /// The delay Frontier asks for here is longer than the bound a read waits
+  /// inside a request and shorter than the delay a third failure carries, so
+  /// only one of the two rules gives the answer 020/FR-013 asks for: the later
+  /// of the two.
+  /// </summary>
+  [Fact]
+  public async Task AThirdFailureKeepsTheFloorOverAShorterRetryAfter()
+  {
+    var handler = new QueueHandler(
+      Text(HttpStatusCode.TooManyRequests, "", TimeSpan.FromSeconds(1)),
+      Text(HttpStatusCode.TooManyRequests, "", TimeSpan.FromSeconds(1)),
+      Text(HttpStatusCode.TooManyRequests, "", TimeSpan.FromSeconds(45))
     );
     var client = Client(handler, out _);
 
