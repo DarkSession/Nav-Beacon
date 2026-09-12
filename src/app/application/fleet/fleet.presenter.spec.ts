@@ -131,6 +131,81 @@ describe('FleetPresenter', () => {
     expect(view.ships).toEqual([]);
   });
 
+  /**
+   * The read is in flight and this browser holds no fleet yet.
+   *
+   * There is nothing to show and no failure to state, so the panel says it is
+   * reading rather than claiming an empty fleet. A browser that already holds
+   * one keeps showing it instead, which is the same rule the exchange failures
+   * follow (020/FR-022).
+   */
+  it('says it is reading while a read is in flight and there is nothing yet', async () => {
+    writeState();
+    let release = (): void => {};
+    api.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+
+    await signIn();
+
+    const view = presenter.view();
+    expect(view.state).toBe('loading');
+    expect(view.status.tone).toBe('loading');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.loading']);
+    expect(view.ships).toEqual([]);
+
+    release();
+    api.hold = null;
+    await settle();
+    expect(presenter.view().state).toBe('current');
+  });
+
+  /**
+   * A fleet already held stays on screen while the next answer is in flight.
+   *
+   * The ships are the ones the account confirmed, and replacing them with a
+   * reading notice would take away what this browser can honestly still show
+   * (020/FR-022).
+   */
+  it('keeps showing a fleet it holds while a refresh is in flight', async () => {
+    writeState();
+    api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+    await signIn();
+    let release = (): void => {};
+    api.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.refreshes.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+
+    const refreshing = presenter.refresh();
+    await settle();
+
+    expect(presenter.view().state).toBe('current');
+    expect(presenter.view().ships.length).toBe(1);
+
+    release();
+    api.hold = null;
+    await refreshing;
+    await settle();
+  });
+
+  /**
+   * The fleet's own sign-in is the account dialog, not a second sign-in.
+   *
+   * One place asks for a Frontier sign-in and states what it is for, and the
+   * fleet sends a Commander there rather than starting one of its own
+   * (020/FR-001, 020/FR-005).
+   */
+  it('opens the account panel where a sign-in is what comes next', () => {
+    const account = TestBed.inject(AccountStore);
+    expect(account.open()).toBe(false);
+
+    presenter.signIn();
+
+    expect(account.open()).toBe(true);
+  });
+
   it('says the fleet is current, and names the journal it was read from', async () => {
     writeState();
     api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)], coverage: coverage() as never }));

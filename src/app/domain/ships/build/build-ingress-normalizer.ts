@@ -107,19 +107,23 @@ export function normalizeReconstructedBuild(candidate: ShipLoadout): IngressResu
   // and the link codec names it from a table of the package's own symbols — so
   // it is an invariant stated where it can be checked rather than a Commander's
   // outcome. Its `reason` is an English sentence, which the sibling ingress
-  // paths also write — `record-open.service.ts`, `build-link.coordinator.ts`,
-  // `stock-build.creator.ts`. Only the first is both reachable in ordinary use
-  // and rendered to a Commander, framed by `library.open.failed`, so only that
-  // one is owed a catalogued message: `build-link.coordinator.ts` publishes a
-  // `LinkFailure` code the message layer frames and never renders its `reason`,
-  // and `stock-build.creator.ts` writes its reasons behind the same kind of
-  // guard as this one. This reason is not owed a catalogue entry because no
-  // door reaches it, and a translated string for a state nobody can arrive at
-  // is a string never read — not because of where it would be rendered, which
-  // is that same frame. The other `unusable` reason here is no precedent
-  // either: that one is the package's own diagnostic, which principle VI
-  // leaves to the package. A door that stopped resolving would make this
-  // Commander-facing and would need a code the message layer can frame
+  // paths also write — `record-open.service.ts`, `fleet-copy.service.ts`,
+  // `build-link.coordinator.ts`, `stock-build.creator.ts`. Only the first is
+  // both reachable in ordinary use and rendered to a Commander, framed by
+  // `library.open.failed`, so only that one is owed a catalogued message.
+  // `fleet-copy.service.ts` renders into that same frame but cannot reach its
+  // own refusal: an owned ship states completed grades and no roll quality
+  // (020/FR-015), so the gate finds nothing partial there to complete.
+  // `build-link.coordinator.ts` publishes a `LinkFailure` code the message
+  // layer frames and never renders its `reason`, and `stock-build.creator.ts`
+  // writes its reasons behind the same kind of guard as this one. This reason
+  // is not owed a catalogue entry because no door reaches it, and a translated
+  // string for a state nobody can arrive at is a string never read — not
+  // because of where it would be rendered, which is that same frame. The other
+  // `unusable` reason here is no precedent either: that one is the package's
+  // own diagnostic, which principle VI leaves to the package. A door that
+  // stopped resolving would make this Commander-facing and would need a code
+  // the message layer can frame
   // (constitution VI).
   if (getShipBySymbol(candidate.shipSymbol)?.symbol !== candidate.shipSymbol) {
     return {

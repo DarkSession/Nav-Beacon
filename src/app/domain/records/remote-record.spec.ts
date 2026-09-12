@@ -123,6 +123,31 @@ describe('remote record contract', () => {
     }
   });
 
+  /**
+   * The envelope, which is where a record from a newer server stops.
+   *
+   * A version this browser does not know stays remote and unopened rather than
+   * being read under this version's rules: a v2 record carrying the v1 key set
+   * would otherwise be adopted into local storage as a v1 record, which is what
+   * 020/FR-012 forbids. The identity, kind and timestamps are the same
+   * boundary — a record this browser cannot place in time or in a library is
+   * not one it can hold.
+   */
+  it.each([
+    ['a format it does not know', { format: 'ednb.remote-record.v2' }],
+    ['a version it does not know', { version: 2 }],
+    ['an identity that is not a UUID', { id: 'not-a-uuid' }],
+    ['a kind that is neither working nor named', { kind: 'archived' }],
+    ['a creation instant it cannot read', { createdAt: 'the day before' }],
+    ['a modification instant it cannot read', { modifiedAt: '2026-13-45T99:00:00.000Z' }],
+  ])('leaves a record with %s unopened', async (_case, override) => {
+    expect(await parseRemoteRecord({ ...shipRecord(), ...override })).toMatchObject({ ok: false });
+  });
+
+  it('refuses an equipment record whose name is neither text nor absent', async () => {
+    expect(await parseRemoteRecord({ ...equipmentRecord(), name: 7 })).toMatchObject({ ok: false });
+  });
+
   it('accepts only the exact tombstone shape', () => {
     const tombstone = { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revision: 4 };
 

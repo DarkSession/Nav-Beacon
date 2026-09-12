@@ -81,10 +81,15 @@ export class FleetCopyService {
 /**
  * Why the ingress gate refused, named mount by mount.
  *
- * It reaches a Commander through `library.open.failed`, the same way every
- * other ingress reason does, and the surface that names the affected mounts
- * carries the detail. It states only what the gate answered — a count and the
- * codes it gave — and invents no cause for it (constitution IV).
+ * No owned ship reaches it. A journal `Loadout` states completed grades and no
+ * roll quality (020/FR-015), so the gate finds nothing partial to complete and
+ * never answers `refused` — the same reason `#construct` gives above for
+ * running the gate at all. It is written for the release that changes that:
+ * the caller renders it through `library.open.failed`, where a Commander would
+ * read it, so it states only what the gate answered — a count and the codes it
+ * gave — and invents no cause for it (constitution IV). A door that did start
+ * reaching this would owe the message layer a code rather than this sentence
+ * (constitution VI, `build-ingress-normalizer.ts`).
  */
 function refusalReason(failures: readonly { readonly code: string | null }[]): string {
   return `The Almanac could not complete ${failures.length} partial engineering roll(s): ${failures

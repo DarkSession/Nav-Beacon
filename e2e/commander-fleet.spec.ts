@@ -141,6 +141,41 @@ test.describe('the ships a Commander owns', () => {
     await scan(page, testInfo, 'owned ships, refresh failed');
   });
 
+  /**
+   * A ship the installed package will not rebuild is stated, not dropped.
+   *
+   * The fleet is what the account owns, so a ship the browser cannot rebuild is
+   * still a ship the Commander has. Leaving it out would make the list a
+   * shorter fleet than the real one, and putting a placeholder in its place
+   * would make it a different one. It is named as unresolved and nothing is put
+   * where it would have been (020/FR-015, 020/FR-016).
+   */
+  test('states a ship the installed package cannot rebuild, putting nothing in its place', async ({
+    page,
+  }, testInfo) => {
+    const service = await installCommanderService(page, { session: 'signed-in' });
+    service.fleet = () => ({
+      status: 200,
+      body: fleetAnswer({
+        ships: [
+          ownedShip(12, ownedShipModel('Anaconda', FIRST_SHIP, 'BA-01')),
+          ownedShip(13, ownedShipModel('NotAHullTheGameCarries', SECOND_SHIP, 'QL-02')),
+        ],
+      }),
+    });
+
+    await openOwnedShips(page);
+    await expect(fleet(page).getByRole('button', { name: FIRST_SHIP })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // The package's answer about the hull, in the application's own words, and
+    // no row offering the ship it could not build.
+    await expect(fleet(page)).toContainText(englishMessages['fleet.unresolved.unknown-hull']);
+    await expect(fleet(page).getByRole('button', { name: SECOND_SHIP })).toHaveCount(0);
+    await scan(page, testInfo, 'owned ships, one unresolved');
+  });
+
   test('offers a sign-in rather than a fleet when there is no account', async ({
     page,
   }, testInfo) => {
