@@ -64,8 +64,17 @@ const HELP_TITLE = new RegExp(
  * mounted and closed, and a closed one is still a `dialog` element. Counting
  * those would make "one dialog is open" true of a page with none.
  */
+/**
+ * Every layer standing over the frame that a Commander could act on.
+ *
+ * The shell's navigation overlay is excluded. It is a `dialog` with no control
+ * of any kind, raised while a route is still loading and withdrawn by the shell
+ * itself (018/FR-002) — so it is never what a journey dismisses, and counting it
+ * as one would have this suite reach for a way out that by design does not
+ * exist. Every other layer here is one somebody opened and somebody closes.
+ */
 function layers(page: Page) {
-  return page.locator('dialog[open]');
+  return page.locator('dialog[open]:not(.waiting)');
 }
 
 function helpModal(page: Page) {
@@ -192,10 +201,18 @@ async function dismissLayer(page: Page): Promise<void> {
       return;
     }
     const top = covering.last();
-    // Marked before it is pressed, so the wait below is about this layer rather
-    // than about whatever is on top afterwards.
+    // Marked before it is pressed, so both the press and the wait below are
+    // about this layer rather than about whatever is on top afterwards. The
+    // press goes through the mark for the same reason: dismissing a layer can
+    // navigate — closing the account modal hands the pointer back to the
+    // catalogue, which opens the hull under it — and a stack read again at
+    // press time is a different stack.
     await top.evaluate((layer) => layer.setAttribute('data-dismissing', ''));
-    await top.getByRole('button', { name: WAY_OUT }).first().click();
+    await page
+      .locator('dialog[open][data-dismissing]')
+      .getByRole('button', { name: WAY_OUT })
+      .first()
+      .click();
 
     // The frame is given back on the next change detection rather than on the
     // click itself, so this waits for the layer just pressed to actually close
