@@ -20,6 +20,8 @@ import {
 
 const OWNER = '900001';
 const OTHER = '900002';
+/** The cached account a stored value carries, as the reader accepts it. */
+const ACCOUNT = { customerId: OWNER, commanderName: 'Hadley' };
 
 function operation(overrides: Partial<PendingRemoteOperation> = {}): PendingRemoteOperation {
   return {
@@ -137,6 +139,42 @@ describe('the Commander state a browser keeps', () => {
 
   it('refuses a version it does not publish', () => {
     expect(parseCommanderLocalState({ ...state(), version: 99 })).toBeNull();
+  });
+
+  /**
+   * A field that does not read is the whole value refused.
+   *
+   * A half-read account state is one that could send a record to the wrong
+   * account, or send a base revision the service never issued, so each of these
+   * refuses everything rather than keeping the part that did read.
+   */
+  it.each([
+    ['an account that is not an object', { account: 'Hadley' }],
+    ['an account carrying a field nobody agreed on', { account: { ...ACCOUNT, email: 'a@b' } }],
+    ['an account missing its name', { account: { customerId: OWNER } }],
+    ['a customer identity that is not one', { account: { ...ACCOUNT, customerId: 'me' } }],
+    ['cursors that are not an object', { accountCursors: [] as unknown }],
+    ['a cursor that is not a revision', { accountCursors: { [OWNER]: -1 } }],
+    ['a cursor under an identity that is not one', { accountCursors: { me: 4 } }],
+    ['revisions that are not an object', { recordRevisions: 4 as unknown }],
+    ['a revision that is not whole', { recordRevisions: { 'record-1': 1.5 } }],
+    ['a queue that is not a list', { pendingOperations: {} as unknown }],
+    ['a queued operation with no identity', { pendingOperations: [operation({ id: '' })] }],
+    ['a queued operation with no record', { pendingOperations: [operation({ recordId: '' })] }],
+    [
+      'a queued operation of a kind nobody publishes',
+      { pendingOperations: [operation({ kind: 'archive' as never })] },
+    ],
+    [
+      'a queued base revision that is not one',
+      { pendingOperations: [operation({ baseRevision: -3 })] },
+    ],
+    [
+      'a queued instant this browser cannot read',
+      { pendingOperations: [operation({ queuedAt: 'the day before' })] },
+    ],
+  ])('refuses a stored value with %s', (_case, override) => {
+    expect(parseCommanderLocalState({ ...state(), ...override })).toBeNull();
   });
 });
 

@@ -23,8 +23,11 @@
   }
 
   <!--
-    A ship the installed game data will not rebuild. It is stated with the
-    package's own reason and nothing is put in its place (020/FR-016).
+    A ship the installed game data will not rebuild. It is named as unresolved
+    and nothing is put in its place. The sentence is this application's, from
+    the failure the mapping answered; the package's own words are carried
+    inside it only where the package published them for the language being read
+    (020/FR-016, `fleet.presenter.ts`).
   -->
   @for (entry of view().unresolved; track entry.id) {
     <ednb-status-notice

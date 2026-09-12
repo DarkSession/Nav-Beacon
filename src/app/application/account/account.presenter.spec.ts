@@ -19,6 +19,8 @@ const ACCOUNT = { customerId: '900001', commanderName: 'CMDR Jameson' };
 /** A service that answers nothing: the presenter is driven by state, not by it. */
 class SilentCommanderApi implements CommanderApiPort {
   readonly calls: string[] = [];
+  /** What a session read answers, for the intents that need a signed-in one. */
+  session: CommanderSessionResult = { kind: 'anonymous' };
 
   callbackResult(): null {
     return null;
@@ -45,7 +47,7 @@ class SilentCommanderApi implements CommanderApiPort {
 
   async readSession(): Promise<CommanderSessionResult> {
     this.calls.push('read-session');
-    return { kind: 'anonymous' };
+    return this.session;
   }
 
   async signOut(): Promise<boolean> {
@@ -302,6 +304,22 @@ describe('AccountPresenter', () => {
 
       expect(api.calls).toContain('start-sign-in');
       expect(api.calls).toContain('read-session');
+
+      // Signing out needs a session and the token that came with it, so the
+      // store is taken through the real sign-in first rather than set into
+      // place: a presenter that dispatched nowhere would pass either way.
+      api.session = {
+        kind: 'signed-in',
+        account: ACCOUNT,
+        antiForgeryToken: 'token-1',
+      };
+      await store.refreshSession();
+      presenter.select('sign-out');
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(api.calls).toContain('sign-out');
+      expect(store.state()).toEqual({ kind: 'anonymous' });
 
       presenter.select('delete');
       // Nothing to delete while the browser is anonymous, so the question is

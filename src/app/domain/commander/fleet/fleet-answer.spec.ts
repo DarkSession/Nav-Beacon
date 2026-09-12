@@ -124,6 +124,54 @@ describe('the fleet wire contract', () => {
       }),
     ],
     [
+      'a stored-ships block carrying a field nobody agreed on',
+      fleetBody({
+        coverage: {
+          startDate: '2026-08-18',
+          cursorDate: '2026-09-02',
+          cursorLine: 7,
+          storedShips: { date: '2026-09-01', line: 3, complete: true, source: 'journal' },
+          nextPermittedRefreshAt: null,
+        },
+      }),
+    ],
+    [
+      'a stored-ships block missing its completeness',
+      fleetBody({
+        coverage: {
+          startDate: '2026-08-18',
+          cursorDate: '2026-09-02',
+          cursorLine: 7,
+          storedShips: { date: '2026-09-01', line: 3 },
+          nextPermittedRefreshAt: null,
+        },
+      }),
+    ],
+    [
+      'a stored-ships line that is not an index',
+      fleetBody({
+        coverage: {
+          startDate: '2026-08-18',
+          cursorDate: '2026-09-02',
+          cursorLine: 7,
+          storedShips: { date: '2026-09-01', line: -1, complete: true },
+          nextPermittedRefreshAt: null,
+        },
+      }),
+    ],
+    [
+      'a next-permitted instant this browser cannot read',
+      fleetBody({
+        coverage: {
+          startDate: '2026-08-18',
+          cursorDate: '2026-09-02',
+          cursorLine: 7,
+          storedShips: null,
+          nextPermittedRefreshAt: 'in a little while',
+        },
+      }),
+    ],
+    [
       'a refusal carrying no code',
       fleetBody({ packageRefusal: { code: '', constraint: null, path: null, message: null } }),
     ],
