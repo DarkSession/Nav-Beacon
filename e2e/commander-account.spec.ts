@@ -243,6 +243,22 @@ test.describe('the Commander account', () => {
     }
     await scan(page, testInfo, 'record conflict layer');
 
+    // Dismissing the layer is not a fourth answer. The layer goes, the record
+    // stays listed, and nothing about it has been settled — this browser's copy
+    // is not local-only, because nobody said to leave both as they are
+    // (020/FR-009, 020/FR-010).
+    await conflict.getByRole('button', { name: englishMessages['action.close'] }).click();
+    await expect(conflict).toHaveCount(0);
+    await expectRecords(page, 1);
+    await expect(synchronisation(page)).not.toContainText('kept in this browser only');
+
+    // And the question is asked again the next time the library is opened,
+    // because dismissal set the layer aside rather than the conflict.
+    await library(page).getByRole('button', { name: englishMessages['action.close'] }).click();
+    await expect(library(page)).toHaveCount(0);
+    await openRecords(page);
+    await expect(conflict).toBeVisible({ timeout: 15_000 });
+
     await conflict.getByRole('button', { name: englishMessages['sync.conflict.cancel'] }).click();
     await expect(conflict).toHaveCount(0);
 

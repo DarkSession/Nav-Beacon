@@ -50,8 +50,16 @@ deployment's own secret store, never in a file in this repository.
 | `RecordValidation:ScriptPath`        | The validator bundle in record mode, from the content root |
 | `FleetProjection:ScriptPath`         | The same bundle in journal mode, from the content root     |
 
-A production instance reads these settings before it serves anything. If one is absent or unsafe it
-names every unfit setting and stops. A refusal names the setting and never its value.
+A production instance reads the Frontier settings, the Data Protection pair, the database link,
+`Deployment:RequireHttps`, the known-proxy and known-network pair and the request body limit before
+it serves anything. If one of those is absent or unsafe it names every unfit setting and stops. A
+refusal names the setting and never its value.
+
+`PathBase` and the two `ScriptPath` settings are not read at start-up. An instance whose validator
+bundle is missing or unreadable starts and serves, and the first request that needs the bundle is
+where it shows: a record synchronisation answers `503` with `validation-unavailable`, and a fleet
+refresh answers with `projection-unavailable`. Step 6 of _Checking a deployment_ is what catches
+this.
 
 The body limit stands above the 1 MiB synchronisation batch so a request just over the batch bound
 reaches the endpoint and receives the stated error code. It is between 1,048,576 and 4,194,304
@@ -129,3 +137,5 @@ Run these against the deployment after a release, in this order.
 3. `api/session` answers `401` with `signedIn: false` for a browser with no session.
 4. A Commander signs in through the edge, and `api/session` answers `200` on another instance.
 5. `api/fleet/refresh` on one instance answers `200` for a Commander who signed in on another.
+6. A record synchronisation answers `200` rather than `503` with `validation-unavailable`, which is
+   what a missing or unreadable validator bundle looks like from the outside.

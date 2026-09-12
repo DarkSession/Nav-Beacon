@@ -22,7 +22,9 @@ a package update can resolve it. A non-empty malformed line MUST produce the sam
 result and MUST be retried rather than skipped.
 
 The service MUST retry a network timeout, HTTP 429, HTTP 502, HTTP 503, HTTP 504 or a response that
-Frontier marks incomplete. It MUST make at most three attempts for one dated response in one refresh.
+Frontier marks incomplete for a UTC date that has ended. An incomplete response for the current UTC
+date MUST NOT be retried: that day is still being written, so no further attempt within the same
+refresh can complete it. It MUST make at most three attempts for one dated response in one refresh.
 Without `Retry-After`, it MUST wait one second before the second attempt and two seconds before the
 third. It MUST honour `Retry-After` up to 30 seconds within the request. A longer value MUST end the
 request and set the next permitted refresh time to that value. After a third retryable failure, that
@@ -48,9 +50,15 @@ Source: 020/FR-013.
 
 #### Scenario: Frontier returns an incomplete journal response
 
-- **WHEN** Frontier reports that a journal response is incomplete
+- **WHEN** Frontier reports that a journal response for a UTC date that has ended is incomplete
 - **THEN** the service does not advance its accepted cursor past that response
 - **AND** it makes at most three attempts with the stated delay rule
+
+#### Scenario: Frontier returns an incomplete response for the current UTC day
+
+- **WHEN** Frontier reports that a journal response for the current UTC date is incomplete
+- **THEN** the service makes no further attempt for that date in that refresh
+- **AND** it keeps the lines it read and leaves its cursor on that date
 
 #### Scenario: Frontier returns an empty journal day
 

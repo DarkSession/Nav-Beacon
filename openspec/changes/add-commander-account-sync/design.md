@@ -262,13 +262,16 @@ fleet. The same line is retried after a package update can resolve it. A non-emp
 also stops before that line and is retried rather than skipped.
 
 The journal reader retries a network timeout, HTTP 429, HTTP 502, HTTP 503, HTTP 504 or a response
-that Frontier marks incomplete. It makes at most three attempts for one dated response in one
-refresh. Without `Retry-After`, it waits one second before the second attempt and two seconds before
-the third. It honours `Retry-After` up to 30 seconds inside the request. A longer `Retry-After` ends
-the request and sets the next permitted refresh time to that value. After the third retryable
-failure, the next permitted time is the later of a supplied `Retry-After` and 60 seconds after the
-failure. A successful complete response clears that delay. Other HTTP failures do not retry. One
-token refresh may follow an authentication failure; another failure marks authorisation expired.
+that Frontier marks incomplete for a UTC date that has ended. An incomplete answer for the current
+UTC date is not retried, because that day is still being written and another attempt in the same
+refresh cannot complete it; the lines already read commit and the cursor stays on the date. It makes
+at most three attempts for one dated response in one refresh. Without `Retry-After`, it waits one
+second before the second attempt and two seconds before the third. It honours `Retry-After` up to 30
+seconds inside the request. A longer `Retry-After` ends the request and sets the next permitted
+refresh time to that value. After the third retryable failure, the next permitted time is the later
+of a supplied `Retry-After` and 60 seconds after the failure. A successful complete response clears
+that delay. Other HTTP failures do not retry. One token refresh may follow an authentication
+failure; another failure marks authorisation expired.
 
 Only one API instance may refresh an account at a time. The per-account next permitted refresh time
 lives in PostgreSQL. A refresh runs within the request for this change; no background worker or
