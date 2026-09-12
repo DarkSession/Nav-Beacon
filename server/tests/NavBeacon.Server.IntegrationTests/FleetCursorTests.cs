@@ -91,6 +91,29 @@ public sealed class FleetCursorTests(PostgreSqlDatabaseFixture database)
   }
 
   [Fact]
+  public async Task ACompleteCurrentDayKeepsTheCursorOnIt()
+  {
+    // Frontier calls the current day complete as readily as a past one, and the
+    // day has still not ended. The lines commit; the date stays, so the ships
+    // the rest of the day brings are read on a later refresh.
+    var journal = new FakeJournalClient();
+    journal.Complete(Today, JournalFixtures.Loadout(12));
+    using var server = NewServer(journal, out var frontier);
+    using var commander = await SignIn(server, frontier, 80_011);
+    await database.SeedCursorAsync(80_011, Today, 0);
+
+    var refreshed = await commander.RefreshFleetAsync();
+
+    Assert.Single(refreshed.Ships);
+    Assert.Equal(Today.ToString("yyyy-MM-dd"), refreshed.CursorDate);
+    Assert.Equal(1, refreshed.CursorLine);
+    await using var context = database.CreateContext();
+    var cursor = await context.JournalCursors.SingleAsync(entry => entry.CustomerId == 80_011);
+    Assert.Equal(Today, cursor.NextUnreadDate);
+    Assert.Equal(1, cursor.NextUnreadLine);
+  }
+
+  [Fact]
   public async Task AnIncompleteDayDoesNotAdvanceToTheNextDate()
   {
     var journal = new FakeJournalClient();

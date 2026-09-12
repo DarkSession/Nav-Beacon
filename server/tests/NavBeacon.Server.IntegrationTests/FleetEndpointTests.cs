@@ -112,7 +112,10 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
 
     Assert.Equal(FleetResults.Current, refreshed.Result);
     Assert.False(refreshed.Pending);
-    Assert.Equal(Today.AddDays(1).ToString("yyyy-MM-dd"), refreshed.CursorDate);
+    // Yesterday is read and left behind; today is read and kept, because the
+    // day has not ended and the cursor never returns to a date it leaves
+    // (020/FR-013).
+    Assert.Equal(Today.ToString("yyyy-MM-dd"), refreshed.CursorDate);
     Assert.True(refreshed.StoredShips!["complete"]!.GetValue<bool>());
     Assert.Equal(FleetResults.Current, read.Result);
     Assert.Equal(12, Assert.Single(read.Ships)!["shipId"]!.GetValue<long>());

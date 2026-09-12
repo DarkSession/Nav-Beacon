@@ -161,13 +161,22 @@ public sealed class FleetService(
       {
         await ClearDelayAsync(cursor, cancellationToken);
       }
-      var day = await ReadDayAsync(context, read.Body, complete, cancellationToken);
+      // The cursor leaves a date when that date has ended, which is this
+      // service's own reading of the clock and not Frontier's completeness
+      // flag: Frontier answers the current day complete as readily as a past
+      // one. Nothing brings the cursor back to a date it has left, so a day
+      // left early is a day whose remaining ships are never read, under a
+      // coverage that states it as taken in (020/FR-013, constitution IV).
+      //
+      // The lines read still commit either way. Only the date stays.
+      var ended = complete && cursor.NextUnreadDate < today;
+      var day = await ReadDayAsync(context, read.Body, ended, cancellationToken);
       if (day.Failure is not null)
       {
         await SaveNextPermittedAsync(cursor, read.NextPermittedRefreshAt, cancellationToken);
         return await FailedAsync(customerId, cursor, day.Failure, day.Refusal, cancellationToken);
       }
-      if (!complete)
+      if (!ended)
       {
         // The day is still being written, so the cursor stays on it. A refresh
         // that stopped on the ten-batch bound has more of it left to read.
