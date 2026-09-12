@@ -839,6 +839,22 @@ export class RecordSynchronisationStore {
     this.#paused.release(recordId);
   }
 
+  /**
+   * Writes one change to the queue, and takes up what follows it.
+   *
+   * Browser storage can refuse the write, and then nothing is queued: the
+   * change stays in the record and nothing at all is waiting to offer it. That
+   * is stated as the storage failure it is rather than settled as work the
+   * account is about to receive, because settling it would let this browser
+   * call itself current while a Commander's save has never left it
+   * (020/FR-011, 020/FR-026).
+   *
+   * The reason stands rather than being replaced by a count of what is waiting,
+   * as a refused record's does: the exchange that follows this trigger carries
+   * everything else that was queued and would otherwise answer a Commander's
+   * lost save with `current`. A later change that does reach the queue clears
+   * it.
+   */
   #queue(
     recordId: string,
     customerId: string,
@@ -849,7 +865,7 @@ export class RecordSynchronisationStore {
     if (!canSynchroniseRecord(state, recordId, customerId)) {
       return;
     }
-    this.#state.queueOperation({
+    const written = this.#state.queueOperation({
       id: this.#uuid.create(),
       customerId,
       recordId,
@@ -857,6 +873,11 @@ export class RecordSynchronisationStore {
       baseRevision: baseRevision ?? remoteRevisionOf(state, recordId),
       queuedAt: this.#clock.timestamp(),
     });
+    if (!written.ok) {
+      this.#blocked = { reason: 'storage' };
+      this.#fail(customerId, this.#blocked);
+      return;
+    }
     this.#queued(recordId, customerId);
   }
 

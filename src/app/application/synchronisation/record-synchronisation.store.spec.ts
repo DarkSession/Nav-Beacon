@@ -1440,6 +1440,30 @@ describe('the record synchronisation store', () => {
     });
   });
 
+  /**
+   * A queue write browser storage refuses leaves nothing waiting to offer the
+   * change, so nothing may say the account is about to receive it. The reason
+   * stands through the exchange that follows, which carries everything else
+   * that was queued and would otherwise answer a lost save with `current`
+   * (020/FR-011, 020/FR-026).
+   */
+  it('states a queue write browser storage refused rather than settling on it', async () => {
+    seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+    writeState({ accountCursors: { [CREDENTIALS.customerId]: 4 } });
+    storage.writeError = quotaError();
+
+    store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+
+    expect(store.status()).toMatchObject({ kind: 'failed', failure: { reason: 'storage' } });
+    expect(commanderState().pendingOperations).toHaveLength(0);
+
+    storage.writeError = null;
+    await store.synchronise(CREDENTIALS);
+
+    expect(store.status()).toMatchObject({ kind: 'failed', failure: { reason: 'storage' } });
+    expect(lastRequest().changes).toHaveLength(0);
+  });
+
   describe('the triggers a record path calls', () => {
     beforeEach(async () => {
       // Signed in first, with nothing to merge, so each trigger is the only

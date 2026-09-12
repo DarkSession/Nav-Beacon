@@ -1,7 +1,9 @@
 import { Injectable, Injector, effect, inject } from '@angular/core';
 import {
   canSynchroniseRecord,
+  recordBinding,
   remoteRevisionOf,
+  type CommanderLocalState,
   type PendingOperationKind,
 } from '../../domain/commander/commander-local-state';
 import type { ConflictResolution } from '../../domain/commander/record-conflict';
@@ -32,12 +34,14 @@ interface RecordSynchronisationEngine {
  * is reached from the shell rather than from a screen, so importing it puts all
  * of that in the first payload of every page.
  *
- * It arrives with the session instead. Nothing here queues, sends or exchanges
- * anything while the browser is anonymous, because an anonymous tool needs no
- * account (constitution I, 020/FR-007) — so an anonymous page never fetches the
- * engine at all, and a Commander who signs in pays for it once, from whatever
- * page they signed in on. That is the shape `build-link-codec-loader.ts` and
- * `build/build-snapshot.reconstructor-loader.ts` already use.
+ * It arrives with the session instead. Nothing here sends or exchanges anything
+ * while the browser has no session, because an anonymous tool needs no account
+ * (constitution I, 020/FR-007) — so such a page never fetches the engine at
+ * all, and a Commander who signs in pays for it once, from whatever page they
+ * signed in on. That is the shape `build-link-codec-loader.ts` and
+ * `build/build-snapshot.reconstructor-loader.ts` already use. The one write it
+ * makes without a session is to the queue, and only for a record an account
+ * already holds (`#owner`).
  *
  * The account dialog is the opposite case and stays eager (`app.html`): it is
  * where a refused sign-in and an expired session are stated, which are the
@@ -120,14 +124,15 @@ export class RecordSynchronisationLoader {
   /**
    * One changed record, offered to the account whether the engine is here yet.
    *
-   * Where the engine is already here it queues the change itself, with its own
-   * rules around it, and this waits for it.
+   * Where the engine is here and has a session to act on, it queues the change
+   * itself, with its own rules around it, and this waits for it.
    *
-   * Where it is not, the change is queued first. Queueing is one write to
-   * browser storage and needs no engine, and the engine is a chunk that can
-   * fail to arrive: a change that waited for it would leave the record altered
-   * here with nothing at all waiting to offer it, and nothing rescans browser
-   * storage later (020/FR-011, 020/FR-026). The engine then takes up what is
+   * Otherwise the change is queued here. Queueing is one write to browser
+   * storage and needs no engine, and the engine is a chunk that can fail to
+   * arrive and a store that does nothing without a session: a change that
+   * waited for either would leave the record altered here with nothing at all
+   * waiting to offer it, and nothing rescans browser storage later
+   * (020/FR-010, 020/FR-011, 020/FR-026). The engine then takes up what is
    * already queued rather than queueing it a second time, which would put two
    * revisions in the account for one save.
    */
@@ -136,7 +141,8 @@ export class RecordSynchronisationLoader {
     kind: PendingOperationKind,
     offer: (engine: RecordSynchronisationEngine) => Promise<void>,
   ): Promise<void> {
-    const queued = this.#here === null && this.#queue(recordId, kind);
+    const own = this.#here !== null && this.#account.credentials() !== null;
+    const queued = !own && this.#queue(recordId, kind);
     const engine = await this.#session();
     if (engine === null) {
       return;
@@ -147,28 +153,60 @@ export class RecordSynchronisationLoader {
   /**
    * Writes one change to the queue, without the engine.
    *
-   * An anonymous browser queues nothing, because an anonymous tool needs no
-   * account, and neither does a record this account may not take (constitution
-   * I, 020/FR-007, 020/FR-024).
+   * Whether it is there is what comes back, because browser storage can refuse
+   * the write: a change that was not queued has nothing waiting to offer it,
+   * and saying it was would leave the engine claiming the account holds a
+   * revision this browser never sent (020/FR-011, 020/FR-026).
    */
   #queue(recordId: string, kind: PendingOperationKind): boolean {
-    const credentials = this.#account.credentials();
-    if (credentials === null) {
-      return false;
-    }
     const state = this.#state.read();
-    if (!canSynchroniseRecord(state, recordId, credentials.customerId)) {
+    const customerId = this.#owner(state, recordId, kind);
+    if (customerId === null || !canSynchroniseRecord(state, recordId, customerId)) {
       return false;
     }
-    this.#state.queueOperation({
+    return this.#state.queueOperation({
       id: this.#uuid.create(),
-      customerId: credentials.customerId,
+      customerId,
       recordId,
       kind,
       baseRevision: remoteRevisionOf(state, recordId),
       queuedAt: this.#clock.timestamp(),
-    });
-    return true;
+    }).ok;
+  }
+
+  /**
+   * Whose account one change belongs to, where it belongs to one.
+   *
+   * The session names it while there is one. Where there is none, a save to a
+   * record an account already holds is named by that record's own binding,
+   * whichever Commander it names: the operation carries them, and only their
+   * own exchanges ever send it (020/FR-024). Signing out is the ordinary case —
+   * it leaves that binding, the cursor and the queue in browser storage for the
+   * same Commander to carry on from, and a Commander who keeps planning while
+   * signed out is doing work that nothing else will ever offer.
+   * The operation carries the revision that record was last in sync at, so
+   * another device's write or deletion meets it as the conflict it is rather
+   * than replacing it without a word (020/FR-009, 020/FR-010, constitution IV).
+   *
+   * A deletion made without a session is not kept that way. Taking a record out
+   * of a Commander's account is an instruction rather than work to preserve,
+   * and a browser with no session has not been given one: the local copy goes,
+   * the account's stays, and a signed-in device decides the rest (020/FR-024).
+   *
+   * An unbound record and a local-only one are nobody's to queue, because an
+   * anonymous tool needs no account and neither does a record this account may
+   * not take (constitution I, 020/FR-007, 020/FR-024).
+   */
+  #owner(state: CommanderLocalState, recordId: string, kind: PendingOperationKind): string | null {
+    const credentials = this.#account.credentials();
+    if (credentials !== null) {
+      return credentials.customerId;
+    }
+    if (kind !== 'upload') {
+      return null;
+    }
+    const binding = recordBinding(state, recordId);
+    return binding === null || binding === 'local-only' ? null : binding;
   }
 
   /**
