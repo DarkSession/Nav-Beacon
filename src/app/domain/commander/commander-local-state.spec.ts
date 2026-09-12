@@ -282,6 +282,58 @@ describe('committing one synchronisation response', () => {
     expect(accountCursor(committed, OWNER)).toBe(5);
   });
 
+  /**
+   * The response commits one operation while another for the same record is
+   * already queued behind it. Sending the revision that one was queued against
+   * would read to the service as another device's write, so a surviving
+   * operation takes the revision the account has just confirmed (020/FR-009).
+   */
+  it('advances a surviving operation to the revision the response confirmed', () => {
+    const queued = state({
+      pendingOperations: [operation({ id: 'operation-2', baseRevision: 3 })],
+      recordBindings: { 'record-1': OWNER },
+      recordRevisions: { 'record-1': 3 },
+    });
+
+    const committed = withSynchronisationCommitted(queued, {
+      customerId: OWNER,
+      cursor: 4,
+      accepted: [{ recordId: 'record-1', revision: 4 }],
+      removedRecordIds: [],
+      completedOperationIds: ['operation-1'],
+    });
+
+    expect(committed.pendingOperations).toEqual([
+      operation({ id: 'operation-2', baseRevision: 4 }),
+    ]);
+  });
+
+  /**
+   * The answer to a conflict is queued against the revision the account holds,
+   * which is ahead of the one this browser had accepted. A base only ever moves
+   * forward, so the answer still overwrites what it was told to overwrite
+   * (020/FR-009).
+   */
+  it('leaves a base revision that is already ahead where it is', () => {
+    const queued = state({
+      pendingOperations: [operation({ id: 'operation-2', baseRevision: 9 })],
+      recordBindings: { 'record-1': OWNER },
+      recordRevisions: { 'record-1': 5 },
+    });
+
+    const committed = withSynchronisationCommitted(queued, {
+      customerId: OWNER,
+      cursor: 6,
+      accepted: [{ recordId: 'record-1', revision: 5 }],
+      removedRecordIds: [],
+      completedOperationIds: [],
+    });
+
+    expect(committed.pendingOperations).toEqual([
+      operation({ id: 'operation-2', baseRevision: 9 }),
+    ]);
+  });
+
   it('keeps one cursor per Commander', () => {
     const committed = withSynchronisationCommitted(before, {
       customerId: OTHER,

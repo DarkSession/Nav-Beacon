@@ -308,10 +308,40 @@ export function withSynchronisationCommitted(
       ...state.accountCursors,
       [commit.customerId]: Math.max(accountCursor(state, commit.customerId), commit.cursor),
     },
-    pendingOperations: state.pendingOperations.filter((operation) => !answered.has(operation.id)),
+    pendingOperations: state.pendingOperations
+      .filter((operation) => !answered.has(operation.id))
+      .map((operation) => withBaseRevisionAdvanced(operation, revisions)),
     recordBindings: bindings,
     recordRevisions: revisions,
   };
+}
+
+/**
+ * One operation that outlived the response, against the revision now accepted.
+ *
+ * An operation carries the revision its record stood at when it was queued, and
+ * the response that arrives while it waits can move that record on. A second
+ * save on the same device queues its operation before the first one's answer
+ * comes back, so sending the revision it was queued against would read to the
+ * service as another device's write — and a Commander would be told their own
+ * two consecutive edits are a cross-device conflict (020/FR-009).
+ *
+ * The base only ever moves forward. An operation given an explicit base is
+ * answering a conflict with the revision the account holds, which is already at
+ * or ahead of what this browser has accepted.
+ */
+function withBaseRevisionAdvanced(
+  operation: PendingRemoteOperation,
+  revisions: Readonly<Record<string, number>>,
+): PendingRemoteOperation {
+  const accepted = revisions[operation.recordId];
+  if (
+    accepted === undefined ||
+    (operation.baseRevision !== null && operation.baseRevision >= accepted)
+  ) {
+    return operation;
+  }
+  return { ...operation, baseRevision: accepted };
 }
 
 /**
