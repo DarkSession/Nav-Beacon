@@ -13,6 +13,7 @@ import { provideLocalization } from '../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../i18n/testing/localization-harness';
 import { BroadcastChannelAdapter } from '../../platform/browser/broadcast-channel.adapter';
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
+import { CommanderStateRepository } from '../../platform/storage/commander-state.repository';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import { recordKey } from '../../platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
@@ -84,6 +85,7 @@ function setup(seed: (storage: MemoryStorage) => void = () => {}) {
     records: TestBed.inject(LocalRecordRepository),
     active: TestBed.inject(ActiveBuildStore),
     coordinator: TestBed.inject(BuildIngressCoordinator),
+    commander: TestBed.inject(CommanderStateRepository),
   };
 }
 
@@ -267,6 +269,43 @@ describe('RetentionService', () => {
     retention.sweep();
 
     expect(remainingIds(storage)).toEqual([]);
+  });
+
+  /**
+   * The binding is what the synchronisation panel counts. Left behind, it names
+   * a record nothing can open and the panel states it as one a Commander could
+   * still save or copy (020/FR-024, constitution IV).
+   */
+  it('forgets what it knew about the removed record’s remote copy', () => {
+    const { retention, clock, commander } = setup(seedOne);
+    commander.bindRecord('working-0', '900001');
+    clock.advanceDays(8);
+
+    retention.sweep();
+
+    expect(commander.read().recordBindings).toEqual({});
+  });
+
+  it('writes no account state for a browser that never had an account', () => {
+    // An anonymous tool needs no account, and an expiry is not the moment to
+    // give a browser one (constitution I).
+    const { retention, storage, clock } = setup(seedOne);
+    clock.advanceDays(8);
+
+    retention.sweep();
+
+    expect([...storage.entries.keys()]).toEqual([]);
+  });
+
+  it('keeps the binding of a record it could not remove', () => {
+    const { retention, storage, clock, commander } = setup(seedOne);
+    commander.bindRecord('working-0', '900001');
+    clock.advanceDays(8);
+    storage.removeError = new DOMException('denied', 'SecurityError');
+
+    retention.sweep();
+
+    expect(commander.read().recordBindings).toEqual({ 'working-0': '900001' });
   });
 
   it('removes nothing while the deadline has not passed', () => {
