@@ -86,13 +86,26 @@ export class SynchronisationPresenter {
       status: this.#statusOf(status.kind === 'inactive' || credentials === null ? null : status),
       detail: this.#detailOf(status),
       retry: status.kind === 'failed' ? this.#messages.message('action.retry') : null,
-      notes: this.#notes(credentials?.customerId ?? null),
+      notes: this.#notes(this.#knownCustomerId()),
       conflict: conflicts.length === 0 ? null : this.#conflictView(conflicts[0]),
     };
   });
 
   /** Whether anything on this surface is waiting for the Commander. */
   readonly hasConflict = computed(() => this.#sync.hasConflicts());
+
+  /**
+   * Whose records these are, or `null` where this browser cannot say.
+   *
+   * Read from the account state rather than from the credentials, because the
+   * two part company: an unreachable service empties the credentials and leaves
+   * the cached account where it is, and the records bound to that account are
+   * still that Commander's (020/FR-022, 020/FR-024).
+   */
+  readonly #knownCustomerId = computed(() => {
+    const state = this.#account.state();
+    return 'account' in state && state.account !== null ? state.account.customerId : null;
+  });
 
   #statusOf(
     status: ReturnType<RecordSynchronisationStore['status']> | null,
@@ -185,9 +198,15 @@ export class SynchronisationPresenter {
       });
     }
 
-    const elsewhere = values.filter(
-      (binding) => binding !== 'local-only' && binding !== customerId,
-    ).length;
+    // Only where this browser knows whose account it has. Without a Customer
+    // ID nothing here is another Commander's rather than this one's, and every
+    // bound record would be counted as somebody else's — which is what a
+    // Commander reads after a sign-out, when the bindings deliberately stay
+    // (020/FR-003, constitution IV).
+    const elsewhere =
+      customerId === null
+        ? 0
+        : values.filter((binding) => binding !== 'local-only' && binding !== customerId).length;
     if (elsewhere > 0) {
       notes.push({
         id: 'account-bound',

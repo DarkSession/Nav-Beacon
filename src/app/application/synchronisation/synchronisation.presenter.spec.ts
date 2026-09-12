@@ -10,6 +10,7 @@ import { UuidAdapter } from '../../platform/browser/uuid.adapter';
 import { COMMANDER_API } from '../../platform/network/commander-api';
 import { recordKey } from '../../platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
+import { AccountStore } from '../account/account.store';
 import { RecordSynchronisationStore } from './record-synchronisation.store';
 import { SynchronisationPresenter } from './synchronisation.presenter';
 import {
@@ -215,6 +216,49 @@ describe('what the record libraries say about the account', () => {
       expect(note.message.length).toBeGreaterThan(0);
       expect(note.message).not.toContain('{{count}}');
     }
+  });
+
+  /**
+   * The bindings deliberately outlive the session (020/FR-003), so after a
+   * sign-out every one of them names an account this browser can no longer
+   * compare against. Counting them as another Commander's tells a Commander
+   * their own saved builds are somebody else's (constitution IV).
+   */
+  it('claims nothing about whose records these are while no account is known', () => {
+    writeCommanderState(storage, {
+      recordBindings: {
+        [FIXTURE_IDS.named]: CUSTOMER,
+        [FIXTURE_IDS.working]: OTHER_CUSTOMER,
+      },
+    });
+
+    const notes = presenter().view().notes;
+    expect(notes.map((note) => note.id)).not.toContain('account-bound');
+  });
+
+  /**
+   * An unreachable service empties the credentials and leaves the cached
+   * account where it is, and the records bound to that account are still that
+   * Commander's (020/FR-022).
+   */
+  it('counts only the other account’s records while the service is unreachable', async () => {
+    writeCommanderState(storage, {
+      recordBindings: {
+        [FIXTURE_IDS.named]: CUSTOMER,
+        [FIXTURE_IDS.working]: OTHER_CUSTOMER,
+      },
+    });
+    await signIn(api);
+    api.session = { kind: 'unavailable' };
+    await TestBed.inject(AccountStore).refreshSession();
+    await settle();
+
+    const bound = presenter()
+      .view()
+      .notes.find((note) => note.id === 'account-bound');
+    expect(bound?.message).toBe(
+      BUNDLED_ENGLISH['sync.note.account-bound'].replace('{{count}}', '1'),
+    );
   });
 
   it('says the account holds a record this version cannot open, without removing it', async () => {
