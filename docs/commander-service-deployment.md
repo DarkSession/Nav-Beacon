@@ -125,6 +125,6 @@ Run these against the deployment after a release, in this order.
 
 1. `pnpm run server:migrate` reports no pending migration.
 2. `health` answers `Healthy` on every instance.
-3. `api/session` answers `401` with state `anonymous` for a browser with no session.
+3. `api/session` answers `401` with `signedIn: false` for a browser with no session.
 4. A Commander signs in through the edge, and `api/session` answers `200` on another instance.
 5. `api/fleet/refresh` on one instance answers `200` for a Commander who signed in on another.
