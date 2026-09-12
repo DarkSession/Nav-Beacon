@@ -1,5 +1,13 @@
 import { Injectable, Injector, effect, inject } from '@angular/core';
+import {
+  canSynchroniseRecord,
+  remoteRevisionOf,
+  type PendingOperationKind,
+} from '../../domain/commander/commander-local-state';
 import type { ConflictResolution } from '../../domain/commander/record-conflict';
+import { ClockAdapter } from '../../platform/browser/clock.adapter';
+import { UuidAdapter } from '../../platform/browser/uuid.adapter';
+import { CommanderStateRepository } from '../../platform/storage/commander-state.repository';
 import { AccountStore } from '../account/account.store';
 import { PausedRecords } from './paused-records';
 import type { RecordSynchronisationCoordinator } from './record-synchronisation.coordinator';
@@ -15,7 +23,10 @@ interface RecordSynchronisationEngine {
  * The synchronisation engine, reached without carrying it in the first payload.
  *
  * Every answer here is the store's own and the coordinator's own, unchanged.
- * What this adds is when the code behind them arrives. The engine is the rules
+ * What this adds is when the code behind them arrives, and the one write that
+ * cannot wait for it: a record path that changes a record while the engine's
+ * chunk is still on its way queues what that owes the account here
+ * (020/FR-011). The engine is the rules
  * for every record an account holds — the batch plan, the conflict answers, the
  * remote record format and the local state they are committed against — and it
  * is reached from the shell rather than from a screen, so importing it puts all
@@ -41,10 +52,15 @@ interface RecordSynchronisationEngine {
 export class RecordSynchronisationLoader {
   readonly #account = inject(AccountStore);
   readonly #paused = inject(PausedRecords);
+  readonly #state = inject(CommanderStateRepository);
+  readonly #uuid = inject(UuidAdapter);
+  readonly #clock = inject(ClockAdapter);
   readonly #injector = inject(Injector);
 
   /** The engine, from the first thing that asked for it. */
   #engine: Promise<RecordSynchronisationEngine | null> | null = null;
+  /** The engine once it is here, so a caller can tell without waiting for it. */
+  #here: RecordSynchronisationEngine | null = null;
   /** Whether the application has asked for the renewal watch. */
   #wanted = false;
   /** How the engine's own watch stops, once one is running. */
@@ -93,14 +109,66 @@ export class RecordSynchronisationLoader {
 
   /** One record written to browser storage, offered to the account. */
   async recordSaved(recordId: string): Promise<void> {
-    const engine = await this.#session();
-    await engine?.store.recordSaved(recordId);
+    await this.#changed(recordId, 'upload', (engine) => engine.store.recordSaved(recordId));
   }
 
   /** One record deleted from browser storage, offered to the account. */
   async recordDeleted(recordId: string): Promise<void> {
+    await this.#changed(recordId, 'delete', (engine) => engine.store.recordDeleted(recordId));
+  }
+
+  /**
+   * One changed record, offered to the account whether the engine is here yet.
+   *
+   * Where the engine is already here it queues the change itself, with its own
+   * rules around it, and this waits for it.
+   *
+   * Where it is not, the change is queued first. Queueing is one write to
+   * browser storage and needs no engine, and the engine is a chunk that can
+   * fail to arrive: a change that waited for it would leave the record altered
+   * here with nothing at all waiting to offer it, and nothing rescans browser
+   * storage later (020/FR-011, 020/FR-026). The engine then takes up what is
+   * already queued rather than queueing it a second time, which would put two
+   * revisions in the account for one save.
+   */
+  async #changed(
+    recordId: string,
+    kind: PendingOperationKind,
+    offer: (engine: RecordSynchronisationEngine) => Promise<void>,
+  ): Promise<void> {
+    const queued = this.#here === null && this.#queue(recordId, kind);
     const engine = await this.#session();
-    await engine?.store.recordDeleted(recordId);
+    if (engine === null) {
+      return;
+    }
+    await (queued ? engine.store.changeQueued(recordId) : offer(engine));
+  }
+
+  /**
+   * Writes one change to the queue, without the engine.
+   *
+   * An anonymous browser queues nothing, because an anonymous tool needs no
+   * account, and neither does a record this account may not take (constitution
+   * I, 020/FR-007, 020/FR-024).
+   */
+  #queue(recordId: string, kind: PendingOperationKind): boolean {
+    const credentials = this.#account.credentials();
+    if (credentials === null) {
+      return false;
+    }
+    const state = this.#state.read();
+    if (!canSynchroniseRecord(state, recordId, credentials.customerId)) {
+      return false;
+    }
+    this.#state.queueOperation({
+      id: this.#uuid.create(),
+      customerId: credentials.customerId,
+      recordId,
+      kind,
+      baseRevision: remoteRevisionOf(state, recordId),
+      queuedAt: this.#clock.timestamp(),
+    });
+    return true;
   }
 
   /**
@@ -128,10 +196,10 @@ export class RecordSynchronisationLoader {
 
   #reach(): Promise<RecordSynchronisationEngine | null> {
     this.#engine ??= this.#load().catch(() => {
-      // The chunk did not arrive. Nothing was exchanged, the queued operations
-      // and the cursor stay in browser storage exactly as an unreachable
-      // service leaves them, and the next trigger asks for the engine again
-      // (020/FR-011, 020/FR-026).
+      // The chunk did not arrive, so nothing was exchanged. What the triggers
+      // above queued is already in browser storage, the cursor stays where it
+      // was, and the next trigger asks for the engine again (020/FR-011,
+      // 020/FR-026).
       this.#engine = null;
       return null;
     });
@@ -156,6 +224,7 @@ export class RecordSynchronisationLoader {
       store: this.#injector.get(store.RecordSynchronisationStore),
       coordinator: this.#injector.get(coordinator.RecordSynchronisationCoordinator),
     };
+    this.#here = engine;
     if (this.#wanted && this.#stopWatch === null) {
       this.#stopWatch = engine.coordinator.start();
     }

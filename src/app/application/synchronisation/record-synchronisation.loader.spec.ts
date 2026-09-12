@@ -1,12 +1,21 @@
 import { TestBed } from '@angular/core/testing';
+import {
+  parseCommanderLocalState,
+  type PendingRemoteOperation,
+} from '../../domain/commander/commander-local-state';
 import { FIXTURE_IDS } from '../../domain/records/fixtures/records';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { ConnectivityAdapter } from '../../platform/browser/connectivity.adapter';
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
 import { COMMANDER_API } from '../../platform/network/commander-api';
+import { EDNB_COMMANDER_STATE_KEY } from '../../platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
+import { AccountStore } from '../account/account.store';
 import { RecordSynchronisationLoader } from './record-synchronisation.loader';
+import { RecordSynchronisationStore } from './record-synchronisation.store';
 import {
+  ACCOUNT,
+  CUSTOMER,
   FakeCommanderApi,
   MovableClock,
   SequentialUuid,
@@ -78,4 +87,81 @@ describe('reaching the record synchronisation engine', () => {
   it('holds no record back before the engine has answered', () => {
     expect(TestBed.inject(RecordSynchronisationLoader).pausedRecords()).toEqual([]);
   });
+
+  /**
+   * Queueing is one write to browser storage and needs no engine, so a change
+   * made while the engine's chunk is still on its way is written before that
+   * chunk is waited for. A chunk that never arrives then leaves a real pending
+   * operation for the next trigger to send; waiting for it would leave the
+   * record changed here with nothing at all waiting to offer it, and nothing
+   * rescans browser storage later (020/FR-011, 020/FR-026).
+   */
+  it.each([
+    [
+      'a save',
+      (loader: RecordSynchronisationLoader) => loader.recordSaved(FIXTURE_IDS.named),
+      'upload',
+    ],
+    [
+      'a deletion',
+      (loader: RecordSynchronisationLoader) => loader.recordDeleted(FIXTURE_IDS.named),
+      'delete',
+    ],
+  ])(
+    'queues what %s owes the account before the engine has arrived',
+    async (_case, trigger, kind) => {
+      writeCommanderState(storage);
+      api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+      await TestBed.inject(AccountStore).refreshSession();
+      const loader = TestBed.inject(RecordSynchronisationLoader);
+
+      const triggered = trigger(loader);
+
+      expect(pendingOperations()).toMatchObject([
+        { recordId: FIXTURE_IDS.named, kind, customerId: CUSTOMER },
+      ]);
+      await triggered;
+      await settle();
+    },
+  );
+
+  /**
+   * The engine is a chunk, and a chunk can fail to arrive. What the save owes
+   * the account is already in the queue, which is what the next trigger sends.
+   * A save that queued nothing would leave the record diverged from the account
+   * with nothing at all to retry, and nothing rescans browser storage later
+   * (020/FR-011, 020/FR-026).
+   */
+  it('leaves what a save owes in the queue when the engine never arrives', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: RecordSynchronisationStore,
+          useFactory: (): never => {
+            throw new Error('The engine chunk did not arrive.');
+          },
+        },
+      ],
+    });
+    writeCommanderState(storage);
+    api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+    await TestBed.inject(AccountStore).refreshSession();
+
+    await TestBed.inject(RecordSynchronisationLoader).recordSaved(FIXTURE_IDS.named);
+    await settle();
+
+    expect(pendingOperations()).toMatchObject([
+      { recordId: FIXTURE_IDS.named, kind: 'upload', customerId: CUSTOMER },
+    ]);
+    expect(api.requests).toHaveLength(0);
+  });
+
+  function pendingOperations(): readonly PendingRemoteOperation[] {
+    const raw = storage.entries.get(EDNB_COMMANDER_STATE_KEY);
+    const parsed = raw === undefined ? null : parseCommanderLocalState(JSON.parse(raw));
+    if (parsed === null) {
+      throw new Error('The Commander state did not read.');
+    }
+    return parsed.pendingOperations;
+  }
 });

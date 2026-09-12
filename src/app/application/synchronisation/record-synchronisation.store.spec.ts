@@ -30,6 +30,7 @@ import {
   type CommanderSessionResult,
 } from '../../platform/network/commander-api';
 import type { FleetResponse } from '../../domain/commander/fleet/fleet-answer';
+import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import {
   EDNB_COMMANDER_STATE_KEY,
   EDNB_TAB_KEY,
@@ -98,11 +99,22 @@ class FakeCommanderApi implements CommanderApiPort {
   }
 }
 
-/** Identities in the order a test can predict. */
+/**
+ * Identities in the order a test can predict, with one seam for interleaving.
+ *
+ * `interruptNext` runs once, on the next identity the store asks for. The store
+ * asks for one the moment it starts reading a record the account sent, which is
+ * where a live page's autosave lands in the defect this seam reproduces: it is
+ * a real point in the store's own order rather than a race against a timer.
+ */
 class SequentialUuid {
   #next = 0;
+  interruptNext: (() => void) | null = null;
 
   create(): string {
+    const interrupt = this.interruptNext;
+    this.interruptNext = null;
+    interrupt?.();
     this.#next += 1;
     return `fedcba98-0000-4000-8000-${String(this.#next).padStart(12, '0')}`;
   }
@@ -158,6 +170,7 @@ describe('the record synchronisation store', () => {
   let session: MemoryStorage;
   let api: FakeCommanderApi;
   let clock: FixedClock;
+  let uuid: SequentialUuid;
   let store: RecordSynchronisationStore;
 
   beforeEach(() => {
@@ -165,11 +178,12 @@ describe('the record synchronisation store', () => {
     session = new MemoryStorage();
     api = new FakeCommanderApi();
     clock = new FixedClock();
+    uuid = new SequentialUuid();
     TestBed.configureTestingModule({
       providers: [
         provideMemoryStorage(storage, session),
         { provide: COMMANDER_API, useValue: api },
-        { provide: UuidAdapter, useClass: SequentialUuid },
+        { provide: UuidAdapter, useValue: uuid },
         { provide: ClockAdapter, useValue: clock },
       ],
     });
@@ -496,6 +510,56 @@ describe('the record synchronisation store', () => {
       expect(recordBinding(commanderState(), FIXTURE_IDS.named)).toBeNull();
     });
 
+    /**
+     * Reading the account's version of a record takes a turn, and a live page
+     * writes during one: the autosave is synchronous, so it writes the
+     * Commander's edit, reports it saved and queues the upload while the read is
+     * still open. The edit stays, and the upload it queued carries the revision
+     * it was made against, which is what raises the conflict rather than losing
+     * one of the two versions (020/FR-009, constitution IV).
+     */
+    it('keeps an edit made while the account’s version was being read', async () => {
+      seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      writeState({
+        accountCursors: { [CREDENTIALS.customerId]: 3 },
+        recordBindings: { [FIXTURE_IDS.named]: CREDENTIALS.customerId },
+        recordRevisions: { [FIXTURE_IDS.named]: 3 },
+      });
+      const records = TestBed.inject(LocalRecordRepository);
+      const held = local(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      if (held.tool !== 'ship') {
+        throw new Error('The ship fixture is not a ship record.');
+      }
+      uuid.interruptNext = () => {
+        // The live page's autosave, which is synchronous: it writes the edit,
+        // reports it saved and queues the upload.
+        records.write({
+          id: held.id,
+          kind: held.kind,
+          revisionId: 'aaaaaaaa-0000-4000-8000-000000000001',
+          createdAt: held.createdAt,
+          modifiedAt: held.modifiedAt,
+          name: 'Edited here',
+          note: held.note,
+          sourceNamed: held.sourceNamed,
+          payload: { tool: 'ship', build: held.build, validation: held.validation },
+        });
+        store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+      };
+      api.answers.push(
+        accepted({
+          accountRevision: 4,
+          records: [{ revision: 4, record: renamed(FIXTURE_IDS.named, 'From another device') }],
+        }),
+      );
+
+      await store.synchronise(CREDENTIALS);
+
+      expect(storedRecord(FIXTURE_IDS.named)).toMatchObject({ name: 'Edited here' });
+      expect(remoteRevisionOf(commanderState(), FIXTURE_IDS.named)).toBe(3);
+      expect(commanderState().pendingOperations).toHaveLength(1);
+    });
+
     it('never takes the account’s version of a record this browser has cancelled', async () => {
       seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
       writeState({ recordBindings: { [FIXTURE_IDS.named]: 'local-only' } });
@@ -677,6 +741,54 @@ describe('the record synchronisation store', () => {
 
       expect(accountCursor(commanderState(), CREDENTIALS.customerId)).toBe(5);
       expect(commanderState().pendingOperations).toHaveLength(0);
+    });
+  });
+
+  describe('a second save made while the first exchange is open', () => {
+    /**
+     * The response commits the first save while the second is already queued
+     * behind it, so the revision the second was queued against is no longer the
+     * one the account holds. Sending that revision would read to the service as
+     * another device's write, and a Commander would be told their own two
+     * consecutive edits on one device are a cross-device conflict (020/FR-009,
+     * constitution IV).
+     */
+    it('sends the revision the account confirmed, not the one it was queued against', async () => {
+      seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      writeState({
+        accountCursors: { [CREDENTIALS.customerId]: 3 },
+        recordBindings: { [FIXTURE_IDS.named]: CREDENTIALS.customerId },
+        recordRevisions: { [FIXTURE_IDS.named]: 3 },
+      });
+      store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+      api.onRequest = () => {
+        // The Commander carries on editing: the next autosave queues behind the
+        // request that is still open, and nothing has committed yet.
+        api.onRequest = null;
+        store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+      };
+      api.answers.push(
+        accepted({
+          accountRevision: 4,
+          results: [
+            {
+              index: 0,
+              outcome: 'applied',
+              id: FIXTURE_IDS.named,
+              revision: 4,
+              remote: null,
+              code: null,
+            },
+          ],
+        }),
+      );
+
+      await store.synchronise(CREDENTIALS);
+
+      expect(lastRequest().changes).toEqual([
+        expect.objectContaining({ type: 'write', baseRevision: 4 }),
+      ]);
+      expect(store.conflicts()).toHaveLength(0);
     });
   });
 

@@ -275,6 +275,23 @@ export class RecordSynchronisationStore {
     });
   }
 
+  /**
+   * A change already in the queue, taken up here.
+   *
+   * A record path that changed a record while this chunk was still on its way
+   * writes what it owes the account through the loader, because a chunk that
+   * never arrives must still leave a pending operation for the next trigger to
+   * send (`record-synchronisation.loader.ts`, 020/FR-011). What is left for this
+   * store is what its own rules decide, and the exchange that follows. Nothing
+   * is queued again here: the change is in the queue once, and offering the
+   * record twice would put a second revision of it in the account for one save.
+   */
+  async changeQueued(recordId: string): Promise<void> {
+    await this.#triggered((customerId) => {
+      this.#queued(recordId, customerId);
+    });
+  }
+
   /** One live page's record, kept protected while the service is reachable. */
   async recordLive(recordId: string): Promise<void> {
     await this.#triggered((customerId) => {
@@ -552,7 +569,6 @@ export class RecordSynchronisationStore {
     customerId: string,
     abandoned: readonly string[],
   ): Promise<void> {
-    const state = this.#state.read();
     const completed = [...abandoned];
     const accepted: { readonly recordId: string; readonly revision: number }[] = [];
     const removed: string[] = [];
@@ -576,10 +592,19 @@ export class RecordSynchronisationStore {
     }
 
     const answered = new Set(completed);
-    const owed = (recordId: string): boolean =>
-      state.pendingOperations.some(
+    const owed = (current: CommanderLocalState, recordId: string): boolean =>
+      current.pendingOperations.some(
         (operation) => operation.recordId === recordId && !answered.has(operation.id),
       );
+    // Reading a remote record takes a turn, and a live page writes during one:
+    // an autosave is synchronous, so it writes the Commander's edit, reports it
+    // saved and queues its upload while this is still reading. Both reads are
+    // taken again before the write, because the version in browser storage is
+    // then the Commander's own work and the account's bytes would replace it
+    // without a word (020/FR-009, constitution IV).
+    const changedUnderUs = (recordId: string, opened: LocalRecord | null): boolean =>
+      owed(this.#state.read(), recordId) ||
+      (this.#openRecord(recordId)?.revisionId ?? null) !== (opened?.revisionId ?? null);
 
     const unreadable = [...this.#unreadable()];
     for (const entry of response.unreadableRecords) {
@@ -590,7 +615,11 @@ export class RecordSynchronisationStore {
 
     for (const entry of response.records) {
       const recordId = entry.record.id;
-      if (recordBinding(state, recordId) === 'local-only' || owed(recordId)) {
+      // Read for each record rather than once for the response: an earlier
+      // record in the same response has already taken a turn to read, and what
+      // a live page did during that turn decides this one.
+      const before = this.#state.read();
+      if (recordBinding(before, recordId) === 'local-only' || owed(before, recordId)) {
         continue;
       }
       const local = this.#openRecord(recordId);
@@ -612,6 +641,13 @@ export class RecordSynchronisationStore {
         accepted.push({ recordId, revision: entry.revision });
         continue;
       }
+      if (changedUnderUs(recordId, local)) {
+        // The Commander's own edit is in browser storage and queued, so this
+        // browser keeps it and claims nothing about the account's revision. The
+        // queued upload carries the revision it was made against, which the
+        // service refuses as the conflict it is (020/FR-009).
+        continue;
+      }
       if (!this.#records.write(adoption.draft).ok) {
         this.#fail(customerId, { reason: 'storage' });
         return;
@@ -620,9 +656,13 @@ export class RecordSynchronisationStore {
     }
     this.#unreadable.set(unreadable);
 
+    // Read again, for the same reason: the reads above took turns, and what a
+    // live page did during them decides whether a deletion marker may remove a
+    // record here.
+    const current = this.#state.read();
     for (const tombstone of response.tombstones) {
       const recordId = tombstone.id;
-      if (recordBinding(state, recordId) === 'local-only') {
+      if (recordBinding(current, recordId) === 'local-only') {
         continue;
       }
       const local = this.#openRecord(recordId);
@@ -631,7 +671,7 @@ export class RecordSynchronisationStore {
         continue;
       }
       const claimed = this.#claims().includes(recordId);
-      if (claimed || owed(recordId)) {
+      if (claimed || owed(current, recordId)) {
         this.#raise({
           recordId,
           customerId,
@@ -804,10 +844,6 @@ export class RecordSynchronisationStore {
     if (!canSynchroniseRecord(state, recordId, customerId)) {
       return;
     }
-    this.#refused.delete(recordId);
-    if (this.#refused.size === 0) {
-      this.#blocked = null;
-    }
     this.#state.queueOperation({
       id: this.#uuid.create(),
       customerId,
@@ -816,6 +852,22 @@ export class RecordSynchronisationStore {
       baseRevision: baseRevision ?? remoteRevisionOf(state, recordId),
       queuedAt: this.#clock.timestamp(),
     });
+    this.#queued(recordId, customerId);
+  }
+
+  /**
+   * What follows one change entering the queue, wherever it was written.
+   *
+   * A record the service refused stops being refused once it has changed again.
+   * An exchange already in flight read the queue before this change reached it,
+   * so it is told to read it once more rather than leaving the change for some
+   * later trigger to carry (020/FR-007, 020/FR-026).
+   */
+  #queued(recordId: string, customerId: string): void {
+    this.#refused.delete(recordId);
+    if (this.#refused.size === 0) {
+      this.#blocked = null;
+    }
     this.#queuedSince = true;
     if (this.#status().kind !== 'synchronising') {
       this.#settle(customerId);
