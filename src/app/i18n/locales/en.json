@@ -1169,6 +1169,7 @@
   "fleet.status.package-refused": "The installed game data refused one journal loadout event.",
   "fleet.status.session-expired": "Your session ended. Sign in again to refresh the fleet.",
   "fleet.status.unavailable": "Nav Beacon could not reach your account.",
+  "fleet.status.refused": "Nav Beacon could not complete the refresh, so the fleet is not current.",
   "fleet.status.failed.frontier": "Frontier did not answer, so the refresh stopped.",
   "fleet.status.failed.too-large": "A journal response passed the size Nav Beacon reads, so the refresh stopped.",
   "fleet.status.failed.malformed": "A journal line could not be read, so the refresh stopped.",

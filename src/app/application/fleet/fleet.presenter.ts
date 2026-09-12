@@ -188,6 +188,7 @@ export class FleetPresenter {
       case 'failed':
         return exchange.failure === 'package-refused' ? 'package-refused' : 'failed';
       case 'session-expired':
+      case 'refused':
       case 'unavailable':
         // A fleet already held is still readable; a browser that has none has
         // nothing to show and says why (020/FR-022).
@@ -271,7 +272,7 @@ export class FleetPresenter {
    */
   #unanswered(): boolean {
     const kind = this.#fleet.exchange().kind;
-    return kind === 'session-expired' || kind === 'unavailable';
+    return kind === 'session-expired' || kind === 'refused' || kind === 'unavailable';
   }
 
   /** Why the last exchange did not leave this browser current. */
@@ -279,6 +280,14 @@ export class FleetPresenter {
     const exchange = this.#fleet.exchange();
     if (exchange.kind === 'session-expired') {
       return this.#messages.message('fleet.status.session-expired');
+    }
+    if (exchange.kind === 'refused') {
+      // One sentence for every refusal that is not an ended session, because
+      // what a Commander does about each of them is the same and none of them
+      // is Frontier's doing. The code is carried for a reader of this state,
+      // not turned into a different sentence this application cannot stand
+      // behind (020/FR-018).
+      return this.#messages.message('fleet.status.refused');
     }
     if (exchange.kind !== 'failed') {
       return this.#messages.message('fleet.status.unavailable');

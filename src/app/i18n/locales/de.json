@@ -1169,6 +1169,7 @@
   "fleet.status.package-refused": "Die installierten Spieldaten haben ein Loadout-Ereignis des Journals abgelehnt.",
   "fleet.status.session-expired": "Deine Sitzung ist beendet. Melde dich erneut an, um die Flotte zu aktualisieren.",
   "fleet.status.unavailable": "Nav Beacon konnte dein Konto nicht erreichen.",
+  "fleet.status.refused": "Nav Beacon konnte die Aktualisierung nicht abschließen, darum ist die Flotte nicht aktuell.",
   "fleet.status.failed.frontier": "Frontier hat nicht geantwortet, darum wurde die Aktualisierung angehalten.",
   "fleet.status.failed.too-large": "Eine Journalantwort überschreitet die Größe, die Nav Beacon liest, darum wurde die Aktualisierung angehalten.",
   "fleet.status.failed.malformed": "Eine Journalzeile war nicht lesbar, darum wurde die Aktualisierung angehalten.",

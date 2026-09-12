@@ -208,6 +208,24 @@ describe('FleetPresenter', () => {
     expect(view.ships.length).toBe(1);
   });
 
+  it('names this application, not Frontier, when this application refused', async () => {
+    writeState();
+    api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+    await signIn();
+    api.refreshes.push({ kind: 'refused', status: 500, code: 'fleet-unavailable' });
+
+    await presenter.refresh();
+
+    // The ships stay listed, and the sentence says what actually happened:
+    // Frontier was never the party that stopped this (020/FR-018).
+    const view = presenter.view();
+    expect(view.state).toBe('current');
+    expect(view.status.tone).toBe('warning');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.refused']);
+    expect(view.status.message).not.toBe(BUNDLED_ENGLISH['fleet.status.failed.frontier']);
+    expect(view.ships.length).toBe(1);
+  });
+
   it('says a refresh the service refused is not a confirmed fleet', async () => {
     writeState();
     api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));

@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import type {
   FleetAnswer,
   FleetCoverage,
+  FleetErrorCode,
   FleetFailure,
   FleetResponse,
   PackageRefusal,
@@ -84,6 +85,16 @@ export type FleetExchange =
   | { readonly kind: 'authorisation-expired' }
   /** The session has gone; a fresh sign-in resumes it and local work is untouched. */
   | { readonly kind: 'session-expired' }
+  /**
+   * The service refused the request for a reason of its own.
+   *
+   * Kept apart from `failed`, which carries what a journal read answered. A
+   * refusal is not an answer about the journal at all — the service could not
+   * read the fleet, or would not take the request as it stands — and reading
+   * one as the other would name Frontier for something this application did
+   * (020/FR-018, constitution IV).
+   */
+  | { readonly kind: 'refused'; readonly code: FleetErrorCode }
   | { readonly kind: 'unavailable' };
 
 /**
@@ -298,7 +309,10 @@ export class FleetStore {
         this.#sessionRefused();
         return;
       }
-      this.#exchange.set({ kind: 'failed', failure: 'frontier-unavailable', refusal: null });
+      // Neither a journal answer nor Frontier's doing: a service that could not
+      // read the fleet, a request it would not take as it stands, or a code
+      // this browser does not know. Stated as the refusal it is.
+      this.#exchange.set({ kind: 'refused', code: response.code });
       return;
     }
     this.#accept(response.answer, customerId);

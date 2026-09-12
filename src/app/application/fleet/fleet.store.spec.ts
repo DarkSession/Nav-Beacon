@@ -351,6 +351,26 @@ describe('FleetStore', () => {
       expect(store.holding()?.ships.length).toBe(1);
     });
 
+    /**
+     * Two of the three codes this route publishes are not Frontier's doing at
+     * all: one says this application could not read the fleet, the other that
+     * it would not take the request as it stands. Reading either as "Frontier
+     * did not answer" sends a Commander to check a service that is working
+     * (020/FR-018, constitution IV).
+     */
+    it.each([['fleet-unavailable', 500] as const, ['invalid-anti-forgery', 400] as const])(
+      'states a %s refusal as this application’s, not Frontier’s',
+      async (code, status) => {
+        await signIn();
+        api.refreshes.push({ kind: 'refused', status, code });
+
+        await store.refresh();
+
+        expect(store.exchange()).toEqual({ kind: 'refused', code });
+        expect(store.holding()?.ships.length).toBe(1);
+      },
+    );
+
     it('asks the account to read the session the service refused', async () => {
       await signIn();
       api.refreshes.push({ kind: 'refused', status: 401, code: 'unauthorised' });
