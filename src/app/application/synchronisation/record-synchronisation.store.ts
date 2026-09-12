@@ -478,11 +478,22 @@ export class RecordSynchronisationStore {
     this.#oversized = plan.oversized[0]?.recordId ?? null;
     this.#status.set({ kind: 'synchronising' });
 
+    const departures = this.#account.signedOutRevision();
     const response = await this.#api.synchroniseRecords(
       { sinceRevision: since, changes: plan.changes },
       credentials.antiForgeryToken,
     );
 
+    if (this.#account.signedOutRevision() !== departures) {
+      // The account left this browser while the request was open. A sign-out
+      // and an account deletion both commit their own local write before this
+      // answer arrives, and every part of committing this one — the records it
+      // carries, the deletion markers, the cursor and the answered operations —
+      // would put that account's data back into a browser that has just taken
+      // it out. Nothing is written and nothing is said: what this page says
+      // about the account is already `inactive` (020/FR-003, 020/FR-006).
+      return;
+    }
     if (response.kind === 'unavailable') {
       this.#fail(customerId, { reason: 'offline' });
       return;

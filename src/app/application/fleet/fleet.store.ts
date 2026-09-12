@@ -192,9 +192,10 @@ export class FleetStore {
     }
     this.#restore(credentials.customerId);
     await this.#exclusive(async () => {
+      const departures = this.#account.signedOutRevision();
       this.#exchange.set({ kind: 'reading' });
       const response = await this.#api.readFleet();
-      this.#take(response, credentials.customerId);
+      this.#take(response, credentials.customerId, departures);
     });
   }
 
@@ -220,12 +221,13 @@ export class FleetStore {
       return;
     }
     await this.#exclusive(async () => {
+      const departures = this.#account.signedOutRevision();
       this.#exchange.set({ kind: 'refreshing' });
       const response = await this.#api.refreshFleet(
         credentials.antiForgeryToken,
         this.#locale.effectiveLocale(),
       );
-      this.#take(response, credentials.customerId);
+      this.#take(response, credentials.customerId, departures);
     });
   }
 
@@ -243,7 +245,21 @@ export class FleetStore {
     await attempt;
   }
 
-  #take(response: FleetResponse, customerId: string): void {
+  /**
+   * Takes one answer back, for the account that is still here to take it.
+   *
+   * A sign-out and an account deletion both commit their own local write while
+   * a request is open, and this answer arrives after it. Accepting it would
+   * write that account's fleet back into a browser that has just cleared it,
+   * and show it to whoever is at the screen; stating a failure for it would
+   * have this page speaking for an account that has gone. The departure count
+   * rising is that moment, and the answer is dropped where it has
+   * (020/FR-003, 020/FR-006).
+   */
+  #take(response: FleetResponse, customerId: string, departures: number): void {
+    if (this.#account.signedOutRevision() !== departures) {
+      return;
+    }
     if (response.kind === 'unavailable') {
       this.#exchange.set({ kind: 'unavailable' });
       return;

@@ -57,6 +57,8 @@ class FakeCommanderApi implements CommanderApiPort {
   session: CommanderSessionResult = { kind: 'anonymous' };
   /** Runs when a request arrives, for a browser that fails mid-response. */
   onRequest: (() => void) | null = null;
+  /** Held before the answer is given, for a test that needs the gap. */
+  hold: Promise<void> | null = null;
 
   callbackResult(): null {
     return null;
@@ -99,6 +101,7 @@ class FakeCommanderApi implements CommanderApiPort {
   async synchroniseRecords(request: SynchronisationRequest): Promise<SynchronisationResponse> {
     this.requests.push(request);
     this.onRequest?.();
+    await this.hold;
     return this.answers.shift() ?? accepted();
   }
 }
@@ -1438,6 +1441,42 @@ describe('the record synchronisation store', () => {
 
       expect(commanderState().pendingOperations).toHaveLength(0);
     });
+  });
+
+  /**
+   * Two writes a departed account must not receive back.
+   *
+   * A sign-out and an account deletion each commit their own local write while
+   * an exchange is open, and the answer arrives after it. Committing any part
+   * of it — the records it carries, its deletion markers, its cursor — would
+   * put that account's data back into a browser that has just taken it out
+   * (020/FR-003, 020/FR-006).
+   */
+  it('commits nothing an answer carries once the account has left the browser', async () => {
+    api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+    const account = TestBed.inject(AccountStore);
+    await account.refreshSession();
+    await settle();
+    writeState({ accountCursors: { [CREDENTIALS.customerId]: 4 } });
+    api.answers.length = 0;
+    api.answers.push(
+      accepted({
+        accountRevision: 21,
+        records: [{ revision: 21, record: renamed(REMOTE_ONLY_ID, 'Elsewhere') }],
+      }),
+    );
+    let release = (): void => {};
+    api.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const running = store.synchronise(CREDENTIALS);
+    await account.signOut();
+    release();
+    await running;
+
+    expect(storedRecord(REMOTE_ONLY_ID)).toBeNull();
+    expect(accountCursor(commanderState(), CREDENTIALS.customerId)).toBe(4);
   });
 
   /**

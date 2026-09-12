@@ -370,6 +370,33 @@ describe('FleetStore', () => {
     expect(holding?.refused[0].reason.length).toBeGreaterThan(0);
   });
 
+  /**
+   * A sign-out and an account deletion both clear this browser's fleet cache in
+   * their own local write, and a request opened before it answers after it. The
+   * answer is dropped: writing it would put the account's ships back into a
+   * browser that has just taken them out, and show them to whoever is at the
+   * screen (020/FR-003, 020/FR-006).
+   */
+  it('writes nothing a fleet answer carries once the account has left the browser', async () => {
+    writeState();
+    await signIn();
+    let release = (): void => {};
+    api.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.refreshes.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+
+    const running = store.refresh();
+    await TestBed.inject(AccountStore).signOut();
+    release();
+    await running;
+    await settle();
+
+    expect(store.holding()).toBeNull();
+    expect(storedState()?.fleetCache).toEqual([]);
+    expect(store.exchange()).toEqual({ kind: 'idle' });
+  });
+
   it('forgets the fleet when the account goes', async () => {
     writeCachedFleet([ownedShipPayload(12)]);
     api.offline = true;

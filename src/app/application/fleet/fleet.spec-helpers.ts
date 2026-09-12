@@ -122,6 +122,8 @@ export class FakeFleetApi implements CommanderApiPort {
   /** How often the account has read the session through this service. */
   sessionReads = 0;
   offline = false;
+  /** Held before either fleet address answers, for a test that needs the gap. */
+  hold: Promise<void> | null = null;
 
   callbackResult(): null {
     return null;
@@ -150,6 +152,7 @@ export class FakeFleetApi implements CommanderApiPort {
 
   async readFleet(): Promise<FleetResponse> {
     this.readCalls += 1;
+    await this.hold;
     if (this.offline) {
       return { kind: 'unavailable' };
     }
@@ -159,6 +162,7 @@ export class FakeFleetApi implements CommanderApiPort {
   async refreshFleet(_antiForgeryToken: string, locale: string): Promise<FleetResponse> {
     this.refreshCalls += 1;
     this.refreshLocales.push(locale);
+    await this.hold;
     if (this.offline) {
       return { kind: 'unavailable' };
     }
