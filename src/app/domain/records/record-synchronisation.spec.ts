@@ -61,8 +61,8 @@ describe('the record synchronisation contract', () => {
   });
 
   describe('reading an accepted response', () => {
-    it('reads records, tombstones and results', () => {
-      const response = parseAcceptedResponse(
+    it('reads records, tombstones and results', async () => {
+      const response = await parseAcceptedResponse(
         ACCEPTED({
           results: [
             { index: 0, outcome: 'applied', id: FIXTURE_IDS.named, revision: 13 },
@@ -83,8 +83,8 @@ describe('the record synchronisation contract', () => {
       expect(response.kind === 'accepted' && response.results).toHaveLength(2);
     });
 
-    it('lists a streamed record this version cannot read rather than refusing the response', () => {
-      const response = parseAcceptedResponse(
+    it('lists a streamed record this version cannot read rather than refusing the response', async () => {
+      const response = await parseAcceptedResponse(
         ACCEPTED({
           records: [{ revision: 21, record: JSON.parse(UNSUPPORTED_NEWER_RECORD) }],
         }),
@@ -97,8 +97,10 @@ describe('the record synchronisation contract', () => {
       });
     });
 
-    it('names no identity for an unreadable record that carries none', () => {
-      const response = parseAcceptedResponse(ACCEPTED({ records: [{ revision: 2, record: 7 }] }));
+    it('names no identity for an unreadable record that carries none', async () => {
+      const response = await parseAcceptedResponse(
+        ACCEPTED({ records: [{ revision: 2, record: 7 }] }),
+      );
 
       expect(response).toMatchObject({ unreadableRecords: [{ revision: 2, id: null }] });
     });
@@ -135,15 +137,15 @@ describe('the record synchronisation contract', () => {
         'a tombstone with an unknown field',
         ACCEPTED({ tombstones: [{ id: FIXTURE_IDS.named, revision: 1, extra: 1 }] }),
       ],
-    ])('refuses the whole response for %s', (_case, body) => {
-      expect(parseAcceptedResponse(body)).toEqual({ kind: 'unavailable' });
+    ])('refuses the whole response for %s', async (_case, body) => {
+      expect(await parseAcceptedResponse(body)).toEqual({ kind: 'unavailable' });
     });
   });
 
   describe('reading a refusal', () => {
-    it('reads the code, the account cursor and every indexed result', () => {
+    it('reads the code, the account cursor and every indexed result', async () => {
       expect(
-        parseRefusal(409, {
+        await parseRefusal(409, {
           status: 409,
           code: 'conflict',
           accountRevision: 12,
@@ -164,8 +166,8 @@ describe('the record synchronisation contract', () => {
       });
     });
 
-    it('reads a deletion conflict as the account holding a marker', () => {
-      const refusal = parseRefusal(409, {
+    it('reads a deletion conflict as the account holding a marker', async () => {
+      const refusal = await parseRefusal(409, {
         code: 'conflict',
         results: [
           { index: 0, outcome: 'conflict', id: FIXTURE_IDS.named, revision: 9, record: null },
@@ -178,8 +180,8 @@ describe('the record synchronisation contract', () => {
     it.each([
       ['a record this version cannot read', JSON.parse(UNSUPPORTED_NEWER_RECORD)],
       ['no record field at all', undefined],
-    ])('never reads %s as a deletion', (_case, record) => {
-      const refusal = parseRefusal(409, {
+    ])('never reads %s as a deletion', async (_case, record) => {
+      const refusal = await parseRefusal(409, {
         code: 'conflict',
         results: [{ index: 0, outcome: 'conflict', id: FIXTURE_IDS.named, revision: 9, record }],
       });
@@ -187,12 +189,14 @@ describe('the record synchronisation contract', () => {
       expect(refusal).toMatchObject({ results: [{ remote: { kind: 'unreadable' } }] });
     });
 
-    it('reads an unpublished code as unknown', () => {
-      expect(parseRefusal(400, { code: 'something-else' })).toMatchObject({ code: 'unknown' });
+    it('reads an unpublished code as unknown', async () => {
+      expect(await parseRefusal(400, { code: 'something-else' })).toMatchObject({
+        code: 'unknown',
+      });
     });
 
-    it('reads a refusal with no body at all', () => {
-      expect(parseRefusal(500, null)).toEqual({
+    it('reads a refusal with no body at all', async () => {
+      expect(await parseRefusal(500, null)).toEqual({
         kind: 'refused',
         status: 500,
         code: 'unknown',
@@ -201,8 +205,8 @@ describe('the record synchronisation contract', () => {
       });
     });
 
-    it('reads results it cannot read as none', () => {
-      expect(parseRefusal(400, { code: 'invalid-request', results: [7] })).toMatchObject({
+    it('reads results it cannot read as none', async () => {
+      expect(await parseRefusal(400, { code: 'invalid-request', results: [7] })).toMatchObject({
         results: [],
       });
     });

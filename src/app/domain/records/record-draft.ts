@@ -1,5 +1,5 @@
 import { reconstructLoadout } from '../equipment/loadout/loadout-reconstructor';
-import { reconstructFromSnapshot } from '../ships/build/build-snapshot.reconstructor';
+import { reconstructFromSnapshot } from '../ships/build/build-snapshot.reconstructor-loader';
 import type { LocalRecord } from './local-record';
 import type { RecordDraft } from './local-record.serializer';
 
@@ -17,10 +17,15 @@ export interface CopyIdentity {
  * uploaded, and the service would refuse it in any case — refusing the
  * complete batch with it, and holding up every other record behind it
  * (020/FR-012).
+ *
+ * The build half of the answer comes through the reconstructor's loader, which
+ * is what keeps the outfitting catalogue out of the shell. Record exchange
+ * starts with the application rather than with a screen, so the question is
+ * asked from code every visit already carries.
  */
-export function isReconstructable(record: LocalRecord): boolean {
+export async function isReconstructable(record: LocalRecord): Promise<boolean> {
   return record.tool === 'ship'
-    ? reconstructFromSnapshot(record.build).ok
+    ? (await reconstructFromSnapshot(record.build)).ok
     : reconstructLoadout(record.loadout).ok;
 }
 

@@ -138,8 +138,16 @@ export class SequentialUuid {
   }
 }
 
-/** Lets every exchange already in flight finish before the next assertion. */
+/**
+ * Lets every exchange already in flight finish before the next assertion.
+ *
+ * An exchange reads a stored build through the reconstructor's loader, which
+ * fetches a module the first time it is asked. Loading that module here first
+ * takes the one unbounded wait out of the exchange, so the turns that follow
+ * are the store's own and stay few and fixed.
+ */
 export async function settle(): Promise<void> {
+  await import('../../domain/ships/build/build-snapshot.reconstructor');
   for (let turn = 0; turn < 3; turn += 1) {
     TestBed.tick();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));

@@ -1,5 +1,5 @@
 import { reconstructLoadout } from '../equipment/loadout/loadout-reconstructor';
-import { reconstructFromSnapshot } from '../ships/build/build-snapshot.reconstructor';
+import { reconstructFromSnapshot } from '../ships/build/build-snapshot.reconstructor-loader';
 import type { RecordSource } from './local-record';
 import type { RecordDraft } from './local-record.serializer';
 import type { RemoteRecord } from './remote-record';
@@ -35,8 +35,16 @@ export type RemoteAdoption =
  * holds no second name. A named record whose ship name is absent falls back to
  * its ident and then to the hull the build names, so a record written by
  * another version is still listed under something a Commander can read.
+ *
+ * A build is rebuilt through the reconstructor's loader, which is what keeps the
+ * outfitting catalogue out of the shell. Record exchange starts with the
+ * application rather than with a screen, so this runs from code every visit
+ * already carries.
  */
-export function adoptRemoteRecord(record: RemoteRecord, context: AdoptionContext): RemoteAdoption {
+export async function adoptRemoteRecord(
+  record: RemoteRecord,
+  context: AdoptionContext,
+): Promise<RemoteAdoption> {
   const envelope = {
     id: record.id,
     kind: record.kind,
@@ -62,7 +70,7 @@ export function adoptRemoteRecord(record: RemoteRecord, context: AdoptionContext
     };
   }
 
-  const rebuilt = reconstructFromSnapshot(record.build);
+  const rebuilt = await reconstructFromSnapshot(record.build);
   if (!rebuilt.ok) {
     return { ok: false, reason: rebuilt.reason };
   }

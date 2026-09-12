@@ -40,17 +40,17 @@ try {
 if (mode === 'journal') {
   projectJournal(input);
 } else {
-  validateRecords(input);
+  await validateRecords(input);
 }
 
-function validateRecords(request: unknown): void {
+async function validateRecords(request: unknown): Promise<void> {
   if (!isRecordRequest(request)) {
     write({ ok: false, code: 'invalid-request', index: null });
     process.exit(0);
   }
 
   for (const [index, record] of request.records.entries()) {
-    if (!parseRemoteRecord(record).ok) {
+    if (!(await parseRemoteRecord(record)).ok) {
       write({ ok: false, code: 'invalid-record', index });
       process.exit(0);
     }

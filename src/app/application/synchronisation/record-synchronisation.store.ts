@@ -111,7 +111,10 @@ export class RecordSynchronisationStore {
   readonly #merged = new Set<string>();
   /** The instant each record's protection was last renewed, within this page. */
   readonly #renewedAt = new Map<string, number>();
+  /** The exchange in flight, so that two triggers at once are one request. */
   #running: Promise<void> | null = null;
+  /** Whether anything was queued after the exchange in flight read the queue. */
+  #queuedSince = false;
   /** A record no request can carry, because it is over its own 64 KiB bound. */
   #oversized: string | null = null;
   /** Why a record this browser holds cannot be uploaded as it stands. */
@@ -210,7 +213,7 @@ export class RecordSynchronisationStore {
         const state = this.#state.read();
         if (
           canSynchroniseRecord(state, entry.record.id, credentials.customerId) &&
-          isReconstructable(entry.record)
+          (await isReconstructable(entry.record))
         ) {
           this.#queue(entry.record.id, credentials.customerId, 'upload');
         }
@@ -298,16 +301,35 @@ export class RecordSynchronisationStore {
     await this.synchronise(credentials);
   }
 
-  /** Exchanges what this browser owes, and takes what the account has. */
+  /**
+   * Exchanges what this browser owes, and takes what the account has.
+   *
+   * One exchange runs at a time, because two overlapping requests would each
+   * answer half the queue and move the cursor past what the other had not
+   * committed yet (020/FR-026). A trigger that arrives while one is in flight
+   * therefore does not start a second request. What it queued is not dropped
+   * either: the exchange already running reads the queue once more when it
+   * finds that something was added after it had read it, so a record saved
+   * while the last request was open is offered without waiting for some later
+   * save to carry it (020/FR-007).
+   */
   async synchronise(credentials: AccountCredentials): Promise<void> {
     if (this.#running !== null) {
       return this.#running;
     }
-    const exchange = this.#exchange(credentials).finally(() => {
+    const exchange = this.#exchanges(credentials).finally(() => {
       this.#running = null;
     });
     this.#running = exchange;
     return exchange;
+  }
+
+  /** One exchange, and another for whatever was queued while it was open. */
+  async #exchanges(credentials: AccountCredentials): Promise<void> {
+    do {
+      this.#queuedSince = false;
+      await this.#exchange(credentials);
+    } while (this.#queuedSince);
   }
 
   /** The Commander's answer to one conflict, for both kinds of conflict. */
@@ -375,7 +397,7 @@ export class RecordSynchronisationStore {
     const accepted: { readonly recordId: string; readonly revision: number }[] = [];
     const removed: string[] = [];
     if (conflict.kind === 'stale-write' && conflict.remote !== null) {
-      const adoption = adoptRemoteRecord(conflict.remote, {
+      const adoption = await adoptRemoteRecord(conflict.remote, {
         revisionId: this.#uuid.create(),
         note: local.note,
         sourceNamed: local.sourceNamed,
@@ -423,7 +445,7 @@ export class RecordSynchronisationStore {
     const customerId = credentials.customerId;
     const state = this.#state.read();
     const since = accountCursor(state, customerId);
-    const { candidates, abandoned } = this.#candidates(state, customerId);
+    const { candidates, abandoned } = await this.#candidates(state, customerId);
     const plan = planSynchronisationBatch(candidates, since);
 
     this.#oversized = plan.oversized[0]?.recordId ?? null;
@@ -442,7 +464,7 @@ export class RecordSynchronisationStore {
       this.#refusal(response, plan, customerId);
       return;
     }
-    this.#accepted(response, plan, customerId, abandoned);
+    await this.#accepted(response, plan, customerId, abandoned);
   }
 
   /**
@@ -453,10 +475,10 @@ export class RecordSynchronisationStore {
    * them again would refuse the whole batch and hold up every other record in
    * it (020/FR-026).
    */
-  #candidates(
+  async #candidates(
     state: CommanderLocalState,
     customerId: string,
-  ): { candidates: readonly ChangeCandidate[]; abandoned: readonly string[] } {
+  ): Promise<{ candidates: readonly ChangeCandidate[]; abandoned: readonly string[] }> {
     const candidates: ChangeCandidate[] = [];
     const abandoned: string[] = [];
 
@@ -491,7 +513,7 @@ export class RecordSynchronisationStore {
         abandoned.push(operation.id);
         continue;
       }
-      if (!isReconstructable(record)) {
+      if (!(await isReconstructable(record))) {
         continue;
       }
       candidates.push({
@@ -517,12 +539,12 @@ export class RecordSynchronisationStore {
    * the retry reads the same stretch of the stream again and answers as a
    * no-op (020/FR-026).
    */
-  #accepted(
+  async #accepted(
     response: Extract<SynchronisationResponse, { kind: 'accepted' }>,
     plan: BatchPlan,
     customerId: string,
     abandoned: readonly string[],
-  ): void {
+  ): Promise<void> {
     const state = this.#state.read();
     const completed = [...abandoned];
     const accepted: { readonly recordId: string; readonly revision: number }[] = [];
@@ -569,7 +591,7 @@ export class RecordSynchronisationStore {
         accepted.push({ recordId, revision: entry.revision });
         continue;
       }
-      const adoption = adoptRemoteRecord(entry.record, {
+      const adoption = await adoptRemoteRecord(entry.record, {
         revisionId: this.#uuid.create(),
         note: local?.note ?? null,
         sourceNamed: local?.sourceNamed ?? null,
@@ -789,6 +811,7 @@ export class RecordSynchronisationStore {
       baseRevision: baseRevision ?? remoteRevisionOf(state, recordId),
       queuedAt: this.#clock.timestamp(),
     });
+    this.#queuedSince = true;
     if (this.#status().kind !== 'synchronising') {
       this.#settle(customerId);
     }

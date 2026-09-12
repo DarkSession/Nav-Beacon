@@ -36,11 +36,11 @@ function keysOf(value: unknown): readonly string[] {
 }
 
 describe('the remote record one local record becomes', () => {
-  it('produces records the strict contract parser accepts', () => {
+  it('produces records the strict contract parser accepts', async () => {
     for (const local of [NAMED_BUILD(), WORKING_BUILD(), LOADOUT()]) {
-      expect(parseRemoteRecord(JSON.parse(JSON.stringify(toRemoteRecord(local))))).toMatchObject({
-        ok: true,
-      });
+      expect(
+        await parseRemoteRecord(JSON.parse(JSON.stringify(toRemoteRecord(local)))),
+      ).toMatchObject({ ok: true });
     }
   });
 

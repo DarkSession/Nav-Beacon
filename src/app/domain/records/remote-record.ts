@@ -6,7 +6,7 @@ import { parseBuildSnapshotV1 } from '../ships/build/build-snapshot.parser';
 import {
   fittedAsStored,
   reconstructFromSnapshot,
-} from '../ships/build/build-snapshot.reconstructor';
+} from '../ships/build/build-snapshot.reconstructor-loader';
 import type { LocalRecordKind } from './local-record';
 
 export const REMOTE_RECORD_FORMAT = 'ednb.remote-record';
@@ -91,8 +91,15 @@ const LOADOUT_KEYS = [
 ] as const;
 const WEAPON_KEYS = ['symbol', 'grade', 'modifications'] as const;
 
-/** Reads and reconstructs one exact remote live-record contract. */
-export function parseRemoteRecord(value: unknown): RemoteRecordParseResult {
+/**
+ * Reads and reconstructs one exact remote live-record contract.
+ *
+ * A build is rebuilt through the reconstructor's loader, which is what keeps the
+ * outfitting catalogue out of the shell: this reader is reached from the
+ * Commander account, and the account is mounted beside the frame on every
+ * screen. The catalogue arrives with the first build a response carries.
+ */
+export async function parseRemoteRecord(value: unknown): Promise<RemoteRecordParseResult> {
   if (!isRecord(value)) return failed('The remote record is not an object.');
 
   const tool = value['tool'];
@@ -131,9 +138,9 @@ export function parseRemoteRecord(value: unknown): RemoteRecordParseResult {
     ) {
       return failed('Remote engineering quality must be complete.');
     }
-    const rebuilt = reconstructFromSnapshot(parsed.snapshot);
+    const rebuilt = await reconstructFromSnapshot(parsed.snapshot);
     if (!rebuilt.ok) return failed(rebuilt.reason);
-    if (!fittedAsStored(parsed.snapshot, rebuilt.loadout)) {
+    if (!(await fittedAsStored(parsed.snapshot, rebuilt.loadout))) {
       return failed('The package did not accept the remote hull-slot combination.');
     }
     return { ok: true, record: { ...envelope, tool, build: parsed.snapshot } };

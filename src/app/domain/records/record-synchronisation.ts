@@ -157,7 +157,7 @@ export function changeBody(change: RecordChange): Record<string, unknown> {
  * because a half-read response committed against this browser's cursor would
  * skip the part it could not read (020/FR-012, 020/FR-026).
  */
-export function parseAcceptedResponse(value: unknown): SynchronisationResponse {
+export async function parseAcceptedResponse(value: unknown): Promise<SynchronisationResponse> {
   if (
     !isObject(value) ||
     !hasExactKeys(value, ['accountRevision', 'results', 'records', 'tombstones'])
@@ -165,7 +165,7 @@ export function parseAcceptedResponse(value: unknown): SynchronisationResponse {
     return { kind: 'unavailable' };
   }
   const accountRevision = value['accountRevision'];
-  const results = parseResults(value['results']);
+  const results = await parseResults(value['results']);
   if (!isRevision(accountRevision) || results === null) {
     return { kind: 'unavailable' };
   }
@@ -186,7 +186,7 @@ export function parseAcceptedResponse(value: unknown): SynchronisationResponse {
     if (!isRevision(revision)) {
       return { kind: 'unavailable' };
     }
-    const parsed = parseRemoteRecord(entry['record']);
+    const parsed = await parseRemoteRecord(entry['record']);
     if (parsed.ok) {
       records.push({ revision, record: parsed.record });
     } else {
@@ -212,11 +212,14 @@ export function parseAcceptedResponse(value: unknown): SynchronisationResponse {
  * The status is kept beside the code. A body that does not read still refuses
  * the batch, and the status is what says whether the session has gone.
  */
-export function parseRefusal(status: number, value: unknown): SynchronisationResponse {
+export async function parseRefusal(
+  status: number,
+  value: unknown,
+): Promise<SynchronisationResponse> {
   const body = isObject(value) ? value : {};
   const code = body['code'];
   const accountRevision = body['accountRevision'];
-  const results = parseResults(body['results']);
+  const results = await parseResults(body['results']);
   return {
     kind: 'refused',
     status,
@@ -226,13 +229,13 @@ export function parseRefusal(status: number, value: unknown): SynchronisationRes
   };
 }
 
-function parseResults(value: unknown): readonly ChangeResult[] | null {
+async function parseResults(value: unknown): Promise<readonly ChangeResult[] | null> {
   if (!Array.isArray(value)) {
     return null;
   }
   const results: ChangeResult[] = [];
   for (const entry of value) {
-    const result = parseResult(entry);
+    const result = await parseResult(entry);
     if (result === null) {
       return null;
     }
@@ -241,7 +244,7 @@ function parseResults(value: unknown): readonly ChangeResult[] | null {
   return results;
 }
 
-function parseResult(value: unknown): ChangeResult | null {
+async function parseResult(value: unknown): Promise<ChangeResult | null> {
   if (!isObject(value)) {
     return null;
   }
@@ -267,7 +270,7 @@ function parseResult(value: unknown): ChangeResult | null {
     outcome,
     id: typeof id === 'string' ? id : null,
     revision: isRevision(revision) ? revision : null,
-    remote: outcome === 'conflict' ? remoteVersion(value['record']) : null,
+    remote: outcome === 'conflict' ? await remoteVersion(value['record']) : null,
     code: typeof code === 'string' ? code : null,
   };
 }
@@ -279,11 +282,11 @@ function parseResult(value: unknown): ChangeResult | null {
  * Commander's local copy on the strength of a field that is not there is the
  * one mistake this must never make (020/FR-010).
  */
-function remoteVersion(value: unknown): RemoteVersion {
+async function remoteVersion(value: unknown): Promise<RemoteVersion> {
   if (value === null) {
     return { kind: 'deleted' };
   }
-  const parsed = parseRemoteRecord(value);
+  const parsed = await parseRemoteRecord(value);
   return parsed.ok ? { kind: 'record', record: parsed.record } : { kind: 'unreadable' };
 }
 

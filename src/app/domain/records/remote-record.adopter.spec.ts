@@ -32,8 +32,8 @@ const CONTEXT = {
 };
 
 describe('the local record one remote record becomes', () => {
-  it('takes a named build, with the package’s own verdict on it', () => {
-    const adoption = adoptRemoteRecord(remote(NAMED_RECORD_V1, FIXTURE_IDS.named), CONTEXT);
+  it('takes a named build, with the package’s own verdict on it', async () => {
+    const adoption = await adoptRemoteRecord(remote(NAMED_RECORD_V1, FIXTURE_IDS.named), CONTEXT);
 
     expect(adoption.ok).toBe(true);
     if (!adoption.ok) {
@@ -50,22 +50,28 @@ describe('the local record one remote record becomes', () => {
     ).toBeDefined();
   });
 
-  it('leaves a working build unnamed', () => {
-    const adoption = adoptRemoteRecord(remote(WORKING_RECORD_V1, FIXTURE_IDS.working), CONTEXT);
+  it('leaves a working build unnamed', async () => {
+    const adoption = await adoptRemoteRecord(
+      remote(WORKING_RECORD_V1, FIXTURE_IDS.working),
+      CONTEXT,
+    );
 
     expect(adoption.ok && adoption.draft.name).toBeNull();
   });
 
-  it('takes a loadout and the name the contract gives it', () => {
-    const adoption = adoptRemoteRecord(remote(LOADOUT_RECORD_V2, FIXTURE_IDS.loadout), CONTEXT);
+  it('takes a loadout and the name the contract gives it', async () => {
+    const adoption = await adoptRemoteRecord(
+      remote(LOADOUT_RECORD_V2, FIXTURE_IDS.loadout),
+      CONTEXT,
+    );
 
     expect(adoption.ok).toBe(true);
     expect(adoption.ok && adoption.draft.name).toBe('Silent Entry');
     expect(adoption.ok && adoption.draft.payload.tool).toBe('equipment');
   });
 
-  it('keeps the note and the named source the local copy carried', () => {
-    const adoption = adoptRemoteRecord(remote(NAMED_RECORD_V1, FIXTURE_IDS.named), {
+  it('keeps the note and the named source the local copy carried', async () => {
+    const adoption = await adoptRemoteRecord(remote(NAMED_RECORD_V1, FIXTURE_IDS.named), {
       ...CONTEXT,
       note: 'Long-range fit.',
       sourceNamed: { recordId: FIXTURE_IDS.working, baseRevisionId: 'r1' },
@@ -78,7 +84,7 @@ describe('the local record one remote record becomes', () => {
     });
   });
 
-  it('falls back to the ident and then the hull for a named build with no ship name', () => {
+  it('falls back to the ident and then the hull for a named build with no ship name', async () => {
     const record = remote(NAMED_RECORD_V1, FIXTURE_IDS.named) as RemoteShipRecord;
     const withIdent: RemoteShipRecord = {
       ...record,
@@ -89,41 +95,45 @@ describe('the local record one remote record becomes', () => {
       build: { ...record.build, shipName: null, shipIdent: null },
     };
 
-    expect(adoptRemoteRecord(withIdent, CONTEXT)).toMatchObject({ draft: { name: 'NB-01' } });
-    expect(adoptRemoteRecord(withNeither, CONTEXT)).toMatchObject({
+    expect(await adoptRemoteRecord(withIdent, CONTEXT)).toMatchObject({ draft: { name: 'NB-01' } });
+    expect(await adoptRemoteRecord(withNeither, CONTEXT)).toMatchObject({
       draft: { name: record.build.shipSymbol },
     });
   });
 
-  it('refuses a build naming a hull this installation does not carry', () => {
+  it('refuses a build naming a hull this installation does not carry', async () => {
     const record = remote(NAMED_RECORD_V1, FIXTURE_IDS.named) as RemoteShipRecord;
     const unknown: RemoteShipRecord = {
       ...record,
       build: { ...record.build, shipSymbol: 'Nonexistent_Hull' },
     };
 
-    expect(adoptRemoteRecord(unknown, CONTEXT).ok).toBe(false);
+    expect((await adoptRemoteRecord(unknown, CONTEXT)).ok).toBe(false);
   });
 
-  it('refuses a loadout naming a suit this installation does not carry', () => {
+  it('refuses a loadout naming a suit this installation does not carry', async () => {
     const record = remote(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit);
 
-    expect(adoptRemoteRecord(record, CONTEXT).ok).toBe(false);
+    expect((await adoptRemoteRecord(record, CONTEXT)).ok).toBe(false);
   });
 });
 
 describe('what may be offered to the account', () => {
-  it('accepts records the package still carries', () => {
-    expect(isReconstructable(local(NAMED_RECORD_V1, FIXTURE_IDS.named))).toBe(true);
-    expect(isReconstructable(local(LOADOUT_RECORD_V2, FIXTURE_IDS.loadout))).toBe(true);
+  it('accepts records the package still carries', async () => {
+    expect(await isReconstructable(local(NAMED_RECORD_V1, FIXTURE_IDS.named))).toBe(true);
+    expect(await isReconstructable(local(LOADOUT_RECORD_V2, FIXTURE_IDS.loadout))).toBe(true);
   });
 
-  it('refuses a build naming a hull this installation does not carry', () => {
-    expect(isReconstructable(local(UNKNOWN_HULL_RECORD, FIXTURE_IDS.unknownHull))).toBe(false);
+  it('refuses a build naming a hull this installation does not carry', async () => {
+    expect(await isReconstructable(local(UNKNOWN_HULL_RECORD, FIXTURE_IDS.unknownHull))).toBe(
+      false,
+    );
   });
 
-  it('refuses a loadout naming a suit this installation does not carry', () => {
-    expect(isReconstructable(local(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit))).toBe(false);
+  it('refuses a loadout naming a suit this installation does not carry', async () => {
+    expect(await isReconstructable(local(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit))).toBe(
+      false,
+    );
   });
 });
 

@@ -8,9 +8,9 @@ import { toBuildSnapshotV1 } from '../ships/build/build-snapshot.serializer';
 import { parseRemoteRecord, parseRemoteTombstone } from './remote-record';
 
 describe('remote record contract', () => {
-  it('accepts exact package-reconstructable ship and equipment records', () => {
-    expect(parseRemoteRecord(shipRecord())).toMatchObject({ ok: true });
-    expect(parseRemoteRecord(equipmentRecord())).toMatchObject({ ok: true });
+  it('accepts exact package-reconstructable ship and equipment records', async () => {
+    expect(await parseRemoteRecord(shipRecord())).toMatchObject({ ok: true });
+    expect(await parseRemoteRecord(equipmentRecord())).toMatchObject({ ok: true });
   });
 
   it.each([
@@ -23,11 +23,13 @@ describe('remote record contract', () => {
     'calculatedValue',
     'catalogueFact',
     'price',
-  ])('rejects the excluded field %s', (field) => {
-    expect(parseRemoteRecord({ ...shipRecord(), [field]: null })).toMatchObject({ ok: false });
+  ])('rejects the excluded field %s', async (field) => {
+    expect(await parseRemoteRecord({ ...shipRecord(), [field]: null })).toMatchObject({
+      ok: false,
+    });
   });
 
-  it('rejects unknown fields at every nested ship level', () => {
+  it('rejects unknown fields at every nested ship level', async () => {
     const record = shipRecord('Anaconda');
     const first = record.build.modules[0]!;
     const candidates = [
@@ -55,11 +57,11 @@ describe('remote record contract', () => {
     ];
 
     for (const candidate of candidates) {
-      expect(parseRemoteRecord(candidate)).toMatchObject({ ok: false });
+      expect(await parseRemoteRecord(candidate)).toMatchObject({ ok: false });
     }
   });
 
-  it('rejects unknown hulls, modules and invalid hull-slot combinations', () => {
+  it('rejects unknown hulls, modules and invalid hull-slot combinations', async () => {
     const record = shipRecord('Anaconda');
     const first = record.build.modules[0]!;
     const candidates = [
@@ -75,11 +77,11 @@ describe('remote record contract', () => {
     ];
 
     for (const candidate of candidates) {
-      expect(parseRemoteRecord(candidate)).toMatchObject({ ok: false });
+      expect(await parseRemoteRecord(candidate)).toMatchObject({ ok: false });
     }
   });
 
-  it('requires completed ordinary engineering', () => {
+  it('requires completed ordinary engineering', async () => {
     const record = shipRecord('Anaconda');
     const first = record.build.modules[0]!;
     const candidate = {
@@ -95,10 +97,10 @@ describe('remote record contract', () => {
       },
     };
 
-    expect(parseRemoteRecord(candidate)).toMatchObject({ ok: false });
+    expect(await parseRemoteRecord(candidate)).toMatchObject({ ok: false });
   });
 
-  it('rejects unknown suits, invalid grades and mount combinations', () => {
+  it('rejects unknown suits, invalid grades and mount combinations', async () => {
     const record = equipmentRecord();
     const loadout = record.loadout;
     const weapon = PERSONAL_WEAPONS.find(
@@ -117,7 +119,7 @@ describe('remote record contract', () => {
     ];
 
     for (const candidate of candidates) {
-      expect(parseRemoteRecord(candidate)).toMatchObject({ ok: false });
+      expect(await parseRemoteRecord(candidate)).toMatchObject({ ok: false });
     }
   });
 

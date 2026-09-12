@@ -42,6 +42,7 @@ import {
 } from '../../platform/storage/storage.spec-helpers';
 import { AccountStore, type AccountCredentials } from '../account/account.store';
 import { RecordSynchronisationStore } from './record-synchronisation.store';
+import { settle } from './synchronisation.spec-helpers';
 
 const CREDENTIALS: AccountCredentials = { customerId: '900001', antiForgeryToken: 'token-1' };
 const OTHER_ACCOUNT = '900002';
@@ -402,9 +403,7 @@ describe('the record synchronisation store', () => {
       api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
 
       await TestBed.inject(AccountStore).refreshSession();
-      TestBed.tick();
-      await Promise.resolve();
-      await Promise.resolve();
+      await settle();
 
       expect(api.requests).toHaveLength(1);
       expect(lastRequest().changes).toHaveLength(1);
