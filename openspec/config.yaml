@@ -1,9 +1,10 @@
 schema: spec-driven
 
 context: |
-  Nav Beacon is a client-side-only Angular application carrying tools for Elite
+  Nav Beacon is a local-first Angular application carrying tools for Elite
   Dangerous. Ship Builder plans ship loadouts; the Equipment Builder plans
-  on-foot loadouts.
+  on-foot loadouts. An optional same-origin Commander service supports the
+  account capabilities.
 
   Read `CONSTITUTION.md` before you plan anything. It is the project's
   non-negotiable law, it governs every specification and change, and the
@@ -12,9 +13,14 @@ context: |
 
   The nine principles, in brief:
 
-  I.    Client-side only. No backend, no accounts, no telemetry, no request to
-        any other origin. A build lives in memory, in `localStorage`, or in the
-        URL fragment — never in a path or a query. Output is static files.
+  I.    Local-first with an optional Commander service. Anonymous tools need no
+        account and no server, and a Commander never needs an account to plan.
+        Anonymous build state lives in memory, in `localStorage`, or in the URL
+        fragment — never in a path or a query. The browser contacts only its own
+        origin, except for the deliberate Frontier sign-in navigation, and only
+        accepted Commander records reach the same-origin API. Notes, URL
+        fragments, SLEF documents and selected journal files stay local. No
+        telemetry exists.
   II.   `@elite-dangerous-almanac/core` is the source of truth for game data and
         build calculations. Never hand-maintain game data, never reimplement a
         calculation the package provides, and never correct a library result
@@ -38,10 +44,12 @@ context: |
         locale. Game text belongs to the Almanac package.
   VII.  One design system, one dark theme. Design tokens are the only source of
         colour, type, spacing, radius, elevation and motion.
-  VIII. Tests gate the build. Unit coverage at or above 80%. Playwright covers
-        ten projects — five layout profiles in Chromium and in Firefox — with an
-        accessibility scan over every screen. Never skip, quarantine or delete a
-        test to get a build green, and never lower the threshold.
+  VIII. Tests gate the build. Angular unit coverage at or above 80%, and .NET
+        coverage over the unit and integration suites together at or above 80%.
+        Playwright covers ten projects — five layout profiles in Chromium and in
+        Firefox — with an accessibility scan over every screen. Never skip,
+        quarantine or delete a test to get a build green, and never lower the
+        threshold.
   IX.   Specification before implementation. Behaviour is agreed in writing
         first, and a capability specification is its standing record.
 
@@ -52,8 +60,9 @@ context: |
     `minimumReleaseAgeExclude` in the same file lists what is exempt:
     `@elite-dangerous-almanac/*` outright, and a named security fix by version.
   - `pnpm run check` must pass before a change is proposed for merge.
-  - Unit tests sit beside their source in `src/`; end-to-end tests in `e2e/`.
-    A new journey needs both.
+  - Unit tests sit beside their source in `src/`, end-to-end tests in `e2e/`,
+    and the server's unit and integration tests in `server/tests/`. A new
+    journey needs a unit test and an end-to-end test.
   - Nothing the application asks for at runtime may be a root-absolute path. A
     pull request is served from a sub-path, so a leading `/` misses the file.
   - `openspec/changes/archive/<NNN>-<short-name>/` holds the design and contract
