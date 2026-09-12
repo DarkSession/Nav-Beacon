@@ -164,12 +164,23 @@ test.describe('handing a loadout to someone else', () => {
   });
 });
 
+/**
+ * The notice the bench itself raises, rather than any notice on the page.
+ *
+ * The frame carries the Commander account beside every screen, and the account
+ * modal states its own account in one of these while it is closed, so a notice
+ * is scoped to the screen that raised it.
+ */
+function benchNotice(page: Page) {
+  return page.locator('ednb-equipment-bench-page ednb-status-notice');
+}
+
 test.describe('a loadout link this version cannot read', () => {
   test('says so where the Commander is, and leaves the bench as it was', async ({ page }) => {
     // An `e.` fragment that is not a loadout this application minted.
     await page.goto('/equipment#e.notaloadoutatall');
 
-    const notice = page.locator('ednb-status-notice');
+    const notice = benchNotice(page);
     await expect(notice).toBeVisible();
     // Said in words a Commander can act on, never as a codec's own diagnostic,
     // and never by a journal key (FR-021).
@@ -190,7 +201,7 @@ test.describe('a loadout link this version cannot read', () => {
       location.hash = 'e.notaloadoutatall';
     });
 
-    await expect(page.locator('ednb-status-notice')).toBeVisible();
+    await expect(benchNotice(page)).toBeVisible();
     await expect(page.locator('.gate')).toHaveCount(0);
     await openRow(page, 'suit');
     await expect(page.locator('.item__name')).toContainText('Dominator Suit');
