@@ -17,6 +17,17 @@ import {
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
 import { helpRouteCoverage, type HelpRouteRow } from './coverage-ledger';
+import {
+  accountDialog,
+  acceptedExchange,
+  conflictLayer,
+  deletionConfirmation,
+  firstChangeConflicts,
+  fleetAnswer,
+  installCommanderService,
+  openAccountDialog,
+  showOwnedShips,
+} from './commander';
 import { openChooser, openEditor, revealMount, revealStatusRail } from './outfitting-surfaces';
 import { buildStockHull, openActionLayer, openLibrary, reachShellAction } from './shell';
 
@@ -168,18 +179,34 @@ const WAY_OUT = new RegExp(
  */
 async function dismissLayer(page: Page): Promise<void> {
   for (let depth = 0; depth < 4; depth += 1) {
+    // The shell's navigation overlay is a layer with nothing to press: it
+    // stands over the page while a route is still loading and withdraws itself
+    // (018/FR-002). A dismissal that navigates raises it for a moment, so the
+    // stack is read once it has gone rather than while it is on top of it —
+    // otherwise the layer this reaches for is the one layer that has no way
+    // out by design.
+    await expect(page.locator('dialog[open].waiting')).toHaveCount(0);
+
     const covering = layers(page);
-    const before = await covering.count();
-    if (before === 0) {
+    if ((await covering.count()) === 0) {
       return;
     }
-    await covering.last().getByRole('button', { name: WAY_OUT }).first().click();
+    const top = covering.last();
+    // Marked before it is pressed, so the wait below is about this layer rather
+    // than about whatever is on top afterwards.
+    await top.evaluate((layer) => layer.setAttribute('data-dismissing', ''));
+    await top.getByRole('button', { name: WAY_OUT }).first().click();
 
     // The frame is given back on the next change detection rather than on the
-    // click itself. Waiting for the stack to actually get shorter is what stops
-    // the next turn of this loop from taking hold of a layer already on its way
-    // out — a locator that resolves, then never becomes clickable.
-    await expect(covering).toHaveCount(before - 1);
+    // click itself, so this waits for the layer just pressed to actually close
+    // before the next turn of the loop takes hold of one — a locator that
+    // resolves on a layer already on its way out then never becomes clickable.
+    //
+    // Waited on that layer rather than on the stack getting shorter, because a
+    // layer may hand back to the one that raised it: cancelling the
+    // account-deletion question returns the account modal, so the count is the
+    // same on both sides of a dismissal that did exactly what it should.
+    await expect(page.locator('dialog[open][data-dismissing]')).toHaveCount(0);
   }
   await expect(layers(page)).toHaveCount(0);
 }
@@ -327,6 +354,48 @@ const REACH: Record<string, (page: Page) => Promise<void>> = {
   'feedback-host': async (page) => {
     await page.goto('/outfitting');
     await expect(page.locator('ednb-announcement-outlet').first()).toBeAttached();
+  },
+  'account-dialog': async (page) => {
+    // The service is stubbed before the first navigation: the account state is
+    // read while the application boots, and a development server answers every
+    // address with the application itself.
+    await installCommanderService(page, { session: 'anonymous' });
+    await page.goto('/ships');
+    await openAccountDialog(page);
+  },
+  'account-deletion-confirmation': async (page) => {
+    await installCommanderService(page, { session: 'signed-in' });
+    await page.goto('/ships');
+    await openAccountDialog(page, true);
+    await accountDialog(page)
+      .getByRole('button', { name: englishMessages['account.delete.action'] })
+      .click();
+    await expect(deletionConfirmation(page)).toBeVisible();
+  },
+  'owned-ships-layer': async (page) => {
+    await installCommanderService(page, {
+      session: 'signed-in',
+      fleet: () => ({ status: 200, body: fleetAnswer() }),
+    });
+    await openLibrary(page);
+    await showOwnedShips(page);
+    await expect(page.locator('ednb-owned-ships-panel')).toBeVisible();
+  },
+  'record-conflict-layer': async (page) => {
+    const service = await installCommanderService(page, { session: 'signed-in' });
+    // The account answers the first change with its own deletion marker, which
+    // is the one question only a Commander can answer.
+    service.exchange = (request) =>
+      request.changes.length === 0
+        ? { status: 200, body: acceptedExchange({ accountRevision: 2 }) }
+        : firstChangeConflicts(request);
+    await withStockBuild(page);
+    // Waited for before the layer is raised: the library pushes a history entry
+    // carrying the address showing at that moment, and the workspace publishes
+    // its build into the fragment a moment after the screen arrives.
+    await expect(page).toHaveURL(/#b\./);
+    await openLibrary(page);
+    await expect(conflictLayer(page)).toBeVisible({ timeout: 15_000 });
   },
 };
 

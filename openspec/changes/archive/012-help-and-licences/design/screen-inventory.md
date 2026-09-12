@@ -145,6 +145,18 @@ capability or applicable surface is a release failure; representative sampling i
 | Hull Anatomy side availability/defect state       | 010   | visible               | FR-011                 |
 | Application frame                                 | 011   | visible               | FR-001                 |
 | Global feedback/announcement host                 | 011   | visible               | FR-011                 |
+| Commander account dialog                          | 020   | obscured, dismissible | FR-001, FR-011         |
+| Account-deletion confirmation                     | 020   | obscured, dismissible | FR-011                 |
+| Owned ships layer                                 | 020   | obscured, dismissible | FR-011                 |
+| Record conflict layer                             | 020   | obscured, dismissible | FR-011                 |
+
+The four rows owned by feature 020 are the optional Commander account's own surfaces: the modal the
+frame's account action raises, the question asked before an account is deleted, the ships a
+Commander owns inside the stored-build layer, and the layer that asks what happens to a record the
+account and this browser disagree about. Each covers the frame while it stands and each is
+dismissible, so help is reached from the capability beneath — the route FR-011 requires there. The
+account is not a behaviour topic: the fixed two-topic FAQ does not change, and what the account holds
+is stated in the account dialog itself.
 
 The **Applies** column carries this feature's requirement IDs; **Owner** carries the feature that
 owns the surface. The application frame's own row records `visible` like any

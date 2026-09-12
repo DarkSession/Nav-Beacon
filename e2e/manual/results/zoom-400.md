@@ -1,9 +1,11 @@
 # Results: actual 400% browser zoom
 
-Protocol: [`zoom-400`](../zoom-400.protocol.md), version 3.
+Protocol: [`zoom-400`](../zoom-400.protocol.md), version 4.
 
-Each row is one observation: one capability and state, in one engine, at one orientation. Rows are
-appended, never edited — a later run is a new row, so the history of a regression stays readable.
+Each row is one observation: one capability and state, in one engine, on one device, at one
+orientation. Rows are appended, never edited — a later run is a new row, so the history of a
+regression stays readable. The sections written before protocol version 4 carry no device column,
+and are left as they were rather than backfilled with a value nobody observed.
 
 ## Run 1
 
@@ -84,3 +86,62 @@ the emulation can finish.
 | —    | —   | Chromium | —     | —        | portrait    | drives & mass / thrusters off | As above, with the package’s reasons in place of the envelope                                        | —      | not run |
 | —    | —   | Firefox  | —     | —        | landscape   | drives & mass / ready         | As above                                                                                             | —      | not run |
 | —    | —   | Firefox  | —     | —        | portrait    | drives & mass / thrusters off | As above                                                                                             | —      | not run |
+
+## The Commander account (feature 020)
+
+Step 9 covers the three layers an account adds to the shell, and each is its own observation. All
+three are drawn over a capability rather than beside it, and each loses something different first in
+a short viewport: the account dialog is the longest of them and ends in its actions, so its foot is
+what a centred dialog cuts off; the conflict layer offers three answers where every other question in
+this application offers two; and the owned-ships view is a list whose every entry carries three facts and
+whose heading carries a sentence about the interval the fleet was read over.
+
+Every device and orientation is a row of its own because the shell chooses its composition from the
+width it is given. At 400% zoom a desktop window is already as narrow as a phone in CSS pixels, so
+what the three devices actually separate is the browser and operating-system chrome each one takes
+out of the viewport — which is the one thing the emulated reading cannot reproduce, and the reason
+this protocol exists.
+
+The automated coverage that does exist for the same requirements is `e2e/reflow.spec.ts`, which runs
+the WCAG-equivalent viewport at a device scale factor of 4 in all ten projects, together with
+`e2e/commander-account.spec.ts`, `e2e/commander-fleet.spec.ts` and `e2e/fleet-copy.spec.ts`, which
+scan every one of these three layers with axe at all five layout profiles in both engines.
+
+| Date | OS  | Browser  | Build | Device  | Viewport | Orientation | Capability / state | Expected                                                                                                                                                                         | Actual | Result  |
+| ---- | --- | -------- | ----- | ------- | -------- | ----------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |
+| —    | —   | Chromium | —     | desktop | —        | landscape   | account dialog     | Full height; every state, the name and the network sentence kept as words; actions keep their labels; the deletion question keeps both answers on screen                         | —      | not run |
+| —    | —   | Chromium | —     | desktop | —        | portrait    | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | tablet  | —        | landscape   | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | tablet  | —        | portrait    | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | phone   | —        | landscape   | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | phone   | —        | portrait    | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | desktop | —        | landscape   | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | desktop | —        | portrait    | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | tablet  | —        | landscape   | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | tablet  | —        | portrait    | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | phone   | —        | landscape   | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | phone   | —        | portrait    | account dialog     | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | desktop | —        | landscape   | record conflict    | The record stays named; all three answers reachable with visible text; dismissible without answering                                                                             | —      | not run |
+| —    | —   | Chromium | —     | desktop | —        | portrait    | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | tablet  | —        | landscape   | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | tablet  | —        | portrait    | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | phone   | —        | landscape   | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | phone   | —        | portrait    | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | desktop | —        | landscape   | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | desktop | —        | portrait    | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | tablet  | —        | landscape   | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | tablet  | —        | portrait    | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | phone   | —        | landscape   | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | phone   | —        | portrait    | record conflict    | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | desktop | —        | landscape   | owned ships        | One entry per ship keeping model, name and plate; the journal interval wraps rather than clips; refresh and its status kept; the list may scroll inside itself, the page may not | —      | not run |
+| —    | —   | Chromium | —     | desktop | —        | portrait    | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | tablet  | —        | landscape   | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | tablet  | —        | portrait    | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | phone   | —        | landscape   | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Chromium | —     | phone   | —        | portrait    | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | desktop | —        | landscape   | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | desktop | —        | portrait    | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | tablet  | —        | landscape   | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | tablet  | —        | portrait    | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | phone   | —        | landscape   | owned ships        | As above                                                                                                                                                                         | —      | not run |
+| —    | —   | Firefox  | —     | phone   | —        | portrait    | owned ships        | As above                                                                                                                                                                         | —      | not run |

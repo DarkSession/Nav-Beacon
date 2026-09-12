@@ -173,7 +173,7 @@
 - [x] 7.4 Implement copy-to-builder with a fresh application record identity and no write back to the
       owned ship; verify an end-to-end test changes and deletes the copied plan while the fleet entry
       remains unchanged.
-- [ ] 7.5 Update the common help-route coverage record for the account dialog, account-deletion
+- [x] 7.5 Update the common help-route coverage record for the account dialog, account-deletion
       confirmation, owned-ships layer and conflict layer without adding a behaviour topic; verify `pnpm
 run policy:specs` resolves every governing reference and help route.
 
@@ -185,11 +185,11 @@ run policy:specs` resolves every governing reference and help route.
 - [x] 8.2 Add deployment guidance for same-origin routing, EF migration execution, horizontal
       instances, key-ring backup and rollback order; verify every command against the local disposable
       deployment with two API instances.
-- [ ] 8.3 Register 020/FR-001 through 020/FR-026 in the end-to-end coverage ledger and add journeys
+- [x] 8.3 Register 020/FR-001 through 020/FR-026 in the end-to-end coverage ledger and add journeys
       for optional sign-in, first merge, offline save, conflict handling, account deletion, fleet
       refresh and fleet copy; verify all ten Playwright projects run each registered journey with the
       accessibility scan enabled.
-- [ ] 8.4 Add manual screen-reader and actual 400% zoom protocol steps and result records for the
+- [x] 8.4 Add manual screen-reader and actual 400% zoom protocol steps and result records for the
       account dialog, synchronisation conflict and owned-ships view; verify both protocols record
       desktop, tablet and mobile results in both orientations.
 - [ ] 8.5 Run `openspec validate add-commander-account-sync --strict`, `pnpm run policy:specs`, the

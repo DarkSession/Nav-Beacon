@@ -1,8 +1,8 @@
 # Manual protocol: actual 400% browser zoom
 
 **Protocol id**: `zoom-400`
-**Covers**: FR-011, FR-012, SC-003
-**Version**: 3
+**Covers**: 011 FR-011, FR-012, SC-003; 020 FR-005, FR-011, FR-016, FR-022
+**Version**: 4
 
 ## What is automated, and what is left
 
@@ -33,11 +33,14 @@ Every run records all of it. A result without versions cannot be reproduced or t
 | Application build    | git SHA of the build under test |
 | Physical display     | 1920×1080 at 100% OS scaling    |
 | Viewport before zoom | 1280×800 CSS pixels             |
+| Device               | desktop, tablet or phone        |
 | Orientation          | landscape                       |
 | Date                 | ISO date of the run             |
 
-Run the full protocol in **both Chromium and Firefox**, and in **both orientations** where the
-device can be rotated. Rotating a desktop window means resizing it to a portrait aspect.
+Run the full protocol in **both Chromium and Firefox**, on a **desktop, a tablet and a phone**, and
+in **both orientations** on each. Rotating a desktop window means resizing it to a portrait aspect.
+The shell chooses its composition from the width it is given, so a device and an orientation are two
+halves of one reading rather than a repetition of it.
 
 ## Setup
 
@@ -77,9 +80,30 @@ technically intact but practically unusable.
    a touch device, without a hover step and without a two-finger gesture.
 8. **Focus stays visible.** The focus ring is visible against the surface under it and is not
    clipped by an ancestor's overflow.
+9. **The Commander account's three layers.** Each one is drawn over a capability rather than beside
+   it, and each carries something a short viewport is the first to lose.
+
+   Open the account dialog. Every state it has is text: whether there is an account, the Commander's
+   name where there is one, what the account holds, and the sentence saying which actions need a
+   network. Expect all of it still present and still reading as words, expect the actions to keep
+   their labels rather than collapsing to marks, and expect the panel to present full height rather
+   than as a centred dialog with its foot cut off. Ask to delete the account and expect the question
+   that stands over it to keep both of its answers on screen with their text, with neither pushed
+   below a fold that has no scroller.
+
+   Open the record conflict. It asks about one record and offers three answers, and at this viewport
+   the three answers are what a centred dialog loses first. Expect the record it is about to stay
+   named, expect all three answers reachable with visible text, and expect the layer to be
+   dismissible without answering.
+
+   Open the ships the Commander owns. Expect the list to stay a list — one entry per ship, each
+   keeping its model, its name and its plate rather than eliding one of them — expect the sentence
+   about what journal the fleet was read from to wrap rather than be clipped, expect the refresh to
+   keep its text, and expect the status of the last refresh to stay on screen beside the ships it
+   describes. The page must not scroll sideways in any of it; the list may scroll inside itself.
 
 ## Recording the result
 
-Append one row per capability/state/engine/orientation to `results/zoom-400.md`, with the expected
-behaviour, what actually happened, and pass or fail. A failure records what was observed, not a
+Append one row per capability/state/engine/device/orientation to `results/zoom-400.md`, with the
+expected behaviour, what actually happened, and pass or fail. A failure records what was observed, not a
 diagnosis. Do not summarise several runs into one row; a row is one observation.
