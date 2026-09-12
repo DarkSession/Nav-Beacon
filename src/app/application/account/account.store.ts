@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import type { CachedCommanderAccount } from '../../domain/commander/commander-local-state';
 import { COMMANDER_API } from '../../platform/network/commander-api';
 import { CommanderStateRepository } from '../../platform/storage/commander-state.repository';
+import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 
 /** What one authenticated request to the Commander service needs. */
 export interface AccountCredentials {
@@ -28,6 +29,7 @@ export type AccountState =
 export class AccountStore {
   readonly #api = inject(COMMANDER_API);
   readonly #local = inject(CommanderStateRepository);
+  readonly #records = inject(LocalRecordRepository);
   readonly #state = signal<AccountState>({ kind: 'loading' });
   readonly #open = signal(false);
   readonly #antiForgeryToken = signal<string | null>(null);
@@ -54,11 +56,20 @@ export class AccountStore {
    * The token stays here rather than being handed around: everything that
    * reaches the account's own API reads this, and it empties the moment the
    * session does (020/FR-004).
+   *
+   * An expired Frontier authorisation is not an expired Nav Beacon session.
+   * Frontier is the fleet's alone; the record exchange reaches this browser's
+   * own service with a session cookie and an anti-forgery token that both
+   * still stand. Emptying this in that state would stop a Commander's saves
+   * reaching the account they belong to, and nothing rescans browser storage
+   * afterwards, so the save would be lost rather than late (020/FR-011,
+   * constitution IV).
    */
   readonly credentials = computed<AccountCredentials | null>(() => {
     const state = this.#state();
     const token = this.#antiForgeryToken();
-    return state.kind === 'signed-in' && token !== null
+    const signed = state.kind === 'signed-in' || state.kind === 'authorisation-expired';
+    return signed && token !== null
       ? { customerId: state.account.customerId, antiForgeryToken: token }
       : null;
   });
@@ -156,8 +167,16 @@ export class AccountStore {
    * records kept and local-only, and nothing queued to upload (020/FR-006,
    * 020/FR-024).
    *
+   * The records this browser holds are read first, because the account state
+   * alone does not name them: a record whose upload never completed carries no
+   * binding, and one bound to another Commander is not this deletion's to
+   * touch (020/FR-024).
+   *
    * A refused local transaction sends nothing. The failure is stated, the
    * session and its records are untouched, and deletion can be attempted again.
+   * A browser that will not say which records it holds is one of those
+   * failures: marking nothing would leave the retained records eligible for the
+   * next account that signs in.
    */
   async deleteAccount(): Promise<void> {
     const account = accountFrom(this.#state());
@@ -165,7 +184,12 @@ export class AccountStore {
     if (account === null || token === null) {
       return;
     }
-    const cleanup = this.#local.prepareAccountDeletion();
+    const retained = this.#records.ids();
+    if (!retained.ok) {
+      this.#state.set({ kind: 'delete-local-failed', account });
+      return;
+    }
+    const cleanup = this.#local.prepareAccountDeletion(account.customerId, retained.value);
     if (!cleanup.ok) {
       this.#state.set({ kind: 'delete-local-failed', account });
       return;

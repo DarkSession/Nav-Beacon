@@ -12,7 +12,7 @@ import {
   COMMANDER_LOCAL_STATE_VERSION,
   type CommanderLocalState,
 } from '../../domain/commander/commander-local-state';
-import { EDNB_COMMANDER_STATE_KEY } from '../../platform/storage/storage-keys';
+import { EDNB_COMMANDER_STATE_KEY, recordKey } from '../../platform/storage/storage-keys';
 import {
   MemoryStorage,
   provideMemoryStorage,
@@ -20,6 +20,8 @@ import {
 } from '../../platform/storage/storage.spec-helpers';
 
 const ACCOUNT = { customerId: '900001', commanderName: 'CMDR Jameson' };
+/** A second Commander, whose records this browser also holds. */
+const OTHER_CUSTOMER = '900002';
 
 const SIGNED_IN: CommanderSessionResult = {
   kind: 'signed-in',
@@ -124,10 +126,18 @@ function storedState(): CommanderLocalState {
   };
 }
 
-function setUp(seed: CommanderLocalState | null = storedState()) {
+function setUp(
+  seed: CommanderLocalState | null = storedState(),
+  retained: readonly string[] = ['record-1', 'record-2'],
+) {
   const storage = new MemoryStorage();
   if (seed !== null) {
     storage.setItem(EDNB_COMMANDER_STATE_KEY, JSON.stringify(seed));
+  }
+  for (const recordId of retained) {
+    // Only the key is read from a record here. Which records this browser
+    // holds is what account deletion asks, not what is in them (020/FR-024).
+    storage.setItem(recordKey(recordId), '{}');
   }
   const api = new FakeCommanderApi();
   api.watch(storage);
@@ -146,8 +156,11 @@ function stored(storage: MemoryStorage): CommanderLocalState {
 }
 
 /** Signs the store in, which is where every deletion test starts. */
-async function signedIn(seed: CommanderLocalState | null = storedState()) {
-  const context = setUp(seed);
+async function signedIn(
+  seed: CommanderLocalState | null = storedState(),
+  retained: readonly string[] = ['record-1', 'record-2'],
+) {
+  const context = setUp(seed, retained);
   context.api.session = SIGNED_IN;
   await context.store.refreshSession();
   return context;
@@ -282,6 +295,44 @@ describe('AccountStore', () => {
       expect(stored(storage).recordBindings['record-1']).toBe('local-only');
     });
 
+    it('marks the retained records of this account, and no other account’s', async () => {
+      const seed: CommanderLocalState = {
+        ...storedState(),
+        accountCursors: { [ACCOUNT.customerId]: 42, [OTHER_CUSTOMER]: 7 },
+        recordBindings: { 'record-1': ACCOUNT.customerId, 'record-3': OTHER_CUSTOMER },
+        recordRevisions: { 'record-1': 41, 'record-3': 9 },
+      };
+      // Held: the account's own record, an unbound one whose upload never
+      // completed, and one belonging to another Commander.
+      const context = await signedIn(seed, ['record-1', 'record-2', 'record-3']);
+      context.store.requestDeletion();
+
+      await context.store.deleteAccount();
+
+      const state = stored(context.storage);
+      expect(state.recordBindings).toEqual({
+        'record-1': 'local-only',
+        'record-2': 'local-only',
+        'record-3': OTHER_CUSTOMER,
+      });
+      expect(state.recordRevisions).toEqual({ 'record-3': 9 });
+      expect(state.accountCursors).toEqual({ [OTHER_CUSTOMER]: 7 });
+    });
+
+    it('deletes nothing when the browser will not say which records it holds', async () => {
+      const context = await signedIn();
+      context.store.requestDeletion();
+      context.storage.accessError = new DOMException('denied', 'SecurityError');
+
+      await context.store.deleteAccount();
+
+      // Marking nothing would leave the retained records eligible for the next
+      // account that signs in, so the deletion is refused instead
+      // (020/FR-024).
+      expect(context.api.calls).not.toContain('delete-account');
+      expect(context.store.state()).toEqual({ kind: 'delete-local-failed', account: ACCOUNT });
+    });
+
     it('keeps the local result when the response is lost', async () => {
       const context = await signedIn();
       context.api.deletionAnswer = null;
@@ -395,6 +446,29 @@ describe('AccountStore', () => {
 
       expect(store.state()).toEqual({ kind: 'authorisation-expired', account: ACCOUNT });
       expect(store.open()).toBe(true);
+    });
+
+    it('keeps the credentials this browser’s own service still accepts', async () => {
+      const { store } = await signedIn();
+
+      store.markAuthorisationExpired();
+
+      // Frontier is the fleet's alone. The record exchange reaches Nav Beacon,
+      // whose session and anti-forgery token both still stand, so a save made
+      // now still belongs to the account (020/FR-011, constitution IV).
+      expect(store.credentials()).toEqual({
+        customerId: ACCOUNT.customerId,
+        antiForgeryToken: 'token-1',
+      });
+    });
+
+    it('empties the credentials once the session itself has ended', async () => {
+      const context = await signedIn();
+      context.api.session = { kind: 'anonymous' };
+
+      await context.store.refreshSession();
+
+      expect(context.store.credentials()).toBeNull();
     });
 
     it('opens itself when a sign-in comes back from Frontier', async () => {

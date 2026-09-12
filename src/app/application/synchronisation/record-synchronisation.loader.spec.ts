@@ -126,6 +126,29 @@ describe('reaching the record synchronisation engine', () => {
   );
 
   /**
+   * An expired Frontier authorisation stops the fleet and nothing else. The
+   * record exchange reaches this browser's own service, whose session and
+   * anti-forgery token both still stand, so a save made in that window is
+   * still the account's — and nothing rescans browser storage later
+   * (020/FR-011, constitution IV).
+   */
+  it('queues what a save owes while the Frontier authorisation has expired', async () => {
+    writeCommanderState(storage);
+    api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+    const account = TestBed.inject(AccountStore);
+    await account.refreshSession();
+    account.markAuthorisationExpired();
+
+    const triggered = TestBed.inject(RecordSynchronisationLoader).recordSaved(FIXTURE_IDS.named);
+
+    expect(pendingOperations()).toMatchObject([
+      { recordId: FIXTURE_IDS.named, kind: 'upload', customerId: CUSTOMER },
+    ]);
+    await triggered;
+    await settle();
+  });
+
+  /**
    * The engine is a chunk, and a chunk can fail to arrive. What the save owes
    * the account is already in the queue, which is what the next trigger sends.
    * A save that queued nothing would leave the record diverged from the account
