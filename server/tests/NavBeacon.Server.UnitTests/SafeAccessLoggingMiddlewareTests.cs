@@ -113,6 +113,12 @@ public sealed class SafeAccessLoggingMiddlewareTests
         ["Logging:LogLevel:Microsoft.AspNetCore.Hosting.Diagnostics"] = "Trace",
         ["Logging:LogLevel:Microsoft.EntityFrameworkCore"] = "Information",
         ["Logging:LogLevel:System"] = "Trace",
+        // A level set for one provider alone, which is how verbosity is
+        // ordinarily raised and which outranks a rule naming no provider
+        // however short its category.
+        ["Logging:Enabled:LogLevel:Default"] = "Trace",
+        ["Logging:Enabled:LogLevel:Microsoft"] = "Trace",
+        ["Logging:Console:LogLevel:Default"] = "Trace",
       }
     );
 
@@ -213,6 +219,8 @@ public sealed class SafeAccessLoggingMiddlewareTests
     }
   }
 
+  /// <summary>A provider that enables everything, named so a level can be set for it alone.</summary>
+  [ProviderAlias("Enabled")]
   private sealed class EnabledLoggerProvider : ILoggerProvider
   {
     public ILogger CreateLogger(string categoryName) => new EnabledLogger();
