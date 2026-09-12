@@ -1527,6 +1527,53 @@ describe('the record synchronisation store', () => {
   });
 
   /**
+   * An exchange reads the queue once more when something was added while it was
+   * open (020/FR-007). A sign-out that lands in the same window ends the run
+   * instead: the credentials it would carry are the ones the Commander has just
+   * given up, and the service answers a request made with them by refusing it —
+   * which this browser states as a session that expired, to a Commander who
+   * ended it themselves (020/FR-003, 020/FR-006).
+   */
+  it('sends nothing more after a sign-out, however much was saved during it', async () => {
+    seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+    api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+    const account = TestBed.inject(AccountStore);
+    await account.refreshSession();
+    await settle();
+    writeState({ accountCursors: { [CREDENTIALS.customerId]: 4 } });
+    api.answers.length = 0;
+    api.requests.length = 0;
+    api.answers.push(accepted({ accountRevision: 4 }));
+    // What the service answers a request made with a session that has ended.
+    api.answers.push({
+      kind: 'refused',
+      status: 401,
+      code: 'unauthorised',
+      accountRevision: null,
+      results: [],
+    });
+    let release = (): void => {};
+    api.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const running = store.synchronise(CREDENTIALS);
+    // A live page autosaves while the request is open, and the Commander signs
+    // out before it answers.
+    store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+    await account.signOut();
+    release();
+    await running;
+    await settle();
+
+    expect(api.requests).toHaveLength(1);
+    expect(account.state()).toEqual({ kind: 'anonymous' });
+    // The save is not lost: it stays queued, for the same Commander signing in
+    // again to carry on with (020/FR-003).
+    expect(commanderState().pendingOperations).toHaveLength(1);
+  });
+
+  /**
    * Deletion is the harder half of the same window, because its local write and
    * the request that follows it are separated by a network round trip: the
    * account has to have left this browser from the moment that write commits,

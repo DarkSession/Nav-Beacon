@@ -351,12 +351,23 @@ export class RecordSynchronisationStore {
     return exchange;
   }
 
-  /** One exchange, and another for whatever was queued while it was open. */
+  /**
+   * One exchange, and another for whatever was queued while it was open.
+   *
+   * The departure count is read once for the whole run rather than once per
+   * exchange, because an account that leaves during the first exchange has
+   * left for the second one too. Reading it again would take the departed
+   * count as the new baseline, and a save made during the departure would go
+   * out with credentials the Commander has just given up — refused, and
+   * reported to them as a session that expired rather than one they ended
+   * (020/FR-003, 020/FR-006).
+   */
   async #exchanges(credentials: AccountCredentials): Promise<void> {
+    const departures = this.#account.signedOutRevision();
     do {
       this.#queuedSince = false;
-      await this.#exchange(credentials);
-    } while (this.#queuedSince);
+      await this.#exchange(credentials, departures);
+    } while (this.#queuedSince && !this.#departed(departures));
   }
 
   /** The Commander's answer to one conflict, for both kinds of conflict. */
@@ -468,12 +479,14 @@ export class RecordSynchronisationStore {
     return { kind: 'cancelled', recordId: conflict.recordId };
   }
 
-  async #exchange(credentials: AccountCredentials): Promise<void> {
-    // Read before anything else this exchange does, because reading what the
-    // account is owed takes turns of its own and a Commander can sign out or
-    // confirm a deletion during one. A count taken after them would already be
-    // the departed one and match itself at every later point (020/FR-006).
-    const departures = this.#account.signedOutRevision();
+  /**
+   * @param departures What `signedOutRevision` said before this run started.
+   *   It is read by the caller rather than here, because reading what the
+   *   account is owed takes turns of its own and a Commander can sign out or
+   *   confirm a deletion during one. A count taken after them would already be
+   *   the departed one and match itself at every later point (020/FR-006).
+   */
+  async #exchange(credentials: AccountCredentials, departures: number): Promise<void> {
     const customerId = credentials.customerId;
     const state = this.#state.read();
     const since = accountCursor(state, customerId);
