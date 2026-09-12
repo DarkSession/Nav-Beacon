@@ -78,7 +78,14 @@ export class FleetCopyService {
   }
 }
 
-/** A diagnostic naming what the Almanac refused. Never Commander-facing text. */
+/**
+ * Why the ingress gate refused, named mount by mount.
+ *
+ * It reaches a Commander through `library.open.failed`, the same way every
+ * other ingress reason does, and the surface that names the affected mounts
+ * carries the detail. It states only what the gate answered — a count and the
+ * codes it gave — and invents no cause for it (constitution IV).
+ */
 function refusalReason(failures: readonly { readonly code: string | null }[]): string {
   return `The Almanac could not complete ${failures.length} partial engineering roll(s): ${failures
     .map((failure) => failure.code ?? 'unknown')
