@@ -469,6 +469,11 @@ export class RecordSynchronisationStore {
   }
 
   async #exchange(credentials: AccountCredentials): Promise<void> {
+    // Read before anything else this exchange does, because reading what the
+    // account is owed takes turns of its own and a Commander can sign out or
+    // confirm a deletion during one. A count taken after them would already be
+    // the departed one and match itself at every later point (020/FR-006).
+    const departures = this.#account.signedOutRevision();
     const customerId = credentials.customerId;
     const state = this.#state.read();
     const since = accountCursor(state, customerId);
@@ -478,20 +483,12 @@ export class RecordSynchronisationStore {
     this.#oversized = plan.oversized[0]?.recordId ?? null;
     this.#status.set({ kind: 'synchronising' });
 
-    const departures = this.#account.signedOutRevision();
     const response = await this.#api.synchroniseRecords(
       { sinceRevision: since, changes: plan.changes },
       credentials.antiForgeryToken,
     );
 
-    if (this.#account.signedOutRevision() !== departures) {
-      // The account left this browser while the request was open. A sign-out
-      // and an account deletion both commit their own local write before this
-      // answer arrives, and every part of committing this one — the records it
-      // carries, the deletion markers, the cursor and the answered operations —
-      // would put that account's data back into a browser that has just taken
-      // it out. Nothing is written and nothing is said: what this page says
-      // about the account is already `inactive` (020/FR-003, 020/FR-006).
+    if (this.#departed(departures)) {
       return;
     }
     if (response.kind === 'unavailable') {
@@ -502,7 +499,7 @@ export class RecordSynchronisationStore {
       this.#refusal(response, plan, customerId);
       return;
     }
-    await this.#accepted(response, plan, customerId, abandoned);
+    await this.#accepted(response, plan, customerId, abandoned, departures);
   }
 
   /**
@@ -582,6 +579,7 @@ export class RecordSynchronisationStore {
     plan: BatchPlan,
     customerId: string,
     abandoned: readonly string[],
+    departures: number,
   ): Promise<void> {
     this.#sessionRead = false;
     const completed = [...abandoned];
@@ -663,6 +661,9 @@ export class RecordSynchronisationStore {
         // service refuses as the conflict it is (020/FR-009).
         continue;
       }
+      if (this.#departed(departures)) {
+        return;
+      }
       if (!this.#records.write(adoption.draft).ok) {
         this.#fail(customerId, { reason: 'storage' });
         return;
@@ -674,6 +675,9 @@ export class RecordSynchronisationStore {
     // Read again, for the same reason: the reads above took turns, and what a
     // live page did during them decides whether a deletion marker may remove a
     // record here.
+    if (this.#departed(departures)) {
+      return;
+    }
     const current = this.#state.read();
     for (const tombstone of response.tombstones) {
       const recordId = tombstone.id;
@@ -705,6 +709,9 @@ export class RecordSynchronisationStore {
       removed.push(recordId);
     }
 
+    if (this.#departed(departures)) {
+      return;
+    }
     const committed = this.#state.commitSynchronisation({
       customerId,
       cursor: response.accountRevision,
@@ -978,6 +985,26 @@ export class RecordSynchronisationStore {
     }
     this.#sessionRead = true;
     void this.#account.refreshSession();
+  }
+
+  /**
+   * Whether the account has left this browser since this exchange began.
+   *
+   * A sign-out and an account deletion each commit their own local write while
+   * an exchange is open — account state, the fleet cache, and for a deletion
+   * the cursor, the queued work and the record bindings it owns — and the
+   * answer arrives after it. Committing any part of that answer would put the
+   * account's data back into a browser that has just taken it out, and stating
+   * a failure for it would have this page speaking for an account that has
+   * gone. What it says is already what the departure left behind
+   * (020/FR-003, 020/FR-006).
+   *
+   * Read again at each point that writes rather than once for the response,
+   * because reading a record the account sent takes a turn and a Commander can
+   * confirm a deletion during one.
+   */
+  #departed(departures: number): boolean {
+    return this.#account.signedOutRevision() !== departures;
   }
 
   #fail(customerId: string, failure: SynchronisationFailure): void {

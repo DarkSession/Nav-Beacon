@@ -124,6 +124,8 @@ export class FakeFleetApi implements CommanderApiPort {
   offline = false;
   /** Held before either fleet address answers, for a test that needs the gap. */
   hold: Promise<void> | null = null;
+  /** Held before the deletion answers, for the window that request is open. */
+  holdDeletion: Promise<void> | null = null;
 
   callbackResult(): null {
     return null;
@@ -143,6 +145,7 @@ export class FakeFleetApi implements CommanderApiPort {
   }
 
   async deleteAccount(): Promise<boolean> {
+    await this.holdDeletion;
     return true;
   }
 

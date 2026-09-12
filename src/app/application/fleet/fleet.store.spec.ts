@@ -397,6 +397,34 @@ describe('FleetStore', () => {
     expect(store.exchange()).toEqual({ kind: 'idle' });
   });
 
+  it('writes nothing a fleet answer carries once the account has been deleted', async () => {
+    writeState();
+    await signIn();
+    let release = (): void => {};
+    api.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.refreshes.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+
+    let releaseDeletion = (): void => {};
+    api.holdDeletion = new Promise<void>((resolve) => {
+      releaseDeletion = resolve;
+    });
+
+    const running = store.refresh();
+    // The local half of the deletion commits here and the request is still
+    // open, which is the window the answer below arrives in.
+    const deleting = TestBed.inject(AccountStore).deleteAccount();
+    release();
+    await running;
+    releaseDeletion();
+    await deleting;
+    await settle();
+
+    expect(store.holding()).toBeNull();
+    expect(storedState()?.fleetCache).toEqual([]);
+  });
+
   it('forgets the fleet when the account goes', async () => {
     writeCachedFleet([ownedShipPayload(12)]);
     api.offline = true;

@@ -59,6 +59,8 @@ class FakeCommanderApi implements CommanderApiPort {
   onRequest: (() => void) | null = null;
   /** Held before the answer is given, for a test that needs the gap. */
   hold: Promise<void> | null = null;
+  /** Held before the deletion answers, for the window that request is open. */
+  holdDeletion: Promise<void> | null = null;
 
   callbackResult(): null {
     return null;
@@ -95,6 +97,7 @@ class FakeCommanderApi implements CommanderApiPort {
   }
 
   async deleteAccount(): Promise<boolean> {
+    await this.holdDeletion;
     return true;
   }
 
@@ -1477,6 +1480,92 @@ describe('the record synchronisation store', () => {
 
     expect(storedRecord(REMOTE_ONLY_ID)).toBeNull();
     expect(accountCursor(commanderState(), CREDENTIALS.customerId)).toBe(4);
+  });
+
+  /**
+   * Deletion is the harder half of the same window, because its local write and
+   * the request that follows it are separated by a network round trip: the
+   * account has to have left this browser from the moment that write commits,
+   * not from the moment the service answers (020/FR-006, 020/FR-024).
+   */
+  it('commits nothing an answer carries once the account has been deleted', async () => {
+    api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+    const account = TestBed.inject(AccountStore);
+    await account.refreshSession();
+    await settle();
+    writeState({ accountCursors: { [CREDENTIALS.customerId]: 4 } });
+    api.answers.length = 0;
+    api.answers.push(
+      accepted({
+        accountRevision: 21,
+        records: [{ revision: 21, record: renamed(REMOTE_ONLY_ID, 'Elsewhere') }],
+      }),
+    );
+    let release = (): void => {};
+    api.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    let releaseDeletion = (): void => {};
+    api.holdDeletion = new Promise<void>((resolve) => {
+      releaseDeletion = resolve;
+    });
+
+    const running = store.synchronise(CREDENTIALS);
+    // The local half of the deletion commits here and the request is still
+    // open, which is the window the answer below arrives in.
+    const deleting = account.deleteAccount();
+    release();
+    await running;
+    releaseDeletion();
+    await deleting;
+
+    expect(storedRecord(REMOTE_ONLY_ID)).toBeNull();
+    expect(accountCursor(commanderState(), CREDENTIALS.customerId)).toBe(0);
+  });
+
+  /**
+   * Reading a record the account sent takes a turn, and a Commander can confirm
+   * a deletion during one. The departure is read again at each point that
+   * writes rather than once for the response, so a record already being read
+   * when the deletion committed is not written into a browser that has just
+   * emptied itself (020/FR-006, 020/FR-024).
+   */
+  it('writes no record it was already reading when the account was deleted', async () => {
+    seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+    api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+    const account = TestBed.inject(AccountStore);
+    await account.refreshSession();
+    await settle();
+    writeState({
+      accountCursors: { [CREDENTIALS.customerId]: 4 },
+      recordBindings: { [FIXTURE_IDS.named]: CREDENTIALS.customerId },
+      recordRevisions: { [FIXTURE_IDS.named]: 4 },
+    });
+    api.answers.length = 0;
+    api.answers.push(
+      accepted({
+        accountRevision: 21,
+        records: [{ revision: 21, record: renamed(REMOTE_ONLY_ID, 'Elsewhere') }],
+      }),
+    );
+    let releaseDeletion = (): void => {};
+    api.holdDeletion = new Promise<void>((resolve) => {
+      releaseDeletion = resolve;
+    });
+    let deleting: Promise<void> | null = null;
+    uuid.interruptNext = () => {
+      // The Commander confirming deletion, whose local transaction is one
+      // synchronous write. The request it sends is still open below.
+      deleting = account.deleteAccount();
+    };
+
+    await store.synchronise(CREDENTIALS);
+    releaseDeletion();
+    await deleting;
+
+    expect(storedRecord(REMOTE_ONLY_ID)).toBeNull();
+    expect(accountCursor(commanderState(), CREDENTIALS.customerId)).toBe(0);
   });
 
   /**

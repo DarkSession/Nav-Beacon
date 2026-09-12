@@ -172,6 +172,11 @@ export class AccountStore {
    * binding, and one bound to another Commander is not this deletion's to
    * touch (020/FR-024).
    *
+   * The account leaves this browser the moment that transaction commits, and
+   * not when the request comes back: the two are separated by a network round
+   * trip, and everything that was holding the account reads that moment to know
+   * it no longer has one (020/FR-006).
+   *
    * A refused local transaction sends nothing. The failure is stated, the
    * session and its records are untouched, and deletion can be attempted again.
    * A browser that will not say which records it holds is one of those
@@ -196,6 +201,15 @@ export class AccountStore {
     }
     this.#antiForgeryToken.set(null);
     this.#state.set({ kind: 'deleting' });
+    // The account leaves this browser here rather than when the request comes
+    // back. The local transaction has committed, so everything holding the
+    // account has to let go of it before the next turn: an exchange or a fleet
+    // load already in flight answers during the request below, and it reads
+    // this to know whether there is still an account to commit for. Raising it
+    // afterwards would let that answer write the deleted account's records,
+    // cursor and ships back into a browser that has just taken them out
+    // (020/FR-006, 020/FR-024).
+    this.#signedOut.update((revision) => revision + 1);
     // The answer is not read, and a request that never comes back is not an
     // error here either. A refusal and a lost response both leave this browser
     // in the state the local transaction already committed, and a Commander who
@@ -203,7 +217,6 @@ export class AccountStore {
     // the server decides, not this browser.
     await this.#api.deleteAccount(token).catch(() => false);
     this.#state.set({ kind: 'anonymous' });
-    this.#signedOut.update((revision) => revision + 1);
   }
 
   markAuthorisationExpired(): void {
