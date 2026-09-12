@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { RecordSynchronisationStore } from '../synchronisation/record-synchronisation.store';
+import { RecordSynchronisationLoader } from '../synchronisation/record-synchronisation.loader';
 import type { LocalRecord } from '../../domain/records/local-record';
 import type { RecordPayload } from '../../domain/records/local-record.serializer';
 import { LocksUnavailableError, WebLocksAdapter } from '../../platform/browser/web-locks.adapter';
@@ -62,7 +62,7 @@ export class NamedRecordService {
   readonly #records = inject(LocalRecordRepository);
   readonly #locks = inject(WebLocksAdapter);
   readonly #uuid = inject(UuidAdapter);
-  readonly #sync = inject(RecordSynchronisationStore);
+  readonly #sync = inject(RecordSynchronisationLoader);
 
   /** Whether an in-place replacement can be made safely in this browser. */
   get canOverwrite(): boolean {

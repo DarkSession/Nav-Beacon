@@ -19,7 +19,7 @@ import { routes } from './app.routes';
 import { RetentionService } from './application/build-library/retention.service';
 import { NavigationWaitingStore } from './application/navigation/navigation-waiting.store';
 import { ServedDocumentStore } from './application/navigation/served-document.store';
-import { RecordSynchronisationCoordinator } from './application/synchronisation/record-synchronisation.coordinator';
+import { RecordSynchronisationLoader } from './application/synchronisation/record-synchronisation.loader';
 import { RouteTitleStrategy } from './features/shared/route-title.strategy';
 import { provideLocalization } from './i18n/i18n.providers';
 import { RenderingTarget } from './platform/browser/rendering-target';
@@ -182,12 +182,18 @@ export const appConfig: ApplicationConfig = {
     // page owes its open records is owed while the page is live, not while a
     // particular screen is drawn (020/FR-025).
     //
+    // Through the loader rather than the coordinator itself, which is what
+    // keeps the rules for an account's records out of the first payload of
+    // every page: the engine is fetched for the account the session belongs to,
+    // from whatever page the Commander signed in on, and an anonymous browser
+    // never fetches it at all.
+    //
     // Not in the build's renderer, for the reason the sweep gives: there is no
     // Commander at build time, no session and no record to protect
     // (015/FR-001).
     provideAppInitializer(() => {
       if (inject(RenderingTarget).isBrowser) {
-        inject(RecordSynchronisationCoordinator).start();
+        inject(RecordSynchronisationLoader).start();
       }
     }),
     // The application's only service worker, and its only cache owner.

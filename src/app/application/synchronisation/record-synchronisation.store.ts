@@ -34,6 +34,7 @@ import { CommanderStateRepository } from '../../platform/storage/commander-state
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import { TabDescriptorRepository } from '../../platform/storage/tab-descriptor.repository';
 import { AccountStore, type AccountCredentials } from '../account/account.store';
+import { PausedRecords } from './paused-records';
 
 /** Which bound one refused request exceeded. */
 export type ExceededBound = 'record-too-large' | 'too-many-changes' | 'request-too-large';
@@ -89,6 +90,10 @@ export type SynchronisationStatus =
  *
  * The interface states, the save paths and the renewal timer are elsewhere.
  * This holds the state they read and the operations they call.
+ *
+ * Reached through `record-synchronisation.loader.ts` rather than imported, so
+ * the rules for an account's records arrive with the session that has records
+ * to exchange rather than in the first payload of every page.
  */
 @Injectable({ providedIn: 'root' })
 export class RecordSynchronisationStore {
@@ -102,7 +107,7 @@ export class RecordSynchronisationStore {
 
   readonly #status = signal<SynchronisationStatus>({ kind: 'inactive' });
   readonly #conflicts = signal<readonly RecordConflict[]>([]);
-  readonly #paused = signal<readonly string[]>([]);
+  readonly #paused = inject(PausedRecords);
   readonly #unreadable = signal<readonly string[]>([]);
 
   /** Records this browser cannot send as they stand, until they change again. */
@@ -129,8 +134,10 @@ export class RecordSynchronisationStore {
    *
    * A live page whose record was deleted elsewhere keeps its active work and
    * stops writing to it until the Commander answers the conflict (020/FR-010).
+   * Held in `PausedRecords` rather than here, because an autosave reads it
+   * while it decides whether to write and this store arrives with the session.
    */
-  readonly pausedRecords = this.#paused.asReadonly();
+  readonly pausedRecords = this.#paused.records;
   readonly hasConflicts = computed(() => this.#conflicts().length > 0);
 
   constructor() {
@@ -155,7 +162,7 @@ export class RecordSynchronisationStore {
    */
   signedOut(): void {
     this.#conflicts.set([]);
-    this.#paused.set([]);
+    this.#paused.releaseAll();
     this.#unreadable.set([]);
     this.#refused.clear();
     this.#merged.clear();
@@ -167,7 +174,7 @@ export class RecordSynchronisationStore {
 
   /** Whether this record's autosave is held by an unanswered deletion conflict. */
   isPaused(recordId: string): boolean {
-    return this.#paused().includes(recordId);
+    return this.#paused.holds(recordId);
   }
 
   /** The conflict standing for one record, where there is one. */
@@ -777,16 +784,14 @@ export class RecordSynchronisationStore {
       conflict,
     ]);
     if (conflict.claimed && conflict.kind === 'remote-deletion') {
-      this.#paused.update((paused) =>
-        paused.includes(conflict.recordId) ? paused : [...paused, conflict.recordId],
-      );
+      this.#paused.hold(conflict.recordId);
     }
   }
 
   /** Clears one answered conflict and lets its live page write again. */
   #release(recordId: string): void {
     this.#conflicts.update((standing) => standing.filter((entry) => entry.recordId !== recordId));
-    this.#paused.update((paused) => paused.filter((entry) => entry !== recordId));
+    this.#paused.release(recordId);
   }
 
   #queue(

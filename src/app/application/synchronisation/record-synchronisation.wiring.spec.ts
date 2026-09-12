@@ -12,12 +12,14 @@ import { COMMANDER_API } from '../../platform/network/commander-api';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import { recordKey } from '../../platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
+import { TabDescriptorRepository } from '../../platform/storage/tab-descriptor.repository';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { AutosaveService } from '../build-library/autosave.service';
 import { NamedRecordService, type NamedSaveRequest } from '../build-library/named-record.service';
 import { RetentionService } from '../build-library/retention.service';
 import { LoadoutAutosaveService } from '../equipment/loadout-autosave.service';
 import { LoadoutStore } from '../equipment/loadout.store';
+import { RecordSynchronisationLoader } from './record-synchronisation.loader';
 import {
   FakeCommanderApi,
   MovableClock,
@@ -278,6 +280,45 @@ describe('joining the record libraries to synchronisation', () => {
       await settle();
 
       expect(api.requests).toHaveLength(0);
+    });
+  });
+
+  describe('a live page the account paused', () => {
+    it('writes the work back the moment the Commander resumes', async () => {
+      writeCommanderState(storage);
+      await signIn(api);
+
+      TestBed.inject(LoadoutStore).open(SUIT, null, { autosaveRecordId: null });
+      const autosave = TestBed.inject(LoadoutAutosaveService);
+      autosave.flush();
+      await settle();
+      const held = TestBed.inject(LoadoutStore).autosaveRecordId();
+      expect(held).not.toBeNull();
+
+      // This page holds the record open, and the account no longer holds it:
+      // the work stays and nothing is written to it until the Commander
+      // answers (020/FR-010).
+      TestBed.inject(TabDescriptorRepository).write('equipment', held!);
+      api.answers.push({
+        kind: 'accepted',
+        accountRevision: 9,
+        results: [],
+        records: [],
+        unreadableRecords: [],
+        tombstones: [{ id: held!, revision: 9 }],
+      });
+      await TestBed.inject(RecordSynchronisationLoader).recordSaved(held!);
+      await settle();
+      expect(autosave.paused()).toBe(true);
+
+      // An explicit resume writes at once. What it answers is a Commander's
+      // own request, so it cannot wait for an exchange, or for the engine
+      // that runs one, to come back.
+      const before = revisionOf(held!);
+      autosave.resume();
+
+      expect(autosave.paused()).toBe(false);
+      expect(revisionOf(held!)).not.toBe(before);
     });
   });
 

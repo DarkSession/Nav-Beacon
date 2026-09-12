@@ -1,16 +1,9 @@
 import { DOCUMENT } from '@angular/core';
 import { Injectable, InjectionToken, inject } from '@angular/core';
-import {
-  parseFleetAnswer,
-  parseFleetRefusal,
-  type FleetResponse,
-} from '../../domain/commander/fleet/fleet-answer';
-import {
-  parseAcceptedResponse,
-  parseRefusal,
-  synchronisationBody,
-  type SynchronisationRequest,
-  type SynchronisationResponse,
+import type { FleetResponse } from '../../domain/commander/fleet/fleet-answer';
+import type {
+  SynchronisationRequest,
+  SynchronisationResponse,
 } from '../../domain/records/record-synchronisation';
 
 export interface CommanderAccountIdentity {
@@ -128,12 +121,17 @@ export class CommanderApi implements CommanderApiPort {
     request: SynchronisationRequest,
     antiForgeryToken: string,
   ): Promise<SynchronisationResponse> {
+    const exchange = await this.#exchangeFormat();
+    if (exchange === null) {
+      return { kind: 'unavailable' };
+    }
+
     let response: Response;
     try {
       response = await this.#fetch('api/records/synchronise', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': antiForgeryToken },
-        body: synchronisationBody(request),
+        body: exchange.synchronisationBody(request),
       });
     } catch {
       return { kind: 'unavailable' };
@@ -143,9 +141,11 @@ export class CommanderApi implements CommanderApiPort {
     try {
       body = await response.json();
     } catch {
-      return response.ok ? { kind: 'unavailable' } : parseRefusal(response.status, null);
+      return response.ok ? { kind: 'unavailable' } : exchange.parseRefusal(response.status, null);
     }
-    return response.ok ? parseAcceptedResponse(body) : parseRefusal(response.status, body);
+    return response.ok
+      ? exchange.parseAcceptedResponse(body)
+      : exchange.parseRefusal(response.status, body);
   }
 
   /**
@@ -185,6 +185,10 @@ export class CommanderApi implements CommanderApiPort {
    * 020/FR-022).
    */
   async #fleetRequest(path: string, init: RequestInit): Promise<FleetResponse> {
+    // Asked for before the request goes, so the reader and the answer it reads
+    // arrive together.
+    const reading = this.#fleetFormat();
+
     let response: Response;
     try {
       response = await this.#fetch(path, init);
@@ -192,17 +196,55 @@ export class CommanderApi implements CommanderApiPort {
       return { kind: 'unavailable' };
     }
 
+    const fleet = await reading;
+    if (fleet === null) {
+      return { kind: 'unavailable' };
+    }
+
     let body: unknown;
     try {
       body = await response.json();
     } catch {
-      return response.ok ? { kind: 'unavailable' } : parseFleetRefusal(response.status, null);
+      return response.ok ? { kind: 'unavailable' } : fleet.parseFleetRefusal(response.status, null);
     }
     if (!response.ok) {
-      return parseFleetRefusal(response.status, body);
+      return fleet.parseFleetRefusal(response.status, body);
     }
-    const answer = parseFleetAnswer(body);
+    const answer = fleet.parseFleetAnswer(body);
     return answer === null ? { kind: 'unavailable' } : { kind: 'answered', answer };
+  }
+
+  /**
+   * The record exchange's own format, reached when a request needs it.
+   *
+   * The session half of this port is on every page, because the account dialog
+   * states a refused sign-in and an expired session wherever a Commander is
+   * (020/FR-001, 020/FR-003). The record exchange is not: it runs for a
+   * signed-in Commander, from the synchronisation engine, which is itself
+   * reached through a loader (`synchronisation/record-synchronisation.loader.ts`).
+   * Its format travels with it rather than with the first payload of every
+   * page.
+   *
+   * A format that does not arrive answers as a request that does not arrive:
+   * nothing was sent and nothing was accepted, so nothing may be written
+   * (020/FR-011, 020/FR-026).
+   */
+  #exchangeFormat(): Promise<typeof import('../../domain/records/record-synchronisation') | null> {
+    return import('../../domain/records/record-synchronisation').catch(() => null);
+  }
+
+  /**
+   * The fleet answer's own reader, reached when a request needs it.
+   *
+   * The fleet is a layer a Commander opens and nothing outside it reads a fleet
+   * answer, so its reader arrives with the request rather than with every page.
+   * A reader that does not arrive leaves this browser unable to read the answer,
+   * which is the outcome it already states for an answer it cannot read: the
+   * fleet this browser already accepted stays valid, and nothing new is claimed
+   * (020/FR-018, 020/FR-022).
+   */
+  #fleetFormat(): Promise<typeof import('../../domain/commander/fleet/fleet-answer') | null> {
+    return import('../../domain/commander/fleet/fleet-answer').catch(() => null);
   }
 
   async #stateChangingRequest(

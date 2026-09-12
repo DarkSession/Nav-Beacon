@@ -1,6 +1,6 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { WorkingRecordAutosave } from '../build-library/working-record.autosave';
-import { RecordSynchronisationStore } from '../synchronisation/record-synchronisation.store';
+import { RecordSynchronisationLoader } from '../synchronisation/record-synchronisation.loader';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { PageLifecycleAdapter } from '../../platform/browser/page-lifecycle.adapter';
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
@@ -22,7 +22,7 @@ export class LoadoutAutosaveService extends WorkingRecordAutosave {
       inject(PageLifecycleAdapter),
       inject(UuidAdapter),
       inject(ClockAdapter),
-      inject(RecordSynchronisationStore),
+      inject(RecordSynchronisationLoader),
       inject(Injector),
     );
   }

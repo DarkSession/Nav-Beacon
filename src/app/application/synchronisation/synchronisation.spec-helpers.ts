@@ -141,13 +141,20 @@ export class SequentialUuid {
 /**
  * Lets every exchange already in flight finish before the next assertion.
  *
- * An exchange reads a stored build through the reconstructor's loader, which
- * fetches a module the first time it is asked. Loading that module here first
- * takes the one unbounded wait out of the exchange, so the turns that follow
- * are the store's own and stay few and fixed.
+ * An exchange is reached through loaders, and each of them fetches a module the
+ * first time it is asked: the synchronisation engine itself, the format the
+ * record exchange is read in, and the reconstructor a stored build is read
+ * through. Loading them here first takes the unbounded waits out of the
+ * exchange, so the turns that follow are the store's own and stay few and
+ * fixed.
  */
 export async function settle(): Promise<void> {
-  await import('../../domain/ships/build/build-snapshot.reconstructor');
+  await Promise.all([
+    import('../../domain/ships/build/build-snapshot.reconstructor'),
+    import('../../domain/records/record-synchronisation'),
+    import('./record-synchronisation.store'),
+    import('./record-synchronisation.coordinator'),
+  ]);
   for (let turn = 0; turn < 3; turn += 1) {
     TestBed.tick();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));

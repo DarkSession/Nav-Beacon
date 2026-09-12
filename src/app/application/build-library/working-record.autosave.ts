@@ -1,5 +1,5 @@
 import { Injector, computed, effect, signal } from '@angular/core';
-import { RecordSynchronisationStore } from '../synchronisation/record-synchronisation.store';
+import { RecordSynchronisationLoader } from '../synchronisation/record-synchronisation.loader';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { PageLifecycleAdapter } from '../../platform/browser/page-lifecycle.adapter';
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
@@ -79,7 +79,7 @@ export class WorkingRecordAutosave {
   readonly #lifecycle: PageLifecycleAdapter;
   readonly #uuid: UuidAdapter;
   readonly #clock: ClockAdapter;
-  readonly #sync: RecordSynchronisationStore;
+  readonly #sync: RecordSynchronisationLoader;
   /** Captured at construction so `start()` can create its watcher from anywhere. */
   readonly #injector: Injector;
 
@@ -89,7 +89,7 @@ export class WorkingRecordAutosave {
     lifecycle: PageLifecycleAdapter,
     uuid: UuidAdapter,
     clock: ClockAdapter,
-    sync: RecordSynchronisationStore,
+    sync: RecordSynchronisationLoader,
     injector: Injector,
   ) {
     this.#subject = subject;
