@@ -214,6 +214,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # The server's integration tests run against a real PostgreSQL, because the
+    # things they cover are the database's own: the row locks that make a
+    # session renewal and a fleet refresh safe under two requests, the advisory
+    # lock one account's refresh holds, and the migrations themselves. The image
+    # and the trust authentication are the development container's, so the one
+    # connection string below is the only difference between the two.
+    services:
+      database:
+        image: postgres:18-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
+        env:
+          POSTGRES_DB: navbeacon
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navbeacon"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
+
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -252,6 +272,11 @@ jobs:
         run: pnpm run server:build
 
       - name: Test the server with coverage
+        env:
+          # A service container on a virtual-machine runner is reached through
+          # the port it publishes on the runner itself, rather than by the name
+          # the development container resolves.
+          ConnectionStrings__NavBeacon: Host=127.0.0.1;Port=5432;Database=navbeacon;Username=postgres;SSL Mode=Disable
         run: pnpm run server:test
 
       - name: Typecheck
