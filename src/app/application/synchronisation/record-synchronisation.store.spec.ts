@@ -476,6 +476,50 @@ describe('the record synchronisation store', () => {
       expect(accountCursor(commanderState(), CREDENTIALS.customerId)).toBe(3);
     });
 
+    it('claims no revision for a record this version could not open', async () => {
+      seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      writeState({
+        accountCursors: { [CREDENTIALS.customerId]: 7 },
+        recordBindings: { [FIXTURE_IDS.named]: CREDENTIALS.customerId },
+        recordRevisions: { [FIXTURE_IDS.named]: 7 },
+      });
+      const unopenable = remoteOf(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      if (unopenable.tool !== 'ship') {
+        throw new Error('The ship fixture is not a ship record.');
+      }
+      api.answers.push(
+        accepted({
+          accountRevision: 9,
+          records: [
+            {
+              revision: 9,
+              record: {
+                ...unopenable,
+                build: { ...unopenable.build, shipSymbol: 'Nonexistent_Hull' },
+              },
+            },
+          ],
+        }),
+      );
+      api.answers.push(accepted({ accountRevision: 9 }));
+
+      await store.synchronise(CREDENTIALS);
+
+      expect(store.unreadable()).toEqual([FIXTURE_IDS.named]);
+      expect(storedRecord(FIXTURE_IDS.named)).toMatchObject({ name: 'Anaconda explorer' });
+      // The version this browser holds is still the one it last read, so an
+      // edit of it is offered against that revision rather than against the
+      // newer one it never opened, and the service refuses it.
+      expect(remoteRevisionOf(commanderState(), FIXTURE_IDS.named)).toBe(7);
+
+      store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+      await store.synchronise(CREDENTIALS);
+
+      expect(lastRequest().changes).toEqual([
+        expect.objectContaining({ type: 'write', baseRevision: 7 }),
+      ]);
+    });
+
     it('lists a streamed record of an unsupported version without refusing the response', async () => {
       api.answers.push(
         accepted({

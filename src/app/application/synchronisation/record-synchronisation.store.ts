@@ -648,10 +648,17 @@ export class RecordSynchronisationStore {
       if (!adoption.ok) {
         // The account holds it, this version cannot open it, and it stays
         // remote and unopened rather than half-written here (020/FR-012).
+        //
+        // Nothing is claimed about its revision either. Claiming one would say
+        // this browser holds the account's version of a record it never read,
+        // and a later edit of the copy it does hold would then be offered
+        // against that revision and taken, replacing the newer version with an
+        // older one and saying nothing to the Commander. Left unclaimed, that
+        // edit carries the revision it was really made against, the service
+        // refuses it, and the Commander is told (020/FR-012, constitution IV).
         if (!unreadable.includes(recordId)) {
           unreadable.push(recordId);
         }
-        accepted.push({ recordId, revision: entry.revision });
         continue;
       }
       if (changedUnderUs(recordId, local)) {
