@@ -55,7 +55,11 @@ function ships(selected = false): OwnedShipsView['ships'] {
     {
       id: '12',
       label: SHIP,
-      detail: fill(BUNDLED_ENGLISH['fleet.row.detail'], { hull: HULL, when: DAY }),
+      detail: fill(BUNDLED_ENGLISH['fleet.row.detail.ident'], {
+        hull: HULL,
+        ident: 'BA-01',
+        when: DAY,
+      }),
       selected,
     },
   ];

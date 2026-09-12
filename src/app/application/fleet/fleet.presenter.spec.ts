@@ -372,6 +372,36 @@ describe('FleetPresenter', () => {
     expect(view.unresolved[0].id).toBe('refused-19');
   });
 
+  /**
+   * Two ships with no name and one hull, read from one journal day. The label
+   * falls back to the hull for both, so the plate is the only thing between
+   * them, and a Commander choosing one has to be able to tell which.
+   */
+  it('carries the plate on a row, and nothing in its place where there is none', async () => {
+    writeState();
+    api.reads.push(
+      answeredFleet({
+        ships: [
+          ownedShipPayload(21, 'Anaconda', { shipName: null, shipIdent: 'BA-01' }),
+          ownedShipPayload(22, 'Anaconda', { shipName: null, shipIdent: null }),
+        ],
+      }),
+    );
+    await signIn();
+
+    const rows = presenter.view().ships;
+    expect(rows[0].label).toBe(rows[1].label);
+    expect(rows[0].detail).toContain('BA-01');
+    expect(rows[0].detail).not.toBe(rows[1].detail);
+    // Nothing stands in for a plate the journal did not state.
+    expect(rows[1].detail).toBe(
+      interpolate(BUNDLED_ENGLISH['fleet.row.detail'], {
+        hull: rows[1].detail.split(',')[0],
+        when: rows[1].detail.split('of ')[1],
+      }),
+    );
+  });
+
   it('states a ship the package would not rebuild through the catalogue', async () => {
     writeState();
     api.reads.push(

@@ -345,14 +345,27 @@ export class FleetPresenter {
     });
   }
 
+  /**
+   * One row of the owned fleet.
+   *
+   * The plate is carried beside the hull where the journal stated one, because
+   * it is the only thing that tells two ships apart when neither is named: the
+   * name falls back to the hull, and two unnamed ships of one hull read from
+   * one journal day are otherwise the same row twice. Where the journal stated
+   * no plate the row says the hull and the day alone, and nothing stands in for
+   * the plate (020/FR-016, constitution IV).
+   */
   #row(ship: OwnedShip, chosen: OwnedShip | null): OwnedShipRow {
+    const ident = ship.loadout.shipIdent;
+    const hull = this.#hullName(ship);
+    const when = this.#day(ship.sourceDate);
     return {
       id: String(ship.shipId),
       label: this.#shipLabel(ship),
-      detail: this.#messages.message('fleet.row.detail', {
-        hull: this.#hullName(ship),
-        when: this.#day(ship.sourceDate),
-      }),
+      detail:
+        ident !== null && ident.length > 0
+          ? this.#messages.message('fleet.row.detail.ident', { hull, ident, when })
+          : this.#messages.message('fleet.row.detail', { hull, when }),
       selected: chosen !== null && chosen.shipId === ship.shipId,
     };
   }

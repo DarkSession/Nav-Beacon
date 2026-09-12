@@ -1185,6 +1185,7 @@
   "fleet.detail.last-accepted": "Die hier aufgeführten Schiffe sind die zuletzt übernommenen.",
   "fleet.coverage": "Journal gelesen von {{from}} bis {{to}}.",
   "fleet.row.detail": "{{hull}}, aus dem Journal vom {{when}}",
+  "fleet.row.detail.ident": "{{hull}} {{ident}}, aus dem Journal vom {{when}}",
   "fleet.fact.hull": "Schiff",
   "fleet.fact.ident": "Schiffskennung",
   "fleet.fact.source": "Journaldatum",
