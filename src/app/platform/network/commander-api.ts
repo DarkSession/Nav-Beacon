@@ -5,6 +5,7 @@ import type {
   SynchronisationRequest,
   SynchronisationResponse,
 } from '../../domain/records/record-synchronisation';
+import SESSION_RESPONSE_CONTRACT from './session-response.contract.json';
 
 export interface CommanderAccountIdentity {
   readonly customerId: string;
@@ -288,11 +289,22 @@ function frontierAuthorisationAddress(value: unknown): string | null {
   return address !== null && address.protocol === 'https:' ? address.href : null;
 }
 
+/**
+ * The one property set a signed-in session answer may carry.
+ *
+ * It is read from `session-response.contract.json` rather than written out
+ * here, because the server writes the answer and this browser refuses a body
+ * whose property set is not exactly the one it accepts. The two halves are
+ * built and tested apart, so a property one side adds alone is a session this
+ * browser cannot read and a Commander who cannot sign in at all. The server's
+ * `SessionContractTests` asserts its answer against the same file, which is
+ * what keeps the two ends of this exchange the same shape (020/FR-001,
+ * 020/FR-003).
+ */
+const SIGNED_IN_SESSION_PROPERTIES = [...SESSION_RESPONSE_CONTRACT.signedIn].sort().join(',');
+
 function parseSession(value: unknown): CommanderSessionResult | null {
-  if (
-    !isObject(value) ||
-    Object.keys(value).sort().join(',') !== 'antiForgeryToken,commanderName,customerId,signedIn'
-  ) {
+  if (!isObject(value) || Object.keys(value).sort().join(',') !== SIGNED_IN_SESSION_PROPERTIES) {
     return null;
   }
   if (value['signedIn'] !== true) {

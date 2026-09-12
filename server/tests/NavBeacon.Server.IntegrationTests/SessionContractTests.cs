@@ -18,7 +18,7 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
   );
 
   [Fact]
-  public async Task AnAnonymousBrowserIsAnonymousAndKeepsItsFleetCache()
+  public async Task AnAnonymousBrowserHasNoSession()
   {
     using var server = NewServer(60_001, out _);
     using var client = server.CreateClient();
@@ -28,12 +28,11 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     var state = await ReadStateAsync(response);
     Assert.False(state.SignedIn);
-    Assert.Equal("anonymous", state.State);
-    Assert.False(state.ClearFleetCache);
+    Assert.Null(state.AntiForgeryToken);
   }
 
   [Fact]
-  public async Task AStartedSignInIsPendingUntilTheCallbackArrives()
+  public async Task AStartedSignInHasNoSessionUntilTheCallbackArrives()
   {
     using var server = NewServer(60_002, out _);
     using var client = server.CreateClient();
@@ -43,8 +42,26 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     var state = await ReadStateAsync(response);
-    Assert.Equal("pending", state.State);
-    Assert.False(state.ClearFleetCache);
+    Assert.False(state.SignedIn);
+  }
+
+  // The browser refuses a session body whose property set is not exactly the one
+  // it accepts, and the two halves of this exchange are built and tested apart.
+  // Both read `session-response.contract.json`, so a property either side adds
+  // alone fails here rather than leaving every Commander unable to sign in
+  // (020/FR-001, 020/FR-003).
+  [Fact]
+  public async Task TheSessionAnswerCarriesExactlyThePropertiesTheBrowserAccepts()
+  {
+    using var server = NewServer(60_010, out _);
+    using var client = server.CreateClient();
+
+    using var anonymous = await client.GetAsync("api/session");
+    Assert.Equal(ContractProperties("anonymous"), await PropertiesOfAsync(anonymous));
+
+    await SignInAsync(client);
+    using var signedIn = await client.GetAsync("api/session");
+    Assert.Equal(ContractProperties("signedIn"), await PropertiesOfAsync(signedIn));
   }
 
   [Fact]
@@ -61,8 +78,7 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
     var body = await response.Content.ReadAsStringAsync();
     var state = await ReadStateAsync(response);
     Assert.True(state.SignedIn);
-    Assert.Equal("signed-in", state.State);
-    Assert.False(state.ClearFleetCache);
+    Assert.False(string.IsNullOrEmpty(state.AntiForgeryToken));
     Assert.DoesNotContain("access-token", body, StringComparison.Ordinal);
     Assert.DoesNotContain("refresh-token", body, StringComparison.Ordinal);
   }
@@ -115,7 +131,7 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
   }
 
   [Fact]
-  public async Task ARevokedSessionReportsExpiryAndClearsTheFleetCache()
+  public async Task ARevokedSessionIsRefusedAndItsRowIsRemoved()
   {
     using var server = NewServer(60_004, out _);
     using var client = server.CreateClient();
@@ -133,9 +149,7 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
     using var response = await replayClient.SendAsync(replay);
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    var state = await ReadStateAsync(response);
-    Assert.Equal("expired", state.State);
-    Assert.True(state.ClearFleetCache);
+    Assert.False((await ReadStateAsync(response)).SignedIn);
     await using var context = database.CreateContext();
     Assert.Empty(await context.Sessions.Where(item => item.CustomerId == 60_004).ToListAsync());
   }
@@ -159,9 +173,7 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
     using var response = await client.GetAsync("api/session");
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    var state = await ReadStateAsync(response);
-    Assert.Equal("expired", state.State);
-    Assert.True(state.ClearFleetCache);
+    Assert.False((await ReadStateAsync(response)).SignedIn);
     await using var context = database.CreateContext();
     Assert.Empty(await context.Sessions.Where(item => item.CustomerId == 60_005).ToListAsync());
   }
@@ -190,7 +202,7 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
     using var response = await client.GetAsync("api/session");
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    Assert.Equal("expired", (await ReadStateAsync(response)).State);
+    Assert.False((await ReadStateAsync(response)).SignedIn);
     await using var context = database.CreateContext();
     Assert.Empty(await context.Sessions.Where(item => item.CustomerId == 60_006).ToListAsync());
   }
@@ -314,18 +326,34 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
     using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
     return new SessionState(
       json.RootElement.GetProperty("signedIn").GetBoolean(),
-      json.RootElement.GetProperty("state").GetString()!,
-      json.RootElement.GetProperty("clearFleetCache").GetBoolean(),
       json.RootElement.TryGetProperty("antiForgeryToken", out var token) ? token.GetString() : null
     );
   }
 
+  private static async Task<IReadOnlyList<string>> PropertiesOfAsync(HttpResponseMessage response)
+  {
+    Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+    using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+    return [.. json.RootElement.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal)];
+  }
+
+  /// <summary>The property set the browser accepts for one of the two answers.</summary>
+  private static IReadOnlyList<string> ContractProperties(string answer)
+  {
+    using var contract = JsonDocument.Parse(
+      File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "session-response.contract.json"))
+    );
+    return
+    [
+      .. contract
+        .RootElement.GetProperty(answer)
+        .EnumerateArray()
+        .Select(property => property.GetString()!)
+        .Order(StringComparer.Ordinal),
+    ];
+  }
+
   private sealed record SignInResult(string ReturnAddress, string SessionCookie);
 
-  private sealed record SessionState(
-    bool SignedIn,
-    string State,
-    bool ClearFleetCache,
-    string? AntiForgeryToken
-  );
+  private sealed record SessionState(bool SignedIn, string? AntiForgeryToken);
 }

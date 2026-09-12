@@ -10,12 +10,6 @@ public static class AccountEndpoints
   public const string SignInRoute = "api/auth/frontier";
   public const string CallbackRoute = "api/auth/frontier/callback";
 
-  // The browser reads the state to decide what local Commander data it may keep.
-  public const string AnonymousState = "anonymous";
-  public const string PendingState = "pending";
-  public const string SignedInState = "signed-in";
-  public const string ExpiredState = "expired";
-
   public static IEndpointRouteBuilder MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
   {
     endpoints.MapPost(SignInRoute, StartSignInAsync);
@@ -91,6 +85,19 @@ public static class AccountEndpoints
     return ReturnToApplication(request, "signed-in");
   }
 
+  // Answers what this browser's session is, in the two property sets the
+  // browser accepts.
+  //
+  // Both sets are written down in `src/app/platform/network/session-response.contract.json`,
+  // which the browser's own parser reads and `SessionContractTests` asserts this
+  // answer against. The browser refuses a body whose property set is not exactly
+  // the one it accepts, so a property added here alone is a Commander who cannot
+  // sign in.
+  //
+  // A refusal says only that there is no session. The browser clears its account
+  // state and the fleet cache whenever it reads one, and it knows from the
+  // request it made whether that is an expiry or plain anonymity, so neither
+  // judgement is the server's to send (020/FR-003).
   private static async Task<IResult> ReadSessionAsync(
     CommanderSessionService sessions,
     IAntiforgery antiforgery,
@@ -104,18 +111,8 @@ public static class AccountEndpoints
     if (access is null)
     {
       CommanderCookies.DeleteSession(response);
-      var presentedSession = !string.IsNullOrWhiteSpace(secret);
       return Results.Json(
-        new
-        {
-          signedIn = false,
-          state = presentedSession
-            ? ExpiredState
-            : request.Cookies.ContainsKey(CommanderCookies.OAuthCorrelationName)
-              ? PendingState
-              : AnonymousState,
-          clearFleetCache = presentedSession,
-        },
+        new { signedIn = false },
         statusCode: StatusCodes.Status401Unauthorized
       );
     }
@@ -125,8 +122,6 @@ public static class AccountEndpoints
       new
       {
         signedIn = true,
-        state = SignedInState,
-        clearFleetCache = false,
         customerId = access.CustomerId.ToString(CultureInfo.InvariantCulture),
         commanderName = access.CommanderName,
         antiForgeryToken = tokens.RequestToken,

@@ -111,8 +111,7 @@ public sealed class CommanderAccountDeletionTests(PostgreSqlDatabaseFixture data
     using var replayed = await replayClient.SendAsync(replay);
     Assert.Equal(HttpStatusCode.Unauthorized, replayed.StatusCode);
     using var replayedJson = JsonDocument.Parse(await replayed.Content.ReadAsStringAsync());
-    Assert.Equal("expired", replayedJson.RootElement.GetProperty("state").GetString());
-    Assert.True(replayedJson.RootElement.GetProperty("clearFleetCache").GetBoolean());
+    Assert.False(replayedJson.RootElement.GetProperty("signedIn").GetBoolean());
 
     using var freshClient = server.CreateClient();
     await SignInAsync(freshClient);

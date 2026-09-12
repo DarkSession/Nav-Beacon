@@ -17,5 +17,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures/**/*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!--
+      The one file both ends of the session exchange read. The browser's parser
+      accepts the property set it names and SessionContractTests asserts the
+      server's answer against it, so a property one side adds alone fails a test
+      rather than leaving a Commander unable to sign in.
+    -->
+    <None
+      Include="../../../src/app/platform/network/session-response.contract.json"
+      Link="session-response.contract.json"
+      CopyToOutputDirectory="PreserveNewest"
+    />
   </ItemGroup>
 </Project>

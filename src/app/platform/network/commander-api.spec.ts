@@ -5,6 +5,7 @@ import type { LocalRecord } from '../../domain/records/local-record';
 import { toRemoteRecord } from '../../domain/records/remote-record.serializer';
 import { decodeAndMigrate } from '../../domain/ships/build/record-migrations';
 import { CommanderApi } from './commander-api';
+import SESSION_RESPONSE_CONTRACT from './session-response.contract.json';
 
 /**
  * Every address this client asks for, resolved against the deployment base.
@@ -194,6 +195,24 @@ describe('the Commander API client', () => {
   });
 
   describe('reading the session', () => {
+    /**
+     * The server writes this answer and this browser refuses any other property
+     * set, so both read `session-response.contract.json`. Reading the contract
+     * here is what keeps the fixture below from becoming this browser's own
+     * private idea of the answer: a property one side adds alone is a session
+     * this browser cannot read and a Commander who cannot sign in at all
+     * (020/FR-001, 020/FR-003).
+     */
+    it('accepts the contract’s property set and nothing beside it', async () => {
+      expect(Object.keys(SESSION).sort()).toEqual([...SESSION_RESPONSE_CONTRACT.signedIn].sort());
+
+      const { api, view } = client(ROOT);
+      view.answers = [json({ ...SESSION, state: 'signed-in' }), json(SESSION)];
+
+      await expect(api.readSession()).resolves.toEqual({ kind: 'unavailable' });
+      await expect(api.readSession()).resolves.toMatchObject({ kind: 'signed-in' });
+    });
+
     it('reads a signed-in session', async () => {
       const { api, view } = client(ROOT);
       view.answers = [json(SESSION)];
