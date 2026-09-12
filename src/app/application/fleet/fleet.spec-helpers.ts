@@ -119,6 +119,8 @@ export class FakeFleetApi implements CommanderApiPort {
   readonly refreshLocales: string[] = [];
   readCalls = 0;
   refreshCalls = 0;
+  /** How often the account has read the session through this service. */
+  sessionReads = 0;
   offline = false;
 
   callbackResult(): null {
@@ -130,6 +132,7 @@ export class FakeFleetApi implements CommanderApiPort {
   }
 
   async readSession(): Promise<CommanderSessionResult> {
+    this.sessionReads += 1;
     return this.session;
   }
 

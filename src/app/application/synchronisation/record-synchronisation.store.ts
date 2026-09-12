@@ -124,6 +124,8 @@ export class RecordSynchronisationStore {
   #oversized: string | null = null;
   /** Why a record this browser holds cannot be uploaded as it stands. */
   #blocked: SynchronisationFailure | null = null;
+  /** Whether this page has already asked the account to read a refused session. */
+  #sessionRead = false;
 
   readonly status = this.#status.asReadonly();
   readonly conflicts = this.#conflicts.asReadonly();
@@ -169,6 +171,7 @@ export class RecordSynchronisationStore {
     this.#renewedAt.clear();
     this.#oversized = null;
     this.#blocked = null;
+    this.#sessionRead = false;
     this.#status.set({ kind: 'inactive' });
   }
 
@@ -569,6 +572,7 @@ export class RecordSynchronisationStore {
     customerId: string,
     abandoned: readonly string[],
   ): Promise<void> {
+    this.#sessionRead = false;
     const completed = [...abandoned];
     const accepted: { readonly recordId: string; readonly revision: number }[] = [];
     const removed: string[] = [];
@@ -718,6 +722,7 @@ export class RecordSynchronisationStore {
     customerId: string,
   ): void {
     if (response.status === 401) {
+      this.#sessionRefused();
       this.#fail(customerId, { reason: 'signed-out' });
       return;
     }
@@ -919,6 +924,28 @@ export class RecordSynchronisationStore {
     return this.#state
       .read()
       .pendingOperations.filter((operation) => operation.customerId === customerId).length;
+  }
+
+  /**
+   * Asks the account to read a session the service has refused.
+   *
+   * The refusal says the session has ended, and this browser's account state
+   * is what still says otherwise. The read clears that state and the fleet
+   * cache, and leaves the planning records, the queue and the current work
+   * alone (020/FR-003). It is not waited for: this exchange already knows what
+   * it owes the Commander, which is the failure it states.
+   *
+   * Once, until the service accepts an exchange again. A session read
+   * publishes fresh credentials, the renewal watch runs again on them, and a
+   * service that refuses every exchange while still answering the session read
+   * would otherwise be asked for a session by every refusal it causes.
+   */
+  #sessionRefused(): void {
+    if (this.#sessionRead) {
+      return;
+    }
+    this.#sessionRead = true;
+    void this.#account.refreshSession();
   }
 
   #fail(customerId: string, failure: SynchronisationFailure): void {

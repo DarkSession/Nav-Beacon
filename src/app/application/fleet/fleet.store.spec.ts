@@ -296,6 +296,40 @@ describe('FleetStore', () => {
       expect(store.holding()?.ships.length).toBe(1);
     });
 
+    it('asks the account to read the session the service refused', async () => {
+      await signIn();
+      api.refreshes.push({ kind: 'refused', status: 401, code: 'unauthorised' });
+      // What the refusal says: the session has ended, which the account learns
+      // by reading it again.
+      api.session = { kind: 'anonymous' };
+
+      await store.refresh();
+      await settle();
+
+      // Account state and the fleet cache both go, and the planning records
+      // stay (020/FR-003).
+      expect(TestBed.inject(AccountStore).state()).toEqual({ kind: 'session-expired' });
+      expect(store.holding()).toBeNull();
+      expect(storedState()?.fleetCache).toEqual([]);
+    });
+
+    it('reads a refused session once while the service goes on refusing', async () => {
+      await signIn();
+      const before = api.sessionReads;
+      api.refreshes.push({ kind: 'refused', status: 401, code: 'unauthorised' });
+      api.refreshes.push({ kind: 'refused', status: 401, code: 'unauthorised' });
+
+      await store.refresh();
+      await settle();
+      await store.refresh();
+      await settle();
+
+      // A service that refuses every request while still answering the session
+      // read publishes fresh credentials on each read, and the watch that
+      // follows them asks for the fleet again.
+      expect(api.sessionReads - before).toBe(1);
+    });
+
     it('refuses to refresh at all while nobody is signed in', async () => {
       await store.refresh();
 

@@ -151,6 +151,8 @@ export class FleetStore {
   );
 
   #running: Promise<void> | null = null;
+  /** Whether this page has already asked the account to read a refused session. */
+  #sessionRead = false;
 
   constructor() {
     // The account arriving is what the fleet follows. A Commander who signs in
@@ -247,11 +249,12 @@ export class FleetStore {
       return;
     }
     if (response.kind === 'refused') {
-      this.#exchange.set(
-        response.code === 'unauthorised'
-          ? { kind: 'session-expired' }
-          : { kind: 'failed', failure: 'frontier-unavailable', refusal: null },
-      );
+      if (response.code === 'unauthorised') {
+        this.#exchange.set({ kind: 'session-expired' });
+        this.#sessionRefused();
+        return;
+      }
+      this.#exchange.set({ kind: 'failed', failure: 'frontier-unavailable', refusal: null });
       return;
     }
     this.#accept(response.answer, customerId);
@@ -266,6 +269,7 @@ export class FleetStore {
    */
   #accept(answer: FleetAnswer, customerId: string): void {
     const at = this.#clock.timestamp();
+    this.#sessionRead = false;
 
     if (isSettledFleetResult(answer.result)) {
       const cached: CachedFleet = {
@@ -306,6 +310,28 @@ export class FleetStore {
     }
   }
 
+  /**
+   * Asks the account to read a session the service has refused.
+   *
+   * The refusal says the session has ended, and this browser's account state
+   * is what still says otherwise. The read clears that state and the fleet
+   * cache, and leaves the planning records and the current work alone
+   * (020/FR-003). It is not waited for: what this exchange owes a Commander is
+   * the answer it already states.
+   *
+   * Once, until the service answers a fleet again. A service that refuses
+   * every fleet request while still answering the session read would otherwise
+   * have each refusal publish fresh credentials, and the watch that follows
+   * them would ask for the fleet again.
+   */
+  #sessionRefused(): void {
+    if (this.#sessionRead) {
+      return;
+    }
+    this.#sessionRead = true;
+    void this.#account.refreshSession();
+  }
+
   /** Shows the fleet this browser already has, where it has one. */
   #restore(customerId: string): void {
     const cached = this.#state.readFleet(customerId);
@@ -316,6 +342,7 @@ export class FleetStore {
 
   /** Forgets what this page was saying about a fleet that has no account. */
   #forget(): void {
+    this.#sessionRead = false;
     this.#holding.set(null);
     this.#confirmedAt.set(null);
     this.#exchange.set({ kind: 'idle' });

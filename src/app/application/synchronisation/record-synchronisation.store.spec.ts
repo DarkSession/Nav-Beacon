@@ -80,7 +80,11 @@ class FakeCommanderApi implements CommanderApiPort {
     return { kind: 'unavailable' };
   }
 
+  /** How often the account has read the session through this service. */
+  sessionReads = 0;
+
   async readSession(): Promise<CommanderSessionResult> {
+    this.sessionReads += 1;
     return this.session;
   }
 
@@ -618,6 +622,55 @@ describe('the record synchronisation store', () => {
 
       expect(store.status()).toMatchObject({ failure: { reason: 'signed-out' } });
       expect(commanderState().pendingOperations).toHaveLength(1);
+    });
+
+    it('asks the account to read the session the service refused', async () => {
+      seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      writeState({ account: ACCOUNT });
+      api.answers.push({
+        kind: 'refused',
+        status: 401,
+        code: 'unauthorised',
+        accountRevision: null,
+        results: [],
+      });
+
+      store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+      await store.synchronise(CREDENTIALS);
+      await settle();
+
+      // Account state and the fleet cache go; the record, the queue and the
+      // cursor stay where they are (020/FR-003).
+      expect(TestBed.inject(AccountStore).state()).toEqual({ kind: 'session-expired' });
+      expect(commanderState().account).toBeNull();
+      expect(commanderState().fleetCache).toEqual([]);
+      expect(commanderState().pendingOperations).toHaveLength(1);
+      expect(storedRecord(FIXTURE_IDS.named)).not.toBeNull();
+    });
+
+    it('reads the refused session once while the service goes on refusing', async () => {
+      seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
+      writeState({ account: ACCOUNT });
+      // The service refuses every exchange and still answers the session read.
+      api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
+      const refusal = {
+        kind: 'refused' as const,
+        status: 401,
+        code: 'unauthorised' as const,
+        accountRevision: null,
+        results: [],
+      };
+      api.answers.push(refusal, refusal);
+
+      store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+      await store.synchronise(CREDENTIALS);
+      await settle();
+      await store.synchronise(CREDENTIALS);
+      await settle();
+
+      // Each read publishes fresh credentials, and the renewal watch that
+      // follows them starts another exchange.
+      expect(api.sessionReads).toBe(1);
     });
 
     it('states a service failure and keeps every change pending', async () => {
