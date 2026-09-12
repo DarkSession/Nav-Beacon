@@ -231,7 +231,7 @@ describe('FleetStore', () => {
 
       // The session was never refused; it was never read. Saying it ended
       // would send a Commander to a sign-in that needs the same network
-      // (020/FR-004, 020/FR-022).
+      // (020/FR-022).
       expect(store.exchange()).toEqual({ kind: 'unavailable' });
       expect(store.holding()?.fromCache).toBe(true);
       expect(store.holding()?.ships.length).toBe(1);

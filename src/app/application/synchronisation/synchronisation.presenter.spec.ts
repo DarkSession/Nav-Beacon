@@ -168,6 +168,41 @@ describe('what the record libraries say about the account', () => {
     expect(view.retry).toBe(BUNDLED_ENGLISH['action.retry']);
   });
 
+  /**
+   * Three bounds are published, the service says which one it refused on, and
+   * each gets its own sentence. One sentence for all three would tell a
+   * Commander whose batch was too long that a record of theirs is too large,
+   * which is a statement about their own data that is not true (020/FR-026,
+   * constitution IV).
+   */
+  for (const [code, key] of [
+    ['record-too-large', 'sync.status.failed.bound.record'],
+    ['too-many-changes', 'sync.status.failed.bound.changes'],
+    ['request-too-large', 'sync.status.failed.bound.request'],
+  ] as const) {
+    it(`names the ${code} bound rather than whichever one is nearest`, async () => {
+      writeCommanderState(storage);
+      seedRecord();
+      const store = await signedIn();
+      api.answers.push({
+        kind: 'refused',
+        status: code === 'request-too-large' ? 413 : 400,
+        code,
+        accountRevision: null,
+        results: [],
+      });
+
+      store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
+      await store.refresh();
+      await settle();
+
+      const view = presenter().view();
+      expect(view.status.tone).toBe('error');
+      expect(view.status.message).toBe(BUNDLED_ENGLISH[key]);
+      expect(view.detail).toContain('1');
+    });
+  }
+
   it('asks the one question only a Commander can answer, by the record’s own name', async () => {
     writeCommanderState(storage, {
       recordBindings: { [FIXTURE_IDS.named]: CUSTOMER },

@@ -12,7 +12,7 @@ import { CommanderStateRepository } from '../../platform/storage/commander-state
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import type { StatusTone } from '../../ui/components/status/status-notice';
 import { AccountStore } from '../account/account.store';
-import type { SynchronisationFailure } from './record-synchronisation.store';
+import type { ExceededBound, SynchronisationFailure } from './record-synchronisation.store';
 import { RecordSynchronisationStore } from './record-synchronisation.store';
 
 /** One answer a Commander can give to a record conflict. */
@@ -280,6 +280,23 @@ export class SynchronisationPresenter {
   }
 }
 
+/**
+ * The sentence for each published bound, named by the bound the service refused
+ * on.
+ *
+ * Three bounds are published and the service says which one it stopped at, so
+ * one sentence for all three would tell a Commander whose batch was too long
+ * that a record of theirs is too large — a statement about their own data that
+ * is not true (020/FR-026, constitution IV). A table rather than a `switch`,
+ * because a fourth bound then fails to compile here rather than reaching a
+ * Commander as whichever sentence a `default` happened to hold.
+ */
+const BOUND_KEYS: Readonly<Record<ExceededBound, MessageKey>> = {
+  'record-too-large': 'sync.status.failed.bound.record',
+  'too-many-changes': 'sync.status.failed.bound.changes',
+  'request-too-large': 'sync.status.failed.bound.request',
+};
+
 /** Why one exchange did not leave this browser current, as a message key. */
 function failureKey(failure: SynchronisationFailure): MessageKey {
   switch (failure.reason) {
@@ -292,7 +309,7 @@ function failureKey(failure: SynchronisationFailure): MessageKey {
     case 'refused':
       return 'sync.status.failed.refused';
     case 'bound':
-      return 'sync.status.failed.bound';
+      return BOUND_KEYS[failure.bound];
     default:
       return 'sync.status.failed.service';
   }

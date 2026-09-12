@@ -1444,6 +1444,33 @@ describe('the record synchronisation store', () => {
       expect(commanderState().pendingOperations).toHaveLength(1);
     });
 
+    /**
+     * The other two bounds, which the service refuses before it reads a single
+     * change. They name no record, because none of them is the reason — the
+     * batch is. A Commander is told which bound stopped it either way
+     * (020/FR-026).
+     */
+    for (const bound of ['too-many-changes', 'request-too-large'] as const) {
+      it(`states the ${bound} bound, which names no record`, async () => {
+        api.answers.push({
+          kind: 'refused',
+          status: bound === 'request-too-large' ? 413 : 400,
+          code: bound,
+          accountRevision: null,
+          results: [],
+        });
+
+        store.queueUpload(FIXTURE_IDS.named, CREDENTIALS.customerId);
+        await store.synchronise(CREDENTIALS);
+
+        expect(store.status()).toMatchObject({
+          failure: { reason: 'bound', bound, recordId: null },
+          changes: 1,
+        });
+        expect(commanderState().pendingOperations).toHaveLength(1);
+      });
+    }
+
     it('stops offering a record the service will not read, and says why', async () => {
       api.answers.push({
         kind: 'refused',

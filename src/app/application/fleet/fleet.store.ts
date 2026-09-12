@@ -254,7 +254,7 @@ export class FleetStore {
       // Which of the two sign-ins is owed, said as the account states it: a
       // Frontier authorisation that expired is not the same thing as a session
       // that ended, and asking for the wrong one sends a Commander somewhere
-      // that cannot help (020/FR-004).
+      // that cannot help (020/FR-018).
       this.#exchange.set(
         this.authorisationExpired()
           ? { kind: 'authorisation-expired' }
@@ -357,7 +357,7 @@ export class FleetStore {
       case 'authorisation-expired':
         this.#exchange.set({ kind: 'authorisation-expired' });
         // The account is what a fresh sign-in is asked for from, and it is the
-        // one surface that can ask for one (020/FR-004).
+        // one surface that can ask for one (020/FR-018).
         this.#account.markAuthorisationExpired();
         return;
       default:

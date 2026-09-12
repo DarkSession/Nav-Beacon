@@ -55,7 +55,7 @@ export class AccountStore {
    *
    * The token stays here rather than being handed around: everything that
    * reaches the account's own API reads this, and it empties the moment the
-   * session does (020/FR-004).
+   * session does (020/FR-003, 020/FR-005).
    *
    * An expired Frontier authorisation is not an expired Nav Beacon session.
    * Frontier is the fleet's alone; the record exchange reaches this browser's
