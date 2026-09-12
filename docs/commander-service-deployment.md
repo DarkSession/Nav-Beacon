@@ -47,8 +47,8 @@ deployment's own secret store, never in a file in this repository.
 | `Deployment:RequireHttps`            | `true` in production; an instance refuses `false` there    |
 | `Kestrel:Limits:MaxRequestBodySize`  | The largest body an instance reads, in bytes               |
 | `PathBase`                           | The sub-path the origin serves the application under       |
-| `RecordValidation:ScriptPath`        | The record validator bundle, relative to the content root  |
-| `FleetProjection:ScriptPath`         | The fleet projection bundle, relative to the content root  |
+| `RecordValidation:ScriptPath`        | The validator bundle in record mode, from the content root |
+| `FleetProjection:ScriptPath`         | The same bundle in journal mode, from the content root     |
 
 A production instance reads these settings before it serves anything. If one is absent or unsafe it
 names every unfit setting and stops. A refusal names the setting and never its value.
@@ -57,8 +57,9 @@ The body limit stands above the 1 MiB synchronisation batch so a request just ov
 reaches the endpoint and receives the stated error code. It is between 1,048,576 and 4,194,304
 bytes.
 
-The two bundles are the output of `pnpm run server:validator`. Publish them beside the application
-and give the instance a Node runtime on its path.
+One bundle, `commander-validator.mjs`, is the output of `pnpm run server:validator`, and both script
+settings name it. Publish it beside the application and give the instance a Node runtime on its
+path.
 
 ## Applying migrations
 
