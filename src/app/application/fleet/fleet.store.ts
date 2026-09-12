@@ -132,6 +132,19 @@ export class FleetStore {
   readonly signedIn = computed(() => this.#account.credentials() !== null);
 
   /**
+   * Whose fleet this browser holds, whether or not it has a session.
+   *
+   * Read from the account state rather than from the credentials, because the
+   * two part company: an unreachable service leaves the cached account where
+   * it is and empties the credentials, and the fleet in browser storage is
+   * still that Commander's (020/FR-022).
+   */
+  readonly #knownCustomerId = computed(() => {
+    const state = this.#account.state();
+    return 'account' in state && state.account !== null ? state.account.customerId : null;
+  });
+
+  /**
    * Whether this browser still knows whose fleet this is.
    *
    * Not the same question as {@link signedIn}. An expired Frontier
@@ -140,10 +153,7 @@ export class FleetStore {
    * Commander — which is exactly the moment 020/FR-018 says the ships stay
    * readable. Only an account that has left this browser empties it.
    */
-  readonly accountKnown = computed(() => {
-    const state = this.#account.state();
-    return 'account' in state && state.account !== null;
-  });
+  readonly accountKnown = computed(() => this.#knownCustomerId() !== null);
 
   /** Whether Frontier authorisation is what a fresh sign-in is owed for. */
   readonly authorisationExpired = computed(
@@ -165,15 +175,25 @@ export class FleetStore {
     let signedOut = this.#account.signedOutRevision();
     effect(() => {
       const revision = this.#account.signedOutRevision();
-      const known = this.accountKnown();
-      if (revision !== signedOut || !known) {
+      const known = this.#knownCustomerId();
+      if (revision !== signedOut || known === null) {
         signedOut = revision;
         this.#forget();
         return;
       }
       if (this.#account.credentials() !== null) {
         void this.load();
+        return;
       }
+      // The account is known and there is no session to read it with, which is
+      // what a browser with no network looks like from its first turn: the
+      // session read could not reach this application's own service, so the
+      // cached account stands and the credentials are empty. The ships already
+      // accepted are read out of browser storage and shown, because a
+      // Commander offline reads the fleet they already have — there is no
+      // later moment to do it in, since nothing else asks again until a
+      // session appears (020/FR-022, constitution I).
+      this.#restore(known);
     });
   }
 
@@ -209,6 +229,14 @@ export class FleetStore {
   async refresh(): Promise<void> {
     const credentials = this.#account.credentials();
     if (credentials === null) {
+      if (this.#account.state().kind === 'offline') {
+        // Nothing refused this session; this browser could not reach the
+        // service to read it. Asking for a sign-in here would name a failure
+        // that has not happened and send a Commander to a page that needs the
+        // same network (020/FR-022).
+        this.#exchange.set({ kind: 'unavailable' });
+        return;
+      }
       // Which of the two sign-ins is owed, said as the account states it: a
       // Frontier authorisation that expired is not the same thing as a session
       // that ended, and asking for the wrong one sends a Commander somewhere

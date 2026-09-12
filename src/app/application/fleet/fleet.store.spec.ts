@@ -190,6 +190,61 @@ describe('FleetStore', () => {
     });
   });
 
+  /**
+   * The harder half of the same requirement: a browser that has no network
+   * from its first turn. The session read is the first thing a cold start
+   * makes, and it does not arrive either, so the account stays cached and
+   * there are no credentials to read a fleet with. The ships this browser
+   * already accepted must still be readable — there is no later moment to
+   * read them in, because nothing asks again until a session appears
+   * (020/FR-022, constitution I).
+   */
+  describe('starting with no network at all', () => {
+    async function startOffline(): Promise<void> {
+      api.offline = true;
+      api.session = { kind: 'unavailable' };
+      await TestBed.inject(AccountStore).refreshSession();
+      await settle();
+    }
+
+    it('reads the last accepted fleet out of this browser', async () => {
+      writeCachedFleet([ownedShipPayload(12), ownedShipPayload(4, 'SideWinder')]);
+
+      await startOffline();
+
+      expect(store.signedIn()).toBe(false);
+      expect(store.accountKnown()).toBe(true);
+      const holding = store.holding();
+      expect(holding?.ships.map((ship) => ship.shipId)).toEqual([4, 12]);
+      expect(holding?.acceptedAt).toBe('2026-09-10T08:00:00.000Z');
+      expect(holding?.fromCache).toBe(true);
+      // Nothing was asked of a service this browser cannot reach.
+      expect(api.readCalls).toBe(0);
+      expect(store.confirmedAt()).toBeNull();
+    });
+
+    it('states the missing network rather than a session that ended', async () => {
+      writeCachedFleet([ownedShipPayload(12)]);
+      await startOffline();
+
+      await store.refresh();
+
+      // The session was never refused; it was never read. Saying it ended
+      // would send a Commander to a sign-in that needs the same network
+      // (020/FR-004, 020/FR-022).
+      expect(store.exchange()).toEqual({ kind: 'unavailable' });
+      expect(store.holding()?.fromCache).toBe(true);
+      expect(store.holding()?.ships.length).toBe(1);
+    });
+
+    it('holds nothing for a browser that has no account cached', async () => {
+      await startOffline();
+
+      expect(store.accountKnown()).toBe(false);
+      expect(store.holding()).toBeNull();
+    });
+  });
+
   describe('what a refresh answered', () => {
     beforeEach(() => {
       writeCachedFleet([ownedShipPayload(12)]);
