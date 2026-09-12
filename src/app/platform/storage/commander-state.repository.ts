@@ -7,6 +7,7 @@ import {
   withRecordForgotten,
   withRecordLocalOnly,
   withFleetAccepted,
+  withAccountDeleted,
   withSynchronisationCommitted,
   type CachedCommanderAccount,
   type CommanderLocalState,
@@ -58,19 +59,19 @@ export class CommanderStateRepository {
     return this.#write({ ...this.read(), account: null, fleetCache: [] });
   }
 
-  prepareAccountDeletion(): CommanderStateWriteResult {
-    const current = this.read();
-    return this.#write({
-      ...current,
-      account: null,
-      fleetCache: [],
-      accountCursors: {},
-      pendingOperations: [],
-      recordBindings: Object.fromEntries(
-        Object.keys(current.recordBindings).map((recordId) => [recordId, 'local-only']),
-      ),
-      recordRevisions: {},
-    });
+  /**
+   * Takes one account out of this browser, in one write.
+   *
+   * The records this browser holds are named by the caller, because a binding
+   * is not the list of records: a record whose upload never completed has no
+   * binding at all, and it must still be marked local-only for the deletion to
+   * hold (020/FR-024).
+   */
+  prepareAccountDeletion(
+    customerId: string,
+    retainedRecordIds: readonly string[],
+  ): CommanderStateWriteResult {
+    return this.#write(withAccountDeleted(this.read(), customerId, retainedRecordIds));
   }
 
   /** The last accepted fleet for one Commander, readable with no network. */

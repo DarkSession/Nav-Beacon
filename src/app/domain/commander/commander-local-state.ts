@@ -231,6 +231,59 @@ export function withRecordLocalOnly(
 }
 
 /**
+ * Takes one account out of this browser, keeping every record it holds.
+ *
+ * The account being deleted is the only one that moves. Its cursor, its queued
+ * work and the revisions its records accepted go with it, and every retained
+ * record it could still claim — its own and the unbound ones — becomes
+ * local-only, so a later sign-in uploads none of them automatically
+ * (020/FR-024). A record this browser no longer holds leaves with the account
+ * rather than staying behind as a binding for nothing.
+ *
+ * Another Commander's records are not this deletion's to touch. Their
+ * bindings, their revisions, their cursor and their queued work all stay
+ * exactly as they are, because nothing ever takes a record out of `local-only`
+ * and severing them would be permanent (020/FR-024).
+ */
+export function withAccountDeleted(
+  state: CommanderLocalState,
+  customerId: string,
+  retainedRecordIds: readonly string[],
+): CommanderLocalState {
+  const retained = new Set(retainedRecordIds);
+  const bindings: Record<string, RecordAccountBinding> = {};
+  for (const [recordId, binding] of Object.entries(state.recordBindings)) {
+    if (binding !== customerId || retained.has(recordId)) {
+      bindings[recordId] = binding;
+    }
+  }
+  for (const recordId of retained) {
+    if (bindings[recordId] === undefined || bindings[recordId] === customerId) {
+      bindings[recordId] = 'local-only';
+    }
+  }
+
+  return {
+    ...state,
+    account: null,
+    fleetCache: [],
+    accountCursors: without(state.accountCursors, [customerId]),
+    pendingOperations: state.pendingOperations.filter(
+      (operation) => operation.customerId !== customerId,
+    ),
+    recordBindings: bindings,
+    // A revision names a remote copy, and the only remote copies this browser
+    // still knows of belong to another account.
+    recordRevisions: Object.fromEntries(
+      Object.entries(state.recordRevisions).filter(([recordId]) => {
+        const binding = bindings[recordId];
+        return binding !== undefined && binding !== 'local-only';
+      }),
+    ),
+  };
+}
+
+/**
  * Drops what this browser knows about one record's remote copy.
  *
  * A queued operation stays: a record deleted here leaves a pending delete that

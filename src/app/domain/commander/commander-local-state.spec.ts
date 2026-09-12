@@ -7,6 +7,8 @@ import {
   parseCommanderLocalState,
   recordBinding,
   remoteRevisionOf,
+  withAccountDeleted,
+  withFleetAccepted,
   withPendingOperation,
   withRecordBound,
   withRecordForgotten,
@@ -182,6 +184,74 @@ describe('what a record is bound to', () => {
     expect(recordBinding(deleted, 'record-1')).toBeNull();
     expect(remoteRevisionOf(deleted, 'record-1')).toBeNull();
     expect(deleted.pendingOperations).toEqual([operation({ kind: 'delete', baseRevision: 3 })]);
+  });
+});
+
+describe('an account leaving this browser', () => {
+  /** A browser holding one account's records, another's, and an unbound one. */
+  function shared(): CommanderLocalState {
+    return state({
+      account: { customerId: OWNER, commanderName: 'Hadley' },
+      fleetCache: [],
+      accountCursors: { [OWNER]: 12, [OTHER]: 4 },
+      pendingOperations: [
+        operation(),
+        operation({ id: 'operation-2', customerId: OTHER, recordId: 'record-3' }),
+      ],
+      recordBindings: { 'record-1': OWNER, 'record-3': OTHER },
+      recordRevisions: { 'record-1': 7, 'record-3': 2 },
+    });
+  }
+
+  it('marks every retained record it could still claim local-only', () => {
+    const deleted = withAccountDeleted(shared(), OWNER, ['record-1', 'record-2', 'record-3']);
+
+    // The bound one and the unbound one both go local-only, so the next
+    // account to sign in uploads neither (020/FR-024).
+    expect(recordBinding(deleted, 'record-1')).toBe('local-only');
+    expect(recordBinding(deleted, 'record-2')).toBe('local-only');
+    expect(canSynchroniseRecord(deleted, 'record-2', OTHER)).toBe(false);
+  });
+
+  it('leaves another Commander’s records, revisions, cursor and queue alone', () => {
+    const deleted = withAccountDeleted(shared(), OWNER, ['record-1', 'record-3']);
+
+    expect(recordBinding(deleted, 'record-3')).toBe(OTHER);
+    expect(remoteRevisionOf(deleted, 'record-3')).toBe(2);
+    expect(deleted.accountCursors).toEqual({ [OTHER]: 4 });
+    expect(deleted.pendingOperations).toEqual([
+      operation({ id: 'operation-2', customerId: OTHER, recordId: 'record-3' }),
+    ]);
+  });
+
+  it('lets a record this browser no longer holds leave with the account', () => {
+    const deleted = withAccountDeleted(shared(), OWNER, ['record-3']);
+
+    expect(recordBinding(deleted, 'record-1')).toBeNull();
+    expect(remoteRevisionOf(deleted, 'record-1')).toBeNull();
+  });
+
+  it('drops the revision of a record it marks local-only', () => {
+    const deleted = withAccountDeleted(shared(), OWNER, ['record-1']);
+
+    expect(remoteRevisionOf(deleted, 'record-1')).toBeNull();
+  });
+
+  it('leaves the browser anonymous with no fleet', () => {
+    const deleted = withAccountDeleted(
+      withFleetAccepted(shared(), {
+        customerId: OWNER,
+        acceptedAt: '2026-01-02T03:04:05.000Z',
+        result: 'current',
+        ships: [],
+        coverage: null,
+      }),
+      OWNER,
+      ['record-1'],
+    );
+
+    expect(deleted.account).toBeNull();
+    expect(deleted.fleetCache).toEqual([]);
   });
 });
 

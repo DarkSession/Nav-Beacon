@@ -167,7 +167,7 @@ describe('the account side of browser storage', () => {
     expect(state.pendingOperations).toEqual([upload()]);
   });
 
-  it('marks every retained record local-only before an account deletion', () => {
+  it('marks the deleted account’s retained records local-only, and no others', () => {
     const { repository } = setup();
     repository.storeAccount({ customerId: OWNER, commanderName: 'Hadley' });
     repository.bindRecord('record-1', OWNER);
@@ -181,14 +181,20 @@ describe('the account side of browser storage', () => {
       completedOperationIds: ['operation-1'],
     });
 
-    repository.prepareAccountDeletion();
+    repository.prepareAccountDeletion(OWNER, ['record-1', 'record-3']);
 
     const state = repository.read();
     expect(state.account).toBeNull();
     expect(state.accountCursors).toEqual({});
     expect(state.pendingOperations).toEqual([]);
     expect(state.recordRevisions).toEqual({});
-    expect(state.recordBindings).toEqual({ 'record-1': 'local-only', 'record-2': 'local-only' });
+    // The retained bound record and the retained unbound one both go
+    // local-only; the other Commander's record keeps its binding (020/FR-024).
+    expect(state.recordBindings).toEqual({
+      'record-1': 'local-only',
+      'record-2': OTHER,
+      'record-3': 'local-only',
+    });
   });
 
   it('reports a store that refuses the write', () => {

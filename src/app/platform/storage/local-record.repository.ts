@@ -78,6 +78,25 @@ export class LocalRecordRepository {
     return { ok: true, value: entries };
   }
 
+  /**
+   * The identity of every record this browser holds.
+   *
+   * Read from the keys alone. What asks for it — account deletion — needs to
+   * know which records are retained and nothing about their content, and
+   * decoding every one of them to answer that would read a Commander's whole
+   * library to count it (020/FR-024).
+   */
+  ids(): RepositoryResult<readonly string[]> {
+    const keys = this.#storage.keys(EDNB_RECORD_KEY_PREFIX);
+    if (!keys.ok) {
+      return keys;
+    }
+    const ids = keys.value
+      .map((key) => recordIdFromKey(key))
+      .filter((id): id is string => id !== null);
+    return { ok: true, value: ids };
+  }
+
   /** One record by identity, decoded and migrated as far as it can be. */
   read(id: string): RepositoryResult<StoredRecordEntry> {
     const raw = this.#storage.read(recordKey(id));

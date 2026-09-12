@@ -145,6 +145,20 @@ describe('LocalRecordRepository', () => {
 
     expect(repository.list()).toEqual({ ok: false, code: 'blocked' });
     expect(repository.available()).toBe(false);
+    expect(repository.ids()).toEqual({ ok: false, code: 'blocked' });
+  });
+
+  it('names the records it holds without opening one of them', () => {
+    const { repository, storage } = setup();
+    repository.write(draft('r1'));
+    storage.setItem(recordKey('r2'), 'not a record at all');
+    storage.setItem('other:key', 'not ours');
+
+    const ids = repository.ids();
+
+    // The unreadable record is held too, and a key this application did not
+    // write is not one of ours (persistence contract, “Ownership and key space”).
+    expect(ids.ok && [...ids.value].sort()).toEqual(['r1', 'r2']);
   });
 
   it('answers a missing record with nothing, not with a guess', () => {
