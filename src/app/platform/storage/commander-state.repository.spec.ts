@@ -153,6 +153,32 @@ describe('the account side of browser storage', () => {
     expect(repository.read().recordBindings).toEqual({});
   });
 
+  it('takes only the ending session’s fleet out of the cache', () => {
+    const { repository } = setup();
+    repository.storeFleet({
+      customerId: OTHER,
+      acceptedAt: '2026-01-02T03:04:05.000Z',
+      result: 'current',
+      ships: [],
+      coverage: null,
+    });
+    repository.storeAccount({ customerId: OWNER, commanderName: 'Hadley' });
+    repository.storeFleet({
+      customerId: OWNER,
+      acceptedAt: '2026-01-02T03:04:05.000Z',
+      result: 'current',
+      ships: [],
+      coverage: null,
+    });
+
+    repository.clearSession();
+
+    // The cache is keyed by Customer ID so that two Commanders sharing a
+    // browser never read each other's ships. One signing out does not take the
+    // other's last accepted fleet with it (020/FR-022).
+    expect(repository.read().fleetCache.map((entry) => entry.customerId)).toEqual([OTHER]);
+  });
+
   it('ends a session without discarding the account’s records, cursor or queue', () => {
     const { repository } = setup();
     repository.storeAccount({ customerId: OWNER, commanderName: 'Hadley' });

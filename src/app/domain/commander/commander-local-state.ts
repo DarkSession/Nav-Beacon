@@ -266,7 +266,10 @@ export function withAccountDeleted(
   return {
     ...state,
     account: null,
-    fleetCache: [],
+    // This account's entry alone: the cache is keyed by Customer ID so that
+    // two Commanders sharing a browser never read each other's ships, and the
+    // one being deleted is the only one leaving (020/FR-022, 020/FR-024).
+    fleetCache: state.fleetCache.filter((entry) => entry.customerId !== customerId),
     accountCursors: without(state.accountCursors, [customerId]),
     pendingOperations: state.pendingOperations.filter(
       (operation) => operation.customerId !== customerId,

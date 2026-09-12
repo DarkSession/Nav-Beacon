@@ -56,7 +56,21 @@ export class CommanderStateRepository {
   clearSession(): CommanderStateWriteResult {
     // The session ends; the account's records, cursor and queued work stay, so
     // the same Commander signing in again carries on where they stopped.
-    return this.#write({ ...this.read(), account: null, fleetCache: [] });
+    //
+    // The fleet cache loses this account's entry and no other. It is keyed by
+    // Customer ID precisely so that two Commanders sharing a browser never
+    // read each other's ships, and emptying it whole would take the other
+    // Commander's last accepted fleet out with it (020/FR-022).
+    const state = this.read();
+    const customerId = state.account?.customerId ?? null;
+    return this.#write({
+      ...state,
+      account: null,
+      fleetCache:
+        customerId === null
+          ? state.fleetCache
+          : state.fleetCache.filter((entry) => entry.customerId !== customerId),
+    });
   }
 
   /**

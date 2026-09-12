@@ -237,8 +237,8 @@ describe('an account leaving this browser', () => {
     expect(remoteRevisionOf(deleted, 'record-1')).toBeNull();
   });
 
-  it('leaves the browser anonymous with no fleet', () => {
-    const deleted = withAccountDeleted(
+  it('leaves the browser anonymous with no fleet of its own', () => {
+    const cached = withFleetAccepted(
       withFleetAccepted(shared(), {
         customerId: OWNER,
         acceptedAt: '2026-01-02T03:04:05.000Z',
@@ -246,12 +246,23 @@ describe('an account leaving this browser', () => {
         ships: [],
         coverage: null,
       }),
-      OWNER,
-      ['record-1'],
+      {
+        customerId: OTHER,
+        acceptedAt: '2026-01-02T03:04:05.000Z',
+        result: 'current',
+        ships: [],
+        coverage: null,
+      },
     );
 
+    const deleted = withAccountDeleted(cached, OWNER, ['record-1']);
+
     expect(deleted.account).toBeNull();
-    expect(deleted.fleetCache).toEqual([]);
+    // The cache is keyed by Customer ID so that two Commanders sharing a
+    // browser never read each other's ships. The account being deleted is the
+    // only one leaving, and the other's last accepted fleet stays readable
+    // with no network (020/FR-022, 020/FR-024).
+    expect(deleted.fleetCache.map((entry) => entry.customerId)).toEqual([OTHER]);
   });
 });
 
