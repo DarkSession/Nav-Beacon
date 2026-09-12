@@ -333,16 +333,35 @@ export class FleetPresenter {
     return null;
   }
 
-  /** What journal history this fleet was read from. */
+  /**
+   * What journal history this fleet was read from.
+   *
+   * The cursor names the next unread date and line, so it is not the end of
+   * what was read: at line zero nothing of its date has been opened, and at a
+   * later line only the lines before it have. Reading the cursor date as an
+   * inclusive end would claim days nobody read — the very overstatement the
+   * projection refuses to make in its own bookkeeping (020/FR-013,
+   * constitution IV).
+   */
   #coverageOf(holding: FleetHolding | null): string | null {
     const coverage = holding?.coverage;
     if (coverage === null || coverage === undefined) {
       return null;
     }
-    return this.#messages.message('fleet.coverage', {
-      from: this.#day(coverage.startDate),
-      to: this.#day(coverage.cursorDate),
-    });
+    const part = coverage.cursorLine > 0 ? this.#day(coverage.cursorDate) : null;
+    const lastComplete = this.#dayBefore(coverage.cursorDate);
+    if (lastComplete === null || lastComplete < coverage.startDate) {
+      // No day has been read end to end: either the cursor still stands where
+      // coverage begins, or it has moved into that first day without leaving it.
+      return part === null
+        ? this.#messages.message('fleet.coverage.none')
+        : this.#messages.message('fleet.coverage.started', { day: part });
+    }
+    const from = this.#day(coverage.startDate);
+    const to = this.#day(lastComplete);
+    return part === null
+      ? this.#messages.message('fleet.coverage', { from, to })
+      : this.#messages.message('fleet.coverage.partial', { from, to, day: part });
   }
 
   /**
@@ -476,6 +495,16 @@ export class FleetPresenter {
   #day(value: string): string {
     const parsed = new Date(`${value}T00:00:00.000Z`);
     return Number.isNaN(parsed.getTime()) ? value : this.#formatters.date(parsed);
+  }
+
+  /** The UTC date before this one, or `null` where the date does not read. */
+  #dayBefore(value: string): string | null {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+    parsed.setUTCDate(parsed.getUTCDate() - 1);
+    return parsed.toISOString().slice(0, 10);
   }
 
   #instant(value: string): string {

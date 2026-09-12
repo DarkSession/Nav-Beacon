@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import englishMessages from '../src/app/i18n/locales/en.json';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import {
   COMMANDER_STATE_KEY,
@@ -138,5 +139,34 @@ test.describe('the ships a Commander owns', () => {
     // The fleet entry is untouched, and still there to be copied again.
     expect(await storedFleet(page)).toBe(fleetBefore);
     await showTheShip(page);
+  });
+
+  test('offers no way to write to an owned ship, chosen or not', async ({ page }) => {
+    await stubAccount(page);
+    await openLibrary(page);
+    await showTheShip(page);
+
+    // The footer that opens, renames and deletes belongs to the stored records
+    // and is not rendered over the fleet at all, so there is no button here to
+    // be disabled or ignored (020/FR-017).
+    await expect(page.locator('.library__footer')).toHaveCount(0);
+    await expect(
+      library(page).getByRole('button', { name: englishMessages['library.action.delete'] }),
+    ).toHaveCount(0);
+    await expect(
+      library(page).getByRole('button', { name: englishMessages['library.action.open'] }),
+    ).toHaveCount(0);
+
+    // Choosing a ship adds the one action the fleet does carry, and it copies.
+    await library(page).getByRole('button', { name: SHIP_NAME }).click();
+    await expect(page.locator('.library__footer')).toHaveCount(0);
+    await expect(library(page).locator('.fleet__action')).toHaveText([
+      englishMessages['fleet.refresh'],
+      englishMessages['fleet.copy'],
+    ]);
+
+    // And the ship's own row is a choice, not a text field: nothing in the view
+    // takes an edit to what the account owns.
+    await expect(library(page).getByRole('textbox')).toHaveCount(0);
   });
 });

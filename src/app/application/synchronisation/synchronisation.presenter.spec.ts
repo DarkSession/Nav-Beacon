@@ -4,7 +4,13 @@ import {
   NAMED_RECORD_V1,
   WORKING_RECORD_V1,
 } from '../../domain/records/fixtures/records';
-import type { SynchronisationResponse } from '../../domain/records/record-synchronisation';
+import type { LocalRecord } from '../../domain/records/local-record';
+import type {
+  ChangeResult,
+  SynchronisationResponse,
+} from '../../domain/records/record-synchronisation';
+import { toRemoteRecord } from '../../domain/records/remote-record.serializer';
+import { decodeAndMigrate } from '../../domain/ships/build/record-migrations';
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
 import { provideIsolatedLocaleEnvironment } from '../../i18n/testing/localization-harness';
@@ -30,8 +36,31 @@ import {
   writeCommanderState,
 } from './synchronisation.spec-helpers';
 
-/** One refusal that names a record both sides changed. */
+/** One refusal that names a record the account no longer holds. */
+function deletionConflict(): SynchronisationResponse {
+  return conflictRefusal({ kind: 'deleted' });
+}
+
+/**
+ * One refusal that names a record both sides changed.
+ *
+ * The account's copy comes back with the refusal, which is what makes this a
+ * stale write rather than a deletion: there are two versions to choose between
+ * (020/FR-010).
+ */
 function staleConflict(): SynchronisationResponse {
+  const account = toRemoteRecord(decoded(NAMED_RECORD_V1, FIXTURE_IDS.named));
+  return conflictRefusal({
+    kind: 'record',
+    record:
+      account.tool === 'ship'
+        ? { ...account, build: { ...account.build, shipName: 'The account\u2019s version' } }
+        : account,
+  });
+}
+
+/** The refusal both conflicts arrive in, differing only in what the account holds. */
+function conflictRefusal(remote: ChangeResult['remote']): SynchronisationResponse {
   return {
     kind: 'refused',
     status: 409,
@@ -43,11 +72,20 @@ function staleConflict(): SynchronisationResponse {
         outcome: 'conflict',
         id: FIXTURE_IDS.named,
         revision: 9,
-        remote: { kind: 'deleted' },
+        remote,
         code: null,
       },
     ],
   };
+}
+
+/** One fixture, decoded, so a remote copy of it can be built. */
+function decoded(bytes: string, id: string): LocalRecord {
+  const result = decodeAndMigrate(JSON.parse(bytes), id);
+  if (!result.ok) {
+    throw new Error('The fixture did not decode.');
+  }
+  return result.record;
 }
 
 /**
@@ -262,7 +300,7 @@ describe('what the record libraries say about the account', () => {
     });
     seedRecord();
     const store = await signedIn();
-    api.answers.push(staleConflict());
+    api.answers.push(deletionConflict());
 
     store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
     await store.refresh();
@@ -284,6 +322,35 @@ describe('what the record libraries say about the account', () => {
       BUNDLED_ENGLISH['sync.conflict.cancel'],
     ]);
     expect(view.status.message).toContain('needs your answer');
+  });
+
+  it('asks a different question where both sides still hold a version', async () => {
+    writeCommanderState(storage, {
+      recordBindings: { [FIXTURE_IDS.named]: CUSTOMER },
+      recordRevisions: { [FIXTURE_IDS.named]: 4 },
+    });
+    seedRecord();
+    const store = await signedIn();
+    api.answers.push(staleConflict());
+
+    store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
+    await store.refresh();
+    await settle();
+
+    // Two versions exist, so the question is which one the account keeps —
+    // not what happens to a record the account has already let go. Saying the
+    // deletion sentence here would describe a loss that did not happen
+    // (020/FR-010, constitution IV).
+    const view = presenter().view();
+    expect(view.conflict).not.toBeNull();
+    expect(view.conflict!.title).toBe(BUNDLED_ENGLISH['sync.conflict.stale.title']);
+    expect(view.conflict!.description).toBe(BUNDLED_ENGLISH['sync.conflict.stale.description']);
+    expect(view.conflict!.recordLabel).toContain('Anaconda explorer');
+    expect(view.conflict!.answers.map((answer) => answer.choice)).toEqual([
+      'overwrite',
+      'keep-both',
+      'cancel',
+    ]);
   });
 
   it('states the records it keeps for nobody and the ones it keeps for another account', async () => {

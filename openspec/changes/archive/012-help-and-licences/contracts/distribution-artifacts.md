@@ -48,7 +48,7 @@ count/hash with a fresh source extraction.
 The audited application constant is exactly:
 
 ```text
-https://github.com/DarkSession/Nav-Beacon/blob/main/LICENSE
+https://github.com/DarkSession/Elite-Dangerous-Ship-Builder/blob/main/LICENSE
 ```
 
 It must parse as HTTPS with host `github.com`, the expected repository/ref/path, and no credentials,
@@ -61,7 +61,7 @@ as terms it is not.
 
 ```text
 https://github.com/DarkSession/Elite-Dangerous-Almanac/blob/main/LICENSE
-https://github.com/DarkSession/Nav-Beacon
+https://github.com/DarkSession/Elite-Dangerous-Ship-Builder
 ```
 
 No issue-tracker destination is emitted. FR-009 is withdrawn, so the installed package's `bugs.url`
@@ -257,7 +257,7 @@ There is no runtime missing/loading/error fallback for these failures.
 > they read is recorded here.
 
 The licence destination this contract states as
-`https://github.com/DarkSession/Nav-Beacon/blob/main/LICENSE` is
+`https://github.com/DarkSession/Elite-Dangerous-Ship-Builder/blob/main/LICENSE` is
 `https://github.com/DarkSession/Nav-Beacon/blob/main/LICENSE`, and the source destination under it
 is `https://github.com/DarkSession/Nav-Beacon`. Everything the audit decides — HTTPS, the host, the
 exact path, no credentials, port, query or fragment, and the purpose each destination is tagged

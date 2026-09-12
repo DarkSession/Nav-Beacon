@@ -138,9 +138,66 @@ describe('FleetPresenter', () => {
     const view = presenter.view();
     expect(view.state).toBe('current');
     expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.current']);
-    expect(view.coverage).not.toBeNull();
+    // The cursor stands at 2026-09-02 line 7, so every day up to Sep 1, 2026 was
+    // read end to end and Sep 2, 2026 was only entered. Naming Sep 2, 2026 as
+    // the end would claim a day that is still half unread (020/FR-013).
+    expect(view.coverage).toBe(
+      interpolate(BUNDLED_ENGLISH['fleet.coverage.partial'], {
+        from: 'Aug 18, 2026',
+        to: 'Sep 1, 2026',
+        day: 'Sep 2, 2026',
+      }),
+    );
     expect(view.ships.map((ship) => ship.id)).toEqual(['12']);
     expect(view.emptyLabel).toBeNull();
+  });
+
+  /**
+   * What the coverage sentence may claim.
+   *
+   * The stored cursor is the next unread date and line, never the last read one
+   * (020/FR-013). Each case below is a cursor a refresh really leaves behind,
+   * and the sentence it earns states only the journal that was actually read —
+   * a day entered is not a day read (constitution IV).
+   */
+  it.each([
+    [
+      'a cursor resting on a later day at line zero',
+      { startDate: '2026-08-18', cursorDate: '2026-09-02', cursorLine: 0 },
+      interpolate(BUNDLED_ENGLISH['fleet.coverage'], {
+        from: 'Aug 18, 2026',
+        to: 'Sep 1, 2026',
+      }),
+    ],
+    [
+      'a cursor that has not moved off the first day',
+      { startDate: '2026-08-18', cursorDate: '2026-08-18', cursorLine: 0 },
+      BUNDLED_ENGLISH['fleet.coverage.none'],
+    ],
+    [
+      'a cursor part-way into the first day',
+      { startDate: '2026-08-18', cursorDate: '2026-08-18', cursorLine: 4 },
+      interpolate(BUNDLED_ENGLISH['fleet.coverage.started'], { day: 'Aug 18, 2026' }),
+    ],
+    [
+      'a cursor one day on, at line zero',
+      { startDate: '2026-08-18', cursorDate: '2026-08-19', cursorLine: 0 },
+      interpolate(BUNDLED_ENGLISH['fleet.coverage'], {
+        from: 'Aug 18, 2026',
+        to: 'Aug 18, 2026',
+      }),
+    ],
+  ])('reads %s as the journal actually read', async (_case, cursor, expected) => {
+    writeState();
+    api.reads.push(
+      answeredFleet({
+        ships: [ownedShipPayload(12)],
+        coverage: coverage(cursor) as never,
+      }),
+    );
+    await signIn();
+
+    expect(presenter.view().coverage).toBe(expected);
   });
 
   it('says a fleet read out of this browser is the last one accepted, not a current one', async () => {
