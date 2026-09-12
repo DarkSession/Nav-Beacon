@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
+import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
+import { BUNDLED_ENGLISH, interpolate } from '../../i18n/locale-registry';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { COMMANDER_API } from '../../platform/network/commander-api';
 import { EDNB_COMMANDER_STATE_KEY } from '../../platform/storage/storage-keys';
@@ -12,6 +13,7 @@ import {
   FakeFleetApi,
   answeredFleet,
   coverage,
+  modelOf,
   ownedShipPayload,
 } from './fleet.spec-helpers';
 import { FleetPresenter } from './fleet.presenter';
@@ -28,6 +30,38 @@ class FixedClock {
   timestamp(): string {
     return this.instant.toISOString();
   }
+}
+
+/**
+ * One payload the package rebuilds and then refuses in its own words.
+ *
+ * The laser belongs in no utility mount, and the package leaves it where the
+ * journal put it with a diagnostic against it, so the refusal carries package
+ * text rather than a finding of this application's.
+ */
+function misfittedPayload(shipId: number): Record<string, unknown> {
+  const anaconda = ShipLoadout.default('Anaconda');
+  const model = modelOf(anaconda);
+
+  return {
+    shipId,
+    sourceDate: '2026-09-01',
+    sourceLine: shipId,
+    model: {
+      ...model,
+      modules: [
+        ...model.modules,
+        {
+          slot: anaconda.slots('utility')[0]!.key,
+          symbol: 'Hpt_PulseLaser_Fixed_Large',
+          enabled: null,
+          priority: null,
+          preEngineered: null,
+          engineering: null,
+        },
+      ],
+    },
+  };
 }
 
 /** Lets every exchange already in flight finish before the next assertion. */
@@ -336,6 +370,33 @@ describe('FleetPresenter', () => {
     expect(view.ships.length).toBe(1);
     expect(view.unresolved.length).toBe(1);
     expect(view.unresolved[0].id).toBe('refused-19');
+  });
+
+  it('states a ship the package would not rebuild through the catalogue', async () => {
+    writeState();
+    api.reads.push(
+      answeredFleet({ ships: [{ shipId: 19, sourceDate: '2026-09-01', sourceLine: 2 }] }),
+    );
+    await signIn();
+
+    const view = presenter.view();
+    expect(store.holding()?.refused[0].reason).toBeNull();
+    expect(view.unresolved[0].message).toBe(BUNDLED_ENGLISH['fleet.unresolved.malformed']);
+    // The whole sentence is one catalogue entry, so nothing written outside the
+    // localisation layer is spliced into it (020/FR-016).
+    expect(Object.values(BUNDLED_ENGLISH)).toContain(view.unresolved[0].message);
+  });
+
+  it('shows the package words where the package published them', async () => {
+    writeState();
+    api.reads.push(answeredFleet({ ships: [misfittedPayload(19)] }));
+    await signIn();
+
+    const stated = store.holding()?.refused[0].reason ?? '';
+    expect(stated.length).toBeGreaterThan(0);
+    expect(presenter.view().unresolved[0].message).toBe(
+      interpolate(BUNDLED_ENGLISH['fleet.unresolved.stated'], { reason: stated }),
+    );
   });
 
   describe('the ship a Commander chose', () => {

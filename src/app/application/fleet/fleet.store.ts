@@ -36,8 +36,11 @@ export interface RefusedOwnedShip {
   /** Frontier's own identity, where the payload carried a readable one. */
   readonly shipId: number | null;
   readonly failure: OwnedShipMappingFailure;
-  /** The package's own words. Never a translation and never invented. */
-  readonly reason: string;
+  /**
+   * The package's own words, where the mapping can show the package spoke them,
+   * and `null` everywhere else. Never a translation and never invented.
+   */
+  readonly reason: string | null;
 }
 
 /** The last accepted owned fleet, as this browser holds it. */
@@ -411,8 +414,8 @@ export class FleetStore {
  * One cached fleet, rebuilt through the package.
  *
  * Every payload goes through `mapOwnedShip`, which is the one path from a
- * stored model to a build. A payload it refuses is listed with the package's
- * own reason rather than dropped or replaced (020/FR-015, 020/FR-016).
+ * stored model to a build. A payload it refuses is listed with the failure it
+ * answered rather than dropped or replaced (020/FR-015, 020/FR-016).
  */
 function holdingOf(cached: CachedFleet, pending: boolean, fromCache: boolean): FleetHolding {
   const ships: OwnedShip[] = [];

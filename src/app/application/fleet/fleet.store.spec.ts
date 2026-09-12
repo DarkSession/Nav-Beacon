@@ -441,8 +441,11 @@ describe('FleetStore', () => {
     const holding = store.holding();
     expect(holding?.ships.map((ship) => ship.shipId)).toEqual([12, 13]);
     expect(holding?.refused.map((refusal) => refusal.shipId)).toEqual([14]);
-    // The package's own words, never a translation and never a replacement.
-    expect(holding?.refused[0].reason.length).toBeGreaterThan(0);
+    // The failure the package answered, under its own name. There is no reason
+    // beside it: no package words reached this refusal, and this application
+    // does not write one in their place.
+    expect(holding?.refused[0].failure).toBe('unknown-hull');
+    expect(holding?.refused[0].reason).toBeNull();
   });
 
   /**

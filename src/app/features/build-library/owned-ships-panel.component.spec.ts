@@ -161,7 +161,7 @@ const STATES: readonly { readonly name: OwnedShipsState; readonly view: OwnedShi
       unresolved: [
         {
           id: 'refused-19',
-          message: fill(BUNDLED_ENGLISH['fleet.unresolved'], {
+          message: fill(BUNDLED_ENGLISH['fleet.unresolved.stated'], {
             reason: 'Unknown module symbol Int_Powerplant_Size9_Class6.',
           }),
         },

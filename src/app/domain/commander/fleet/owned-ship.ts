@@ -121,8 +121,12 @@ export type OwnedShipMappingResult =
   | {
       readonly ok: false;
       readonly failure: OwnedShipMappingFailure;
-      /** The package's own words where the package spoke. Never a translation. */
-      readonly reason: string;
+      /**
+       * The package's own words, where this application can show that the
+       * package spoke them, and `null` everywhere else. Never a translation and
+       * never a sentence written here (020/FR-016).
+       */
+      readonly reason: string | null;
       /** The package's structured diagnostics, verbatim, where it published any. */
       readonly issues: readonly LoadoutIssue[];
     };
@@ -171,14 +175,19 @@ export function mapOwnedShip(value: unknown): OwnedShipMappingResult {
     return payload;
   }
 
+  // The snapshot parser and the reconstructor each state a reason, and neither
+  // reason can be shown to be the package's: some of those words come from the
+  // package and some are written in this repository. The failure code is the
+  // answer they are read for, and the words are dropped rather than carried as
+  // the package's (020/FR-016).
   const parsed = parseBuildSnapshotV1(payload.snapshot);
   if (!parsed.ok) {
-    return refusal('malformed', parsed.reason);
+    return refusal('malformed');
   }
 
   const rebuilt = reconstructFromSnapshot(parsed.snapshot);
   if (!rebuilt.ok) {
-    return refusal(rebuilt.failure, rebuilt.reason);
+    return refusal(rebuilt.failure);
   }
 
   const refused = refusedFit(parsed.snapshot, rebuilt.loadout);
@@ -210,18 +219,18 @@ type PayloadResult =
 
 function parsePayload(value: unknown): PayloadResult {
   if (!isRecord(value) || !hasExactKeys(value, PAYLOAD_KEYS)) {
-    return refusal('malformed', 'The owned ship has an unknown or missing field.');
+    return refusal('malformed');
   }
   if (!isIndex(value['shipId'])) {
-    return refusal('malformed', 'The owned ship carries no Frontier ship identity.');
+    return refusal('malformed');
   }
   if (!isJournalDate(value['sourceDate']) || !isIndex(value['sourceLine'])) {
-    return refusal('malformed', 'The owned ship carries no journal date and line.');
+    return refusal('malformed');
   }
 
   const model = value['model'];
   if (!isRecord(model) || !hasExactKeys(model, MODEL_KEYS) || !Array.isArray(model['modules'])) {
-    return refusal('malformed', 'The owned-ship model has an unknown or missing field.');
+    return refusal('malformed');
   }
 
   const modules: unknown[] = [];
@@ -232,7 +241,7 @@ function parsePayload(value: unknown): PayloadResult {
       !isExactNullableObject(entry['preEngineered'], PRE_ENGINEERED_KEYS) ||
       !isExactNullableObject(entry['engineering'], ENGINEERING_KEYS)
     ) {
-      return refusal('malformed', 'An owned module has an unknown or missing field.');
+      return refusal('malformed');
     }
     modules.push(snapshotModule(entry));
   }
@@ -275,7 +284,7 @@ function snapshotModule(module: Record<string, unknown>): unknown {
 }
 
 /**
- * What the package said about a model it did not fit as stated, or `null`.
+ * Why a model the package did not fit as stated is refused, or `null`.
  *
  * The package answers an unusable mount with the hull default, and leaves a
  * module that belongs nowhere sitting in the slot it was given with a
@@ -295,24 +304,19 @@ function refusedFit(
   loadout: ShipLoadout,
 ): {
   readonly failure: OwnedShipMappingFailure;
-  readonly reason: string;
+  readonly reason: string | null;
   readonly issues: readonly LoadoutIssue[];
 } | null {
   const issues = unfitIssues(loadout);
   const substituted = substitutedModule(snapshot, loadout);
 
   if (substituted !== null) {
+    // A substitution is this application's own finding: the package fitted a
+    // build and said nothing about it. The failure names which finding it is,
+    // and there is no reason, because there are no package words to carry.
     return getModuleBySymbol(substituted.symbol) === null
-      ? {
-          failure: 'unknown-identity',
-          reason: `This installation carries no module "${substituted.symbol}".`,
-          issues,
-        }
-      : {
-          failure: 'unsupported-combination',
-          reason: `The package did not fit "${substituted.symbol}" in slot "${substituted.slot}".`,
-          issues,
-        };
+      ? { failure: 'unknown-identity', reason: null, issues }
+      : { failure: 'unsupported-combination', reason: null, issues };
   }
 
   const stated = issues[0];
@@ -323,7 +327,7 @@ function refusedFit(
 
 function refusal(
   failure: OwnedShipMappingFailure,
-  reason: string,
+  reason: string | null = null,
   issues: readonly LoadoutIssue[] = [],
 ): Extract<OwnedShipMappingResult, { readonly ok: false }> {
   return { ok: false, failure, reason, issues };

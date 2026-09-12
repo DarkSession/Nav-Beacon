@@ -159,7 +159,7 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unknown-hull' });
-    expect(result.ok === false && result.reason).toContain('Nonexistent_Hull');
+    expect(result.ok === false && result.reason).toBeNull();
   });
 
   it('refuses a module symbol the installed package does not carry', () => {
@@ -170,7 +170,7 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unknown-identity' });
-    expect(result.ok === false && result.reason).toContain('Int_Hyperdrive_Invented');
+    expect(result.ok === false && result.reason).toBeNull();
   });
 
   it('refuses a slot key the hull does not have, and carries the package diagnostic', () => {
@@ -184,7 +184,9 @@ describe('owned ships the package cannot resolve', () => {
     expect(result.ok === false && result.issues.map((issue) => issue.code)).toContain(
       'unknownSlot',
     );
-    expect(result.ok === false && result.reason).toContain('NotARealSlot');
+    expect(result.ok === false && result.issues.map((issue) => issue.slot)).toContain(
+      'NotARealSlot',
+    );
   });
 
   it('refuses a module the package leaves in a mount it does not belong in', () => {
@@ -271,7 +273,7 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unsupported-combination' });
-    expect(result.ok === false && result.reason).toContain('Sidewinder_Armour_Grade1');
+    expect(result.ok === false && result.reason).toBeNull();
     expect(Object.keys(result).sort()).toEqual(['failure', 'issues', 'ok', 'reason']);
     expect('ship' in result).toBe(false);
   });
@@ -288,8 +290,43 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unsupported-combination' });
-    expect(result.ok === false && result.reason).toContain('Int_CargoRack_Size8_Class1');
+    expect(result.ok === false && result.reason).toBeNull();
     expect('ship' in result).toBe(false);
+  });
+
+  it('states the package words where the package published them, and none of its own', () => {
+    // Two refusals side by side. The package published a diagnostic about the
+    // first and nothing about the second, which this application found by
+    // asking where the stored module went. Only the first has words to carry
+    // (020/FR-016).
+    const anaconda = ShipLoadout.default('Anaconda');
+    const model = modelOf(anaconda);
+    const stated = mapOwnedShip(
+      payloadOf({
+        ...model,
+        modules: [
+          ...model.modules,
+          {
+            slot: anaconda.slots('utility')[0]!.key,
+            symbol: 'Hpt_PulseLaser_Fixed_Large',
+            enabled: null,
+            priority: null,
+            preEngineered: null,
+            engineering: null,
+          },
+        ],
+      }),
+    );
+    const detected = mapOwnedShip(
+      payloadOf(withModule(model, 'Armour', { symbol: 'Sidewinder_Armour_Grade1' })),
+    );
+
+    expect(stated.ok === false && stated.reason).toBe(
+      stated.ok === false ? stated.issues[0]!.message : '',
+    );
+    expect(stated.ok === false && stated.reason?.length).toBeGreaterThan(0);
+    expect(detected).toMatchObject({ ok: false, failure: 'unsupported-combination' });
+    expect(detected.ok === false && detected.reason).toBeNull();
   });
 });
 

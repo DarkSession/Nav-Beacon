@@ -1,13 +1,14 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { PackageRefusal } from '../../domain/commander/fleet/fleet-answer';
-import type { OwnedShip } from '../../domain/commander/fleet/owned-ship';
+import type { OwnedShip, OwnedShipMappingFailure } from '../../domain/commander/fleet/owned-ship';
+import type { MessageKey } from '../../i18n/locale-registry';
 import { Formatters } from '../../i18n/formatters/formatters';
 import { GameTextPresenter } from '../../i18n/game-text.presenter';
 import { MessageService } from '../../i18n/message.service';
 import type { Fact } from '../../ui/components/fact-list/fact-list';
 import type { StatusTone } from '../../ui/components/status/status-notice';
 import { AccountStore } from '../account/account.store';
-import { FleetStore, type FleetHolding } from './fleet.store';
+import { FleetStore, type FleetHolding, type RefusedOwnedShip } from './fleet.store';
 
 /**
  * The states design decision 10 gives the owned-ships view.
@@ -142,10 +143,7 @@ export class FleetPresenter {
       facts: chosen === null ? [] : this.#factsOf(chosen),
       unresolved: (holding?.refused ?? []).map((entry) => ({
         id: `refused-${entry.shipId ?? 'unknown'}`,
-        // The package's own reason, carried as the package wrote it. This
-        // application states that a ship could not be rebuilt; what the package
-        // says about it is the package's (constitution II).
-        message: this.#messages.message('fleet.unresolved', { reason: entry.reason }),
+        message: this.#unresolvedMessage(entry),
       })),
       refusal,
       refresh: state === 'sign-in-required' ? null : this.#messages.message('fleet.refresh'),
@@ -390,6 +388,23 @@ export class FleetPresenter {
   }
 
   /**
+   * What one ship the installed package would not rebuild says.
+   *
+   * The sentence is this application's and comes from the failure code, which
+   * is the machine-readable answer the mapping gives. Where the package
+   * published words of its own they are carried inside a localised sentence,
+   * and nothing else is read out of them: this application never writes the
+   * package's reason and never translates it (constitution II, 020/FR-016).
+   */
+  #unresolvedMessage(entry: RefusedOwnedShip): string {
+    const stated = entry.reason ?? '';
+    if (stated.length > 0) {
+      return this.#messages.message('fleet.unresolved.stated', { reason: stated });
+    }
+    return this.#messages.message(UNRESOLVED_KEYS[entry.failure]);
+  }
+
+  /**
    * The package refusal, where the last refresh carried one.
    *
    * The package's own message is shown where the package published one. Where
@@ -455,3 +470,19 @@ export class FleetPresenter {
     return Number.isNaN(parsed.getTime()) ? value : this.#formatters.dateTime(parsed);
   }
 }
+
+/**
+ * One sentence for each answer the mapping gives, where the package published
+ * no words of its own.
+ *
+ * Written as a table rather than a chain, so a failure code added to the
+ * mapping stops the build here instead of falling through to a sentence about a
+ * different answer (constitution IV).
+ */
+const UNRESOLVED_KEYS: Readonly<Record<OwnedShipMappingFailure, MessageKey>> = {
+  malformed: 'fleet.unresolved.malformed',
+  'unknown-hull': 'fleet.unresolved.unknown-hull',
+  'unknown-identity': 'fleet.unresolved.unknown-identity',
+  refused: 'fleet.unresolved.refused',
+  'unsupported-combination': 'fleet.unresolved.unsupported-combination',
+};
