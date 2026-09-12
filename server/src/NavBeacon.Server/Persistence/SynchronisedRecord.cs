@@ -14,8 +14,6 @@ public sealed class SynchronisedRecord
 
   public string? RecordKind { get; set; }
 
-  public string? Name { get; set; }
-
   public DateTimeOffset? CreatedAt { get; set; }
 
   public DateTimeOffset? BrowserModifiedAt { get; set; }

@@ -249,11 +249,6 @@ namespace NavBeacon.Server.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("name");
-
                     b.Property<string>("Payload")
                         .HasColumnType("jsonb")
                         .HasColumnName("payload");
@@ -282,7 +277,7 @@ namespace NavBeacon.Server.Persistence.Migrations
 
                     b.ToTable("synchronised_records", null, t =>
                         {
-                            t.HasCheckConstraint("ck_synchronised_records_exact_shape", "(payload IS NULL AND record_kind IS NULL AND name IS NULL AND created_at IS NULL AND browser_modified_at IS NULL AND server_content_at IS NULL AND protection_deadline IS NULL) OR (payload IS NOT NULL AND record_kind IS NOT NULL AND created_at IS NOT NULL AND browser_modified_at IS NOT NULL AND server_content_at IS NOT NULL)");
+                            t.HasCheckConstraint("ck_synchronised_records_exact_shape", "(payload IS NULL AND record_kind IS NULL AND created_at IS NULL AND browser_modified_at IS NULL AND server_content_at IS NULL AND protection_deadline IS NULL) OR (payload IS NOT NULL AND record_kind IS NOT NULL AND created_at IS NOT NULL AND browser_modified_at IS NOT NULL AND server_content_at IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_synchronised_records_revision", "revision > 0");
                         });

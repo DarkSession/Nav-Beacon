@@ -336,7 +336,6 @@ public sealed class RecordSynchronisationService(
     record.Revision = revision;
     record.Payload = null;
     record.RecordKind = null;
-    record.Name = null;
     record.CreatedAt = null;
     record.BrowserModifiedAt = null;
     record.ServerContentAt = null;

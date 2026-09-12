@@ -498,7 +498,6 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
       .SingleAsync(record => record.CustomerId == customerId && record.RecordId == recordId);
     Assert.Null(tombstone.Payload);
     Assert.Null(tombstone.RecordKind);
-    Assert.Null(tombstone.Name);
     Assert.Null(tombstone.CreatedAt);
     Assert.Null(tombstone.BrowserModifiedAt);
     Assert.Null(tombstone.ServerContentAt);

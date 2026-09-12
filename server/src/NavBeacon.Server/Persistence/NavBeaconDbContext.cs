@@ -81,7 +81,7 @@ public sealed class NavBeaconDbContext(DbContextOptions<NavBeaconDbContext> opti
         table.HasCheckConstraint("ck_synchronised_records_revision", "revision > 0");
         table.HasCheckConstraint(
           "ck_synchronised_records_exact_shape",
-          "(payload IS NULL AND record_kind IS NULL AND name IS NULL AND created_at IS NULL "
+          "(payload IS NULL AND record_kind IS NULL AND created_at IS NULL "
             + "AND browser_modified_at IS NULL AND server_content_at IS NULL "
             + "AND protection_deadline IS NULL) "
             + "OR (payload IS NOT NULL AND record_kind IS NOT NULL AND created_at IS NOT NULL "
@@ -91,7 +91,6 @@ public sealed class NavBeaconDbContext(DbContextOptions<NavBeaconDbContext> opti
       entity.HasKey(record => new { record.CustomerId, record.RecordId });
       entity.Property(record => record.Payload).HasColumnType("jsonb");
       entity.Property(record => record.RecordKind).HasMaxLength(32);
-      entity.Property(record => record.Name).HasMaxLength(256);
       entity.HasIndex(record => new { record.CustomerId, record.Revision }).IsUnique();
       entity
         .HasOne(record => record.Account)

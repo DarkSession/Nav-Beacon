@@ -137,7 +137,6 @@ namespace NavBeacon.Server.Persistence.Migrations
             revision = table.Column<long>(type: "bigint", nullable: false),
             payload = table.Column<string>(type: "jsonb", nullable: true),
             record_kind = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
-            name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
             created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
             browser_modified_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
             server_content_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -146,7 +145,7 @@ namespace NavBeacon.Server.Persistence.Migrations
           constraints: table =>
           {
             table.PrimaryKey("PK_synchronised_records", x => new { x.customer_id, x.record_id });
-            table.CheckConstraint("ck_synchronised_records_exact_shape", "(payload IS NULL AND record_kind IS NULL AND name IS NULL AND created_at IS NULL AND browser_modified_at IS NULL AND server_content_at IS NULL AND protection_deadline IS NULL) OR (payload IS NOT NULL AND record_kind IS NOT NULL AND created_at IS NOT NULL AND browser_modified_at IS NOT NULL AND server_content_at IS NOT NULL)");
+            table.CheckConstraint("ck_synchronised_records_exact_shape", "(payload IS NULL AND record_kind IS NULL AND created_at IS NULL AND browser_modified_at IS NULL AND server_content_at IS NULL AND protection_deadline IS NULL) OR (payload IS NOT NULL AND record_kind IS NOT NULL AND created_at IS NOT NULL AND browser_modified_at IS NOT NULL AND server_content_at IS NOT NULL)");
             table.CheckConstraint("ck_synchronised_records_revision", "revision > 0");
             table.ForeignKey(
                       name: "FK_synchronised_records_commander_accounts_customer_id",

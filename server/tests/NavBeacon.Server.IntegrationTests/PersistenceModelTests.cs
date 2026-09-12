@@ -290,7 +290,7 @@ public sealed class PersistenceModelTests : IClassFixture<PostgreSqlDatabaseFixt
       CustomerId = account.CustomerId,
       RecordId = Guid.NewGuid(),
       Revision = 2,
-      Name = "retained name",
+      ProtectionDeadline = DateTimeOffset.UtcNow,
     };
     context.Add(invalidTombstone);
 

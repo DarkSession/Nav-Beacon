@@ -215,7 +215,6 @@ public sealed class CommanderAccountDeletionTests(PostgreSqlDatabaseFixture data
         RecordId = Guid.NewGuid(),
         Revision = 1,
         RecordKind = "ship",
-        Name = "Test record",
         Payload = "{}",
         CreatedAt = InitialTime,
         BrowserModifiedAt = InitialTime,

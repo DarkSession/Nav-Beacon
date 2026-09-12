@@ -152,7 +152,6 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
         RecordId = recordId,
         Revision = 7,
         RecordKind = "ship",
-        Name = "Local work",
         Payload = "{\"kept\":true}",
         CreatedAt = clock.GetUtcNow(),
         BrowserModifiedAt = clock.GetUtcNow(),
@@ -190,7 +189,7 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
       CancellationToken.None
     );
     Assert.Contains("kept", storedRecord.Payload, StringComparison.Ordinal);
-    Assert.Equal("Local work", storedRecord.Name);
+    Assert.Equal("ship", storedRecord.RecordKind);
     Assert.Equal(7, storedAccount.RecordRevision);
     Assert.Equal("Test Commander", storedAccount.CommanderName);
   }
