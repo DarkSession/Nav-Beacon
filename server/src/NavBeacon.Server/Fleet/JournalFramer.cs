@@ -49,9 +49,12 @@ public sealed record FramedJournalLine(
 /// one line is materialised at a time and a caller that stops reading leaves the
 /// rest of the response unparsed.
 ///
-/// A `Fileheader` states which game wrote the lines that follow it. Only lines
-/// under a Live header are candidates; anything else is framed, ignored and
-/// passed over, because the fleet is the Live fleet.
+/// A `Fileheader` states which game wrote the lines that follow it. Frontier
+/// serves Live journals at the address these responses come from, so lines are
+/// read as Live until a header says otherwise: a response that carries no
+/// header at all is still read. A header stating an earlier game turns the
+/// lines under it into ones that are framed, ignored and passed over, because
+/// the fleet is the Live fleet.
 /// </summary>
 public sealed class JournalFramer(TextReader reader)
 {

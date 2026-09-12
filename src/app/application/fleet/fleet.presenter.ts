@@ -238,12 +238,16 @@ export class FleetPresenter {
    * completed refresh would tell a Commander that their journal confirms a
    * fleet nothing has checked (020/FR-018, 020/FR-022).
    *
-   * A fleet read out of this browser is the exception. Its own sentence
-   * already says that these are the ships last accepted and that a refresh
-   * needs a network, which is the same fact in the words that fit it.
+   * A fleet read out of this browser is the exception, and only where the
+   * cached sentence is the one shown: that sentence already says that these are
+   * the ships last accepted and that a refresh needs a network, which is the
+   * same fact in the words that fit it. An incomplete or empty cached fleet
+   * says neither, so a refresh that never reached the service is stated there
+   * as it is anywhere else. Leaving it out would read as a completed refresh
+   * that found nothing (020/FR-018).
    */
   #settledStatus(state: OwnedShipsState, holding: FleetHolding | null): OwnedShipsView['status'] {
-    if (this.#unanswered() && holding?.fromCache === false) {
+    if (this.#unanswered() && !this.#speaksForItself(state, holding)) {
       return { tone: 'warning', message: this.#failedMessage() };
     }
     switch (state) {
@@ -259,6 +263,15 @@ export class FleetPresenter {
           ),
         };
     }
+  }
+
+  /**
+   * Whether the settled sentence already carries the failure's own fact.
+   *
+   * Only `fleet.status.cached` does, and only the state that reaches it.
+   */
+  #speaksForItself(state: OwnedShipsState, holding: FleetHolding | null): boolean {
+    return holding?.fromCache === true && state !== 'incomplete' && state !== 'empty';
   }
 
   /**
@@ -324,7 +337,7 @@ export class FleetPresenter {
       state === 'failed' ||
       state === 'package-refused' ||
       state === 'authorisation-expired' ||
-      (this.#unanswered() && holding?.fromCache === false)
+      (this.#unanswered() && !this.#speaksForItself(state, holding))
     ) {
       return (holding?.ships.length ?? 0) > 0
         ? this.#messages.message('fleet.detail.last-accepted')
@@ -423,15 +436,21 @@ export class FleetPresenter {
    * What one ship the installed package would not rebuild says.
    *
    * The sentence is this application's and comes from the failure code, which
-   * is the machine-readable answer the mapping gives. Where the package
-   * published words of its own they are carried inside a localised sentence,
-   * and nothing else is read out of them: this application never writes the
-   * package's reason and never translates it (constitution II, 020/FR-016).
+   * is the machine-readable answer the mapping gives. Where the package states
+   * the reason in the language being read, its words are carried inside that
+   * sentence and nothing else is read out of them.
+   *
+   * Where the package has no words for this language — which its API documents
+   * for every locale but English — the sentence is the failure's own. Setting
+   * the package's English inside a German sentence would pass untranslated game
+   * text off as a translation, which is the one thing constitution VI forbids
+   * doing with it; this application never writes the package's reason and never
+   * translates it (constitution II, VI, 020/FR-016).
    */
   #unresolvedMessage(entry: RefusedOwnedShip): string {
-    const stated = entry.reason ?? '';
-    if (stated.length > 0) {
-      return this.#messages.message('fleet.unresolved.stated', { reason: stated });
+    const stated = entry.stated === null ? null : this.#gameText.loadoutIssueMessage(entry.stated);
+    if (stated?.translationState === 'localized' && stated.text !== null) {
+      return this.#messages.message('fleet.unresolved.stated', { reason: stated.text });
     }
     return this.#messages.message(UNRESOLVED_KEYS[entry.failure]);
   }

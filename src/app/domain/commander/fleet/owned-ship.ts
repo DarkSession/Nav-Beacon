@@ -122,11 +122,13 @@ export type OwnedShipMappingResult =
       readonly ok: false;
       readonly failure: OwnedShipMappingFailure;
       /**
-       * The package's own words, where this application can show that the
-       * package spoke them, and `null` everywhere else. Never a translation and
-       * never a sentence written here (020/FR-016).
+       * The one issue the package stated about this ship, where this
+       * application can show that the package stated it, and `null` everywhere
+       * else. The issue travels rather than its English text, because only a
+       * caller that knows the reading locale can ask the package for words
+       * (020/FR-016, constitution VI).
        */
-      readonly reason: string | null;
+      readonly stated: LoadoutIssue | null;
       /** The package's structured diagnostics, verbatim, where it published any. */
       readonly issues: readonly LoadoutIssue[];
     };
@@ -192,7 +194,7 @@ export function mapOwnedShip(value: unknown): OwnedShipMappingResult {
 
   const refused = refusedFit(parsed.snapshot, rebuilt.loadout);
   if (refused !== null) {
-    return refusal(refused.failure, refused.reason, refused.issues);
+    return refusal(refused.failure, refused.stated, refused.issues);
   }
 
   return {
@@ -304,7 +306,7 @@ function refusedFit(
   loadout: ShipLoadout,
 ): {
   readonly failure: OwnedShipMappingFailure;
-  readonly reason: string | null;
+  readonly stated: LoadoutIssue | null;
   readonly issues: readonly LoadoutIssue[];
 } | null {
   const issues = unfitIssues(loadout);
@@ -313,24 +315,23 @@ function refusedFit(
   if (substituted !== null) {
     // A substitution is this application's own finding: the package fitted a
     // build and said nothing about it. The failure names which finding it is,
-    // and there is no reason, because there are no package words to carry.
+    // and the package stated nothing, because there are no package words to
+    // carry.
     return getModuleBySymbol(substituted.symbol) === null
-      ? { failure: 'unknown-identity', reason: null, issues }
-      : { failure: 'unsupported-combination', reason: null, issues };
+      ? { failure: 'unknown-identity', stated: null, issues }
+      : { failure: 'unsupported-combination', stated: null, issues };
   }
 
   const stated = issues[0];
-  return stated === undefined
-    ? null
-    : { failure: 'unsupported-combination', reason: stated.message, issues };
+  return stated === undefined ? null : { failure: 'unsupported-combination', stated, issues };
 }
 
 function refusal(
   failure: OwnedShipMappingFailure,
-  reason: string | null = null,
+  stated: LoadoutIssue | null = null,
   issues: readonly LoadoutIssue[] = [],
 ): Extract<OwnedShipMappingResult, { readonly ok: false }> {
-  return { ok: false, failure, reason, issues };
+  return { ok: false, failure, stated, issues };
 }
 
 function isExactNullableObject(value: unknown, keys: readonly string[]): boolean {

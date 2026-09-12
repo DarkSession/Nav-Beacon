@@ -1,5 +1,9 @@
 import { writeSync } from 'node:fs';
-import { getSlefDiagnosticMessage } from '@elite-dangerous-almanac/core/i18n/diagnostics';
+import {
+  getLoadoutEditErrorMessage,
+  getLoadoutIssueMessage,
+  getSlefDiagnosticMessage,
+} from '@elite-dangerous-almanac/core/i18n/diagnostics';
 import { getModuleBySymbol } from '@elite-dangerous-almanac/core/ships/modules';
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { inspectSlef } from '@elite-dangerous-almanac/core/ships/slef';
@@ -113,7 +117,7 @@ function projectLine(line: JournalLine, locale: string): LineResult {
       code: 'invalidLoadout',
       constraint: null,
       path: null,
-      message: packageMessage(error),
+      message: editErrorMessage(error, locale),
     });
   }
 
@@ -135,7 +139,7 @@ function projectLine(line: JournalLine, locale: string): LineResult {
       code: mapped.failure,
       constraint: null,
       path: null,
-      message: mapped.reason,
+      message: mapped.stated === null ? null : getLoadoutIssueMessage(mapped.stated, locale),
     });
   }
 
@@ -241,8 +245,24 @@ function diagnostic(refusal: SlefDiagnostic | undefined, locale: string): Packag
   };
 }
 
-function packageMessage(error: unknown): string | null {
-  return error instanceof Error && error.message.length > 0 ? error.message : null;
+/**
+ * A refused loadout edit's own words, in the locale the refresh asked for.
+ *
+ * `getLoadoutEditErrorMessage` is the package's gate for this error type, and
+ * it answers `null` where the package publishes no text for that locale.
+ * Reading `error.message` instead would hand English prose to every reader
+ * whatever they asked for, and the application would then show it as the
+ * package's answer in their language (020/FR-016).
+ */
+function editErrorMessage(error: unknown, locale: string): string | null {
+  if (!(error instanceof Error) || error.message.length === 0) {
+    return null;
+  }
+  const message = getLoadoutEditErrorMessage(
+    error as Parameters<typeof getLoadoutEditErrorMessage>[0],
+    locale,
+  );
+  return message !== null && message.length > 0 ? message : null;
 }
 
 function refused(refusal: PackageRefusal): LineResult {

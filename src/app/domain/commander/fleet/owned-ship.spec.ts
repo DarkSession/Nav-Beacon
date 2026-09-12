@@ -159,7 +159,7 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unknown-hull' });
-    expect(result.ok === false && result.reason).toBeNull();
+    expect(result.ok === false && result.stated).toBeNull();
   });
 
   it('refuses a module symbol the installed package does not carry', () => {
@@ -170,7 +170,7 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unknown-identity' });
-    expect(result.ok === false && result.reason).toBeNull();
+    expect(result.ok === false && result.stated).toBeNull();
   });
 
   it('refuses a slot key the hull does not have, and carries the package diagnostic', () => {
@@ -216,8 +216,8 @@ describe('owned ships the package cannot resolve', () => {
     expect(result.ok === false && result.issues.map((issue) => issue.code)).toEqual([
       'incompatibleModule',
     ]);
-    expect(result.ok === false && result.reason).toBe(
-      result.ok === false ? result.issues[0]!.message : '',
+    expect(result.ok === false && result.stated).toBe(
+      result.ok === false ? result.issues[0] : null,
     );
   });
 
@@ -273,8 +273,8 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unsupported-combination' });
-    expect(result.ok === false && result.reason).toBeNull();
-    expect(Object.keys(result).sort()).toEqual(['failure', 'issues', 'ok', 'reason']);
+    expect(result.ok === false && result.stated).toBeNull();
+    expect(Object.keys(result).sort()).toEqual(['failure', 'issues', 'ok', 'stated']);
     expect('ship' in result).toBe(false);
   });
 
@@ -290,7 +290,7 @@ describe('owned ships the package cannot resolve', () => {
     const result = mapOwnedShip(payloadOf(model));
 
     expect(result).toMatchObject({ ok: false, failure: 'unsupported-combination' });
-    expect(result.ok === false && result.reason).toBeNull();
+    expect(result.ok === false && result.stated).toBeNull();
     expect('ship' in result).toBe(false);
   });
 
@@ -321,12 +321,14 @@ describe('owned ships the package cannot resolve', () => {
       payloadOf(withModule(model, 'Armour', { symbol: 'Sidewinder_Armour_Grade1' })),
     );
 
-    expect(stated.ok === false && stated.reason).toBe(
-      stated.ok === false ? stated.issues[0]!.message : '',
+    // The issue travels, not its English text: only a caller that knows the
+    // reading locale may ask the package for words (constitution VI).
+    expect(stated.ok === false && stated.stated).toBe(
+      stated.ok === false ? stated.issues[0] : null,
     );
-    expect(stated.ok === false && stated.reason?.length).toBeGreaterThan(0);
+    expect(stated.ok === false && stated.stated?.message.length).toBeGreaterThan(0);
     expect(detected).toMatchObject({ ok: false, failure: 'unsupported-combination' });
-    expect(detected.ok === false && detected.reason).toBeNull();
+    expect(detected.ok === false && detected.stated).toBeNull();
   });
 });
 

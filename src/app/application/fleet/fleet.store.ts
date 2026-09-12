@@ -1,4 +1,5 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import type { LoadoutIssue } from '@elite-dangerous-almanac/core/ships/loadout-validation';
 import type {
   FleetAnswer,
   FleetCoverage,
@@ -37,10 +38,12 @@ export interface RefusedOwnedShip {
   readonly shipId: number | null;
   readonly failure: OwnedShipMappingFailure;
   /**
-   * The package's own words, where the mapping can show the package spoke them,
-   * and `null` everywhere else. Never a translation and never invented.
+   * The one issue the package stated about this ship, where the mapping can
+   * show the package stated it, and `null` everywhere else. The issue travels
+   * rather than its words: the reading locale belongs to the presenter, and
+   * only the package may turn an issue into a sentence (constitution VI).
    */
-  readonly reason: string | null;
+  readonly stated: LoadoutIssue | null;
 }
 
 /** The last accepted owned fleet, as this browser holds it. */
@@ -427,7 +430,7 @@ function holdingOf(cached: CachedFleet, pending: boolean, fromCache: boolean): F
       ships.push(mapped.ship);
       continue;
     }
-    refused.push({ shipId: readShipId(payload), failure: mapped.failure, reason: mapped.reason });
+    refused.push({ shipId: readShipId(payload), failure: mapped.failure, stated: mapped.stated });
   }
 
   return {

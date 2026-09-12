@@ -45,7 +45,7 @@ class FixedClock {
 function ownedShip(shipId = 12, hullSymbol = 'Anaconda'): OwnedShip {
   const mapped = mapOwnedShip(ownedShipPayload(shipId, hullSymbol));
   if (!mapped.ok) {
-    throw new Error(`The fixture did not rebuild: ${mapped.reason}`);
+    throw new Error(`The fixture did not rebuild: ${mapped.failure}`);
   }
   return mapped.ship;
 }

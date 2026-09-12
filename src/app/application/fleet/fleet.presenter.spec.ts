@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
+import { GameTextPresenter } from '../../i18n/game-text.presenter';
 import { BUNDLED_ENGLISH, interpolate } from '../../i18n/locale-registry';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { COMMANDER_API } from '../../platform/network/commander-api';
@@ -220,6 +221,42 @@ describe('FleetPresenter', () => {
     expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.cached']);
     expect(view.ships.length).toBe(1);
   });
+
+  it.each([
+    ['incomplete' as const, 'fleet.status.incomplete' as const],
+    ['empty' as const, 'fleet.status.empty' as const],
+  ])(
+    'says a %s fleet read out of this browser is still waiting on a refresh nothing answered',
+    async (result, settled) => {
+      writeState({
+        fleetCache: [
+          {
+            customerId: CUSTOMER,
+            acceptedAt: '2026-09-10T08:00:00.000Z',
+            result,
+            ships: result === 'empty' ? [] : [ownedShipPayload(12)],
+            coverage: coverage(),
+          },
+        ],
+      });
+      api.offline = true;
+      await signIn();
+
+      // Neither settled sentence says a refresh was attempted, so unlike
+      // `fleet.status.cached` neither can stand in for the failure. Showing one
+      // here would read as a refresh that completed and found this
+      // (020/FR-018).
+      const view = presenter.view();
+      expect(view.state).toBe(result);
+      expect(view.status.message).not.toBe(BUNDLED_ENGLISH[settled]);
+      expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.unavailable']);
+      expect(view.ships.length).toBe(result === 'empty' ? 0 : 1);
+      // And the ships that are listed are still said to be the last accepted.
+      expect(view.detail).toBe(
+        result === 'empty' ? null : BUNDLED_ENGLISH['fleet.detail.last-accepted'],
+      );
+    },
+  );
 
   it('states incomplete coverage as incomplete, and says more journal is left', async () => {
     writeState();
@@ -467,7 +504,7 @@ describe('FleetPresenter', () => {
     await signIn();
 
     const view = presenter.view();
-    expect(store.holding()?.refused[0].reason).toBeNull();
+    expect(store.holding()?.refused[0].stated).toBeNull();
     expect(view.unresolved[0].message).toBe(BUNDLED_ENGLISH['fleet.unresolved.malformed']);
     // The whole sentence is one catalogue entry, so nothing written outside the
     // localisation layer is spliced into it (020/FR-016).
@@ -479,11 +516,56 @@ describe('FleetPresenter', () => {
     api.reads.push(answeredFleet({ ships: [misfittedPayload(19)] }));
     await signIn();
 
-    const stated = store.holding()?.refused[0].reason ?? '';
+    const stated = store.holding()?.refused[0].stated?.message ?? '';
     expect(stated.length).toBeGreaterThan(0);
     expect(presenter.view().unresolved[0].message).toBe(
       interpolate(BUNDLED_ENGLISH['fleet.unresolved.stated'], { reason: stated }),
     );
+  });
+
+  it('states the failure in its own words where the package has none for this language', async () => {
+    // The package publishes these diagnostics for English locales only. Setting
+    // its English inside a localised sentence would pass untranslated game text
+    // off as a translation, so the sentence becomes the failure's own
+    // (constitution VI, 020/FR-016).
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideMemoryStorage(storage),
+        { provide: COMMANDER_API, useValue: api },
+        { provide: ClockAdapter, useValue: new FixedClock() },
+        {
+          provide: GameTextPresenter,
+          useValue: {
+            loadoutIssueMessage: (issue: { readonly message: string }) => ({
+              text: issue.message,
+              language: 'en',
+              translationState: 'canonical',
+              disclosureKey: 'game-text.untranslated.description',
+            }),
+            shipName: (symbol: string) => ({
+              text: symbol,
+              language: 'en',
+              translationState: 'canonical',
+              disclosureKey: 'game-text.untranslated.description',
+            }),
+          },
+        },
+      ],
+    });
+    store = TestBed.inject(FleetStore);
+    presenter = TestBed.inject(FleetPresenter);
+
+    writeState();
+    api.reads.push(answeredFleet({ ships: [misfittedPayload(19)] }));
+    await signIn();
+
+    const stated = store.holding()?.refused[0].stated?.message ?? '';
+    expect(stated.length).toBeGreaterThan(0);
+    expect(presenter.view().unresolved[0].message).toBe(
+      BUNDLED_ENGLISH['fleet.unresolved.unsupported-combination'],
+    );
+    expect(presenter.view().unresolved[0].message).not.toContain(stated);
   });
 
   describe('the ship a Commander chose', () => {

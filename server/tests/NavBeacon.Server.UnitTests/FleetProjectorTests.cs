@@ -24,6 +24,9 @@ public sealed class FleetProjectorTests
   private const string UnknownModule =
     """{"timestamp":"2026-09-10T12:00:00Z","event":"Loadout","Ship":"anaconda","ShipID":14,"Modules":[{"Slot":"PowerPlant","Item":"Int_Powerplant_Size8_Class99"}]}""";
 
+  private const string Oversized =
+    """{"timestamp":"2026-09-10T12:00:00Z","event":"Loadout","Ship":"sidewinder","ShipID":19,"Modules":[{"Slot":"Slot01_Size2","Item":"Int_CargoRack_Size8_Class1","On":true,"Priority":1}]}""";
+
   private const string UnreadableLoadout =
     """{"timestamp":"2026-09-10T12:00:00Z","event":"Loadout","Ship":"anaconda","ShipID":15,"Modules":[{"Slot":5,"Item":"Int_Powerplant_Size8_Class5"}]}""";
 
@@ -148,6 +151,23 @@ public sealed class FleetProjectorTests
     // absence travels rather than becoming a translation of this application's.
     Assert.Null(german.Refusal?.Message);
     Assert.Equal(english.Refusal?.Path, german.Refusal?.Path);
+  }
+
+  [Fact]
+  public async Task AMappingRefusalCarriesThePackagesWordsOnlyWhereItHasThem()
+  {
+    var english = await Published().ProjectAsync([Candidate(19, 7, Oversized)], "en", default);
+    var german = await Published().ProjectAsync([Candidate(19, 7, Oversized)], "de", default);
+
+    // The package fitted every module the line named and then stated why the
+    // fit does not stand. Those are its words, so they travel only in the
+    // language it published them in: reading the English entry for a German
+    // refresh would hand this application untranslated game text to show as an
+    // answer in the reader's language (020/FR-016, constitution VI).
+    Assert.Equal("unsupported-combination", english.Refusal?.Code);
+    Assert.Equal("unsupported-combination", german.Refusal?.Code);
+    Assert.False(string.IsNullOrWhiteSpace(english.Refusal?.Message));
+    Assert.Null(german.Refusal?.Message);
   }
 
   [Fact]

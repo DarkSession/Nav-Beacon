@@ -441,11 +441,11 @@ describe('FleetStore', () => {
     const holding = store.holding();
     expect(holding?.ships.map((ship) => ship.shipId)).toEqual([12, 13]);
     expect(holding?.refused.map((refusal) => refusal.shipId)).toEqual([14]);
-    // The failure the package answered, under its own name. There is no reason
-    // beside it: no package words reached this refusal, and this application
-    // does not write one in their place.
+    // The failure the package answered, under its own name. There is no stated
+    // issue beside it: the package said nothing about this refusal, and this
+    // application does not write words in their place.
     expect(holding?.refused[0].failure).toBe('unknown-hull');
-    expect(holding?.refused[0].reason).toBeNull();
+    expect(holding?.refused[0].stated).toBeNull();
   });
 
   /**
