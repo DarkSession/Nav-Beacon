@@ -69,6 +69,28 @@ public sealed class FleetCursorTests(PostgreSqlDatabaseFixture database)
   }
 
   [Fact]
+  public async Task AnEmptyCurrentDayKeepsTheCursorOnIt()
+  {
+    // The Commander has not played yet today, so Frontier answers the current
+    // day with nothing at all. The day has not ended, and a cursor that left it
+    // would never come back to read what the rest of it holds.
+    var journal = new FakeJournalClient();
+    journal.Queue(Today, new JournalRead(JournalReadOutcome.Empty, "", null));
+    using var server = NewServer(journal, out var frontier);
+    using var commander = await SignIn(server, frontier, 80_010);
+    await database.SeedCursorAsync(80_010, Today, 0);
+
+    var refreshed = await commander.RefreshFleetAsync();
+
+    Assert.Equal(Today.ToString("yyyy-MM-dd"), refreshed.CursorDate);
+    Assert.Equal(0, refreshed.CursorLine);
+    await using var context = database.CreateContext();
+    var cursor = await context.JournalCursors.SingleAsync(entry => entry.CustomerId == 80_010);
+    Assert.Equal(Today, cursor.NextUnreadDate);
+    Assert.Equal(0, cursor.NextUnreadLine);
+  }
+
+  [Fact]
   public async Task AnIncompleteDayDoesNotAdvanceToTheNextDate()
   {
     var journal = new FakeJournalClient();

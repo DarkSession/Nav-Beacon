@@ -138,6 +138,18 @@ public sealed class FleetService(
           );
         case JournalReadOutcome.Empty:
           await ClearDelayAsync(cursor, cancellationToken);
+          if (cursor.NextUnreadDate >= today)
+          {
+            // The cursor advances past a day that has ended, and the current
+            // UTC day has not. A Commander who has not played yet today gets
+            // the same empty answer as a day with no journal at all, and
+            // advancing on it would pass over the rest of the day for good:
+            // nothing brings the cursor back to a date it has left, so every
+            // ship bought or refitted later that day would never be read. The
+            // coverage would state the day as read as well (020/FR-013,
+            // constitution IV).
+            return await SettledAsync(customerId, cursor, false, null, cancellationToken);
+          }
           await CommitAsync(context, [], cursor.NextUnreadDate.AddDays(1), 0, cancellationToken);
           continue;
         default:
