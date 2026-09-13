@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   FIXTURE_IDS,
@@ -25,6 +26,7 @@ import {
   quotaError,
 } from '../../platform/storage/storage.spec-helpers';
 import { AccountStore } from '../account/account.store';
+import { RecordInvalidationService } from '../build-library/record-invalidation.service';
 import { RetentionService } from '../build-library/retention.service';
 import { RecordSynchronisationStore } from './record-synchronisation.store';
 import { SynchronisationPresenter } from './synchronisation.presenter';
@@ -275,6 +277,33 @@ describe('what the record libraries say about the account', () => {
    * revision, so there is nothing about it to forget. The panel that counted it
    * has to stop (020/FR-024, 020/FR-025).
    */
+  /**
+   * And the same when the record leaves from another page.
+   *
+   * The library list beside this panel re-reads storage on every invalidation,
+   * so a panel that did not would go on counting a record whose row has gone
+   * from the screen it sits under (020/FR-024).
+   */
+  it('stops counting a record another page deleted', async () => {
+    writeCommanderState(storage, {
+      recordBindings: { [FIXTURE_IDS.named]: CUSTOMER, [FIXTURE_IDS.working]: 'local-only' },
+    });
+    seedTwoRecords();
+    await signedIn();
+
+    const view = presenter().view;
+    expect(view().notes.map((note) => note.id)).toEqual(['local-only']);
+
+    const stop = TestBed.inject(RecordInvalidationService).listen();
+    storage.entries.delete(recordKey(FIXTURE_IDS.working));
+    TestBed.inject(DOCUMENT).defaultView?.dispatchEvent(
+      new StorageEvent('storage', { key: recordKey(FIXTURE_IDS.working), newValue: null }),
+    );
+    stop();
+
+    expect(view().notes).toEqual([]);
+  });
+
   it('stops counting a record the account never took once it expires out of this browser', async () => {
     writeCommanderState(storage, { recordBindings: { [FIXTURE_IDS.named]: CUSTOMER } });
     seedRecord();

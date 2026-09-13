@@ -141,8 +141,12 @@ export class FleetPresenter {
               ship: this.#shipLabel(chosen),
             }),
       facts: chosen === null ? [] : this.#factsOf(chosen),
-      unresolved: (holding?.refused ?? []).map((entry) => ({
-        id: `refused-${entry.shipId ?? 'unknown'}`,
+      // The Frontier identity where the payload carried one, and its place in
+      // the list where it did not. Two payloads with no readable identity would
+      // otherwise share one id, and the list that tracks by it would draw one
+      // of the two notices (020/FR-016).
+      unresolved: (holding?.refused ?? []).map((entry, index) => ({
+        id: entry.shipId === null ? `refused-unknown-${index}` : `refused-${entry.shipId}`,
         message: this.#unresolvedMessage(entry),
       })),
       refusal,
@@ -255,17 +259,8 @@ export class FleetPresenter {
         return { tone: 'warning', message: this.#messages.message('fleet.status.incomplete') };
       case 'empty':
         return { tone: 'info', message: this.#messages.message('fleet.status.empty') };
-      default: {
-        const key = this.#settledKey(holding);
-        return {
-          // A ship named below rather than listed is a list that does not carry
-          // the confirmed fleet, which is what `fleet.status.incomplete` says
-          // above it in a warning. Drawing the same fact as a success would be
-          // a second rendering of a different sentence (011/FR-010).
-          tone: key === 'fleet.status.unresolved' ? 'warning' : 'success',
-          message: this.#messages.message(key),
-        };
-      }
+      default:
+        return this.#settledSentence(holding);
     }
   }
 
@@ -279,13 +274,32 @@ export class FleetPresenter {
    * sentence claims no completeness, so it stands as it is (020/FR-015,
    * 020/FR-016, constitution IV).
    */
-  #settledKey(
-    holding: FleetHolding | null,
-  ): 'fleet.status.cached' | 'fleet.status.current' | 'fleet.status.unresolved' {
+  #settledSentence(holding: FleetHolding | null): OwnedShipsView['status'] {
     if (holding?.fromCache === true) {
-      return 'fleet.status.cached';
+      return { tone: 'success', message: this.#messages.message('fleet.status.cached') };
     }
-    return (holding?.refused.length ?? 0) > 0 ? 'fleet.status.unresolved' : 'fleet.status.current';
+
+    const refused = holding?.refused.length ?? 0;
+    if (refused === 0) {
+      return { tone: 'success', message: this.#messages.message('fleet.status.current') };
+    }
+
+    return {
+      // A ship named below rather than listed is a list that does not carry the
+      // confirmed fleet, which is what `fleet.status.incomplete` says above it
+      // in a warning. Drawing the same fact as a success would be a second
+      // rendering of a different sentence (011/FR-010).
+      tone: 'warning',
+      // Counted, because an installed package that predates one module refuses
+      // every ship carrying it. One sentence about "a ship" over five notices
+      // states a smaller gap than the list has (020/FR-016, constitution IV).
+      message:
+        refused === 1
+          ? this.#messages.message('fleet.status.unresolved.one')
+          : this.#messages.message('fleet.status.unresolved.many', {
+              count: this.#formatters.integer(refused),
+            }),
+    };
   }
 
   /**

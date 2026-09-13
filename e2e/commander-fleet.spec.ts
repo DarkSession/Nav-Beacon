@@ -176,7 +176,7 @@ test.describe('the ships a Commander owns', () => {
 
     // And the sentence above the list does not claim the list is the whole
     // fleet while one of its ships is named below it instead (020/FR-015).
-    await expect(fleet(page)).toContainText(englishMessages['fleet.status.unresolved']);
+    await expect(fleet(page)).toContainText(englishMessages['fleet.status.unresolved.one']);
     await expect(fleet(page)).not.toContainText(englishMessages['fleet.status.current']);
     await scan(page, testInfo, 'owned ships, one unresolved');
   });

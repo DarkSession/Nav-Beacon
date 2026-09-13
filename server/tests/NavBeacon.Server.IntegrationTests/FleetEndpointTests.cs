@@ -193,6 +193,35 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
     Assert.Equal("Night Watch", read.Ship(12)["model"]!["shipName"]!.GetValue<string>());
   }
 
+  [Fact]
+  public async Task AReadAfterARefreshThatLeftADayUnreadIsNotCurrent()
+  {
+    var accepted = Yesterday.AddDays(-1);
+    var journal = new FakeJournalClient();
+    journal.Complete(
+      accepted,
+      JournalFixtures.Loadout(12),
+      JournalFixtures.StoredShips(shipIds: [12])
+    );
+    journal.Queue(Yesterday, new JournalRead(JournalReadOutcome.Failed, string.Empty, null));
+    using var server = NewServer(journal, out var frontier);
+    using var commander = await SignIn(server, frontier, 82_018);
+    await database.SeedCursorAsync(82_018, accepted, 0);
+
+    var failed = await commander.RefreshFleetAsync();
+    var read = await commander.ReadFleetAsync();
+
+    Assert.Equal(FleetResults.Failed, failed.Result);
+    Assert.True(failed.Pending);
+    // Yesterday has ended and nothing in it was read. Answering the reload
+    // from the stored fleet alone would state a fleet the journal confirms
+    // whole, with the refresh that was to confirm it having failed
+    // (020/FR-016).
+    Assert.True(read.Pending);
+    Assert.Equal(FleetResults.Incomplete, read.Result);
+    Assert.Equal(Yesterday.ToString("yyyy-MM-dd"), read.CursorDate);
+  }
+
   /// <summary>
   /// A journal response too large to read is its own failure, and not the one a
   /// Commander reads as Frontier being unreachable. What stopped the refresh is

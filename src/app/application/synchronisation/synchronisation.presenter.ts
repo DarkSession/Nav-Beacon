@@ -8,6 +8,7 @@ import { CommanderStateRepository } from '../../platform/storage/commander-state
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import type { StatusTone } from '../../ui/components/status/status-notice';
 import { AccountStore } from '../account/account.store';
+import { RecordInvalidationService } from '../build-library/record-invalidation.service';
 import type { ExceededBound, SynchronisationFailure } from './record-synchronisation.store';
 import { RecordSynchronisationStore } from './record-synchronisation.store';
 
@@ -70,6 +71,7 @@ export class SynchronisationPresenter {
   readonly #sync = inject(RecordSynchronisationStore);
   readonly #state = inject(CommanderStateRepository);
   readonly #records = inject(LocalRecordRepository);
+  readonly #invalidation = inject(RecordInvalidationService);
 
   readonly view = computed<SynchronisationPanelView>(() => {
     const status = this.#sync.status();
@@ -141,16 +143,20 @@ export class SynchronisationPresenter {
    * this device no longer has, and a record this device has can carry no
    * binding at all. Neither store is cached here — both are read whole, because
    * storage stays the authority on what is stored — and the record store's own
-   * revision is what makes the count follow them. A record leaving this browser
-   * is the one change that moves these counts on its own: a deletion made while
-   * nobody is signed in, and an expired unnamed record swept away, both take a
-   * record out without touching the session or the exchange. Every write that
-   * changes a binding under a record that stays — an exchange committing, a
-   * conflict answered, the account departing — moves one of those two, which
-   * the view reads beside this (020/FR-024, 020/FR-025).
+   * revision is what makes the count follow them, beside the invalidation
+   * another page's write raises: the same record library is open in both, and a
+   * record saved or deleted in one is gone from the other's list a moment
+   * later. A record leaving this browser is the one change that moves these
+   * counts on its own: a deletion made while nobody is signed in, and an
+   * expired unnamed record swept away, both take a record out without touching
+   * the session or the exchange. Every write that changes a binding under a
+   * record that stays — an exchange committing, a conflict answered, the
+   * account departing — moves one of those two, which the view reads beside
+   * this (020/FR-024, 020/FR-025).
    */
   #heldBack(customerId: string | null): HeldBackRecords {
     this.#records.revision();
+    this.#invalidation.revision();
 
     const state = this.#state.read();
     const listed = this.#records.ids();

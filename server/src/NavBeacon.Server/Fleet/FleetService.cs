@@ -35,8 +35,32 @@ public sealed class FleetService(
     var cursor = await database
       .JournalCursors.AsNoTracking()
       .SingleOrDefaultAsync(entry => entry.CustomerId == customerId, cancellationToken);
-    return Settled(ships, Coverage(cursor), false, null, null);
+    return Settled(ships, Coverage(cursor), Pending(cursor), null, null);
   }
+
+  /// <summary>
+  /// Whether a day the cursor has not reached has ended without being read.
+  /// </summary>
+  ///
+  /// <remarks>
+  /// A cursor left on a date before the current one is a refresh that stopped
+  /// short: the days between it and today have ended, and nothing in them was
+  /// read. Answering no there would take a refresh Frontier failed, or one a
+  /// response too large ended, and report it on the next page load as a fleet
+  /// the journal confirms whole — with nothing having been read in between
+  /// (020/FR-016).
+  ///
+  /// A cursor inside the current day is a different case, and this says no to
+  /// it. The day is still being written, so there are lines after the cursor
+  /// whatever the last refresh did, and the fleet import metadata holds four
+  /// items that cannot tell a refresh that read the day to its end from one
+  /// that stopped on the batch bound inside it (020/FR-015). The coverage
+  /// carries the date and line either way, which is what states how far
+  /// reading reached.
+  /// </remarks>
+  private bool Pending(JournalCursor? cursor) =>
+    cursor is not null
+    && cursor.NextUnreadDate < DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
   public async Task<FleetState> RefreshAsync(
     long customerId,

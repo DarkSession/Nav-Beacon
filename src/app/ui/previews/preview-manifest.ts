@@ -4662,11 +4662,12 @@ registerPreview({
 // ---------------------------------------------------------------------------
 // Feature 020 — the Commander account
 //
-// One modal, twelve states. The five required manifest states cannot name twelve
-// screen states between them, so the dialog is declared four times — once for
-// the account's ordinary life, once for a session that cannot be used, once for
-// the deletion question, and once for what the browser is still establishing —
-// and each declaration names the screen state its fixture draws. Registering the same production component under a second id is
+// One modal, thirteen states. The five required manifest states cannot name
+// thirteen screen states between them, so the dialog is declared four times —
+// once for the account's ordinary life, once for a session that cannot be used,
+// once for the deletion question, and once for what stands unfinished between a
+// Commander and the account they still have — and each declaration names the
+// screen state its fixture draws. Registering the same production component under a second id is
 // what `tab-group-segmented` already does for a second set of renderings.
 //
 // Every fixture reads its words from the bundled English catalogue, so a
@@ -5000,12 +5001,13 @@ registerPreview({
 });
 
 registerPreview({
-  componentId: 'account-dialog-authorisation',
+  componentId: 'account-dialog-unfinished',
   group: 'Layers',
   component: AccountDialog,
-  contract: contract('account-dialog-authorisation', ACCOUNT_DIALOG_SEMANTICS, [
+  contract: contract('account-dialog-unfinished', ACCOUNT_DIALOG_SEMANTICS, [
     'default',
     'loading',
+    'error',
   ]),
   states: [
     // A Frontier authorisation that lapsed under a session that has not. The
@@ -5034,7 +5036,7 @@ registerPreview({
     ),
     notApplicable(
       'empty',
-      'The modal states what it is establishing while it establishes it. The modal with nothing to say about the session is the anonymous state, declared under account-dialog.',
+      'Every state here has a sentence to state. The modal with nothing to say about the session is the anonymous state, declared under account-dialog.',
     ),
     // The session being read, at the start of a browser session.
     state(
@@ -5052,9 +5054,27 @@ registerPreview({
       ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
       true,
     ),
-    notApplicable(
+    // A sign-out the service refused. The session stands, so the actions that
+    // act on it stand with it and the Commander can ask again.
+    state(
       'error',
-      'Reading the session either answers or fails, and a failure is a session that cannot be used — the states declared under account-dialog-session.',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'error',
+            message: BUNDLED_ENGLISH['account.status.sign-out-failed'],
+          },
+          actions: SIGNED_IN_ACTIONS,
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the sign-out did not take, and leaves the same actions to ask again with',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
     ),
     notApplicable(
       'disabled',
@@ -5984,7 +6004,7 @@ registerPreview({
       {
         view: fleetView({
           coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
-          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.unresolved'] },
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.unresolved.one'] },
           unresolved: [
             {
               id: 'refused-19',

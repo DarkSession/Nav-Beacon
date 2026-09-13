@@ -571,11 +571,41 @@ describe('FleetPresenter', () => {
     // And the sentence above the list does not claim the list is the whole
     // fleet while one of its ships is named below it instead (020/FR-015,
     // constitution IV).
-    expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.unresolved']);
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.unresolved.one']);
     expect(view.status.message).not.toBe(BUNDLED_ENGLISH['fleet.status.current']);
     // And the tone says the same thing the sentence does, as it does for the
     // other statement that this list is not the whole confirmed fleet
     // (011/FR-010).
+    expect(view.status.tone).toBe('warning');
+  });
+
+  /**
+   * Two payloads with no readable Frontier identity are two notices, and the
+   * sentence above them counts both.
+   *
+   * An installed package that predates a module refuses every ship carrying it,
+   * so a refusal is not a single event. The notices are tracked by the id this
+   * presenter gives them, and one id for two of them would draw one notice
+   * (020/FR-016, constitution IV).
+   */
+  it('counts every ship it cannot rebuild and names each of them separately', async () => {
+    writeState();
+    api.reads.push(
+      answeredFleet({
+        ships: [
+          { sourceDate: '2026-09-01', sourceLine: 2 },
+          { sourceDate: '2026-09-01', sourceLine: 3 },
+        ],
+      }),
+    );
+    await signIn();
+
+    const view = presenter.view();
+    expect(view.unresolved.length).toBe(2);
+    expect(new Set(view.unresolved.map((entry) => entry.id)).size).toBe(2);
+    expect(view.status.message).toBe(
+      BUNDLED_ENGLISH['fleet.status.unresolved.many'].replace('{{count}}', '2'),
+    );
     expect(view.status.tone).toBe('warning');
   });
 
