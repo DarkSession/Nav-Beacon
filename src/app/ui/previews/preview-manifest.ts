@@ -4694,6 +4694,7 @@ function accountView(
     ],
     networkNotice: BUNDLED_ENGLISH['account.network.notice'],
     actions: [],
+    busyLabel: BUNDLED_ENGLISH['action.busy'],
     deletionConfirmation: false,
     deletionTitle: BUNDLED_ENGLISH['account.delete.title'],
     deletionDescription: BUNDLED_ENGLISH['account.delete.description'],
@@ -5665,13 +5666,43 @@ registerPreview({
 //
 // Every fixture reads its words from the bundled English catalogue, so a
 // reworded sentence reaches the catalogue page and the product together. The
-// package refusal is the exception, and deliberately so: its code, constraint
-// and path are the game data's own answer, and no catalogue owns them.
+// package's own answer is the exception, and deliberately so: the refusal code,
+// constraint and path, and the reason inside a refusal sentence, are the game
+// data's words and no catalogue owns them.
 // ---------------------------------------------------------------------------
 
 const PREVIEW_SHIP = 'Bright Anvil';
 const PREVIEW_HULL = 'Anaconda';
+const PREVIEW_IDENT = 'BA-01';
 const PREVIEW_DAY = '14 Aug 2026';
+const PREVIEW_COVERAGE_START = '01 Jul 2026';
+const PREVIEW_REFUSAL_REASON = 'Unknown module symbol Int_Powerplant_Size9_Class6.';
+
+/** The row of the ship every fleet fixture lists, in the catalogue's words. */
+const PREVIEW_ROW_DETAIL = BUNDLED_ENGLISH['fleet.row.detail.ident']
+  .replace('{{hull}}', PREVIEW_HULL)
+  .replace('{{ident}}', PREVIEW_IDENT)
+  .replace('{{when}}', PREVIEW_DAY);
+
+/** The journal days every settled fleet fixture states it read. */
+const PREVIEW_COVERAGE = BUNDLED_ENGLISH['fleet.coverage']
+  .replace('{{from}}', PREVIEW_COVERAGE_START)
+  .replace('{{to}}', PREVIEW_DAY);
+
+/** The name of the chosen ship's fact list, as the catalogue words it. */
+const PREVIEW_FACTS_LABEL = BUNDLED_ENGLISH['fleet.facts.label'].replace('{{ship}}', PREVIEW_SHIP);
+
+/** The delay a held refresh states, as the catalogue words it. */
+const PREVIEW_WAITING_UNTIL = BUNDLED_ENGLISH['fleet.detail.waiting.until'].replace(
+  '{{when}}',
+  `${PREVIEW_DAY}, 09:41`,
+);
+
+/** One ship the installed package will not rebuild, with its own reason. */
+const PREVIEW_UNRESOLVED = BUNDLED_ENGLISH['fleet.unresolved.stated'].replace(
+  '{{reason}}',
+  PREVIEW_REFUSAL_REASON,
+);
 
 /** One owned-ships view model, with the parts every state shares filled in. */
 function fleetView(
@@ -5689,7 +5720,7 @@ function fleetView(
       {
         id: '12',
         label: PREVIEW_SHIP,
-        detail: `${PREVIEW_HULL}, from the journal of ${PREVIEW_DAY}`,
+        detail: PREVIEW_ROW_DETAIL,
         selected: false,
       },
     ],
@@ -5709,7 +5740,7 @@ function fleetView(
 /** The facts of the chosen ship, read off the build the package rebuilt. */
 const FLEET_FACTS = [
   { id: 'hull', label: BUNDLED_ENGLISH['fleet.fact.hull'], value: PREVIEW_HULL, unit: '' },
-  { id: 'ident', label: BUNDLED_ENGLISH['fleet.fact.ident'], value: 'BA-01', unit: '' },
+  { id: 'ident', label: BUNDLED_ENGLISH['fleet.fact.ident'], value: PREVIEW_IDENT, unit: '' },
   { id: 'source', label: BUNDLED_ENGLISH['fleet.fact.source'], value: PREVIEW_DAY, unit: '' },
 ];
 
@@ -5770,16 +5801,16 @@ registerPreview({
       'default',
       {
         view: fleetView({
-          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+          coverage: PREVIEW_COVERAGE,
           ships: [
             {
               id: '12',
               label: PREVIEW_SHIP,
-              detail: `${PREVIEW_HULL}, from the journal of ${PREVIEW_DAY}`,
+              detail: PREVIEW_ROW_DETAIL,
               selected: true,
             },
           ],
-          selectedLabel: `About ${PREVIEW_SHIP}`,
+          selectedLabel: PREVIEW_FACTS_LABEL,
           facts: FLEET_FACTS,
           copy: BUNDLED_ENGLISH['fleet.copy'],
         }),
@@ -5852,12 +5883,11 @@ registerPreview({
           state: 'incomplete',
           status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.incomplete'] },
           detail: BUNDLED_ENGLISH['fleet.detail.pending'],
-          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+          coverage: PREVIEW_COVERAGE,
           unresolved: [
             {
               id: 'refused-19',
-              message:
-                'The installed game data cannot rebuild one ship: Unknown module symbol Int_Powerplant_Size9_Class6.',
+              message: PREVIEW_UNRESOLVED,
             },
           ],
         }),
@@ -5881,7 +5911,7 @@ registerPreview({
         view: fleetView({
           state: 'waiting',
           status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.waiting'] },
-          detail: 'The next attempt is permitted from 14 Aug 2026, 09:41.',
+          detail: PREVIEW_WAITING_UNTIL,
         }),
       },
       [
@@ -5981,7 +6011,7 @@ registerPreview({
       {
         view: fleetView({
           status: { tone: 'success', message: BUNDLED_ENGLISH['fleet.status.cached'] },
-          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+          coverage: PREVIEW_COVERAGE,
         }),
       },
       [
@@ -6003,13 +6033,12 @@ registerPreview({
       'error',
       {
         view: fleetView({
-          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+          coverage: PREVIEW_COVERAGE,
           status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.unresolved.one'] },
           unresolved: [
             {
               id: 'refused-19',
-              message:
-                'The installed game data cannot rebuild one ship: Unknown module symbol Int_Powerplant_Size9_Class6.',
+              message: PREVIEW_UNRESOLVED,
             },
           ],
         }),

@@ -27,8 +27,8 @@ equivalents for every visual carrier.
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 1–15 | As stated in the protocol | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 1–15 | As above                  | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 1–15 | As above                  | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 1–15 | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 1–15 | As stated in the protocol | —      | not run |
 
 Capability features append their own rows as they land; the rows above are the
 foundation's own and are the ones this feature is accountable for.
@@ -42,8 +42,8 @@ list moves, the actions wrap — so each is its own observation.
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 15   | As stated in the protocol | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 15   | As above                  | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 15   | As above                  | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 15   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 15   | As stated in the protocol | —      | not run |
 
 ## A newly published version (feature 011, user story 4)
 
@@ -63,8 +63,8 @@ so what a reader walks past to reach it differs.
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 16   | As stated in the protocol | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 16   | As above                  | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 16   | As above                  | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 16   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 16   | As stated in the protocol | —      | not run |
 
 ## Help, licences and provenance (feature 012)
 
@@ -82,8 +82,8 @@ notice while the interface is in German — is a property of the reader and the
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 17   | As stated in the protocol | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 17   | As above                  | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 17   | As above                  | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 17   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 17   | As stated in the protocol | —      | not run |
 
 The record feature 012 is accountable for, including what the automated suite
 does cover in its place, is
@@ -113,8 +113,8 @@ ready, unavailable and stacked states in all ten projects.
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 18   | As stated in the protocol | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 18   | As above                  | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 18   | As above                  | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 18   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 18   | As stated in the protocol | —      | not run |
 
 ## The equipment bench (feature 013)
 
@@ -142,8 +142,8 @@ projects.
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 19   | As stated in the protocol | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 19   | As above                  | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 19   | As above                  | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 19   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 19   | As stated in the protocol | —      | not run |
 
 ## The tool bar's own controls (feature 017)
 
@@ -168,8 +168,8 @@ all ten projects.
 | Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
 | ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 20   | As stated in the protocol | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 20   | As above                  | —      | not run |
-| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 20   | As above                  | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 20   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 20   | As stated in the protocol | —      | not run |
 
 ## A screen that is on its way (feature 018)
 

@@ -50,13 +50,17 @@ public sealed class FleetService(
   /// the journal confirms whole — with nothing having been read in between
   /// (020/FR-016).
   ///
-  /// A cursor inside the current day is a different case, and this says no to
-  /// it. The day is still being written, so there are lines after the cursor
-  /// whatever the last refresh did, and the fleet import metadata holds four
-  /// items that cannot tell a refresh that read the day to its end from one
-  /// that stopped on the batch bound inside it (020/FR-015). The coverage
-  /// carries the date and line either way, which is what states how far
-  /// reading reached.
+  /// A cursor inside the current day is answered no, and that is a choice
+  /// rather than a fact. Fleet import metadata holds four items, and they
+  /// cannot tell a refresh that read the day to its end from one that stopped
+  /// on the batch bound inside it: both leave the same date and the same line
+  /// count, and a fifth item is what 020/FR-015 forbids. The coverage carries
+  /// that date and line either way, which is what states how far reading
+  /// reached.
+  ///
+  /// So a refresh that stops inside the current day answers `incomplete` and
+  /// asks to be run again, and a reload of the same unchanged state answers
+  /// `current`. Reading the cursor back cannot recover what the refresh knew.
   /// </remarks>
   private bool Pending(JournalCursor? cursor) =>
     cursor is not null

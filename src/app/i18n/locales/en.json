@@ -1175,7 +1175,7 @@
   "fleet.copy": "Copy into the builder",
   "fleet.status.sign-in-required": "Sign in with Frontier to read the ships you own. Planning works without an account.",
   "fleet.status.loading": "Reading the ships in your account.",
-  "fleet.status.current": "Every ship your journal confirms is listed here.",
+  "fleet.status.current": "Every ship the journal history read so far confirms is listed here.",
   "fleet.status.unresolved.one": "A ship your journal confirms and this browser cannot rebuild is named below rather than listed.",
   "fleet.status.unresolved.many": "{{count}} ships your journal confirms and this browser cannot rebuild are named below rather than listed.",
   "fleet.status.cached": "These are the ships this browser last accepted. A refresh needs a network.",

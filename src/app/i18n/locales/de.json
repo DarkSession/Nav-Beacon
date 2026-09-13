@@ -1175,7 +1175,7 @@
   "fleet.copy": "In den Ship Builder kopieren",
   "fleet.status.sign-in-required": "Melde dich mit Frontier an, um deine eigenen Schiffe zu lesen. Die Planung läuft auch ohne Konto.",
   "fleet.status.loading": "Die Schiffe in deinem Konto werden gelesen.",
-  "fleet.status.current": "Jedes Schiff, das dein Journal bestätigt, steht hier.",
+  "fleet.status.current": "Jedes Schiff, das der bisher gelesene Journalverlauf bestätigt, steht hier.",
   "fleet.status.unresolved.one": "Ein Schiff, das dein Journal bestätigt und dieser Browser nicht nachbauen kann, wird unten genannt statt aufgelistet.",
   "fleet.status.unresolved.many": "{{count}} Schiffe, die dein Journal bestätigt und dieser Browser nicht nachbauen kann, werden unten genannt statt aufgelistet.",
   "fleet.status.cached": "Das sind die Schiffe, die dieser Browser zuletzt übernommen hat. Eine Aktualisierung braucht ein Netz.",
