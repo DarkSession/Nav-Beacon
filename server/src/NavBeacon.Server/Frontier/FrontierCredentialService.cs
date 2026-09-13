@@ -1,4 +1,5 @@
 using System.Data;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using NavBeacon.Server.Persistence;
@@ -64,10 +65,16 @@ public sealed class FrontierCredentialService(
     if (!forceRefresh && account.AccessTokenExpiresAt > timeProvider.GetUtcNow())
     {
       await transaction.CommitAsync(cancellationToken);
-      return tokenProtector.Unprotect(account.ProtectedAccessToken);
+      return Read(account.ProtectedAccessToken);
     }
 
-    var refreshToken = tokenProtector.Unprotect(account.ProtectedRefreshToken);
+    var refreshToken = Read(account.ProtectedRefreshToken);
+    if (refreshToken is null)
+    {
+      await transaction.CommitAsync(cancellationToken);
+      return null;
+    }
+
     var refreshed = await frontier.RefreshAsync(refreshToken, cancellationToken);
     if (refreshed is null)
     {
@@ -81,5 +88,27 @@ public sealed class FrontierCredentialService(
     await database.SaveChangesAsync(cancellationToken);
     await transaction.CommitAsync(cancellationToken);
     return refreshed.AccessToken;
+  }
+
+  /// <summary>
+  /// One stored token, or `null` where this server cannot read it.
+  ///
+  /// A key ring that was lost or replaced leaves the stored tokens as bytes
+  /// nothing here opens. That is Frontier authorisation this server no longer
+  /// holds, so it is answered as the authorisation that has gone: a Commander
+  /// signs in with Frontier again, and the tokens are stored under the ring now
+  /// in use. Reading it regardless would end the request in an unhandled
+  /// failure, which states nothing and offers nothing (020/FR-018).
+  /// </summary>
+  private string? Read(string protectedToken)
+  {
+    try
+    {
+      return tokenProtector.Unprotect(protectedToken);
+    }
+    catch (CryptographicException)
+    {
+      return null;
+    }
   }
 }

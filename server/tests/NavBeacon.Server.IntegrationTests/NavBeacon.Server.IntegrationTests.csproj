@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures/**/*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Fixtures/**/*.mjs" CopyToOutputDirectory="PreserveNewest" />
     <!--
       The one file both ends of the session exchange read. The browser's parser
       accepts the property set it names and SessionContractTests asserts the

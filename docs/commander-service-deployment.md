@@ -101,9 +101,12 @@ application name.
 
 ## Backing up and restoring the key ring
 
-The key ring is the `data_protection_keys` table. Losing it signs every Commander out and makes the
-stored Frontier tokens unreadable. The certificate that encrypts it is equally load-bearing: a
-restored ring without its certificate is unreadable.
+The key ring is the `data_protection_keys` table. Losing it makes the stored Frontier tokens
+unreadable, so every Commander is asked to sign in with Frontier again, and it invalidates the
+anti-forgery tokens already issued, which the next `GET api/session` replaces. Commander sessions
+survive it: a session is a hashed secret in the database and does not use the ring. The certificate
+that encrypts the ring is equally load-bearing: a restored ring without its certificate is
+unreadable.
 
 1. Keep the key ring certificate in the deployment's secret store, with the same retention as the
    database backup.

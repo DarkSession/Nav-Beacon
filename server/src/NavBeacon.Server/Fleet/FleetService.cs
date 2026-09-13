@@ -248,7 +248,7 @@ public sealed class FleetService(
   private async Task<DayResult> ReadDayAsync(
     RefreshContext context,
     string body,
-    bool complete,
+    bool ended,
     CancellationToken cancellationToken
   )
   {
@@ -340,8 +340,10 @@ public sealed class FleetService(
       lastLine = line.Index;
     }
 
-    var nextDate = complete ? date.AddDays(1) : date;
-    var nextLine = complete ? 0 : lastLine + 1;
+    // The date the cursor moves to, which is decided by the clock rather than
+    // by Frontier's completeness flag: the caller states why.
+    var nextDate = ended ? date.AddDays(1) : date;
+    var nextLine = ended ? 0 : lastLine + 1;
     return await ProjectAndCommitAsync(
       context,
       operations,

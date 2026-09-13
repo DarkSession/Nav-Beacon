@@ -306,6 +306,43 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
     Assert.Equal(0, frontier.RefreshCalls);
   }
 
+  [Fact]
+  public async Task TokensStoredUnderALostKeyRingAreAnsweredAsNoToken()
+  {
+    var clock = new ManualTimeProvider(InitialTime);
+    var protector = new EphemeralDataProtectionProvider().CreateProtector("Frontier tokens v1");
+    await using var context = database.CreateContext();
+    context.CommanderAccounts.AddRange(
+      Account(20_007, protector, clock.GetUtcNow().AddMinutes(1)),
+      Account(20_008, protector, clock.GetUtcNow().AddSeconds(-1))
+    );
+    await context.SaveChangesAsync(CancellationToken.None);
+    var frontier = new FakeFrontierClient
+    {
+      RefreshedTokens = new FrontierTokens(
+        "new-access",
+        "new-refresh",
+        clock.GetUtcNow().AddHours(1)
+      ),
+    };
+    // A second ring, which is what a deployment that lost the first one runs
+    // on. The stored tokens are bytes it cannot open.
+    var credentials = new FrontierCredentialService(
+      context,
+      frontier,
+      new EphemeralDataProtectionProvider(),
+      clock
+    );
+
+    // Both paths to a stored token: the one that stands unexpired, and the one
+    // that would be sent to Frontier to be refreshed.
+    Assert.Null(await credentials.GetAccessTokenAsync(20_007, CancellationToken.None));
+    Assert.Null(await credentials.GetAccessTokenAsync(20_008, CancellationToken.None));
+    // Nothing was sent: a refresh token this server cannot read is not a
+    // refresh token Frontier is asked about.
+    Assert.Equal(0, frontier.RefreshCalls);
+  }
+
   private static CommanderAccount Account(
     long customerId,
     IDataProtector protector,

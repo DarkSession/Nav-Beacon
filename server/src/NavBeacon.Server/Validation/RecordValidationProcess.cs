@@ -76,7 +76,14 @@ public sealed class RecordValidationProcess(RecordValidationProcessOptions optio
         return new RecordValidationResult(true, RecordValidationFailure.None, null, null);
       }
 
-      var code = root.TryGetProperty("code", out var codeValue) ? codeValue.GetString() : null;
+      // Read under its kind, as `ok` and `index` are. A command that answers a
+      // code of any other kind is a command this server cannot read, and
+      // reading it regardless throws past the batch refusal below (020/FR-012).
+      var code =
+        root.TryGetProperty("code", out var codeValue)
+        && codeValue.ValueKind == JsonValueKind.String
+          ? codeValue.GetString()
+          : null;
       var index =
         root.TryGetProperty("index", out var indexValue)
         && indexValue.ValueKind == JsonValueKind.Number

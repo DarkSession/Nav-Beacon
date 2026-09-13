@@ -586,6 +586,35 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
   }
 
   [Fact]
+  public async Task ARefusalStatingACodeOfTheWrongKindStillRefusesTheBatch()
+  {
+    var frontier = new FakeFrontierClient();
+    using var server = new CommanderTestServer(
+      database,
+      frontier,
+      new ManualTimeProvider(InitialTime),
+      settings: new Dictionary<string, string>
+      {
+        ["RecordValidation:ScriptPath"] = Path.Combine(
+          AppContext.BaseDirectory,
+          "Fixtures",
+          "refusal-without-a-code.mjs"
+        ),
+      }
+    );
+    using var commander = await SignInAsync(server, frontier, 70_021);
+
+    var refused = await commander.SynchroniseAsync(
+      RecordFixtures.Request(0, RecordFixtures.Write(RecordFixtures.Ship(Guid.NewGuid())))
+    );
+
+    // The batch is refused and the answer names the refusal, rather than the
+    // request ending in a failure that states nothing (020/FR-012).
+    Assert.Equal(HttpStatusCode.BadRequest, refused.Status);
+    Assert.Equal("invalid-record", refused.Code);
+  }
+
+  [Fact]
   public async Task AnAccountRevisionCommittedMidRequestIsNotOverwritten()
   {
     var race = new RevisionRaceInterceptor(database.ConnectionString, 70_019);
