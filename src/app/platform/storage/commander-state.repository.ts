@@ -1,0 +1,142 @@
+import { Injectable, inject } from '@angular/core';
+import {
+  emptyCommanderLocalState,
+  parseCommanderLocalState,
+  withPendingOperation,
+  withRecordBound,
+  withRecordForgotten,
+  withRecordLocalOnly,
+  withFleetAccepted,
+  withAccountDeleted,
+  withSynchronisationCommitted,
+  type CachedCommanderAccount,
+  type CommanderLocalState,
+  type PendingRemoteOperation,
+  type SynchronisationCommit,
+} from '../../domain/commander/commander-local-state';
+import { cachedFleetFor, type CachedFleet } from '../../domain/commander/fleet/fleet-cache';
+import { EDNB_COMMANDER_STATE_KEY } from './storage-keys';
+import { LOCAL_STORAGE_PORT, type StorageFailureCode } from './web-storage.port';
+
+export type CommanderStateWriteResult =
+  { readonly ok: true } | { readonly ok: false; readonly code: StorageFailureCode };
+
+/**
+ * The account side of browser storage, as one value under one key.
+ *
+ * Every change is read, changed and written whole, so a value that fails to
+ * write leaves the previous one intact. What decides a record's account — its
+ * binding, the remote revision it accepted, the operations waiting to be sent
+ * and the account cursor — is in that one value together, which is what lets a
+ * complete response commit at once (024/FR-026).
+ *
+ * Notes and device claim identities are not here and are not sent. They belong
+ * to the record's own key and to the live page (024/FR-007).
+ */
+@Injectable({ providedIn: 'root' })
+export class CommanderStateRepository {
+  readonly #storage = inject(LOCAL_STORAGE_PORT);
+
+  read(): CommanderLocalState {
+    const result = this.#storage.read(EDNB_COMMANDER_STATE_KEY);
+    if (!result.ok || result.value === null) {
+      return emptyCommanderLocalState();
+    }
+    try {
+      return parseCommanderLocalState(JSON.parse(result.value)) ?? emptyCommanderLocalState();
+    } catch {
+      return emptyCommanderLocalState();
+    }
+  }
+
+  storeAccount(account: CachedCommanderAccount): CommanderStateWriteResult {
+    return this.#write({ ...this.read(), account });
+  }
+
+  clearSession(): CommanderStateWriteResult {
+    // The session ends; the account's records, cursor and queued work stay, so
+    // the same Commander signing in again carries on where they stopped.
+    //
+    // The fleet cache loses this account's entry and no other. It is keyed by
+    // Customer ID precisely so that two Commanders sharing a browser never
+    // read each other's ships, and emptying it whole would take the other
+    // Commander's last accepted fleet out with it (024/FR-022).
+    const state = this.read();
+    const customerId = state.account?.customerId ?? null;
+    return this.#write({
+      ...state,
+      account: null,
+      fleetCache:
+        customerId === null
+          ? state.fleetCache
+          : state.fleetCache.filter((entry) => entry.customerId !== customerId),
+    });
+  }
+
+  /**
+   * Takes one account out of this browser, in one write.
+   *
+   * The records this browser holds are named by the caller, because a binding
+   * is not the list of records: a record whose upload never completed has no
+   * binding at all, and it must still be marked local-only for the deletion to
+   * hold (024/FR-024).
+   */
+  prepareAccountDeletion(
+    customerId: string,
+    retainedRecordIds: readonly string[],
+  ): CommanderStateWriteResult {
+    return this.#write(withAccountDeleted(this.read(), customerId, retainedRecordIds));
+  }
+
+  /** The last accepted fleet for one Commander, readable with no network. */
+  readFleet(customerId: string): CachedFleet | null {
+    return cachedFleetFor(this.read().fleetCache, customerId);
+  }
+
+  /**
+   * Takes one settled fleet answer.
+   *
+   * Only a settled answer reaches here. A refresh that is waiting, has failed
+   * or has lost its authorisation leaves the fleet this browser already
+   * accepted exactly where it is (024/FR-018).
+   */
+  storeFleet(fleet: CachedFleet): CommanderStateWriteResult {
+    return this.#write(withFleetAccepted(this.read(), fleet));
+  }
+
+  /** Binds one record to the signed-in Commander. */
+  bindRecord(recordId: string, customerId: string): CommanderStateWriteResult {
+    return this.#write(withRecordBound(this.read(), recordId, customerId));
+  }
+
+  /** Marks one record local-only and clears what it had queued. */
+  markRecordLocalOnly(recordId: string): CommanderStateWriteResult {
+    return this.#write(withRecordLocalOnly(this.read(), recordId));
+  }
+
+  /** Drops what this browser knew about one record's remote copy. */
+  forgetRecord(recordId: string): CommanderStateWriteResult {
+    return this.#write(withRecordForgotten(this.read(), recordId));
+  }
+
+  /** Queues one remote operation, so a change made offline survives a reload. */
+  queueOperation(operation: PendingRemoteOperation): CommanderStateWriteResult {
+    return this.#write(withPendingOperation(this.read(), operation));
+  }
+
+  /**
+   * Commits one complete synchronisation response.
+   *
+   * The cursor advances and the answered operations go in this write and no
+   * earlier one. A write that fails leaves both where they were, and the
+   * service answers the retry as a no-op (024/FR-026).
+   */
+  commitSynchronisation(commit: SynchronisationCommit): CommanderStateWriteResult {
+    return this.#write(withSynchronisationCommitted(this.read(), commit));
+  }
+
+  #write(value: CommanderLocalState): CommanderStateWriteResult {
+    const result = this.#storage.write(EDNB_COMMANDER_STATE_KEY, JSON.stringify(value));
+    return result.ok ? { ok: true } : result;
+  }
+}

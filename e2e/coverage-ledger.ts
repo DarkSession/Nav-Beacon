@@ -53,6 +53,7 @@ export const COVERED_FEATURES: readonly string[] = [
   '019-first-frame-typefaces',
   '020-held-grade-ladder',
   '023-served-document-held',
+  '024-commander-account-sync',
 ];
 
 /** The five layout profiles, each run in both engines. */
@@ -2404,6 +2405,152 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
     ],
     manualRecord: null,
   },
+  // ---------------------------------------------------------------------------
+  // 020 — the optional Commander account. Three surfaces: the frame's account
+  // modal, what the record libraries say about an account, and the ships a
+  // Commander owns inside the stored-build layer.
+  // ---------------------------------------------------------------------------
+  {
+    surfaceId: 'commander/account-dialog',
+    requirements: ['024/FR-001', '024/FR-002', '024/FR-005'],
+    journey: 'commander/account',
+    axe: true,
+    assertions: [
+      'planning needs no account, and an anonymous session sends the service nothing',
+      'the modal states what the account holds before a Commander signs in rather than after',
+      'it says which actions need a network and that planning does not',
+      'the Commander named on screen is the one the session states, never one this browser chose',
+      'signing in is a deliberate navigation off this origin, and the callback marker leaves the address',
+    ],
+    manualRecord: 'screen-reader',
+  },
+  {
+    surfaceId: 'commander/session-and-credentials',
+    requirements: ['024/FR-003', '024/FR-004', '024/FR-023'],
+    journey: 'commander/account',
+    axe: true,
+    assertions: [
+      'the session answers an identity and an anti-forgery value: no token, OAuth code or OAuth state reaches the browser, read in the session contract tests',
+      'a refused correlation and an expired session both ask for a fresh sign-in and leave the planning records where they are, read in the account store tests',
+      'only Live game data is accepted, read in the server contract tests',
+      'applying a published update stays the one mechanism with a time limit, read in the update journey',
+    ],
+    manualRecord: null,
+  },
+  {
+    surfaceId: 'commander/account-deletion',
+    requirements: ['024/FR-006', '024/FR-024'],
+    journey: 'commander/account',
+    axe: true,
+    assertions: [
+      'the destructive answer stands behind a confirmation layer of its own',
+      'dismissing that layer is a cancel, read in the confirmation-layer tests',
+      'the confirmation says what leaves the server and what stays in this browser',
+      'the deletion reaches the service only once this browser has committed its own cleanup, read in the store tests',
+      'the planning records stay here afterwards, and this browser then holds nothing about the account',
+      'a refused local cleanup sends no deletion and leaves the account available for another attempt, read in the store tests',
+    ],
+    manualRecord: 'screen-reader',
+  },
+  {
+    surfaceId: 'commander/record-synchronisation',
+    requirements: ['024/FR-007', '024/FR-011', '024/FR-022'],
+    journey: 'commander/records',
+    axe: true,
+    assertions: [
+      'an autosave is what synchronises, and an anonymous browser queues nothing',
+      'a named save reaches the same trigger as an autosave, read in the synchronisation wiring tests',
+      'a save the account cannot be reached for is still a save',
+      'the region says what is still owed beside the failure, read in the panel component tests',
+      'the failed state offers an explicit retry, and the retry brings the account current',
+      'no state claims a device is current until the service has confirmed it',
+    ],
+    manualRecord: 'screen-reader',
+  },
+  {
+    surfaceId: 'commander/first-merge',
+    requirements: ['024/FR-008', '024/FR-019', '024/FR-020', '024/FR-021'],
+    journey: 'commander/records',
+    axe: true,
+    assertions: [
+      'the first sign-in offers this browser\u2019s eligible records and takes the account\u2019s in the same exchange',
+      'no request carries a note',
+      'a device claim, a save provenance and a local revision have no field to travel in, read in the serializer tests',
+      'ship builds and equipment loadouts follow the same merge, read in the wiring tests',
+      'a build opened from a link enters synchronisation as an autosave, read in the wiring tests, and puts nothing in a path or query, read in the build-link journey',
+    ],
+    manualRecord: null,
+  },
+  {
+    surfaceId: 'commander/record-conflict',
+    requirements: ['024/FR-009', '024/FR-010'],
+    journey: 'commander/records',
+    axe: true,
+    assertions: [
+      'a record the account no longer holds raises one layer offering three answers',
+      'the layer names the record it is asking about, read in the presenter tests',
+      'dismissing the layer answers nothing: the conflict stands and both versions are still there',
+      'leave-both-as-they-are keeps this browser\u2019s copy and makes it local-only',
+      'nothing stays queued for a record left as it is, read in the store tests',
+      'overwrite supersedes the marker under the old identity and keep-both mints a fresh one, read in the store tests',
+    ],
+    manualRecord: 'screen-reader',
+  },
+  {
+    surfaceId: 'commander/remote-record-contract',
+    requirements: ['024/FR-012', '024/FR-025', '024/FR-026'],
+    journey: 'commander/records',
+    axe: true,
+    assertions: [
+      'a record the account holds in a form this version cannot open is stated and left unopened, read in the store tests',
+      'a live page renews its own records\u2019 protection once a day and changes no content or revision, read in the store tests',
+      'a refusal applies none of the batch, so nothing is committed against this browser\u2019s cursor, read in the server contract tests',
+      'the record, change-count and batch bounds are read at the boundary in the contract tests',
+    ],
+    manualRecord: null,
+  },
+  {
+    surfaceId: 'commander/owned-ships',
+    requirements: ['024/FR-013', '024/FR-014', '024/FR-015', '024/FR-016', '024/FR-018'],
+    journey: 'commander/fleet',
+    axe: true,
+    assertions: [
+      'the ships a journal loadout event confirms are listed, each named as the Commander named it',
+      'the view states what journal history the fleet was read from, so incomplete coverage is checkable',
+      'a held refresh and a failed one both say so and neither empties the list',
+      'a failed state says the ships listed are the ones last accepted',
+      'a sign-in is offered in place of a fleet where there is no account',
+      'a ship the installed package will not rebuild is named as unresolved and nothing is put in its place',
+      'the sentence above the list claims no whole fleet while a ship is named below it instead',
+      'the package\u2019s own words are carried where it published them for the language being read, and never written or translated here, read in the presenter tests',
+    ],
+    manualRecord: 'screen-reader',
+  },
+  {
+    surfaceId: 'commander/fleet-copy',
+    requirements: ['024/FR-017'],
+    journey: 'commander/fleet-copy',
+    axe: true,
+    assertions: [
+      'an owned ship copies into the builder as a record with an identity of its own',
+      'changing and deleting the copy leaves the fleet entry exactly as it was',
+      'the fleet view offers no way to write to an owned ship',
+    ],
+    manualRecord: null,
+  },
+  {
+    surfaceId: 'commander/responsive-and-localised',
+    requirements: ['024/FR-005', '024/FR-011', '024/FR-016', '024/FR-022'],
+    journey: 'commander/account',
+    axe: true,
+    assertions: [
+      'the account modal, the conflict layer and the owned-ships view hold their reading order at desktop, tablet and mobile widths in both orientations, read in the 400% zoom record',
+      'every action clears the touch baseline and the document never scrolls sideways, at 200% text and at actual 400% zoom, read in the 400% zoom record',
+      'every owned string has a counterpart in both shipped locales, carrying the same placeholders and no blank, read in the interface-foundations policy',
+      'nothing is carried by tone: each state says what it means in its own sentence',
+    ],
+    manualRecord: 'zoom-400',
+  },
 ];
 
 /** Every requirement id the ledger currently evidences. */
@@ -2620,6 +2767,39 @@ export const helpRouteCoverage: readonly HelpRouteRow[] = [
     surface: 'Global feedback/announcement host',
     owner: '011',
     frameEntry: 'visible',
+    requirements: ['012/FR-011'],
+  },
+  {
+    // The account belongs to the session rather than to a screen, so its modal
+    // is raised from the frame's own action row beside Help and covers the
+    // frame while it stands.
+    id: 'account-dialog',
+    surface: 'Commander account dialog',
+    owner: '020',
+    frameEntry: 'obscured',
+    requirements: ['012/FR-001', '012/FR-011'],
+  },
+  {
+    id: 'account-deletion-confirmation',
+    surface: 'Account-deletion confirmation',
+    owner: '020',
+    frameEntry: 'obscured',
+    requirements: ['012/FR-011'],
+  },
+  {
+    // A second view of the stored-build layer rather than a second layer: the
+    // ships a Commander owns answer at the screen's own address.
+    id: 'owned-ships-layer',
+    surface: 'Owned ships layer',
+    owner: '020',
+    frameEntry: 'obscured',
+    requirements: ['012/FR-011'],
+  },
+  {
+    id: 'record-conflict-layer',
+    surface: 'Record conflict layer',
+    owner: '020',
+    frameEntry: 'obscured',
     requirements: ['012/FR-011'],
   },
 ];

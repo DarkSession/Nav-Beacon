@@ -26,6 +26,9 @@ export const EDNB_TAB_KEY = 'ednb:tab';
  */
 export const EDNB_UPDATE_APPLIED_KEY = 'ednb:update-applied';
 
+/** Account, fleet and synchronisation state committed as one local value. */
+export const EDNB_COMMANDER_STATE_KEY = 'ednb:commander-state';
+
 /** The channel duplicated tabs negotiate working-record ownership over. */
 export const EDNB_BROADCAST_CHANNEL = 'ednb.persistence.v1';
 

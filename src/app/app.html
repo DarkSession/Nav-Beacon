@@ -49,11 +49,12 @@
 }
 
 <!--
-  The four layers that talk to a Commander about the session they are in
-  rather than about a screen: Help · About, the two halves of the update
-  announcement, and the statement that the application is waiting for a screen.
+  The five layers that talk to a Commander about the session they are in
+  rather than about a screen: Help · About, the Commander account, the two
+  halves of the update announcement, and the statement that the application is
+  waiting for a screen.
 
-  All four are mounted in a browser only, and this is the one place in this
+  All five are mounted in a browser only, and this is the one place in this
   template that asks which. Each of them is a closed `<dialog>` until something
   opens it, so rendering them into a generated document draws nothing, moves
   nothing and costs a Commander no frame — but two of them state the version
@@ -82,6 +83,38 @@
     [dismissLabel]="help.dismissLabel()"
     (dismissed)="help.closeDialog()"
   />
+
+  <!--
+    The Commander account, beside the frame for the same reason help is: an
+    account belongs to the session rather than to a screen. Browser-only, and
+    reached rather than carried, so the first payload holds only what the first
+    frame draws.
+
+    The worker prefetches every script with the shell
+    (`ngsw-config.json`, `app-shell`), so from the second visit on this code is
+    already in the cache and opening the account asks the network for nothing.
+    That is what lets the modal still state a refused sign-in callback and an
+    expired session, which are the moments the network is the thing that
+    failed: reaching Frontier and coming back is a fresh load of an
+    application the browser already holds.
+
+    No prefetch trigger of its own. A fetch started with the session lands
+    inside the takeover a served document is still holding, and that frame may
+    not move; one started on idle competes with the engine the session is
+    already fetching, on the one screen where a Commander is most likely to
+    reach for something else at the same time (024/FR-001, 024/FR-003,
+    015/FR-009, constitution IV).
+  -->
+  @defer (when account.open()) {
+    <ednb-account-dialog
+      [open]="account.open()"
+      [view]="account.view()"
+      (dismissed)="account.closeDialog()"
+      (actionSelected)="account.select($event)"
+      (deletionConfirmed)="account.confirmDeletion()"
+      (deletionCancelled)="account.cancelDeletion()"
+    />
+  }
 
   <!--
     The overlay a newer version puts up before it restarts the page under it.

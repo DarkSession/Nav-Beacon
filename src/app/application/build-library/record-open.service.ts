@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { isShipRecord } from '../../domain/records/local-record';
-import { normalizeReconstructedBuild } from '../../domain/ships/build/build-ingress-normalizer';
+import {
+  normalizeReconstructedBuild,
+  refusalReason,
+} from '../../domain/ships/build/build-ingress-normalizer';
 import { reconstructFromSnapshot } from '../../domain/ships/build/build-snapshot.reconstructor';
 import { baselineFingerprint } from '../../domain/ships/build/build-fingerprint';
 import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
@@ -106,11 +109,4 @@ export class RecordOpenService {
       },
     };
   }
-}
-
-/** A diagnostic naming what the Almanac refused. Never Commander-facing text. */
-function refusalReason(failures: readonly { readonly code: string | null }[]): string {
-  return `The Almanac could not complete ${failures.length} partial engineering roll(s): ${failures
-    .map((failure) => failure.code ?? 'unknown')
-    .join(', ')}.`;
 }

@@ -3,8 +3,8 @@
 **Protocol id**: `screen-reader`
 **Covers**: 011 FR-006, FR-007, FR-008, FR-009, FR-010, FR-013, FR-020, FR-023, FR-025,
 FR-026, SC-001; 017 FR-001, FR-002, FR-003, FR-004, FR-005, SC-001, SC-002; 018 FR-002,
-FR-006, FR-007
-**Version**: 14
+FR-006, FR-007; 024 FR-001, FR-005, FR-006, FR-009, FR-010, FR-013, FR-016, FR-018, FR-022
+**Version**: 15
 
 ## What is automated, and what is left
 
@@ -475,9 +475,73 @@ disagrees or where the announcement is correct but unusable.
     received: the words do not move between the two, so what is being confirmed
     is that anything is said at all.
 
+23. **The Commander account.** An account is optional, so start where a
+    Commander starts: without one. Find the account entry on the banner row
+    where there is room for it and inside the named action layer where there is
+    not, and expect a button announced by the words it reads as. Activate it
+    and expect one dialog announced by name, with the page behind it
+    unreachable by heading, landmark or gesture.
+
+    Walk it with no account. Expect the state to be announced in words —
+    signed out — expect what an account would hold to be read as a named list
+    **before** anything is signed in to rather than after, and expect the
+    sentence saying which actions need a network to be read with it rather than
+    left below the controls where a reader meets it only after choosing. Then
+    activate the sign-in: expect to be told that this leaves the application,
+    before it happens.
+
+    Come back signed in. Expect the state to change audibly from signed out to
+    signed in, expect the Commander's name to be announced as the account's own
+    value rather than as a heading or as a bare string on its own, and expect
+    nothing about the identity to depend on where it sits. Find the deletion
+    control and activate it. Expect a second dialog announced by its own
+    question, expect the reader to be moved into it, and expect what leaves the
+    account and what stays in this browser to be announced as two separate
+    statements rather than as one sentence a reader has to split. Expect the
+    destructive answer and the way back to be told apart by what is said rather
+    than by colour, emphasis or order. Answer **no** and expect to be returned
+    to the account dialog and to the control that asked.
+
+    Then the record the two copies disagree about. With one record saved here
+    that the account no longer holds, open the saved builds. Expect the
+    question announced as a layer of its own, expect the record it is about to
+    be named inside it, and expect the three answers to be announced as three
+    named controls rather than as two and a dismissal. Leave it without
+    answering and expect nothing to have been decided — expect the record to be
+    announced as still here, and as no longer being sent anywhere. Raise it
+    again and answer it: expect one polite announcement of what became of that
+    record, and expect the list beneath to be announced as changed once rather
+    than read again from the top.
+
+    Then the ships the Commander owns. Open the owned-ships view and expect the
+    region announced by name. Expect each ship announced as one control
+    carrying its model, the name the Commander gave it and its identification
+    plate, and expect a ship with no name of its own to be announced by its
+    model rather than by a gap. Expect the interval the journal was read over to
+    be announced in words with the list rather than as a stray date beside it.
+    Ask for a refresh: expect one polite announcement of the outcome; expect a
+    refresh Frontier is holding to be announced as waiting rather than as
+    failed; and expect a refresh that stopped to say that the ships on screen
+    are the ones last accepted. In every one of those states expect the ships
+    already accepted to stay announced, and expect **nothing** to be announced
+    as current unless the service answered that it is.
+
+    The judgment this step exists for: whether a Commander who has only heard
+    these three layers can say whether they are signed in, what the account
+    holds, which of two copies of a record they have just chosen, and how much
+    of their fleet the application actually knows about. Three of those are
+    statements about something that is not on the screen — a copy held
+    somewhere else, an interval a journal was read over, a refresh that has not
+    finished — and whether that survives being spoken one control at a time is
+    a question no snapshot of the accessibility tree can answer.
+
 ## Recording the result
 
-Append one row per configuration and step to `results/screen-reader.md`, with
-the expected speech or behaviour, what was actually announced, and pass or fail.
-A failure records the announcement verbatim. Do not merge configurations into
-one row: what NVDA says and what TalkBack says are different observations.
+Append one row per configuration, orientation and step to
+`results/screen-reader.md`, with the expected speech or behaviour, what was
+actually announced, and pass or fail. A failure records the announcement
+verbatim. Do not merge configurations into one row: what NVDA says and what
+TalkBack says are different observations. Do not merge orientations either —
+the shell folds and unfolds between them, so what a reader walks past to reach
+the same control is a different screen, and on a desktop window a portrait run
+means resizing it to a portrait aspect.

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NavBeacon.Server/NavBeacon.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NavBeacon.Server.IntegrationTests/NavBeacon.Server.IntegrationTests.csproj" />
+    <Project Path="tests/NavBeacon.Server.UnitTests/NavBeacon.Server.UnitTests.csproj" />
+  </Folder>
+</Solution>

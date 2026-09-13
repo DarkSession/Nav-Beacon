@@ -113,12 +113,15 @@ accepted requirement rather than to nothing.
 
 This is the exhaustive set required by FR-011. The `helpRouteCoverage` export inside feature 011's
 shared `e2e/coverage-ledger.ts` transcribes it; it does not re-derive it, and it is the only part of
-that file this feature owns. Every row is a current capability shipped by features 001–011, a
-package-backed artwork or value surface named by an accepted screen contract, or a state that
-obscures the application frame. **Frame entry** records whether FR-001's route is visible in that
-state; where a dismissible layer covers the frame, help is reached from the capability beneath once
-the layer is dismissed, which is what FR-011 now requires in place of a substitute route. A missing
-capability or applicable surface is a release failure; representative sampling is not sufficient.
+that file this feature owns. Every row is a current shipped capability, a package-backed artwork or
+value surface named by an accepted screen contract, or a state that obscures the application frame.
+The rows below 011 are entered by the features that ship them: this table is the register every
+shipped surface is recorded in, which is why it is the one archived table a later change writes into
+(`CONSTITUTION.md`, Development Workflow). **Frame entry** records whether FR-001's route is visible
+in that state; where a dismissible layer covers the frame, help is reached from the capability
+beneath once the layer is dismissed, which is what FR-011 now requires in place of a substitute
+route. A missing capability or applicable surface is a release failure; representative sampling is
+not sufficient.
 
 | Capability / surface                              | Owner | Frame entry           | Applies                |
 | ------------------------------------------------- | ----- | --------------------- | ---------------------- |
@@ -145,6 +148,18 @@ capability or applicable surface is a release failure; representative sampling i
 | Hull Anatomy side availability/defect state       | 010   | visible               | FR-011                 |
 | Application frame                                 | 011   | visible               | FR-001                 |
 | Global feedback/announcement host                 | 011   | visible               | FR-011                 |
+| Commander account dialog                          | 020   | obscured, dismissible | FR-001, FR-011         |
+| Account-deletion confirmation                     | 020   | obscured, dismissible | FR-011                 |
+| Owned ships layer                                 | 020   | obscured, dismissible | FR-011                 |
+| Record conflict layer                             | 020   | obscured, dismissible | FR-011                 |
+
+The four rows owned by feature 024 are the optional Commander account's own surfaces: the modal the
+frame's account action raises, the question asked before an account is deleted, the ships a
+Commander owns inside the stored-build layer, and the layer that asks what happens to a record the
+account and this browser disagree about. Each covers the frame while it stands and each is
+dismissible, so help is reached from the capability beneath — the route FR-011 requires there. The
+account is not a behaviour topic: the fixed two-topic FAQ does not change, and what the account holds
+is stated in the account dialog itself.
 
 The **Applies** column carries this feature's requirement IDs; **Owner** carries the feature that
 owns the surface. The application frame's own row records `visible` like any

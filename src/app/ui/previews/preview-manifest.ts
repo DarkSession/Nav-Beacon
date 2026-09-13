@@ -257,6 +257,9 @@ import { ShipIdentityFields } from '../outfitting/ship-identity-fields';
 import { UnavailableFact } from '../outfitting/unavailable-fact';
 import { DiagnosticList } from '../technical/diagnostic-list';
 import { InlineLink } from '../components/inline-link/inline-link';
+import { AccountDialog } from '../../features/account/account-dialog.component';
+import { SynchronisationPanel } from '../../features/build-library/synchronisation-panel.component';
+import { OwnedShipsPanel } from '../../features/build-library/owned-ships-panel.component';
 import { HelpDialog } from '../../features/help/help-dialog.component';
 import { SaveBuildDialog } from '../../features/build-workspace/save-build.dialog';
 import { HELP_MANIFEST } from '../../platform/build/help-manifest.generated';
@@ -4657,6 +4660,431 @@ registerPreview({
 });
 
 // ---------------------------------------------------------------------------
+// Feature 020 — the Commander account
+//
+// One modal, thirteen states. The five required manifest states cannot name
+// thirteen screen states between them, so the dialog is declared four times —
+// once for the account's ordinary life, once for a session that cannot be used,
+// once for the deletion question, and once for what stands unfinished between a
+// Commander and the account they still have — and each declaration names the
+// screen state its fixture draws. Registering the same production component under a second id is
+// what `tab-group-segmented` already does for a second set of renderings.
+//
+// Every fixture reads its words from the bundled English catalogue, so a
+// reworded account message reaches the catalogue page and the product together.
+// ---------------------------------------------------------------------------
+
+/** One account view model, with the parts every state shares filled in. */
+function accountView(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    title: BUNDLED_ENGLISH['account.title'],
+    commanderLabel: BUNDLED_ENGLISH['account.commander.label'],
+    commanderName: null,
+    status: null,
+    dataUseTitle: BUNDLED_ENGLISH['account.data.title'],
+    dataUse: [
+      BUNDLED_ENGLISH['account.data.identity'],
+      BUNDLED_ENGLISH['account.data.credentials'],
+      BUNDLED_ENGLISH['account.data.records'],
+      BUNDLED_ENGLISH['account.data.fleet'],
+      BUNDLED_ENGLISH['account.data.frontier'],
+      BUNDLED_ENGLISH['account.data.destination'],
+    ],
+    networkNotice: BUNDLED_ENGLISH['account.network.notice'],
+    actions: [],
+    busyLabel: BUNDLED_ENGLISH['action.busy'],
+    deletionConfirmation: false,
+    deletionTitle: BUNDLED_ENGLISH['account.delete.title'],
+    deletionDescription: BUNDLED_ENGLISH['account.delete.description'],
+    deletionConfirm: BUNDLED_ENGLISH['account.delete.confirm'],
+    deletionCancel: BUNDLED_ENGLISH['action.cancel'],
+    dismiss: BUNDLED_ENGLISH['action.close'],
+    ...overrides,
+  };
+}
+
+/** The name a catalogue page shows in place of a Commander's own. */
+const PREVIEW_COMMANDER = 'CMDR Preview';
+
+const SIGN_IN_ACTION = {
+  label: BUNDLED_ENGLISH['account.sign-in'],
+  kind: 'sign-in',
+  emphasis: 'primary',
+  busy: false,
+};
+
+const SIGNED_IN_ACTIONS = [
+  {
+    label: BUNDLED_ENGLISH['account.sign-out'],
+    kind: 'sign-out',
+    emphasis: 'secondary',
+    busy: false,
+  },
+  {
+    label: BUNDLED_ENGLISH['account.delete.action'],
+    kind: 'delete',
+    emphasis: 'danger',
+    busy: false,
+  },
+];
+
+/** What every state of this modal is held to, whichever declaration draws it. */
+const ACCOUNT_DIALOG_EXPECTATIONS: readonly string[] = [
+  'one dialog, named by its visible title, over an inert capability',
+  'states what the account holds before it offers to sign in',
+  'states which actions need a network without blocking local work',
+  'wide viewports centre a bounded dialog; narrow ones raise a full-width sheet',
+  'every action clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+  'the same reading order at desktop, tablet and mobile width, in both orientations',
+  'no meaning carried by tone alone: every notice says it in words',
+];
+
+const ACCOUNT_DIALOG_SEMANTICS = {
+  role: 'dialog',
+  visibleNameMatchesAccessibleName: true,
+  // The modal is mounted and open or mounted and closed; it draws no control
+  // with a collapsed form for an `aria-expanded` to describe.
+  exposedStates: ['busy'],
+  relationships: ['label', 'description'],
+  textEquivalents: ['session state, in a sentence rather than by tone'],
+} as const;
+
+registerPreview({
+  componentId: 'account-dialog',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'empty',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Signed in.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: { tone: 'success', message: BUNDLED_ENGLISH['account.status.signed-in'] },
+          actions: SIGNED_IN_ACTIONS,
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'names the Commander and offers sign-out beside deletion'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+      true,
+    ),
+    // Anonymous.
+    state(
+      'empty',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'info', message: BUNDLED_ENGLISH['account.status.anonymous'] },
+          actions: [SIGN_IN_ACTION],
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'states that every planning tool works without an account'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Redirect pending.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.redirect-pending'] },
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'names Frontier as the service it is sending the Commander to',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Correlation refused.
+    state(
+      'error',
+      {
+        open: true,
+        view: accountView({
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.correlation-refused'],
+          },
+          actions: [SIGN_IN_ACTION],
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'offers a fresh sign-in and states that local work is unchanged',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'account-dialog-session',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog-session', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Offline.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['account.status.offline'] },
+          actions: [
+            {
+              label: BUNDLED_ENGLISH['action.retry'],
+              kind: 'retry',
+              emphasis: 'primary',
+              busy: false,
+            },
+          ],
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'states that local work is safe and offers another attempt'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'A session state always has a sentence to state. The modal with nothing to say about the session is the anonymous state, declared under account-dialog.',
+    ),
+    // Sign-out.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.signing-out'] },
+          actions: [
+            {
+              label: BUNDLED_ENGLISH['account.sign-out'],
+              kind: 'sign-out',
+              emphasis: 'secondary',
+              busy: true,
+            },
+          ],
+        }),
+      },
+      [...ACCOUNT_DIALOG_EXPECTATIONS, 'keeps the action’s own label while it reports itself busy'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Expired session.
+    state(
+      'error',
+      {
+        open: true,
+        view: accountView({
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.session-expired'],
+          },
+          actions: [SIGN_IN_ACTION],
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'asks for authentication again without discarding local work or closing anything open',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'account-dialog-deletion',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog-deletion', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Account-deletion confirmation.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.delete-confirmation'],
+          },
+          deletionConfirmation: true,
+        }),
+      },
+      [
+        'one confirmation layer, named by its visible question, over an inert capability',
+        'states what the server removes and what stays on this device',
+        'the destructive answer is a button a Commander presses; dismissal cancels',
+        'both answers clear the 44 CSS-pixel target baseline and wrap rather than overflowing',
+        'the same reading order at desktop, tablet and mobile width, in both orientations',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'The confirmation always states the question and both answers; a version of it with nothing to confirm is not a state.',
+    ),
+    // Deletion in progress.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.deleting'] },
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the deletion is under way and offers no action',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // Refused local cleanup.
+    state(
+      'error',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'error',
+            message: BUNDLED_ENGLISH['account.status.delete-local-failed'],
+          },
+          actions: SIGNED_IN_ACTIONS,
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the account was not deleted and leaves it available for another attempt',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'account-dialog-unfinished',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog-unfinished', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // A Frontier authorisation that lapsed under a session that has not. The
+    // account is still signed in here, so the sign-out and the deletion stand
+    // beside the Frontier sign-in rather than going with the fleet.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.authorisation-expired'],
+          },
+          actions: [SIGN_IN_ACTION, ...SIGNED_IN_ACTIONS],
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'names the Commander whose session stands while the Frontier authorisation does not',
+        'offers the sign-out and the deletion beside the Frontier sign-in',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'Every state here has a sentence to state. The modal with nothing to say about the session is the anonymous state, declared under account-dialog.',
+    ),
+    // The session being read, at the start of a browser session.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.loading'] },
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the session is being read, and offers no action until it answers',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    // A sign-out the service refused. The session stands, so the actions that
+    // act on it stand with it and the Commander can ask again.
+    state(
+      'error',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'error',
+            message: BUNDLED_ENGLISH['account.status.sign-out-failed'],
+          },
+          actions: SIGNED_IN_ACTIONS,
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the sign-out did not take, and leaves the same actions to ask again with',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
+  ],
+});
+
+// ---------------------------------------------------------------------------
 // Feature 013 — the equipment bench
 //
 // Two components, both shared by every chooser and every reading on the bench.
@@ -4871,5 +5299,763 @@ registerPreview({
     state('disabled', { label: 'Select or drop journal files', disabled: true }, [
       'exposes the disabled state natively on the file control',
     ]),
+  ],
+});
+
+// ---------------------------------------------------------------------------
+// Feature 020 — the record libraries' account region
+//
+// One panel, twelve states. The five required manifest states cannot name
+// twelve screen states between them, so the panel is declared three times —
+// once for where the account stands, once for what is true of sets of records,
+// and once for the question only a Commander can answer — and each declaration
+// names the screen state or states its fixture draws. Two of them draw two: a
+// note about records the account does not hold is read under a sentence about
+// the device, so the fixture that carries the note carries that sentence with
+// it. Registering one production component under a
+// second id is what `tab-group-segmented` already does for a second set of
+// renderings.
+//
+// Every fixture reads its words from the bundled English catalogue, so a
+// reworded sentence reaches the catalogue page and the product together.
+// ---------------------------------------------------------------------------
+
+/** One panel view model, with the parts every state shares filled in. */
+function synchronisationView(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    heading: BUNDLED_ENGLISH['sync.title'],
+    status: { tone: 'info', message: BUNDLED_ENGLISH['sync.status.local-only'] },
+    detail: null,
+    retry: null,
+    notes: [],
+    conflict: null,
+    ...overrides,
+  };
+}
+
+/** The instant and the counts a catalogue page shows in place of a Commander's own. */
+const PREVIEW_INSTANT = '12 Sep 2026, 09:41';
+const PREVIEW_RECORD = 'Deep space explorer';
+
+/** One catalogue sentence, with the instant a Commander would read in it. */
+function atPreviewInstant(key: MessageKey): string {
+  return BUNDLED_ENGLISH[key].replace('{{when}}', PREVIEW_INSTANT);
+}
+
+/**
+ * One counted catalogue sentence, with the count a catalogue page shows.
+ *
+ * The stem and the count together choose the sentence, exactly as the message
+ * service does, so a fixture cannot draw the plural form over a count of one.
+ */
+function previewCount(stem: string, count: number): string {
+  const key = `${stem}.${count === 1 ? 'one' : 'many'}` as MessageKey;
+  return BUNDLED_ENGLISH[key].replace('{{count}}', String(count));
+}
+
+function synchronisationConflict(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    recordId: 'preview-record',
+    title: BUNDLED_ENGLISH['sync.conflict.stale.title'],
+    description: BUNDLED_ENGLISH['sync.conflict.stale.description'],
+    recordLabel: BUNDLED_ENGLISH['sync.conflict.record'].replace('{{name}}', PREVIEW_RECORD),
+    answers: [
+      {
+        choice: 'overwrite',
+        label: BUNDLED_ENGLISH['sync.conflict.overwrite'],
+        emphasis: 'primary',
+      },
+      {
+        choice: 'keep-both',
+        label: BUNDLED_ENGLISH['sync.conflict.keep-both'],
+        emphasis: 'secondary',
+      },
+      {
+        choice: 'cancel',
+        label: BUNDLED_ENGLISH['sync.conflict.cancel'],
+        emphasis: 'secondary',
+      },
+    ],
+    dismiss: BUNDLED_ENGLISH['action.close'],
+    ...overrides,
+  };
+}
+
+/** What every state of this region is held to, whichever declaration draws it. */
+const SYNCHRONISATION_EXPECTATIONS: readonly string[] = [
+  'the account state is a sentence, never a tone on its own',
+  'no meaning carried by colour: every notice says it in words',
+  'the same reading order at desktop, tablet and mobile width, in both orientations',
+  'every action clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+  'nothing here claims the device is current until the service has confirmed it',
+];
+
+const SYNCHRONISATION_SEMANTICS = {
+  role: 'group',
+  visibleNameMatchesAccessibleName: true,
+  exposedStates: [],
+  relationships: ['label', 'description'],
+  textEquivalents: ['account state, in a sentence rather than by tone'],
+} as const;
+
+registerPreview({
+  componentId: 'record-synchronisation',
+  group: 'Library',
+  component: SynchronisationPanel,
+  contract: contract('record-synchronisation', SYNCHRONISATION_SEMANTICS, [
+    'default',
+    'empty',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Current.
+    state(
+      'default',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'success',
+            message: atPreviewInstant('sync.status.current'),
+          },
+        }),
+      },
+      [...SYNCHRONISATION_EXPECTATIONS, 'names the instant the service confirmed this device at'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Local only.
+    state(
+      'empty',
+      { view: synchronisationView() },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that the records stay in this browser and that an account is optional',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // First merge.
+    state(
+      'loading',
+      {
+        view: synchronisationView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['sync.status.merging'] },
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that the first exchange after a sign-in is running',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Failed.
+    state(
+      'error',
+      {
+        view: synchronisationView({
+          status: { tone: 'error', message: BUNDLED_ENGLISH['sync.status.failed.offline'] },
+          detail: previewCount('sync.status.failed.pending', 2),
+          retry: BUNDLED_ENGLISH['action.retry'],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that local work is safe, says what is still owed and offers another attempt',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the account is doing. Its retry carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'record-synchronisation-records',
+  group: 'Library',
+  component: SynchronisationPanel,
+  contract: contract('record-synchronisation-records', SYNCHRONISATION_SEMANTICS, [
+    'default',
+    'empty',
+    'loading',
+    'error',
+  ]),
+  states: [
+    // Account-bound: records this browser keeps for another Commander. The
+    // settled sentence is the one that claims only what this device sends,
+    // because the note under it names records the account does not hold.
+    state(
+      'default',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'success',
+            message: atPreviewInstant('sync.status.current.partial'),
+          },
+          notes: [
+            {
+              id: 'account-bound',
+              tone: 'info',
+              message: previewCount('sync.note.account-bound', 2),
+            },
+          ],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that another account’s records stay here and never reach this one',
+        'claims no whole device above a note that names records the account does not hold',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Local-only, under an account this browser has and could not reach. The
+    // region says the account is out of reach rather than asking a Commander
+    // whose name the frame beside it is drawing to sign in.
+    state(
+      'empty',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['sync.status.unreachable'],
+          },
+          notes: [
+            {
+              id: 'local-only',
+              tone: 'info',
+              message: previewCount('sync.note.local-only', 3),
+            },
+          ],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that a local-only record needs an explicit new save or copy',
+        'states that the account is out of reach rather than asking for a sign-in',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Pending.
+    state(
+      'loading',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'warning',
+            message: previewCount('sync.status.pending', 2),
+          },
+        }),
+      },
+      [...SYNCHRONISATION_EXPECTATIONS, 'states what is owed without blocking any local work'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Unsupported remote version.
+    state(
+      'error',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'success',
+            message: atPreviewInstant('sync.status.current'),
+          },
+          notes: [
+            {
+              id: 'unsupported-version',
+              tone: 'warning',
+              message: previewCount('sync.note.unsupported-version', 1),
+            },
+          ],
+        }),
+      },
+      [
+        ...SYNCHRONISATION_EXPECTATIONS,
+        'states that the account holds a record this version cannot open, and keeps it',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the account is doing. Its retry carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'record-synchronisation-conflict',
+  group: 'Layers',
+  component: SynchronisationPanel,
+  contract: contract('record-synchronisation-conflict', SYNCHRONISATION_SEMANTICS, [
+    'default',
+    'error',
+  ]),
+  states: [
+    // Stale-write conflict.
+    state(
+      'default',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'warning',
+            message: previewCount('sync.status.conflicted', 1),
+          },
+          conflict: synchronisationConflict(),
+        }),
+      },
+      [
+        'one layer, named by its visible question, over an inert library',
+        'names the record the question is about',
+        'offers overwrite, keep both and cancel; dismissal answers nothing',
+        'states that neither version is removed until the Commander chooses',
+        'every answer clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+        'the same reading order at desktop, tablet and mobile width, in both orientations',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'A conflict layer always names a record and offers three answers; a version of it with nothing to answer is not a state.',
+    ),
+    notApplicable(
+      'loading',
+      'The question is asked once the exchange has already answered. Nothing about the layer waits.',
+    ),
+    // Remote deletion conflict.
+    state(
+      'error',
+      {
+        view: synchronisationView({
+          status: {
+            tone: 'warning',
+            message: previewCount('sync.status.conflicted', 1),
+          },
+          conflict: synchronisationConflict({
+            title: BUNDLED_ENGLISH['sync.conflict.deleted.title'],
+            description: BUNDLED_ENGLISH['sync.conflict.deleted.description'],
+          }),
+        }),
+      },
+      [
+        'one layer, named by its visible question, over an inert library',
+        'states that the account no longer holds the record and this browser still does',
+        'states that the open work stays whichever answer is chosen',
+        'offers overwrite, keep both and cancel; dismissal answers nothing',
+        'every answer clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'disabled',
+      'The layer is open or closed. Its answers carry their own busy and disabled states; the layer has none.',
+    ),
+  ],
+});
+
+// ---------------------------------------------------------------------------
+// Feature 020 — the owned ships, inside the stored-build layer
+//
+// One panel, eleven states. The five required manifest states cannot name
+// eleven screen states between them, so the panel is declared four times — once
+// for what the fleet is, once for what journal coverage says about it, once for
+// what the account or the installed game data has to answer first, and once for
+// a settled fleet the current sentence does not fit — and each declaration names
+// the screen state its fixture draws. The same reason the account region beside
+// it is declared three times.
+//
+// Every fixture reads its words from the bundled English catalogue, so a
+// reworded sentence reaches the catalogue page and the product together. The
+// package's own answer is the exception, and deliberately so: the refusal code,
+// constraint and path, and the reason inside a refusal sentence, are the game
+// data's words and no catalogue owns them.
+// ---------------------------------------------------------------------------
+
+const PREVIEW_SHIP = 'Bright Anvil';
+const PREVIEW_HULL = 'Anaconda';
+const PREVIEW_IDENT = 'BA-01';
+const PREVIEW_DAY = '14 Aug 2026';
+const PREVIEW_COVERAGE_START = '01 Jul 2026';
+const PREVIEW_REFUSAL_REASON = 'Unknown module symbol Int_Powerplant_Size9_Class6.';
+
+/** The row of the ship every fleet fixture lists, in the catalogue's words. */
+const PREVIEW_ROW_DETAIL = BUNDLED_ENGLISH['fleet.row.detail.ident']
+  .replace('{{hull}}', PREVIEW_HULL)
+  .replace('{{ident}}', PREVIEW_IDENT)
+  .replace('{{when}}', PREVIEW_DAY);
+
+/** The journal days every settled fleet fixture states it read. */
+const PREVIEW_COVERAGE = BUNDLED_ENGLISH['fleet.coverage']
+  .replace('{{from}}', PREVIEW_COVERAGE_START)
+  .replace('{{to}}', PREVIEW_DAY);
+
+/** The name of the chosen ship's fact list, as the catalogue words it. */
+const PREVIEW_FACTS_LABEL = BUNDLED_ENGLISH['fleet.facts.label'].replace('{{ship}}', PREVIEW_SHIP);
+
+/** The delay a held refresh states, as the catalogue words it. */
+const PREVIEW_WAITING_UNTIL = BUNDLED_ENGLISH['fleet.detail.waiting.until'].replace(
+  '{{when}}',
+  `${PREVIEW_DAY}, 09:41`,
+);
+
+/** One ship the installed package will not rebuild, with its own reason. */
+const PREVIEW_UNRESOLVED = BUNDLED_ENGLISH['fleet.unresolved.stated'].replace(
+  '{{reason}}',
+  PREVIEW_REFUSAL_REASON,
+);
+
+/** One owned-ships view model, with the parts every state shares filled in. */
+function fleetView(
+  overrides: Partial<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    state: 'current',
+    heading: BUNDLED_ENGLISH['fleet.title'],
+    status: { tone: 'success', message: BUNDLED_ENGLISH['fleet.status.current'] },
+    detail: null,
+    coverage: null,
+    listLabel: BUNDLED_ENGLISH['fleet.list.label'],
+    chosenLabel: BUNDLED_ENGLISH['fleet.list.chosen'],
+    ships: [
+      {
+        id: '12',
+        label: PREVIEW_SHIP,
+        detail: PREVIEW_ROW_DETAIL,
+        selected: false,
+      },
+    ],
+    emptyLabel: null,
+    selectedLabel: null,
+    facts: [],
+    unresolved: [],
+    refusal: null,
+    refresh: BUNDLED_ENGLISH['fleet.refresh'],
+    refreshing: false,
+    signIn: null,
+    copy: null,
+    ...overrides,
+  };
+}
+
+/** The facts of the chosen ship, read off the build the package rebuilt. */
+const FLEET_FACTS = [
+  { id: 'hull', label: BUNDLED_ENGLISH['fleet.fact.hull'], value: PREVIEW_HULL, unit: '' },
+  { id: 'ident', label: BUNDLED_ENGLISH['fleet.fact.ident'], value: PREVIEW_IDENT, unit: '' },
+  { id: 'source', label: BUNDLED_ENGLISH['fleet.fact.source'], value: PREVIEW_DAY, unit: '' },
+];
+
+/**
+ * The package's own refusal, as a catalogue page shows it.
+ *
+ * No message, which is what the pinned package publishes for every locale but
+ * English. The sentence beside it is this application's own statement of that
+ * absence; the code, constraint and path are the package's answer, unchanged.
+ */
+const FLEET_REFUSAL = {
+  heading: BUNDLED_ENGLISH['fleet.refusal.title'],
+  message: null,
+  absentMessage: BUNDLED_ENGLISH['fleet.refusal.no-message'],
+  facts: [
+    { id: 'code', label: BUNDLED_ENGLISH['fleet.refusal.code'], value: 'slot-unknown', unit: '' },
+    {
+      id: 'constraint',
+      label: BUNDLED_ENGLISH['fleet.refusal.constraint'],
+      value: 'slots',
+      unit: '',
+    },
+    {
+      id: 'path',
+      label: BUNDLED_ENGLISH['fleet.refusal.path'],
+      value: 'Modules[4].Slot',
+      unit: '',
+    },
+  ],
+};
+
+/** What every state of this region is held to, whichever declaration draws it. */
+const FLEET_EXPECTATIONS: readonly string[] = [
+  'what the fleet is, in a sentence, never a tone on its own',
+  'no meaning carried by colour: every notice says it in words',
+  'the same reading order at desktop, tablet and mobile width, in both orientations',
+  'every action clears the 44 CSS-pixel target baseline and wraps rather than overflowing',
+  'nothing here claims a refresh completed unless the service answered one',
+  'an owned ship is read-only: the only action on one takes a copy',
+];
+
+const FLEET_SEMANTICS = {
+  role: 'group',
+  visibleNameMatchesAccessibleName: true,
+  exposedStates: [],
+  relationships: ['label', 'description'],
+  textEquivalents: ['the state of the fleet, in a sentence rather than by tone'],
+} as const;
+
+registerPreview({
+  componentId: 'owned-ships',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships', FLEET_SEMANTICS, ['default', 'empty', 'loading', 'error']),
+  states: [
+    // Current, with a ship chosen and its facts beside it.
+    state(
+      'default',
+      {
+        view: fleetView({
+          coverage: PREVIEW_COVERAGE,
+          ships: [
+            {
+              id: '12',
+              label: PREVIEW_SHIP,
+              detail: PREVIEW_ROW_DETAIL,
+              selected: true,
+            },
+          ],
+          selectedLabel: PREVIEW_FACTS_LABEL,
+          facts: FLEET_FACTS,
+          copy: BUNDLED_ENGLISH['fleet.copy'],
+        }),
+      },
+      [...FLEET_EXPECTATIONS, 'names the chosen ship in visible text and offers the copy'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    // No confirmed ships.
+    state(
+      'empty',
+      {
+        view: fleetView({
+          state: 'empty',
+          status: { tone: 'info', message: BUNDLED_ENGLISH['fleet.status.empty'] },
+          ships: [],
+          emptyLabel: BUNDLED_ENGLISH['fleet.list.empty'],
+        }),
+      },
+      [...FLEET_EXPECTATIONS, 'states that no journal loadout event confirms a ship yet'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Loading.
+    state(
+      'loading',
+      {
+        view: fleetView({
+          state: 'loading',
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['fleet.status.loading'] },
+          ships: [],
+          emptyLabel: BUNDLED_ENGLISH['fleet.list.empty'],
+        }),
+      },
+      [...FLEET_EXPECTATIONS, 'states that the account is being read, and claims nothing yet'],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Failed refresh.
+    state(
+      'error',
+      {
+        view: fleetView({
+          state: 'failed',
+          status: { tone: 'error', message: BUNDLED_ENGLISH['fleet.status.failed.frontier'] },
+          detail: BUNDLED_ENGLISH['fleet.detail.last-accepted'],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states why the refresh stopped and that the ships already accepted still stand',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its refresh carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'owned-ships-coverage',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships-coverage', FLEET_SEMANTICS, ['default', 'error']),
+  states: [
+    // Incomplete coverage, with a ship the installed package will not rebuild.
+    state(
+      'default',
+      {
+        view: fleetView({
+          state: 'incomplete',
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.incomplete'] },
+          detail: BUNDLED_ENGLISH['fleet.detail.pending'],
+          coverage: PREVIEW_COVERAGE,
+          unresolved: [
+            {
+              id: 'refused-19',
+              message: PREVIEW_UNRESOLVED,
+            },
+          ],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that journal history cannot confirm the whole fleet, and names what it read',
+        'lists a ship the installed game data will not rebuild rather than dropping it',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'empty',
+      'Incomplete coverage is a statement about a fleet that has ships in it. With none, the state is the empty one beside it.',
+    ),
+    notApplicable('loading', 'Coverage is what an answer carried. Nothing about it waits.'),
+    // Waiting for Frontier.
+    state(
+      'error',
+      {
+        view: fleetView({
+          state: 'waiting',
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.waiting'] },
+          detail: PREVIEW_WAITING_UNTIL,
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that Frontier holds the next refresh, and when another attempt is permitted',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its refresh carries its own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'owned-ships-account',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships-account', FLEET_SEMANTICS, ['default', 'empty', 'error']),
+  states: [
+    // Expired Frontier authorisation.
+    state(
+      'default',
+      {
+        view: fleetView({
+          state: 'authorisation-expired',
+          status: {
+            tone: 'error',
+            message: BUNDLED_ENGLISH['fleet.status.authorisation-expired'],
+          },
+          detail: BUNDLED_ENGLISH['fleet.detail.last-accepted'],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that a fresh sign-in comes first, and that the ships already accepted stand',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    // Sign-in required.
+    state(
+      'empty',
+      {
+        view: fleetView({
+          state: 'sign-in-required',
+          status: { tone: 'info', message: BUNDLED_ENGLISH['fleet.status.sign-in-required'] },
+          ships: [],
+          refresh: null,
+          signIn: BUNDLED_ENGLISH['account.sign-in'],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that planning works without an account, and offers the sign-in',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'loading',
+      'What the account owes is known the moment it is asked. Nothing about it waits.',
+    ),
+    // A package identity the installed game data refused.
+    state(
+      'error',
+      {
+        view: fleetView({
+          state: 'package-refused',
+          status: { tone: 'error', message: BUNDLED_ENGLISH['fleet.status.package-refused'] },
+          detail: BUNDLED_ENGLISH['fleet.detail.last-accepted'],
+          refusal: FLEET_REFUSAL,
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'shows the installed game data’s own refusal unchanged: its code, its constraint and its path',
+        'states in this application’s own words that the game data gives no reason in this language',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its actions carry their own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'owned-ships-settled',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships-settled', FLEET_SEMANTICS, ['default', 'error']),
+  states: [
+    // Read out of this browser, because no refresh answered.
+    state(
+      'default',
+      {
+        view: fleetView({
+          status: { tone: 'success', message: BUNDLED_ENGLISH['fleet.status.cached'] },
+          coverage: PREVIEW_COVERAGE,
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that these are the ships last accepted and that a refresh needs a network',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'empty',
+      'A settled fleet the current sentence does not fit is a statement about ships that are in it. With none, the state is the empty one declared under owned-ships.',
+    ),
+    notApplicable(
+      'loading',
+      'A settled fleet is what an answer left behind. The refresh that carries it is the loading state declared under owned-ships.',
+    ),
+    // Settled, with a confirmed ship the installed package will not rebuild.
+    state(
+      'error',
+      {
+        view: fleetView({
+          coverage: PREVIEW_COVERAGE,
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.unresolved.one'] },
+          unresolved: [
+            {
+              id: 'refused-19',
+              message: PREVIEW_UNRESOLVED,
+            },
+          ],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'claims no whole fleet above a ship it names below the list instead',
+        'draws that sentence in the same tone as the rest of what the list does not carry',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its actions carry their own busy and disabled states; the region has none.',
+    ),
   ],
 });

@@ -169,14 +169,23 @@ describe('package text', () => {
       germanCatalogue as Record<string, string>,
     ];
 
+    // Every pair is checked and the offenders are collected, rather than
+    // asserted one pair at a time: the catalogues and the module tables are
+    // both long, and an assertion per pair costs more than the reading does.
+    const offenders: string[] = [];
     for (const catalogue of catalogues) {
       for (const [key, value] of Object.entries(catalogue)) {
         for (const token of tokens) {
-          expect(key.includes(token), `${key} is keyed by an entitlement token`).toBe(false);
-          expect(value.includes(token), `${key} hard-codes an entitlement token`).toBe(false);
+          if (key.includes(token)) {
+            offenders.push(`${key} is keyed by an entitlement token`);
+          }
+          if (value.includes(token)) {
+            offenders.push(`${key} hard-codes an entitlement token`);
+          }
         }
       }
     }
+    expect(offenders).toEqual([]);
   });
 
   it('resolves every package leaf this feature needs through one rule', () => {

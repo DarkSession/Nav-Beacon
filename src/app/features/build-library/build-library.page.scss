@@ -22,6 +22,17 @@
   min-block-size: 0;
 }
 
+// Which of the layer's two views is showing. Inset like every other region
+// here rather than by a body padding, and closed with the same hairline the
+// search row carries, because it divides the selector from whichever view it
+// chose.
+.library__views {
+  display: block;
+  padding-block: var(--ednb-space-control-block);
+  padding-inline: var(--ednb-space-row);
+  border-block-end: var(--ednb-border-width-hairline) solid var(--ednb-rule-panel);
+}
+
 // The reference's header row: a search field with the count set in monospace
 // beside it, wrapping to its own line where the surface is narrow. Canvas 1a
 // closes it with a hairline, which is what separates the row that searches the

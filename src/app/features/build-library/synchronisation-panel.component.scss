@@ -1,0 +1,32 @@
+@use '../../../styles/responsive' as layout;
+
+// The library's own account region: a heading, the state in a sentence, the
+// sentences about sets of records, and the retry where there is one. One column
+// at every width, because a region that reflows into two has two reading orders.
+.sync {
+  @include layout.stack(var(--ednb-space-stack-tight));
+
+  padding-block: var(--ednb-space-control-block);
+  padding-inline: var(--ednb-space-row);
+  border-block-end: var(--ednb-border-width-hairline) solid var(--ednb-rule-panel);
+}
+
+.sync__heading {
+  @include layout.micro-label;
+
+  margin: 0;
+}
+
+// A sentence about an account is not a measure, so it wraps rather than
+// reaching past the panel at the narrowest profile or at doubled text.
+.sync__status,
+.sync__note {
+  overflow-wrap: anywhere;
+}
+
+.sync__actions,
+.sync__answers {
+  @include layout.wrapping-row(var(--ednb-space-inline));
+
+  align-items: center;
+}

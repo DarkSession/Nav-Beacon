@@ -1,9 +1,10 @@
 # Runs most of the gate `pnpm run check` runs, split into individual steps so a
 # failure names the stage that broke: formatting, the specification record,
-# types, the script tests, build, unit tests (with the 80% coverage thresholds
-# from angular.json) and the Playwright end-to-end suite across the desktop,
-# tablet and mobile viewports. It has one stage of its own, between the checks
-# and the build: the version stamp, which only a deployable build needs.
+# server restore, server format, server build, server tests, types, the script
+# tests, the Angular build, unit tests and the Playwright end-to-end suite across
+# the desktop, tablet and mobile viewports. The Angular and .NET unit tests both
+# enforce their 80% coverage floors. CI has one stage of its own, between the
+# checks and the build: the version stamp, which only a deployable build needs.
 #
 # **Two lanes.** A pull request whose every changed path is under `openspec/`
 # runs the `Scope` and `Specification record` jobs and nothing else — about two
@@ -213,6 +214,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # The server's integration tests run against a real PostgreSQL, because the
+    # things they cover are the database's own: the row locks that make a
+    # session renewal and a fleet refresh safe under two requests, the advisory
+    # lock one account's refresh holds, and the migrations themselves. The image
+    # and the trust authentication are the development container's, so the one
+    # connection string below is the only difference between the two.
+    services:
+      database:
+        image: postgres:18-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
+        env:
+          POSTGRES_DB: navbeacon
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d navbeacon"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
+
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -233,8 +254,30 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Restore server packages
+        run: pnpm run server:restore
+
+      - name: Check server formatting
+        run: pnpm run server:format
+
+      - name: Build the server
+        run: pnpm run server:build
+
+      - name: Test the server with coverage
+        env:
+          # A service container on a virtual-machine runner is reached through
+          # the port it publishes on the runner itself, rather than by the name
+          # the development container resolves.
+          ConnectionStrings__NavBeacon: Host=127.0.0.1;Port=5432;Database=navbeacon;Username=postgres;SSL Mode=Disable
+        run: pnpm run server:test
 
       - name: Typecheck
         run: pnpm run typecheck

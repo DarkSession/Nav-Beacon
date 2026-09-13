@@ -1,0 +1,52 @@
+@use '../../../styles/responsive' as layout;
+
+// The layer's own fleet region: a heading, the state in a sentence, what the
+// journal covered, the ships, the facts of the chosen one and the actions. One
+// column at every width, because a region that reflows into two has two
+// reading orders.
+.fleet {
+  @include layout.stack(var(--ednb-space-stack-tight));
+
+  padding-block: var(--ednb-space-control-block);
+  padding-inline: var(--ednb-space-row);
+}
+
+.fleet__heading {
+  @include layout.micro-label;
+
+  margin: 0;
+}
+
+.fleet__facts-heading,
+.fleet__refusal-heading {
+  margin: 0;
+  font-family: var(--ednb-font-heading);
+  font-size: var(--ednb-text-size-heading-sm);
+  font-weight: var(--ednb-text-weight-heading);
+  color: var(--ednb-text-primary);
+}
+
+.fleet__refusal {
+  @include layout.stack(var(--ednb-space-stack-tight));
+}
+
+// A sentence about a fleet is not a measure, and a package diagnostic carries
+// words this application did not choose, so both wrap rather than reaching past
+// the panel at the narrowest profile or at doubled text.
+.fleet__status,
+.fleet__unresolved,
+.fleet__coverage,
+.fleet__refusal-message {
+  overflow-wrap: anywhere;
+}
+
+.fleet__coverage,
+.fleet__refusal-message {
+  margin: 0;
+  color: var(--ednb-text-subtle);
+  line-height: var(--ednb-text-leading-body);
+}
+
+.fleet__actions {
+  @include layout.wrapping-row(var(--ednb-space-inline));
+}

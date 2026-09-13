@@ -5,6 +5,9 @@ playwright-report/
 test-results/
 coverage/
 pnpm-lock.yaml
+
+# NuGet writes these, and `dotnet restore --locked-mode` rewrites any reformat.
+server/**/packages.lock.json
 public/
 .claude/
 .agents/

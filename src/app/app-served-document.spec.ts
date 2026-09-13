@@ -176,7 +176,13 @@ describe('App and a first navigation that presents no screen', () => {
     expect(mainText(fixture)).toContain(SERVED_SUBJECT);
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('ednb-status-notice')).toBeNull();
+    // The frame's status region, which is drawn only where a notice stands, so
+    // its absence is the whole of "nothing is said". Reading every notice in
+    // the shell instead would read past the page: the layers mounted beside the
+    // frame carry notices of their own — the account states what it is doing —
+    // and each sits inside a closed dialog, which draws nothing and says
+    // nothing to a Commander on the screen behind it (018/FR-007).
+    expect(element.querySelector('.frame__status')).toBeNull();
   });
 
   it('lets the screen a navigation presents replace it', async () => {

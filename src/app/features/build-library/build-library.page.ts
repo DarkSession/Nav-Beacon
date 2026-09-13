@@ -25,6 +25,9 @@ import { RecordInvalidationService } from '../../application/build-library/recor
 import { RecordOpenService } from '../../application/build-library/record-open.service';
 import { LoadoutOpenService } from '../../application/equipment/loadout-open.service';
 import { RetentionService } from '../../application/build-library/retention.service';
+import { RecordSynchronisationCoordinator } from '../../application/synchronisation/record-synchronisation.coordinator';
+import { RecordSynchronisationStore } from '../../application/synchronisation/record-synchronisation.store';
+import { SynchronisationPresenter } from '../../application/synchronisation/synchronisation.presenter';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import { Formatters } from '../../i18n/formatters/formatters';
@@ -46,7 +49,13 @@ import { TextField } from '../../ui/components/text-field/text-field';
 import { Layer } from '../../ui/components/layer/layer';
 import type { SavedBuild } from '../../ui/components/saved-build-card/saved-build-card';
 import { StatusNotice } from '../../ui/components/status/status-notice';
+import { SynchronisationPanel } from './synchronisation-panel.component';
+import { OwnedShipsPanel } from './owned-ships-panel.component';
+import { TabGroup, type TabItem } from '../../ui/components/tab-group/tab-group';
+import { FleetPresenter } from '../../application/fleet/fleet.presenter';
+import { FleetCopyService } from '../../application/fleet/fleet-copy.service';
 import { NAVIGATION_ROUTES } from '../shared/app-navigation';
+import type { ConflictChoice } from '../../domain/commander/record-conflict';
 
 /**
  * One action the committing footer offers on the record that was chosen.
@@ -94,6 +103,9 @@ interface PendingDelete {
     RecordManager,
     ResponsiveRecordList,
     StatusNotice,
+    OwnedShipsPanel,
+    SynchronisationPanel,
+    TabGroup,
     TextField,
   ],
   templateUrl: './build-library.page.html',
@@ -118,6 +130,42 @@ export class BuildLibraryPage {
   readonly #gameText = inject(GameTextPresenter);
   readonly #router = inject(Router);
   readonly #presence = inject(LibraryPresence);
+  readonly #sync = inject(RecordSynchronisationStore);
+  readonly #synchronisation = inject(RecordSynchronisationCoordinator);
+  readonly #syncPresenter = inject(SynchronisationPresenter);
+  readonly #fleetPresenter = inject(FleetPresenter);
+  readonly #fleetCopy = inject(FleetCopyService);
+
+  /**
+   * Conflicts the Commander has waved away for this visit.
+   *
+   * Dismissing the question is not one of the three answers. The conflict
+   * stands, both versions stay exactly as they are, and the account's own state
+   * still says how many records are waiting — what is set aside is the layer,
+   * not the decision (024/FR-009, 024/FR-010).
+   */
+  readonly #setAside = signal<readonly string[]>([]);
+
+  /**
+   * What this browser can say about the account's copy of these records.
+   *
+   * The library is one of the moments the design synchronises at, so the
+   * exchange is asked for when the layer is raised and what it answers is
+   * stated here (024/FR-011, design decision 6).
+   */
+  readonly syncView = computed(() => {
+    const view = this.#syncPresenter.view();
+    const setAside = this.#setAside();
+    // The first question this visit has not set aside, which is not always the
+    // first conflict. One response can refuse several records at once, and this
+    // layer is the only surface that offers the three answers: reading the
+    // first alone would put every other standing conflict out of reach for the
+    // rest of the visit, while the status over it still counts them
+    // (024/FR-009, 024/FR-010, constitution IV).
+    const asked =
+      this.#syncPresenter.conflicts().find((entry) => !setAside.includes(entry.recordId)) ?? null;
+    return asked === view.conflict ? view : { ...view, conflict: asked };
+  });
 
   /**
    * What a journal import stored, when one opened this layer.
@@ -139,6 +187,32 @@ export class BuildLibraryPage {
   readonly deleteCancelLabel = this.#messages.messageSignal('library.delete.cancel');
   readonly searchLabel = this.#messages.messageSignal('library.search.label');
   readonly nothingChosen = this.#messages.messageSignal('library.chosen.none');
+  readonly viewsLabel = this.#messages.messageSignal('library.view.label');
+
+  /**
+   * Which of the layer's two views is showing.
+   *
+   * The stored builds are what this layer has always been, so they are what it
+   * opens on. The fleet is the other thing a Commander keeps ships in, and it
+   * is reached from here rather than from an address of its own: the layer has
+   * none, and the ships behind it are one account's, so an address would resolve
+   * to a different fleet for every Commander who opened it (design decision 10).
+   */
+  readonly #shownView = signal<'records' | 'ships'>('records');
+  readonly shownView = this.#shownView.asReadonly();
+
+  readonly views = computed<readonly TabItem[]>(() => [
+    { id: 'records', label: this.#messages.message('library.title') },
+    { id: 'ships', label: this.#messages.message('fleet.title') },
+  ]);
+
+  /** The chosen view said in words, so the choice is not a tint alone. */
+  readonly viewChosenLabel = computed(
+    () => this.views().find((view) => view.id === this.shownView())?.label ?? '',
+  );
+
+  /** Everything the owned-ships view draws. */
+  readonly fleetView = this.#fleetPresenter.view;
 
   readonly isEmpty = this.#library.isEmpty;
   readonly status = this.#library.status;
@@ -382,6 +456,38 @@ export class BuildLibraryPage {
       this.#invalidation.revision();
       this.#library.refresh();
     });
+
+    // A record library opening is one of the moments the account exchanges at.
+    // It does nothing at all while the browser is anonymous, and it never makes
+    // the list wait on a network (024/FR-011, design decision 6).
+    void this.#synchronisation.refresh();
+  }
+
+  /** An explicit retry of an exchange that did not leave this browser current. */
+  retrySynchronisation(): void {
+    void this.#synchronisation.refresh();
+  }
+
+  /** The Commander's answer to the conflict the panel is asking about. */
+  answerConflict(choice: ConflictChoice): void {
+    const conflict = this.syncView().conflict;
+    if (conflict !== null) {
+      void this.#synchronisation.resolve(conflict.recordId, choice);
+    }
+  }
+
+  /**
+   * Leaves the conflict standing.
+   *
+   * Dismissal is not one of the three answers. Both versions stay exactly as
+   * they are and the question is asked again the next time the library is
+   * opened (024/FR-009, 024/FR-010).
+   */
+  dismissConflict(): void {
+    const conflict = this.syncView().conflict;
+    if (conflict !== null) {
+      this.#setAside.update((standing) => [...standing, conflict.recordId]);
+    }
   }
 
   /**
@@ -498,6 +604,11 @@ export class BuildLibraryPage {
     // 017/FR-008).
     this.#letGoOf(pending.recordId);
 
+    // A deletion the Commander confirmed is a deletion of the account's copy
+    // too. Nothing is queued while the browser is anonymous, and the local
+    // removal has already happened (024/FR-010, 024/FR-011).
+    void this.#sync.recordDeleted(pending.recordId);
+
     this.#invalidation.announceDelete(pending.recordId);
     this.#library.refresh();
   }
@@ -518,6 +629,7 @@ export class BuildLibraryPage {
         // Selected deliberately, one by one, so the same rule applies as to a
         // single confirmed deletion.
         this.#letGoOf(id);
+        void this.#sync.recordDeleted(id);
         this.#invalidation.announceDelete(id);
       }
     }
@@ -723,6 +835,56 @@ export class BuildLibraryPage {
 
   #hullName(symbol: string): string {
     return this.#gameText.shipName(symbol).text ?? symbol;
+  }
+
+  /** Shows the stored builds, or the ships the Commander owns. */
+  chooseView(id: string): void {
+    this.#failure.set(null);
+    this.#shownView.set(id === 'ships' ? 'ships' : 'records');
+  }
+
+  /** Chooses the owned ship the facts and the copy action are about. */
+  chooseShip(shipId: string): void {
+    const parsed = Number(shipId);
+    if (!Number.isInteger(parsed)) {
+      return;
+    }
+    this.#fleetPresenter.choose(parsed);
+  }
+
+  /** Asks the account's fleet service to read more journal. */
+  refreshFleet(): void {
+    void this.#fleetPresenter.refresh();
+  }
+
+  /** Opens the account panel, which is where a sign-in is asked for. */
+  signInForFleet(): void {
+    this.#fleetPresenter.signIn();
+  }
+
+  /**
+   * Takes a copy of the chosen owned ship into the builder.
+   *
+   * A copy, with a record identity of its own. The owned ship is read-only and
+   * nothing here writes to it: what the builder receives is a separate build a
+   * Commander may rename, edit and delete with the fleet entry untouched
+   * (024/FR-017).
+   */
+  async copyOwnedShip(): Promise<void> {
+    this.#failure.set(null);
+    const ship = this.#fleetPresenter.chosen();
+    if (ship === null) {
+      return;
+    }
+
+    const result = await this.#fleetCopy.copy(ship);
+    if (result.kind === 'failed') {
+      this.#failure.set(this.#messages.message('library.open.failed', { reason: result.reason }));
+      return;
+    }
+    if (result.kind === 'committed') {
+      await this.#leaveThrough(NAVIGATION_ROUTES.outfitting);
+    }
   }
 
   /**

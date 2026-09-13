@@ -40,6 +40,50 @@ export function toBuildSnapshotV1(loadout: ShipLoadout): BuildSnapshotV1 {
   };
 }
 
+/**
+ * One snapshot, rebuilt field by field.
+ *
+ * An allowlist rather than a spread, wherever a snapshot crosses a boundary. A
+ * caller can hold an object that reconstructs a build *and* carries a
+ * calculated figure beside it, and a spread would carry the figure with it.
+ * Adding a field here is a decision someone has to make on purpose (persistence
+ * contract, "Boundary exclusions").
+ */
+export function copyBuildSnapshotV1(build: BuildSnapshotV1): BuildSnapshotV1 {
+  return {
+    format: BUILD_SNAPSHOT_FORMAT,
+    version: BUILD_SNAPSHOT_VERSION,
+    shipSymbol: build.shipSymbol,
+    shipName: build.shipName,
+    shipIdent: build.shipIdent,
+    modules: build.modules.map((module) => ({
+      slot: module.slot,
+      symbol: module.symbol,
+      enabled: module.enabled,
+      priority: module.priority,
+      preEngineered:
+        module.preEngineered === null
+          ? null
+          : {
+              symbol: module.preEngineered.symbol,
+              blueprint: module.preEngineered.blueprint,
+              grade: module.preEngineered.grade,
+              acquisition: module.preEngineered.acquisition,
+              experimental: module.preEngineered.experimental,
+            },
+      engineering:
+        module.engineering === null
+          ? null
+          : {
+              blueprint: module.engineering.blueprint,
+              grade: module.engineering.grade,
+              quality: module.engineering.quality,
+              experimental: module.engineering.experimental,
+            },
+    })),
+  };
+}
+
 function snapshotModule(slotKey: string, module: FittedModule): SnapshotModuleV1 {
   const preEngineered = snapshotPreEngineered(module);
 

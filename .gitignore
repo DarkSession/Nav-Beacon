@@ -42,6 +42,11 @@ yarn-error.log
 .sass-cache/
 /connect.lock
 /coverage
+/server/**/bin/
+/server/**/obj/
+/server/**/TestResults/
+/server/**/coverage/
+/server/validator/dist/
 /libpeerconnection.log
 testem.log
 /typings

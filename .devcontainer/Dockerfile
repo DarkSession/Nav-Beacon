@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/devcontainers/typescript-node:24-bookworm
 
 # Install Bubblewrap (bwrap) for sandboxed command execution.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends bubblewrap \
+    && apt-get install -y --no-install-recommends bubblewrap postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 RUN (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \

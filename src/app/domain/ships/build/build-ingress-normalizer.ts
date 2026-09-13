@@ -8,6 +8,29 @@ import type {
 } from './build-ingress-result';
 
 /**
+ * A diagnostic naming what the gate refused, mount by mount.
+ *
+ * It states only what the gate answered — a count and the codes it gave — and
+ * invents no cause for it (constitution IV). Every door that has to say why a
+ * refusal happened reads it from here, so one refusal is one sentence rather
+ * than a sentence for each door.
+ *
+ * The sentence is English and uncatalogued. `record-open.service.ts` renders it
+ * to a Commander, framed by `library.open.failed`, because a record stored
+ * before this application completed rolls can carry a partial one.
+ * `fleet-copy.service.ts` reads it for a refusal it cannot reach: an owned ship
+ * states completed grades and no roll quality (024/FR-015), so the gate finds
+ * nothing partial there to complete. The note on `normalizeReconstructedBuild`
+ * below holds why the ingress paths word their refusals this way, and what
+ * would change it (constitution VI).
+ */
+export function refusalReason(failures: readonly { readonly code: string | null }[]): string {
+  return `The Almanac could not complete ${failures.length} partial engineering roll(s): ${failures
+    .map((failure) => failure.code ?? 'unknown')
+    .join(', ')}.`;
+}
+
+/**
  * The one gate every incoming build passes through.
  *
  * Opening a record, loading a link, importing SLEF and restoring on reload all
@@ -107,19 +130,23 @@ export function normalizeReconstructedBuild(candidate: ShipLoadout): IngressResu
   // and the link codec names it from a table of the package's own symbols — so
   // it is an invariant stated where it can be checked rather than a Commander's
   // outcome. Its `reason` is an English sentence, which the sibling ingress
-  // paths also write — `record-open.service.ts`, `build-link.coordinator.ts`,
-  // `stock-build.creator.ts`. Only the first is both reachable in ordinary use
-  // and rendered to a Commander, framed by `library.open.failed`, so only that
-  // one is owed a catalogued message: `build-link.coordinator.ts` publishes a
-  // `LinkFailure` code the message layer frames and never renders its `reason`,
-  // and `stock-build.creator.ts` writes its reasons behind the same kind of
-  // guard as this one. This reason is not owed a catalogue entry because no
-  // door reaches it, and a translated string for a state nobody can arrive at
-  // is a string never read — not because of where it would be rendered, which
-  // is that same frame. The other `unusable` reason here is no precedent
-  // either: that one is the package's own diagnostic, which principle VI
-  // leaves to the package. A door that stopped resolving would make this
-  // Commander-facing and would need a code the message layer can frame
+  // paths also write — `record-open.service.ts`, `fleet-copy.service.ts`,
+  // `build-link.coordinator.ts`, `stock-build.creator.ts`. Only the first is
+  // both reachable in ordinary use and rendered to a Commander, framed by
+  // `library.open.failed`, so only that one is owed a catalogued message.
+  // `fleet-copy.service.ts` renders into that same frame but cannot reach its
+  // own refusal: an owned ship states completed grades and no roll quality
+  // (024/FR-015), so the gate finds nothing partial there to complete.
+  // `build-link.coordinator.ts` publishes a `LinkFailure` code the message
+  // layer frames and never renders its `reason`, and `stock-build.creator.ts`
+  // writes its reasons behind the same kind of guard as this one. This reason
+  // is not owed a catalogue entry because no door reaches it, and a translated
+  // string for a state nobody can arrive at is a string never read — not
+  // because of where it would be rendered, which is that same frame. The other
+  // `unusable` reason here is no precedent either: that one is the package's
+  // own diagnostic, which principle VI leaves to the package. A door that
+  // stopped resolving would make this Commander-facing and would need a code
+  // the message layer can frame
   // (constitution VI).
   if (getShipBySymbol(candidate.shipSymbol)?.symbol !== candidate.shipSymbol) {
     return {

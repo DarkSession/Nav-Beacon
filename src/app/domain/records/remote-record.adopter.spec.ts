@@ -1,0 +1,167 @@
+import { decodeAndMigrate } from '../ships/build/record-migrations';
+import {
+  FIXTURE_IDS,
+  LOADOUT_RECORD_V2,
+  NAMED_RECORD_V1,
+  UNKNOWN_HULL_RECORD,
+  UNKNOWN_SUIT_RECORD,
+  WORKING_RECORD_V1,
+} from './fixtures/records';
+import type { LocalRecord } from './local-record';
+import { copyLocalRecord, isReconstructable } from './record-draft';
+import { adoptRemoteRecord } from './remote-record.adopter';
+import type { RemoteRecord, RemoteShipRecord } from './remote-record';
+import { toRemoteRecord } from './remote-record.serializer';
+
+function local(bytes: string, id: string): LocalRecord {
+  const decoded = decodeAndMigrate(JSON.parse(bytes), id);
+  if (!decoded.ok) {
+    throw new Error('The fixture did not decode.');
+  }
+  return decoded.record;
+}
+
+function remote(bytes: string, id: string): RemoteRecord {
+  return toRemoteRecord(local(bytes, id));
+}
+
+const CONTEXT = {
+  revisionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  note: null,
+  sourceNamed: null,
+};
+
+describe('the local record one remote record becomes', () => {
+  it('takes a named build, with the package’s own verdict on it', async () => {
+    const adoption = await adoptRemoteRecord(remote(NAMED_RECORD_V1, FIXTURE_IDS.named), CONTEXT);
+
+    expect(adoption.ok).toBe(true);
+    if (!adoption.ok) {
+      return;
+    }
+    // The verdict is the package's, read off the rebuilt loadout rather than
+    // copied from the remote record: a record written against an older package
+    // states what that one said, and this browser stores what its own says.
+    expect(adoption.draft).toMatchObject({
+      id: FIXTURE_IDS.named,
+      kind: 'named',
+      name: 'Anaconda explorer',
+      payload: { tool: 'ship', validation: { valid: true, complete: true } },
+    });
+  });
+
+  it('leaves a working build unnamed', async () => {
+    const adoption = await adoptRemoteRecord(
+      remote(WORKING_RECORD_V1, FIXTURE_IDS.working),
+      CONTEXT,
+    );
+
+    expect(adoption.ok && adoption.draft.name).toBeNull();
+  });
+
+  it('takes a loadout and the name the contract gives it', async () => {
+    const adoption = await adoptRemoteRecord(
+      remote(LOADOUT_RECORD_V2, FIXTURE_IDS.loadout),
+      CONTEXT,
+    );
+
+    expect(adoption.ok).toBe(true);
+    expect(adoption.ok && adoption.draft.name).toBe('Silent Entry');
+    expect(adoption.ok && adoption.draft.payload.tool).toBe('equipment');
+  });
+
+  it('keeps the note and the named source the local copy carried', async () => {
+    const adoption = await adoptRemoteRecord(remote(NAMED_RECORD_V1, FIXTURE_IDS.named), {
+      ...CONTEXT,
+      note: 'Long-range fit.',
+      sourceNamed: { recordId: FIXTURE_IDS.working, baseRevisionId: 'r1' },
+    });
+
+    expect(adoption.ok && adoption.draft.note).toBe('Long-range fit.');
+    expect(adoption.ok && adoption.draft.sourceNamed).toEqual({
+      recordId: FIXTURE_IDS.working,
+      baseRevisionId: 'r1',
+    });
+  });
+
+  it('falls back to the ident and then the hull for a named build with no ship name', async () => {
+    const record = remote(NAMED_RECORD_V1, FIXTURE_IDS.named) as RemoteShipRecord;
+    const withIdent: RemoteShipRecord = {
+      ...record,
+      build: { ...record.build, shipName: null, shipIdent: 'NB-01' },
+    };
+    const withNeither: RemoteShipRecord = {
+      ...record,
+      build: { ...record.build, shipName: null, shipIdent: null },
+    };
+
+    expect(await adoptRemoteRecord(withIdent, CONTEXT)).toMatchObject({ draft: { name: 'NB-01' } });
+    expect(await adoptRemoteRecord(withNeither, CONTEXT)).toMatchObject({
+      draft: { name: record.build.shipSymbol },
+    });
+  });
+
+  it('refuses a build naming a hull this installation does not carry', async () => {
+    const record = remote(NAMED_RECORD_V1, FIXTURE_IDS.named) as RemoteShipRecord;
+    const unknown: RemoteShipRecord = {
+      ...record,
+      build: { ...record.build, shipSymbol: 'Nonexistent_Hull' },
+    };
+
+    expect((await adoptRemoteRecord(unknown, CONTEXT)).ok).toBe(false);
+  });
+
+  it('refuses a loadout naming a suit this installation does not carry', async () => {
+    const record = remote(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit);
+
+    expect((await adoptRemoteRecord(record, CONTEXT)).ok).toBe(false);
+  });
+});
+
+describe('what may be offered to the account', () => {
+  it('accepts records the package still carries', async () => {
+    expect(await isReconstructable(local(NAMED_RECORD_V1, FIXTURE_IDS.named))).toBe(true);
+    expect(await isReconstructable(local(LOADOUT_RECORD_V2, FIXTURE_IDS.loadout))).toBe(true);
+  });
+
+  it('refuses a build naming a hull this installation does not carry', async () => {
+    expect(await isReconstructable(local(UNKNOWN_HULL_RECORD, FIXTURE_IDS.unknownHull))).toBe(
+      false,
+    );
+  });
+
+  it('refuses a loadout naming a suit this installation does not carry', async () => {
+    expect(await isReconstructable(local(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit))).toBe(
+      false,
+    );
+  });
+});
+
+describe('one record under a second identity', () => {
+  const identity = { id: FIXTURE_IDS.working, revisionId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' };
+
+  it('keeps a build, its name, its note and the verdict stored with it', () => {
+    const copy = copyLocalRecord(local(NAMED_RECORD_V1, FIXTURE_IDS.named), identity);
+
+    expect(copy).toMatchObject({
+      id: FIXTURE_IDS.working,
+      revisionId: identity.revisionId,
+      kind: 'named',
+      name: 'Anaconda explorer',
+      note: 'Long-range fit.',
+      payload: { tool: 'ship', validation: { valid: true, complete: true } },
+    });
+  });
+
+  it('keeps a loadout', () => {
+    const copy = copyLocalRecord(local(LOADOUT_RECORD_V2, FIXTURE_IDS.loadout), identity);
+
+    expect(copy).toMatchObject({ id: FIXTURE_IDS.working, payload: { tool: 'equipment' } });
+  });
+
+  it('cannot copy a loadout the package no longer carries', () => {
+    expect(
+      copyLocalRecord(local(UNKNOWN_SUIT_RECORD, FIXTURE_IDS.unknownSuit), identity),
+    ).toBeNull();
+  });
+});

@@ -1,23 +1,26 @@
 # Agent guide
 
-Nav Beacon — a client-side-only Angular application carrying tools for Elite
-Dangerous. Ship Builder, which plans ship loadouts, is the first of them.
+Nav Beacon — a local-first Angular application carrying tools for Elite
+Dangerous. Ship Builder, which plans ship loadouts, is the first of them. An
+optional same-origin Commander service supports account features.
 
 ## Read first
 
 - [`CONSTITUTION.md`](./CONSTITUTION.md) — the project's non-negotiable
   principles. Everything below is their short form; where the two differ, the
   constitution wins.
-- [`openspec/specs/`](./openspec/specs) — three group directories
-  (`ship-builder/`, `equipment-builder/`, `platform/`), one directory per
-  capability inside each, and a `spec.md` stating what that capability does. Read the one you are about
-  to touch.
+- [`openspec/specs/`](./openspec/specs) — one directory per capability group,
+  one directory per capability inside each, and a `spec.md` stating what that
+  capability does. Read the capability you touch.
 
 ## Non-negotiables
 
-- **No backend.** No server, no API of our own, no accounts, no telemetry.
-  Builds live in memory, in `localStorage`, or in a URL fragment. Nothing is
-  uploaded. The build output is static files.
+- **Local-first with an optional Commander service.** Anonymous tools need no
+  account or server. Their records live in memory, in browser storage or in a
+  URL fragment. The browser contacts only its own origin, except for deliberate
+  Frontier sign-in navigation. Only accepted Commander records reach the
+  same-origin API. Notes, URL fragments, SLEF documents and selected journal
+  files stay local. The server contacts only Frontier. No telemetry exists.
 - **`@elite-dangerous-almanac/core` is the source of truth** for game data and
   build calculations. Never hand-maintain game data, and never reimplement a
   calculation the package provides. Import leaf subpaths (e.g.
@@ -63,11 +66,12 @@ Dangerous. Ship Builder, which plans ship loadouts, is the first of them.
   the source of truth for any design tool it syncs with.
 - **Domain logic lives outside components** — in framework-agnostic services and
   signal-based stores that are testable without rendering.
-- **Tests gate the build.** Unit coverage stays at or above 80% (statements,
-  branches, functions, lines), enforced in `angular.json`; never lower the
-  threshold to get green. Never skip, quarantine or delete a test either —
-  `pnpm run policy` fails a build containing a skipped, focused or quarantined
-  interface test.
+- **Tests gate the build.** Angular unit coverage stays at or above 80%
+  (statements, branches, functions and lines). .NET coverage, over the unit and
+  integration suites together, stays at or above 80% (lines, branches and
+  methods). Never lower a threshold to get green.
+  Never skip, quarantine or delete a test either. `pnpm run policy` fails a
+  build containing a skipped, focused or quarantined interface test.
 
 ## Using the Almanac
 
@@ -95,10 +99,19 @@ them: renaming them would change bytes a Commander has already saved.
 ## Working in this repo
 
 - Angular is standalone and zoneless; prefer signals for state.
+- The server targets .NET 10 LTS. One ASP.NET Core application uses EF Core and
+  PostgreSQL. API instances keep no required process-local Commander state.
+- **The deployment applies migrations; a starting instance never does.** Several
+  instances start together, so a server whose schema is behind refuses to start
+  rather than serve a schema it does not know. Run `pnpm run server:migrate`
+  after adding a migration; the dev container runs it on create.
+  [`docs/commander-service-deployment.md`](./docs/commander-service-deployment.md)
+  carries the settings a production instance requires, the routing the browser's
+  base-relative `api/` address needs, key-ring backup and the rollback order.
 - Package manager is **pnpm**. `pnpm-lock.yaml` is committed; CI installs with
   `--frozen-lockfile`.
 - Run `pnpm run check` before proposing a change: format, typecheck, build, unit
-  tests with coverage, Playwright.
+  tests with coverage, server restore, format, build and tests, and Playwright.
 - During fixes, use the README's targeted-check procedure: reproduce the failing
   test and project, then run the affected capability across the matrix.
   Store full output under `dist/verification/` and read concise failure summaries.
@@ -179,6 +192,12 @@ Step 1 is what holds the fix. Resolve it without the entry and the next
 `pnpm update` silently takes the older version back. `pnpm audit` does not catch
 that: an advisory published in the last few days is not in its feed yet.
 
+NuGet packages follow the same seven-day delay. Pin every NuGet package to an
+exact version. Before restore, read its publication time from NuGet registration
+metadata and confirm that it is at least seven days old. Run the NuGet audit.
+A younger security fix needs an advisory-named exact-version exception in the
+project dependency policy. Remove the exception after seven days.
+
 ### Who owns which region
 
 The outfitting workspace is assembled from several capabilities. Each one's
@@ -237,7 +256,14 @@ install. The Claude Code flow is `/opsx:explore` (optional) → `/opsx:propose` 
   specification disagree, resolve the mismatch deliberately.
 - `openspec/changes/archive/<NNN>-<short-name>/` holds the design and contract
   documents of the features already built. Source files, tests and
-  specifications cite them by path. Read them; do not extend them.
+  specifications cite them by path. Read them; do not extend them. One table is
+  the exception, because it is a register rather than a record of what one
+  feature did: the release coverage ledger in
+  `012-help-and-licences/design/screen-inventory.md`. Every shipped surface is
+  entered there, whichever feature owns it,
+  `scripts/check-specification-record.mjs` reconciles it against
+  `helpRouteCoverage` in both directions, and a change that ships a surface
+  covering the application frame writes its rows into it.
 - **Two reviews run inside the flow**, by two different subagents, and neither
   waits to be asked. A specification reviewer reads the planning artefacts when
   the task list is written, before you present them. A code reviewer reads the

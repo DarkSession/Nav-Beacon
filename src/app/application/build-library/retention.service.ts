@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
+import { recordBinding, remoteRevisionOf } from '../../domain/commander/commander-local-state';
 import type { LocalRecord } from '../../domain/records/local-record';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
+import { CommanderStateRepository } from '../../platform/storage/commander-state.repository';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
 import { TabOwnershipCoordinator } from './tab-ownership.coordinator';
 
@@ -35,8 +37,10 @@ export const UNNAMED_RECORD_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
  *     and seven days does not need that precision;
  *   * a named record is never touched, and neither is a record a live page is
  *     autosaving into. Both are evaluated at the moment of the sweep;
- *   * nothing is written and nothing is announced when it runs. The remaining
- *     time each row states beforehand is the whole of the notice (FR-010).
+ *   * nothing is announced when it runs, and the only thing written besides the
+ *     removal is what this browser knew about the record's remote copy. The
+ *     remaining time each row states beforehand is the whole of the notice
+ *     (FR-010).
  *
  * There is no count limit any more. Nothing refuses to store a record because
  * many already exist, and no number evicts anything.
@@ -44,6 +48,7 @@ export const UNNAMED_RECORD_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 @Injectable({ providedIn: 'root' })
 export class RetentionService {
   readonly #records = inject(LocalRecordRepository);
+  readonly #state = inject(CommanderStateRepository);
   readonly #clock = inject(ClockAdapter);
   readonly #ownership = inject(TabOwnershipCoordinator);
 
@@ -91,6 +96,13 @@ export class RetentionService {
    * An unreadable record is never removed here. Its instant cannot be read, so
    * its age is a guess, and a guess is not something to delete a Commander's
    * work on: it stays listed, exactly as it stays listed everywhere else.
+   *
+   * Nothing is sent. A local sweep removes this browser's copy and never the
+   * account's: the service runs the remote period from its own receipt time and
+   * expires a remote autosave only after that period and the protection
+   * deadline have both passed. A browser whose clock is days fast would
+   * otherwise delete, from every one of a Commander's devices, a record none of
+   * them had finished with (024/FR-025).
    */
   sweep(): void {
     const listed = this.#records.list();
@@ -106,7 +118,27 @@ export class RetentionService {
       if (!this.hasExpired(record) || this.#ownership.heldLive(record.id)) {
         continue;
       }
-      this.#records.remove(record.id);
+      if (!this.#records.remove(record.id).ok) {
+        continue;
+      }
+      // What this browser knew about the record's remote copy goes with it.
+      // Kept, it is a binding naming a record nothing can open, which the
+      // synchronisation panel counts and states as a record a Commander could
+      // still save or copy (024/FR-024, constitution IV).
+      //
+      // After the removal, so a refused removal leaves the record and its
+      // binding together: an unbound record an anonymous page later edits is
+      // nobody's to upload, and it would stop reaching the account it belongs
+      // to (024/FR-007).
+      //
+      // Only where there is something to drop. A browser that has never had an
+      // account knows nothing about any record's remote copy, and writing
+      // account state for it would put one there on an expiry alone
+      // (constitution I).
+      const known = this.#state.read();
+      if (recordBinding(known, record.id) !== null || remoteRevisionOf(known, record.id) !== null) {
+        this.#state.forgetRecord(record.id);
+      }
     }
   }
 }

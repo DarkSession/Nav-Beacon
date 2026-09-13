@@ -127,7 +127,14 @@ export async function openLibrary(page: Page): Promise<void> {
   if (!(await layer.isVisible())) {
     await reachShellAction(page, /^(Open saved build|Gespeicherten Aufbau öffnen)$/);
   }
-  await expect(layer).toBeVisible();
+  // Waited on generously, for the same reason the catalogue's own press is
+  // (`prerendered-first-frame.spec.ts`): the layer is deferred, so the press
+  // asks the server for the library's code and the layer is drawn when it
+  // arrives. Seventeen chunks over a server that several readings are asking
+  // for a build from at once is not the ten seconds a bare expectation allows,
+  // and a layer that took twelve seconds to arrive under that load is a slow
+  // server rather than a library that failed to open.
+  await expect(layer).toBeVisible({ timeout: 30_000 });
 }
 
 /**

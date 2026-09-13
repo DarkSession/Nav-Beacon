@@ -1,0 +1,4 @@
+{
+  "signedIn": ["antiForgeryToken", "commanderName", "customerId", "signedIn"],
+  "anonymous": ["signedIn"]
+}

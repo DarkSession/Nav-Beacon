@@ -2,9 +2,11 @@
 
 Protocol: [`screen-reader`](../screen-reader.protocol.md), version 14.
 
-Each row is one observation: one step, in one configuration. Rows are appended,
-never edited — a later run is a new row, so the history of a regression stays
-readable.
+Each row is one observation: one step, in one configuration, and — from
+protocol version 14 — at one orientation. Rows are appended, never edited — a
+later run is a new row, so the history of a regression stays readable. The
+sections written before version 14 carry no orientation column, and are left as
+they were rather than backfilled with a value nobody observed.
 
 ## Run 1
 
@@ -239,3 +241,57 @@ it, through an open modal layer in particular, is what a person has to answer.
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 22   | As stated in the protocol | —      | not run |
 | —    | —   | Chromium | TalkBack | —     | —        | mobile        | 22   | As stated in the protocol | —      | not run |
 | —    | —   | Chromium | TalkBack | —     | —        | tablet        | 22   | As stated in the protocol | —      | not run |
+
+## The Commander account (feature 024)
+
+Step 23 covers the three layers an account adds to the shell. Each is its own
+observation rather than one walk of the step: the account dialog is where a
+Commander learns what an account holds and asks for it to be deleted, the
+conflict layer is the one place in this application where a reader is asked to
+choose between two copies of their own work, and the owned-ships view is a list
+of something the application only knows second hand. What a reader makes of
+"the account no longer holds this" is the judgment 024/FR-010 turns on, and it
+is not the same judgment as "this fleet is as much as the journal has said so
+far".
+
+Each configuration is its own observation for the usual reason: the account
+entry is on the banner row where there is room for it and inside the named
+action layer where there is not, and the three layers are centred dialogs at
+desktop and full-width sheets at the compact widths. Each orientation is its
+own observation for the same reason one step further: the shell chooses its
+composition from the width it is given, so a tablet turned on its side is a
+different screen to walk rather than the same one again.
+
+The automated coverage that does exist for the same requirements is
+`e2e/commander-account.spec.ts`, `e2e/commander-fleet.spec.ts` and
+`e2e/fleet-copy.spec.ts` — the account stubbed at the network boundary and
+every rendered state scanned by axe, every control a Commander acts on resolved
+by its accessible name, the three conflict answers asserted present with the
+layer dismissible without answering, and a held refresh and a failed one
+asserted to state themselves without emptying the list, in all ten projects.
+Two structural assertions are the exception and read a class: that the footer
+which opens, renames and deletes a stored record is not rendered over the fleet
+at all, and that the fleet carries exactly the two actions it carries. Neither
+is about a control a Commander reaches, and an element asserted absent has no
+accessible name to be reached by.
+
+| Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Orientation | Step | Capability / state | Expected                                                                                                                                                | Actual | Result  |
+| ---- | --- | -------- | -------- | ----- | -------- | ------------- | ----------- | ---- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |
+| —    | —   | Firefox  | NVDA     | —     | —        | desktop       | landscape   | 23   | account dialog     | Signed-out and signed-in states, the data-use list read before the sign-in, and the deletion question announced as a layer of its own                   | —      | not run |
+| —    | —   | Firefox  | NVDA     | —     | —        | desktop       | portrait    | 23   | account dialog     | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | landscape   | 23   | account dialog     | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | portrait    | 23   | account dialog     | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | landscape   | 23   | account dialog     | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | portrait    | 23   | account dialog     | As above                                                                                                                                                | —      | not run |
+| —    | —   | Firefox  | NVDA     | —     | —        | desktop       | landscape   | 23   | record conflict    | The record named, three answers as three named controls, and leaving the layer announced as answering none of them                                      | —      | not run |
+| —    | —   | Firefox  | NVDA     | —     | —        | desktop       | portrait    | 23   | record conflict    | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | landscape   | 23   | record conflict    | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | portrait    | 23   | record conflict    | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | landscape   | 23   | record conflict    | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | portrait    | 23   | record conflict    | As above                                                                                                                                                | —      | not run |
+| —    | —   | Firefox  | NVDA     | —     | —        | desktop       | landscape   | 23   | owned ships        | Every ship announced with its model, name and plate; the journal interval read with the list; a held or stopped refresh said in words and the list kept | —      | not run |
+| —    | —   | Firefox  | NVDA     | —     | —        | desktop       | portrait    | 23   | owned ships        | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | landscape   | 23   | owned ships        | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | portrait    | 23   | owned ships        | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | landscape   | 23   | owned ships        | As above                                                                                                                                                | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | portrait    | 23   | owned ships        | As above                                                                                                                                                | —      | not run |
