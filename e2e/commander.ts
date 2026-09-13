@@ -234,6 +234,33 @@ export function firstChangeConflicts(
   };
 }
 
+/**
+ * Every change of one exchange refused as a conflict.
+ *
+ * One response can refuse several records at once, which is what a browser
+ * holding more than one record the account disagrees about receives
+ * (020/FR-009, 020/FR-010).
+ */
+export function everyChangeConflicts(
+  request: SentExchange,
+  remote: Record<string, unknown> | null = null,
+  accountRevision = 2,
+): ServiceAnswer {
+  return {
+    status: 409,
+    body: {
+      code: 'conflict',
+      accountRevision,
+      results: request.changes.map((change, index) => ({
+        ...indexed(change, index),
+        outcome: 'conflict',
+        revision: accountRevision,
+        record: remote,
+      })),
+    },
+  };
+}
+
 /** The application record identity one sent change is about, where it has one. */
 function recordIdOf(change: Record<string, unknown>): string | null {
   const record = change['record'];

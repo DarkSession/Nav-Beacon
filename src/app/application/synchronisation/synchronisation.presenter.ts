@@ -73,10 +73,21 @@ export class SynchronisationPresenter {
   readonly #records = inject(LocalRecordRepository);
   readonly #invalidation = inject(RecordInvalidationService);
 
+  /**
+   * Every conflict standing, in the order they were raised.
+   *
+   * One response can refuse several records at once, so more than one can
+   * stand. A surface that offers the three answers reads this rather than the
+   * single question below, because setting one question aside must not put the
+   * rest out of reach (020/FR-009, 020/FR-010).
+   */
+  readonly conflicts = computed<readonly ConflictView[]>(() =>
+    this.#sync.conflicts().map((conflict) => this.#conflictView(conflict)),
+  );
+
   readonly view = computed<SynchronisationPanelView>(() => {
     const status = this.#sync.status();
     const credentials = this.#account.credentials();
-    const conflicts = this.#sync.conflicts();
     const held = this.#heldBack(this.#knownCustomerId());
 
     return {
@@ -98,7 +109,7 @@ export class SynchronisationPresenter {
           ? this.#messages.message('action.retry')
           : null,
       notes: this.#notes(held),
-      conflict: conflicts.length === 0 ? null : this.#conflictView(conflicts[0]),
+      conflict: this.conflicts()[0] ?? null,
     };
   });
 

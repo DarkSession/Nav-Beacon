@@ -155,10 +155,16 @@ export class BuildLibraryPage {
    */
   readonly syncView = computed(() => {
     const view = this.#syncPresenter.view();
-    const conflict = view.conflict;
-    return conflict !== null && this.#setAside().includes(conflict.recordId)
-      ? { ...view, conflict: null }
-      : view;
+    const setAside = this.#setAside();
+    // The first question this visit has not set aside, which is not always the
+    // first conflict. One response can refuse several records at once, and this
+    // layer is the only surface that offers the three answers: reading the
+    // first alone would put every other standing conflict out of reach for the
+    // rest of the visit, while the status over it still counts them
+    // (020/FR-009, 020/FR-010, constitution IV).
+    const asked =
+      this.#syncPresenter.conflicts().find((entry) => !setAside.includes(entry.recordId)) ?? null;
+    return asked === view.conflict ? view : { ...view, conflict: asked };
   });
 
   /**

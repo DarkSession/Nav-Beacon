@@ -8,13 +8,20 @@ import {
   COMMANDER_NAME,
   deletionConfirmation,
   everyChangeApplied,
+  everyChangeConflicts,
   installCommanderService,
   library,
   openAccountDialog,
   storedCommanderState,
   type CommanderService,
 } from './commander';
-import { buildStockHull, expectRecords, openLibrary, savedToBrowser } from './shell';
+import {
+  buildStockHull,
+  expectRecords,
+  openLibrary,
+  reachShellAction,
+  savedToBrowser,
+} from './shell';
 
 /**
  * The Commander account, from the outside.
@@ -54,12 +61,33 @@ const ACCOUNT_RECORD = {
   },
 } as const;
 
-/** A stock build of the reference hull, autosaved into this browser. */
-async function planSomething(page: Page): Promise<void> {
+/**
+ * A stock build of the reference hull, autosaved into this browser.
+ *
+ * `held` is how many records this browser should hold once the build is
+ * stored, so that a test wanting two of them can say so.
+ */
+async function planSomething(page: Page, held = 1): Promise<void> {
   await page.goto(`/ships/${HULL}`);
   await buildStockHull(page, englishMessages['hullDetail.create']);
   await savedToBrowser(page);
-  await expectRecords(page, 1);
+  await expectRecords(page, held);
+}
+
+/**
+ * Names the build on screen, so the record it was in stops being the working
+ * one and the next build gets a working record of its own.
+ *
+ * A browser holding two records is what a response refusing two of them needs.
+ */
+async function nameActiveBuild(page: Page, name: string): Promise<void> {
+  await reachShellAction(page, /^Save$/);
+  const dialog = page.getByRole('dialog', { name: englishMessages['workspace.save.title'] });
+  await dialog
+    .getByRole('textbox', { name: englishMessages['workspace.save.name.label'] })
+    .fill(name);
+  await dialog.getByRole('button', { name: englishMessages['workspace.save.confirm'] }).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 /** The identity of the first live record this browser has offered the account. */
@@ -203,6 +231,48 @@ test.describe('the Commander account', () => {
       },
     );
     await expectRecords(page, 1);
+  });
+
+  test('asks about the next record when one question is set aside', async ({ page }) => {
+    test.slow();
+    const service = await installCommanderService(page, { session: 'signed-in' });
+
+    // Nothing reaches the account while the records are made, so both saves are
+    // still waiting when the account finally answers. A save that cannot reach
+    // the account is still a save (020/FR-011).
+    service.exchange = () => 'unreachable';
+
+    // The first is named, so the second gets a working record of its own rather
+    // than replacing it.
+    await planSomething(page);
+    await nameActiveBuild(page, 'First plan');
+    await planSomething(page, 2);
+
+    // The account is reachable again and disagrees about both records, holding
+    // no copy of either: each is a record deleted on another device. One
+    // response refuses them together, so two questions stand at once
+    // (020/FR-010).
+    service.exchange = (request) => everyChangeConflicts(request);
+
+    await openRecords(page);
+
+    const conflict = conflictLayer(page);
+    await expect(conflict).toBeVisible({ timeout: 15_000 });
+    await expect(synchronisation(page)).toContainText('2 records');
+
+    // Setting the first question aside answers nothing and says nothing about
+    // the second. The layer moves on to the record still unanswered, rather
+    // than leaving it out of reach for the rest of the visit while the status
+    // above it goes on counting it (020/FR-009, 020/FR-010).
+    await conflict.getByRole('button', { name: englishMessages['action.close'] }).click();
+    await expect(conflict).toBeVisible();
+
+    await conflict.getByRole('button', { name: englishMessages['action.close'] }).click();
+    await expect(conflict).toHaveCount(0);
+
+    // Neither question was answered, so both records stay exactly as they are.
+    await expectRecords(page, 2);
+    await expect(synchronisation(page)).toContainText('2 records');
   });
 
   test('asks the Commander about a record the account no longer holds', async ({

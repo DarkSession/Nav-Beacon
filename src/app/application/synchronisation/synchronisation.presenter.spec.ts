@@ -82,6 +82,24 @@ function staleConflict(): SynchronisationResponse {
   });
 }
 
+/** One refusal that names two records, as a response refusing a batch can. */
+function twoDeletionConflicts(): SynchronisationResponse {
+  return {
+    kind: 'refused',
+    status: 409,
+    code: 'conflict',
+    accountRevision: 9,
+    results: [FIXTURE_IDS.named, FIXTURE_IDS.working].map((id, index) => ({
+      index,
+      outcome: 'conflict' as const,
+      id,
+      revision: 9,
+      remote: { kind: 'deleted' as const },
+      code: null,
+    })),
+  };
+}
+
 /** The refusal both conflicts arrive in, differing only in what the account holds. */
 function conflictRefusal(remote: ChangeResult['remote']): SynchronisationResponse {
   return {
@@ -491,6 +509,33 @@ describe('what the record libraries say about the account', () => {
       BUNDLED_ENGLISH['sync.conflict.cancel'],
     ]);
     expect(view.status.message).toContain('needs your answer');
+  });
+
+  it('holds every conflict one response refused, and asks the first', async () => {
+    writeCommanderState(storage, {
+      recordBindings: { [FIXTURE_IDS.named]: CUSTOMER, [FIXTURE_IDS.working]: CUSTOMER },
+      recordRevisions: { [FIXTURE_IDS.named]: 4, [FIXTURE_IDS.working]: 4 },
+    });
+    seedTwoRecords();
+    const store = await signedIn();
+    api.answers.push(twoDeletionConflicts());
+
+    store.queueUpload(FIXTURE_IDS.named, CUSTOMER);
+    store.queueUpload(FIXTURE_IDS.working, CUSTOMER);
+    await store.refresh();
+    await settle();
+
+    // One response can refuse several records at once. A surface that sets one
+    // question aside reads the rest from here, because asking only the first
+    // would put every other standing conflict out of reach while the status
+    // over it still counts them (020/FR-009, 020/FR-010).
+    const conflicts = presenter().conflicts();
+    expect(conflicts.map((conflict) => conflict.recordId)).toEqual([
+      FIXTURE_IDS.named,
+      FIXTURE_IDS.working,
+    ]);
+    expect(presenter().view().conflict).toBe(conflicts[0]);
+    expect(presenter().view().status.message).toContain('2');
   });
 
   it('asks a different question where both sides still hold a version', async () => {
