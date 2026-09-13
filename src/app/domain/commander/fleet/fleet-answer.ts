@@ -25,14 +25,11 @@ import {
 
 // The coverage block, what it holds and the shape rules both readers work
 // under live in `fleet-coverage`, because the browser's fleet cache reads that
-// block back on every page and must not carry this reader with it. They are
-// published again here so that one import states the whole contract.
-export {
-  parseFleetCoverage,
-  type FleetCoverage,
-  type FleetResult,
-  type StoredShipsComparison,
-} from './fleet-coverage';
+// block back on every page and must not carry this reader with it. The types
+// are published again here so that one import states the whole contract. The
+// reader is not: taking it from here would put this module back on every page,
+// which is the thing the split undoes.
+export type { FleetCoverage, FleetResult, StoredShipsComparison } from './fleet-coverage';
 
 /** Why a refresh stopped. Always with `result: "failed"`. */
 export type FleetFailure =

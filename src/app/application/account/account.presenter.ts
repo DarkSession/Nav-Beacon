@@ -32,7 +32,7 @@ export interface AccountDialogView {
 /**
  * The account dialog and its frame action, as a Commander reads them.
  *
- * One view model for eight states, so the dialog draws the same regions in the
+ * One view model for thirteen states, so the dialog draws the same regions in the
  * same order whatever the session is doing: who is signed in, what the session
  * state is, what the account holds, what needs a network, and what can be done
  * about it. A state that has nothing to say in a region omits the region rather

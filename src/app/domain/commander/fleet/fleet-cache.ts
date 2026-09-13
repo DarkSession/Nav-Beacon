@@ -1,4 +1,10 @@
-import { parseFleetCoverage, type FleetCoverage, type FleetResult } from './fleet-coverage';
+import {
+  hasExactKeys,
+  isObject,
+  parseFleetCoverage,
+  type FleetCoverage,
+  type FleetResult,
+} from './fleet-coverage';
 
 /**
  * The last accepted owned fleet, as this browser keeps it between visits.
@@ -115,14 +121,4 @@ function parseEntry(value: unknown): CachedFleet | null {
     ships: [...(ships as readonly unknown[])],
     coverage,
   };
-}
-
-function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const actual = Object.keys(value).sort();
-  const expected = [...keys].sort();
-  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

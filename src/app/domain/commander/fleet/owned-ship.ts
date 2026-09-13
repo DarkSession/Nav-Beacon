@@ -6,6 +6,7 @@ import {
   BUILD_SNAPSHOT_VERSION,
   type BuildSnapshotV1,
 } from '../../ships/build/build-snapshot';
+import { hasExactKeys, isDate, isIndex, isObject } from './fleet-coverage';
 import { parseBuildSnapshotV1 } from '../../ships/build/build-snapshot.parser';
 import {
   reconstructFromSnapshot,
@@ -220,25 +221,25 @@ type PayloadResult =
   | Extract<OwnedShipMappingResult, { readonly ok: false }>;
 
 function parsePayload(value: unknown): PayloadResult {
-  if (!isRecord(value) || !hasExactKeys(value, PAYLOAD_KEYS)) {
+  if (!isObject(value) || !hasExactKeys(value, PAYLOAD_KEYS)) {
     return refusal('malformed');
   }
   if (!isIndex(value['shipId'])) {
     return refusal('malformed');
   }
-  if (!isJournalDate(value['sourceDate']) || !isIndex(value['sourceLine'])) {
+  if (!isDate(value['sourceDate']) || !isIndex(value['sourceLine'])) {
     return refusal('malformed');
   }
 
   const model = value['model'];
-  if (!isRecord(model) || !hasExactKeys(model, MODEL_KEYS) || !Array.isArray(model['modules'])) {
+  if (!isObject(model) || !hasExactKeys(model, MODEL_KEYS) || !Array.isArray(model['modules'])) {
     return refusal('malformed');
   }
 
   const modules: unknown[] = [];
   for (const entry of model['modules']) {
     if (
-      !isRecord(entry) ||
+      !isObject(entry) ||
       !hasExactKeys(entry, MODULE_KEYS) ||
       !isExactNullableObject(entry['preEngineered'], PRE_ENGINEERED_KEYS) ||
       !isExactNullableObject(entry['engineering'], ENGINEERING_KEYS)
@@ -274,7 +275,7 @@ function snapshotModule(module: Record<string, unknown>): unknown {
     enabled: module['enabled'],
     priority: module['priority'],
     preEngineered: module['preEngineered'],
-    engineering: isRecord(engineering)
+    engineering: isObject(engineering)
       ? {
           blueprint: engineering['blueprint'],
           grade: engineering['grade'],
@@ -335,28 +336,5 @@ function refusal(
 }
 
 function isExactNullableObject(value: unknown, keys: readonly string[]): boolean {
-  return value === null || (isRecord(value) && hasExactKeys(value, keys));
-}
-
-function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const actual = Object.keys(value).sort();
-  const expected = [...keys].sort();
-  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isIndex(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-}
-
-/** A UTC calendar date, in the spelling a journal filename and cursor use. */
-function isJournalDate(value: unknown): value is string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
-    return false;
-  }
-  const parsed = Date.parse(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed) && new Date(parsed).toISOString().startsWith(value);
+  return value === null || (isObject(value) && hasExactKeys(value, keys));
 }

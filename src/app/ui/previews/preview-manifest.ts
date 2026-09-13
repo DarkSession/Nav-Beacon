@@ -5454,7 +5454,7 @@ registerPreview({
       {
         view: synchronisationView({
           status: { tone: 'error', message: BUNDLED_ENGLISH['sync.status.failed.offline'] },
-          detail: '2 changes are still waiting.',
+          detail: previewCount('sync.status.failed.pending', 2),
           retry: BUNDLED_ENGLISH['action.retry'],
         }),
       },
@@ -5987,8 +5987,8 @@ registerPreview({
       },
       [
         ...FLEET_EXPECTATIONS,
-        'shows the installed game data own refusal unchanged: its code, its constraint and its path',
-        'states in this application own words that the game data gives no reason in this language',
+        'shows the installed game data’s own refusal unchanged: its code, its constraint and its path',
+        'states in this application’s own words that the game data gives no reason in this language',
       ],
       ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
     ),

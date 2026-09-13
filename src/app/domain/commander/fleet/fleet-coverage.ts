@@ -10,7 +10,9 @@
  *
  * It sits apart from `fleet-answer` because the cache is reached on every page
  * and the answer's own reader is not: the fleet is a layer a Commander opens.
- * `fleet-answer` reads the rest of the envelope under these same rules.
+ * The shape rules below are published with it, so `fleet-answer` and
+ * `owned-ship` read the rest of a fleet answer by the same rules the cached
+ * block is read by, rather than each keeping its own reading of them.
  */
 
 /** What the owned fleet is, as the service states it. */
@@ -115,7 +117,7 @@ export function isDate(value: unknown): value is string {
 }
 
 /** A UTC instant, in the spelling the session contract uses. */
-export function isInstant(value: unknown): value is string {
+function isInstant(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
 }
 
