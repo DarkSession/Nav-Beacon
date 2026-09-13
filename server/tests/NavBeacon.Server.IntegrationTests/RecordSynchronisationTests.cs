@@ -12,7 +12,7 @@ namespace NavBeacon.Server.IntegrationTests;
 
 /// <summary>
 /// Covers the account revision stream, the request bounds and the atomic
-/// refusal rules of 020/FR-026 over HTTP.
+/// refusal rules of 024/FR-026 over HTTP.
 /// </summary>
 public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture database)
   : IClassFixture<PostgreSqlDatabaseFixture>
@@ -609,7 +609,7 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     );
 
     // The batch is refused and the answer names the refusal, rather than the
-    // request ending in a failure that states nothing (020/FR-012).
+    // request ending in a failure that states nothing (024/FR-012).
     Assert.Equal(HttpStatusCode.BadRequest, refused.Status);
     Assert.Equal("invalid-record", refused.Code);
   }

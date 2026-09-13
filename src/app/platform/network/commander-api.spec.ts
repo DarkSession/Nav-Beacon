@@ -211,7 +211,7 @@ describe('the Commander API client', () => {
      * here is what keeps the fixture below from becoming this browser's own
      * private idea of the answer: a property one side adds alone is a session
      * this browser cannot read and a Commander who cannot sign in at all
-     * (020/FR-001, 020/FR-003).
+     * (024/FR-001, 024/FR-003).
      */
     it('accepts the contract’s property set and nothing beside it', async () => {
       expect(Object.keys(SESSION).sort()).toEqual([...SESSION_RESPONSE_CONTRACT.signedIn].sort());
@@ -488,7 +488,7 @@ describe('the Commander API client', () => {
    * Both fleet addresses, which nothing else in this file exercises.
    *
    * The refresh states the locale it wants the package diagnostic in, and the
-   * service reads that header to choose it (020/FR-016). Nothing else carries
+   * service reads that header to choose it (024/FR-016). Nothing else carries
    * that choice, so a refresh that stopped sending the header would leave every
    * Commander reading English with no test saying so.
    */

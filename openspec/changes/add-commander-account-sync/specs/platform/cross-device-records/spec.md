@@ -12,7 +12,7 @@ ship builds and equipment loadouts. Each record MUST have an application record 
 from a Frontier ship identity. Notes and device claim identities MUST remain local and MUST NOT
 enter a remote record.
 
-Source: 020/FR-007.
+Source: 024/FR-007.
 
 #### Scenario: A signed-in Commander saves both record types
 
@@ -30,7 +30,7 @@ only when every field in their live-record contract is equal. Server revision, s
 and live-page protection deadline MUST NOT affect equality. Equal records MUST accept the remote
 revision. A difference in any synchronised field MUST become a conflicting write.
 
-Source: 020/FR-008.
+Source: 024/FR-008.
 
 #### Scenario: First sign-in has records on both sides
 
@@ -66,7 +66,7 @@ local version a different application record identity. Cancel MUST leave both ve
 mark the local version local-only and clear its pending remote operation. A protection renewal MUST
 NOT change the content record revision or account revision.
 
-Source: 020/FR-009.
+Source: 024/FR-009.
 
 #### Scenario: Two devices change one record
 
@@ -98,7 +98,7 @@ tombstone in place and upload the local version under a fresh application record
 MUST leave the tombstone in place, mark the local version local-only and clear its pending remote
 operation.
 
-Source: 020/FR-010.
+Source: 024/FR-010.
 
 #### Scenario: Another device deletes an unchanged record
 
@@ -143,7 +143,7 @@ The application MUST state that synchronisation is pending or failed and MUST re
 eligible action or explicit Commander request. It MUST NOT claim that a device is current until the
 service confirms it.
 
-Source: 020/FR-011.
+Source: 024/FR-011.
 
 #### Scenario: A save occurs without a network
 
@@ -191,7 +191,7 @@ One record-validation command MUST receive at most the bounded synchronisation r
 after 30 seconds and MUST return at most 64 KiB. A timeout, oversized output, crash or non-zero exit
 MUST refuse the complete batch before a database write.
 
-Source: 020/FR-012.
+Source: 024/FR-012.
 
 #### Scenario: Another device uses an older application version
 
@@ -232,7 +232,7 @@ bound to another Customer ID MUST remain local and MUST NOT appear in or upload 
 account. Account deletion MUST remove the binding from retained planning records and mark them
 local-only. A local-only record MUST require an explicit new save or copy before it can synchronise.
 
-Source: 020/FR-024.
+Source: 024/FR-024.
 
 #### Scenario: Another Commander signs in on the same browser
 
@@ -259,7 +259,7 @@ local record and after each accepted content change. It MUST set the first prote
 each renewal to eight days after server receipt. A renewal MUST NOT change server content time. A
 browser timestamp MUST NOT control remote expiry.
 
-Source: 020/FR-025.
+Source: 024/FR-025.
 
 #### Scenario: A signed-in page remains live and online
 
@@ -297,7 +297,7 @@ with the current revision. A retry after a committed response was lost MUST ther
 further revision. The browser MUST advance its cursor and clear pending operations only after it
 commits the complete response to browser storage.
 
-Source: 020/FR-026.
+Source: 024/FR-026.
 
 #### Scenario: One record exceeds its bound
 

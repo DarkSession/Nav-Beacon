@@ -20,12 +20,12 @@ import {
  *
  * The payload is the package-produced ship model plus the two facts the service
  * adds to it: the Frontier `ShipId` that identifies the ship inside one account,
- * and the journal date-line tuple the model was read from (020/FR-015). There is
+ * and the journal date-line tuple the model was read from (024/FR-015). There is
  * no name, note, record identity or revision, because an owned ship is not an
  * application record; and there is no calculated value, cargo capacity, hull or
  * module value, rebuy, hot state, fuel, health, ammunition, engineer, blueprint
  * ID, engineering quality or modifier block, because every one of those is
- * either the package's to derive from the model or a field 020/FR-015 excludes.
+ * either the package's to derive from the model or a field 024/FR-015 excludes.
  *
  * The model is deliberately the shape local persistence already stores, so it
  * travels the reconstruction path a saved build travels — the snapshot parser
@@ -33,7 +33,7 @@ import {
  * different is what a failure may leave behind. A stored build the package
  * defaults a mount on is ordinary build state; an owned ship is a statement
  * about a Commander's real ship, so a model the package does not fit exactly is
- * refused whole and nothing partial or substituted is kept (020/FR-016).
+ * refused whole and nothing partial or substituted is kept (024/FR-016).
  */
 export interface OwnedShipPayload {
   /** Frontier's own ship identity, unique within one Commander account. */
@@ -80,7 +80,7 @@ export interface OwnedShipPreEngineered {
  *
  * A completed grade, with no roll quality beside it: an owned ship is a ship a
  * Commander has already engineered, so the roll is finished by the time the
- * journal states it, and 020/FR-015 excludes the quality figure from storage.
+ * journal states it, and 024/FR-015 excludes the quality figure from storage.
  */
 export interface OwnedShipEngineering {
   /** The blueprint's `fdname`, or `null` where the engineering names none. */
@@ -108,7 +108,7 @@ export interface OwnedShip {
  * Why an owned-ship payload did not become a build.
  *
  * `malformed` is the contract gate: the payload is not the owned-ship shape, or
- * carries a field 020/FR-015 excludes. The three reconstruction failures are the
+ * carries a field 024/FR-015 excludes. The three reconstruction failures are the
  * package's own answers, carried under its own names.
  * `unsupported-combination` is the fourth: the package built something, but not
  * what the payload named, so what it built is a replacement rather than the
@@ -127,7 +127,7 @@ export type OwnedShipMappingResult =
        * application can show that the package stated it, and `null` everywhere
        * else. The issue travels rather than its English text, because only a
        * caller that knows the reading locale can ask the package for words
-       * (020/FR-016, constitution VI).
+       * (024/FR-016, constitution VI).
        */
       readonly stated: LoadoutIssue | null;
       /** The package's structured diagnostics, verbatim, where it published any. */
@@ -137,7 +137,7 @@ export type OwnedShipMappingResult =
 /**
  * A completed roll, in the figure the package reads.
  *
- * The stored model states a completed grade and no quality (020/FR-015), so
+ * The stored model states a completed grade and no quality (024/FR-015), so
  * reconstruction states the completed roll rather than a figure nobody
  * computed.
  */
@@ -182,7 +182,7 @@ export function mapOwnedShip(value: unknown): OwnedShipMappingResult {
   // reason can be shown to be the package's: some of those words come from the
   // package and some are written in this repository. The failure code is the
   // answer they are read for, and the words are dropped rather than carried as
-  // the package's (020/FR-016).
+  // the package's (024/FR-016).
   const parsed = parseBuildSnapshotV1(payload.snapshot);
   if (!parsed.ok) {
     return refusal('malformed');

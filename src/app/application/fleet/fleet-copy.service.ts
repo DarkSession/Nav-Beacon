@@ -22,12 +22,12 @@ import {
  * the owned ship's build is serialized to a snapshot and rebuilt from it, so
  * the builder holds its own `ShipLoadout` and no edit can reach back into the
  * fleet. A build is edited in place, and handing the same object over would
- * make "copy" mean "open" (020/FR-017).
+ * make "copy" mean "open" (024/FR-017).
  *
  * The candidate carries no record identity at all. It arrives dirty, with no
  * named source and no autosave target, so autosave mints it a record of its own
  * at the first write — a separate saved build a Commander may rename, edit and
- * delete without any of it reaching the owned ship (020/FR-017, 001/FR-008).
+ * delete without any of it reaching the owned ship (024/FR-017, 001/FR-008).
  */
 @Injectable({ providedIn: 'root' })
 export class FleetCopyService {

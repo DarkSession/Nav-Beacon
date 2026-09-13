@@ -14,7 +14,7 @@ import { RecordSynchronisationStore } from './record-synchronisation.store';
  *
  * The rule is one renewal a day and the store holds it; this is only how often
  * the question is put, so a page left open for a week renews on each of its
- * days rather than only at the moment it was opened (020/FR-025).
+ * days rather than only at the moment it was opened (024/FR-025).
  */
 export const PROTECTION_CHECK_MS = 60 * 60 * 1000;
 
@@ -25,20 +25,20 @@ export const PROTECTION_CHECK_MS = 60 * 60 * 1000;
  * lifecycle and no interface. This is the three of them:
  *
  *   * it is what injects the store at all, so the first-sign-in merge runs from
- *     whichever page a Commander signs in on (020/FR-008);
+ *     whichever page a Commander signs in on (024/FR-008);
  *   * it renews the protection deadline of the records the live page is
  *     autosaving into, once a day, while the service is reachable
- *     (020/FR-025);
+ *     (024/FR-025);
  *   * it forgets the account when a Commander signs out or deletes it, which
  *     the account store states rather than calls, because that store is the one
- *     the synchronisation store already reads (020/FR-003).
+ *     the synchronisation store already reads (024/FR-003).
  *
  * It also carries the one conflict answer that is not the store's to give. Keep
  * both mints a fresh identity for this browser's version, and a live page that
  * was holding the old identity has to follow its work onto the new one — the
  * tab claim and the tool's own record id both move, or a reload would restore
  * from a record the account keeps and this page no longer writes to
- * (020/FR-009, 020/FR-010).
+ * (024/FR-009, 024/FR-010).
  */
 @Injectable({ providedIn: 'root' })
 export class RecordSynchronisationCoordinator {
@@ -56,7 +56,7 @@ export class RecordSynchronisationCoordinator {
   constructor() {
     // Sign-out and account deletion both leave this page with nothing to say
     // about an account. The queued operations and the cursor stay in browser
-    // storage, so the same Commander signing in again carries on (020/FR-003).
+    // storage, so the same Commander signing in again carries on (024/FR-003).
     let seen = this.#account.signedOutRevision();
     effect(() => {
       const revision = this.#account.signedOutRevision();
@@ -73,7 +73,7 @@ export class RecordSynchronisationCoordinator {
    * Returns an unsubscribe. Called once, from the application's own
    * initializer, because the records are held by the tools rather than by a
    * screen: a Commander who leaves a build open and goes to the shipyard is
-   * still a live page holding that record (020/FR-025).
+   * still a live page holding that record (024/FR-025).
    */
   start(): () => void {
     const watcher = effect(
@@ -105,7 +105,7 @@ export class RecordSynchronisationCoordinator {
    *
    * Nothing is sent while the browser believes it is offline, and nothing at
    * all while it is anonymous. The store keeps the once-a-day rule, so putting
-   * the question more often than that costs one comparison (020/FR-025).
+   * the question more often than that costs one comparison (024/FR-025).
    */
   renewProtection(): void {
     if (!this.#connectivity.online()) {

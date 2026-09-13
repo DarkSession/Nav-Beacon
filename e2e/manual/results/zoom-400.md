@@ -87,7 +87,7 @@ the emulation can finish.
 | —    | —   | Firefox  | —     | —        | landscape   | drives & mass / ready         | As above                                                                                             | —      | not run |
 | —    | —   | Firefox  | —     | —        | portrait    | drives & mass / thrusters off | As above                                                                                             | —      | not run |
 
-## The Commander account (feature 020)
+## The Commander account (feature 024)
 
 Step 9 covers the three layers an account adds to the shell, and each is its own observation. All
 three are drawn over a capability rather than beside it, and each loses something different first in

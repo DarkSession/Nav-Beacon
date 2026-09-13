@@ -70,7 +70,7 @@ export class WorkingRecordAutosave {
     }
     // The same pause, reached from the account rather than from another tab: a
     // synchronised device deleted the record this page holds, so the work stays
-    // and nothing is written to it until the Commander answers (020/FR-010).
+    // and nothing is written to it until the Commander answers (024/FR-010).
     return held !== null && this.#sync.pausedRecords().includes(held);
   });
 
@@ -130,7 +130,7 @@ export class WorkingRecordAutosave {
     // A pause that arrives from the account rather than from another tab is
     // still a pause this page has to state: the work is usable, nothing is
     // being written to it, and the Commander resumes it deliberately
-    // (020/FR-010).
+    // (024/FR-010).
     const remotePause = effect(
       () => {
         const held = this.#subject.autosaveRecordId();
@@ -178,7 +178,7 @@ export class WorkingRecordAutosave {
       // For a remote deletion, resuming is an overwrite: the work goes back
       // under the same application record identity at a revision newer than the
       // marker. The store answers nothing at all while the browser is anonymous
-      // or while no conflict stands on this record (020/FR-010).
+      // or while no conflict stands on this record (024/FR-010).
       void this.#sync.resumeRecord(held);
     }
     this.#writeNow(true);
@@ -281,7 +281,7 @@ export class WorkingRecordAutosave {
       this.#subject.setPersistence('saved');
       // The record is in browser storage, so it may now enter the account's own
       // exchange. Nothing is queued while the browser is anonymous, and nothing
-      // about this write waits on the network (020/FR-007, 020/FR-011).
+      // about this write waits on the network (024/FR-007, 024/FR-011).
       void this.#sync.recordSaved(recordId);
       return true;
     }

@@ -57,7 +57,7 @@
       <!--
         The ships the Commander owns, read from the account rather than from
         this browser. Read-only: the copy action asks for a saved build of its
-        own and nothing here writes to a fleet entry (020/FR-017).
+        own and nothing here writes to a fleet entry (024/FR-017).
       -->
       <ednb-owned-ships-panel
         [view]="fleetView()"
@@ -70,7 +70,7 @@
       <!--
         Where these records stand with the Commander's account, and the one
         question only they can answer. Drawn above the list, because it is true of
-        every row beneath it (020/FR-011, design decision 10).
+        every row beneath it (024/FR-011, design decision 10).
       -->
       <ednb-synchronisation-panel
         [view]="syncView()"
@@ -140,7 +140,7 @@
 
        It commits on a stored record, so it belongs to that view. An owned ship
        is not deleted and not opened — it is copied — and the fleet view carries
-       that action itself (020/FR-017). -->
+       that action itself (024/FR-017). -->
   @if (shownView() === 'records') {
     <div class="library__footer">
       @if (chosenActions().length === 0) {

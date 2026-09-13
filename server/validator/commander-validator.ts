@@ -67,10 +67,10 @@ async function validateRecords(request: unknown): Promise<void> {
  * One bounded projection batch.
  *
  * Each candidate line goes to `inspectSlef` exactly as the journal wrote it
- * (020/FR-013). What comes back is built into a `ShipLoadout` and captured in
+ * (024/FR-013). What comes back is built into a `ShipLoadout` and captured in
  * the shape local persistence already stores, then read back through
  * `mapOwnedShip` — the same gate the browser applies — so a model that would not
- * reopen is refused here rather than stored (020/FR-016).
+ * reopen is refused here rather than stored (024/FR-016).
  *
  * A refusal names the line and stops the batch: the fleet service keeps its
  * cursor before that line and retries it after a package update.
@@ -153,7 +153,7 @@ function projectLine(line: JournalLine, locale: string): LineResult {
  * cannot place comes back as the hull's own default, which is ordinary build
  * state for a build a Commander is editing and a fabricated fact for a
  * statement about a real ship. An owned ship therefore keeps nothing the line
- * did not state (020/FR-016), and which refusal it is stays a question for the
+ * did not state (024/FR-016), and which refusal it is stays a question for the
  * package catalogue rather than for the wording of a message.
  */
 function refusedAgainstLine(
@@ -182,7 +182,7 @@ function refusedAgainstLine(
  * The stored model, taken from the package's own reading of the line.
  *
  * The snapshot serialiser supplies every field; the roll quality beside a
- * completed grade is the one field 020/FR-015 excludes, so it is dropped here
+ * completed grade is the one field 024/FR-015 excludes, so it is dropped here
  * rather than stored and ignored later.
  */
 function ownedShipModel(loadout: ShipLoadout): OwnedShipModel {
@@ -231,7 +231,7 @@ function engineeringOf(
  * `getSlefDiagnosticMessage` answers `null` where the package publishes no text
  * for that locale. That absence travels as it is: the structured code and
  * constraint are the package's too, and this application never writes its own
- * translation of a game diagnostic (020/FR-016).
+ * translation of a game diagnostic (024/FR-016).
  */
 function diagnostic(refusal: SlefDiagnostic | undefined, locale: string): PackageRefusal {
   if (refusal === undefined) {
@@ -252,7 +252,7 @@ function diagnostic(refusal: SlefDiagnostic | undefined, locale: string): Packag
  * it answers `null` where the package publishes no text for that locale.
  * Reading `error.message` instead would hand English prose to every reader
  * whatever they asked for, and the application would then show it as the
- * package's answer in their language (020/FR-016).
+ * package's answer in their language (024/FR-016).
  */
 function editErrorMessage(error: unknown, locale: string): string | null {
   if (!(error instanceof Error) || error.message.length === 0) {

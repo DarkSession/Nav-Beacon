@@ -94,7 +94,7 @@ describe('the record synchronisation coordinator', () => {
       await settle();
 
       // Asked again a moment later, which the store answers with the once-a-day
-      // rule rather than a second renewal (020/FR-025).
+      // rule rather than a second renewal (024/FR-025).
       coordinator.renewProtection();
       await settle();
 
@@ -169,7 +169,7 @@ describe('the record synchronisation coordinator', () => {
       await settle();
 
       // A browser whose clock is a year ahead renews and never deletes: the
-      // service runs the remote period from its own receipt time (020/FR-025).
+      // service runs the remote period from its own receipt time (024/FR-025).
       clock.advanceDays(365);
       coordinator.renewProtection();
       await settle();

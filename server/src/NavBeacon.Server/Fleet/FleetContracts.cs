@@ -1,6 +1,6 @@
 namespace NavBeacon.Server.Fleet;
 
-/// <summary>Fixed journal and projection bounds published by 020/FR-013.</summary>
+/// <summary>Fixed journal and projection bounds published by 024/FR-013.</summary>
 public static class FleetLimits
 {
   /// <summary>How far back the first cursor reaches.</summary>
@@ -33,7 +33,7 @@ public static class FleetLimits
   public static readonly TimeSpan FailureDelay = TimeSpan.FromSeconds(60);
 }
 
-/// <summary>What the fleet is, as one word the application states (020/FR-018).</summary>
+/// <summary>What the fleet is, as one word the application states (024/FR-018).</summary>
 public static class FleetResults
 {
   /// <summary>Current to the accepted journal cursor.</summary>
@@ -77,7 +77,7 @@ public static class FleetErrorCodes
 /// <summary>
 /// The package's own answer to a candidate it refused, as refresh feedback.
 /// `Message` is what the package publishes for the requested locale and is
-/// `null` where it publishes none. Nothing here is stored (020/FR-016).
+/// `null` where it publishes none. Nothing here is stored (024/FR-016).
 /// </summary>
 public sealed record PackageRefusal(
   string Code,
@@ -90,7 +90,7 @@ public sealed record PackageRefusal(
 public sealed record FleetShip(long ShipId, DateOnly SourceDate, int SourceLine, string ModelJson);
 
 /// <summary>
-/// The four journal metadata items 020/FR-015 allows, and nothing else.
+/// The four journal metadata items 024/FR-015 allows, and nothing else.
 /// </summary>
 public sealed record FleetCoverage(
   DateOnly StartDate,

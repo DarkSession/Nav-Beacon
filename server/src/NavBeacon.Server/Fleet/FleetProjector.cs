@@ -50,7 +50,7 @@ public sealed class FleetProjectionOptions
 /// <summary>
 /// Hands one bounded batch of candidate Live `Loadout` lines to the journal mode
 /// of the server's one Node command, which passes each line unchanged to
-/// `inspectSlef` and answers with package-produced ship models (020/FR-013,
+/// `inspectSlef` and answers with package-produced ship models (024/FR-013,
 /// design decision 8).
 /// </summary>
 public sealed class FleetProjector
@@ -153,7 +153,7 @@ public sealed class FleetProjector
         return null;
       }
       // The exact stored contract, read once more before PostgreSQL sees it, so
-      // a field 020/FR-015 excludes cannot reach the fleet through the command.
+      // a field 024/FR-015 excludes cannot reach the fleet through the command.
       try
       {
         RemoteContractJson.ParseOwnedShip(model);
@@ -204,7 +204,7 @@ public sealed class FleetProjector
     }
 
     // Every candidate before the refused one is projected, and the service
-    // commits that prefix before it stops on the refused line (020/FR-013).
+    // commits that prefix before it stops on the refused line (024/FR-013).
     var accepted = Ships(root, candidates, index);
     return accepted is null
       ? Unavailable

@@ -6,7 +6,7 @@
  * answer: the browser's fleet cache stores it and reads it back on a later
  * visit. It is read here under the same rule both times, rather than a looser
  * second one, so a cached block and a fresh one mean the same thing
- * (020/FR-015, 020/FR-022).
+ * (024/FR-015, 024/FR-022).
  *
  * It sits apart from `fleet-answer` because the cache is reached on every page
  * and the answer's own reader is not: the fleet is a layer a Commander opens.

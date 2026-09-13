@@ -79,7 +79,7 @@ export class SynchronisationPresenter {
    * One response can refuse several records at once, so more than one can
    * stand. A surface that offers the three answers reads this rather than the
    * single question below, because setting one question aside must not put the
-   * rest out of reach (020/FR-009, 020/FR-010).
+   * rest out of reach (024/FR-009, 024/FR-010).
    */
   readonly conflicts = computed<readonly ConflictView[]>(() =>
     this.#sync.conflicts().map((conflict) => this.#conflictView(conflict)),
@@ -97,7 +97,7 @@ export class SynchronisationPresenter {
       // account, which is what puts the status back. Holding no credentials is
       // not the same thing — a session the service ended leaves a failure whose
       // own cause emptied them, and that failure is the only statement of why
-      // (020/FR-003, 020/FR-011).
+      // (024/FR-003, 024/FR-011).
       status: this.#statusOf(status.kind === 'inactive' ? null : status, held),
       detail: this.#detailOf(status),
       // Offered only where pressing it would exchange something. An exchange
@@ -122,7 +122,7 @@ export class SynchronisationPresenter {
    * Read from the account state rather than from the credentials, because the
    * two part company: an unreachable service empties the credentials and leaves
    * the cached account where it is, and the records bound to that account are
-   * still that Commander's (020/FR-022, 020/FR-024).
+   * still that Commander's (024/FR-022, 024/FR-024).
    */
   readonly #knownCustomerId = computed(() => {
     const state = this.#account.state();
@@ -136,7 +136,7 @@ export class SynchronisationPresenter {
    * credentials, because several states empty those and only this one is the
    * service being unreachable. A local write that would not commit, and a
    * session the service ended, are different situations with different answers
-   * (020/FR-003, 020/FR-022).
+   * (024/FR-003, 024/FR-022).
    */
   readonly #accountUnreachable = computed(() => {
     const state = this.#account.state();
@@ -163,7 +163,7 @@ export class SynchronisationPresenter {
    * the session or the exchange. Every write that changes a binding under a
    * record that stays — an exchange committing, a conflict answered, the
    * account departing — moves one of those two, which the view reads beside
-   * this (020/FR-024, 020/FR-025).
+   * this (024/FR-024, 024/FR-025).
    */
   #heldBack(customerId: string | null): HeldBackRecords {
     this.#records.revision();
@@ -187,7 +187,7 @@ export class SynchronisationPresenter {
       // ID nothing here is another Commander's rather than this one's, and every
       // bound record would be counted as somebody else's — which is what a
       // Commander reads after a sign-out, when the bindings deliberately stay
-      // (020/FR-003, constitution IV).
+      // (024/FR-003, constitution IV).
       if (customerId === null) {
         continue;
       }
@@ -196,7 +196,7 @@ export class SynchronisationPresenter {
       // so an unbound record is one the account does not hold. What is on its
       // way to the account is not read from here: this count is only ever asked
       // for under the settled sentence, which is the state where nothing of
-      // this Commander's is waiting (020/FR-012, 020/FR-026).
+      // this Commander's is waiting (024/FR-012, 024/FR-026).
       if (binding === null) {
         unoffered += 1;
         continue;
@@ -218,13 +218,13 @@ export class SynchronisationPresenter {
       // account is not a browser with nobody signed in. Telling that Commander
       // to sign in states something untrue about their session and offers them
       // nothing they can do, while the frame beside this panel is drawing their
-      // name (020/FR-022, constitution IV).
+      // name (024/FR-022, constitution IV).
       if (this.#accountUnreachable()) {
         return { tone: 'warning', message: this.#messages.message('sync.status.unreachable') };
       }
       // Anonymous, or signed in with no exchange attempted yet. Both are the
       // same sentence: the records are in this browser and nowhere else
-      // (020/FR-007).
+      // (024/FR-007).
       return { tone: 'info', message: this.#messages.message('sync.status.local-only') };
     }
     switch (status.kind) {
@@ -245,7 +245,7 @@ export class SynchronisationPresenter {
             // the account has every record on this device states something
             // about one library that its own notes contradict, and over a
             // record it could not offer it states it with nothing beside it to
-            // read (020/FR-011, 020/FR-012, 020/FR-024, constitution IV).
+            // read (024/FR-011, 024/FR-012, 024/FR-024, constitution IV).
             held.localOnly + held.elsewhere + held.unoffered > 0
               ? 'sync.status.current.partial'
               : 'sync.status.current',
@@ -270,7 +270,7 @@ export class SynchronisationPresenter {
    * What is still owed, beside a failure that says why.
    *
    * A failed exchange never claims the device is current, and it says how much
-   * is still waiting rather than leaving the count to be guessed (020/FR-011).
+   * is still waiting rather than leaving the count to be guessed (024/FR-011).
    */
   #detailOf(status: ReturnType<RecordSynchronisationStore['status']>): string | null {
     if (status.kind !== 'failed' || status.changes === 0) {
@@ -290,13 +290,13 @@ export class SynchronisationPresenter {
    *
    * The counts arrive already taken, because the status sentence above them is
    * decided by the same ones and the panel must not state one set twice
-   * (020/FR-024).
+   * (024/FR-024).
    *
    * A record this browser could not offer has no note. It is already listed in
    * the library above, which says there why it cannot be opened or rebuilt, and
    * a second sentence here would either repeat that or offer a Commander a
    * remedy — save or copy it again — that a record nothing can open does not
-   * have (020/FR-012, constitution IV).
+   * have (024/FR-012, constitution IV).
    */
   #notes(held: HeldBackRecords): readonly SynchronisationNote[] {
     const notes: SynchronisationNote[] = [];
@@ -422,7 +422,7 @@ interface HeldBackRecords {
    *
    * A record the first merge passed over — its stored bytes did not read, or
    * the installed package would not rebuild it — is never queued, so it takes
-   * no binding and the exchange settles without it (020/FR-012).
+   * no binding and the exchange settles without it (024/FR-012).
    */
   readonly unoffered: number;
 }
@@ -436,7 +436,7 @@ type CountedMessageStem = PairedStem<MessageKey, MessageKey>;
  * Three bounds are published and the service says which one it stopped at, so
  * one sentence for all three would tell a Commander whose batch was too long
  * that a record of theirs is too large — a statement about their own data that
- * is not true (020/FR-026, constitution IV). A table rather than a `switch`,
+ * is not true (024/FR-026, constitution IV). A table rather than a `switch`,
  * because a fourth bound then fails to compile here rather than reaching a
  * Commander as whichever sentence a `default` happened to hold.
  */

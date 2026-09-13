@@ -171,7 +171,7 @@ describe('FleetStore', () => {
       await store.refresh();
 
       // The one thing an offline page may not say. The fleet is still there,
-      // and nothing about it has been confirmed (020/FR-018, 020/FR-022).
+      // and nothing about it has been confirmed (024/FR-018, 024/FR-022).
       expect(store.exchange()).toEqual({ kind: 'unavailable' });
       expect(store.confirmedAt()).toBeNull();
       expect(store.holding()?.fromCache).toBe(true);
@@ -197,7 +197,7 @@ describe('FleetStore', () => {
    * there are no credentials to read a fleet with. The ships this browser
    * already accepted must still be readable — there is no later moment to
    * read them in, because nothing asks again until a session appears
-   * (020/FR-022, constitution I).
+   * (024/FR-022, constitution I).
    */
   describe('starting with no network at all', () => {
     async function startOffline(): Promise<void> {
@@ -231,7 +231,7 @@ describe('FleetStore', () => {
 
       // The session was never refused; it was never read. Saying it ended
       // would send a Commander to a sign-in that needs the same network
-      // (020/FR-022).
+      // (024/FR-022).
       expect(store.exchange()).toEqual({ kind: 'unavailable' });
       expect(store.holding()?.fromCache).toBe(true);
       expect(store.holding()?.ships.length).toBe(1);
@@ -336,7 +336,7 @@ describe('FleetStore', () => {
       expect(TestBed.inject(AccountStore).state().kind).toBe('authorisation-expired');
       // The ships already accepted are still this Commander's ships. An expired
       // authorisation is a reason to sign in again, not a reason to empty the
-      // fleet (020/FR-018).
+      // fleet (024/FR-018).
       expect(store.holding()?.ships.length).toBe(1);
       expect(storedState()?.fleetCache.length).toBe(1);
     });
@@ -356,7 +356,7 @@ describe('FleetStore', () => {
      * all: one says this application could not read the fleet, the other that
      * it would not take the request as it stands. Reading either as "Frontier
      * did not answer" sends a Commander to check a service that is working
-     * (020/FR-018, constitution IV).
+     * (024/FR-018, constitution IV).
      */
     it.each([['fleet-unavailable', 500] as const, ['invalid-anti-forgery', 400] as const])(
       'states a %s refusal as this application’s, not Frontier’s',
@@ -382,7 +382,7 @@ describe('FleetStore', () => {
       await settle();
 
       // Account state and the fleet cache both go, and the planning records
-      // stay (020/FR-003).
+      // stay (024/FR-003).
       expect(TestBed.inject(AccountStore).state()).toEqual({ kind: 'session-expired' });
       expect(store.holding()).toBeNull();
       expect(storedState()?.fleetCache).toEqual([]);
@@ -453,7 +453,7 @@ describe('FleetStore', () => {
    * their own local write, and a request opened before it answers after it. The
    * answer is dropped: writing it would put the account's ships back into a
    * browser that has just taken them out, and show them to whoever is at the
-   * screen (020/FR-003, 020/FR-006).
+   * screen (024/FR-003, 024/FR-006).
    */
   it('writes nothing a fleet answer carries once the account has left the browser', async () => {
     writeState();

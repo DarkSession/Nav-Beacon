@@ -8,7 +8,7 @@ namespace NavBeacon.Server.IntegrationTests;
 
 /// <summary>
 /// Covers the live-page protection deadline, unnamed-record expiry and the
-/// deletion conflict an offline page receives (020/FR-010 and 020/FR-025).
+/// deletion conflict an offline page receives (024/FR-010 and 024/FR-025).
 /// </summary>
 public sealed class RecordProtectionTests(PostgreSqlDatabaseFixture database)
   : IClassFixture<PostgreSqlDatabaseFixture>

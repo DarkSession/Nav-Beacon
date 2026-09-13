@@ -65,7 +65,7 @@ export const HELP_ACTION = 'help.open';
  * One action for every account state. It is drawn on every screen because an
  * account belongs to the session rather than to a tool, and a Commander reaches
  * sign-in, sign-out, what the account holds and account deletion from wherever
- * they happen to be (020/FR-001).
+ * they happen to be (024/FR-001).
  */
 export const ACCOUNT_ACTION = 'account.open';
 

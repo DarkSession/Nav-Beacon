@@ -404,7 +404,7 @@ describe('the record synchronisation store', () => {
       // and no request between now and then can carry it. Counting it would say
       // a change is on its way to the account that this device will never
       // offer; the record is read instead beside the settled sentence, as one
-      // the account does not hold (020/FR-012, constitution IV).
+      // the account does not hold (024/FR-012, constitution IV).
       expect(store.status()).toMatchObject({ kind: 'current' });
     });
 
@@ -584,7 +584,7 @@ describe('the record synchronisation store', () => {
      * Commander's edit, reports it saved and queues the upload while the read is
      * still open. The edit stays, and the upload it queued carries the revision
      * it was made against, which is what raises the conflict rather than losing
-     * one of the two versions (020/FR-009, constitution IV).
+     * one of the two versions (024/FR-009, constitution IV).
      */
     it('keeps an edit made while the account’s version was being read', async () => {
       seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
@@ -704,7 +704,7 @@ describe('the record synchronisation store', () => {
       await settle();
 
       // Account state and the fleet cache go; the record, the queue and the
-      // cursor stay where they are (020/FR-003).
+      // cursor stay where they are (024/FR-003).
       expect(TestBed.inject(AccountStore).state()).toEqual({ kind: 'session-expired' });
       expect(commanderState().account).toBeNull();
       expect(commanderState().fleetCache).toEqual([]);
@@ -867,7 +867,7 @@ describe('the record synchronisation store', () => {
      * behind it, so the revision the second was queued against is no longer the
      * one the account holds. Sending that revision would read to the service as
      * another device's write, and a Commander would be told their own two
-     * consecutive edits on one device are a cross-device conflict (020/FR-009,
+     * consecutive edits on one device are a cross-device conflict (024/FR-009,
      * constitution IV).
      */
     it('sends the revision the account confirmed, not the one it was queued against', async () => {
@@ -1426,7 +1426,7 @@ describe('the record synchronisation store', () => {
       // That mark is the only thing that takes the record out of the next
       // batch, and the service refuses a batch whole on this identity. Sending
       // it again would hold every other record's saves and deletions behind it
-      // for as long as the queue names it (020/FR-026).
+      // for as long as the queue names it (024/FR-026).
       expect(lastRequest().changes).toHaveLength(0);
     });
 
@@ -1462,7 +1462,7 @@ describe('the record synchronisation store', () => {
      * The other two bounds, which the service refuses before it reads a single
      * change. They name no record, because none of them is the reason — the
      * batch is. A Commander is told which bound stopped it either way
-     * (020/FR-026).
+     * (024/FR-026).
      */
     for (const bound of ['too-many-changes', 'request-too-large'] as const) {
       it(`states the ${bound} bound, which names no record`, async () => {
@@ -1579,7 +1579,7 @@ describe('the record synchronisation store', () => {
    * an exchange is open, and the answer arrives after it. Committing any part
    * of it — the records it carries, its deletion markers, its cursor — would
    * put that account's data back into a browser that has just taken it out
-   * (020/FR-003, 020/FR-006).
+   * (024/FR-003, 024/FR-006).
    */
   it('commits nothing an answer carries once the account has left the browser', async () => {
     api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
@@ -1610,11 +1610,11 @@ describe('the record synchronisation store', () => {
 
   /**
    * An exchange reads the queue once more when something was added while it was
-   * open (020/FR-007). A sign-out that lands in the same window ends the run
+   * open (024/FR-007). A sign-out that lands in the same window ends the run
    * instead: the credentials it would carry are the ones the Commander has just
    * given up, and the service answers a request made with them by refusing it —
    * which this browser states as a session that expired, to a Commander who
-   * ended it themselves (020/FR-003, 020/FR-006).
+   * ended it themselves (024/FR-003, 024/FR-006).
    */
   it('sends nothing more after a sign-out, however much was saved during it', async () => {
     seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
@@ -1651,7 +1651,7 @@ describe('the record synchronisation store', () => {
     expect(api.requests).toHaveLength(1);
     expect(account.state()).toEqual({ kind: 'anonymous' });
     // The save is not lost: it stays queued, for the same Commander signing in
-    // again to carry on with (020/FR-003).
+    // again to carry on with (024/FR-003).
     expect(commanderState().pendingOperations).toHaveLength(1);
   });
 
@@ -1659,7 +1659,7 @@ describe('the record synchronisation store', () => {
    * Deletion is the harder half of the same window, because its local write and
    * the request that follows it are separated by a network round trip: the
    * account has to have left this browser from the moment that write commits,
-   * not from the moment the service answers (020/FR-006, 020/FR-024).
+   * not from the moment the service answers (024/FR-006, 024/FR-024).
    */
   it('commits nothing an answer carries once the account has been deleted', async () => {
     api.session = { kind: 'signed-in', account: ACCOUNT, antiForgeryToken: 'token-1' };
@@ -1702,7 +1702,7 @@ describe('the record synchronisation store', () => {
    * a deletion during one. The departure is read again at each point that
    * writes rather than once for the response, so a record already being read
    * when the deletion committed is not written into a browser that has just
-   * emptied itself (020/FR-006, 020/FR-024).
+   * emptied itself (024/FR-006, 024/FR-024).
    */
   it('writes no record it was already reading when the account was deleted', async () => {
     seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
@@ -1746,7 +1746,7 @@ describe('the record synchronisation store', () => {
    * change, so nothing may say the account is about to receive it. The reason
    * stands through the exchange that follows, which carries everything else
    * that was queued and would otherwise answer a lost save with `current`
-   * (020/FR-011, 020/FR-026).
+   * (024/FR-011, 024/FR-026).
    */
   it('states a queue write browser storage refused rather than settling on it', async () => {
     seed(NAMED_RECORD_V1, FIXTURE_IDS.named);
@@ -1806,7 +1806,7 @@ describe('the record synchronisation store', () => {
      * Commander, each queue nothing: neither is this account's to delete. Left
      * behind, the binding names a record nothing can open, and the
      * synchronisation panel counts it and offers to save or copy it — with
-     * nothing left to save (020/FR-024, constitution IV).
+     * nothing left to save (024/FR-024, constitution IV).
      */
     it('forgets a deleted record the account is never told about', async () => {
       writeState({
@@ -1829,7 +1829,7 @@ describe('the record synchronisation store', () => {
     /**
      * A deletion the account has not answered keeps what its queued operation
      * was raised against, so the retry still sends the revision the account
-     * holds rather than none (020/FR-010, 020/FR-026).
+     * holds rather than none (024/FR-010, 024/FR-026).
      */
     it('keeps a queued deletion’s own state until the account answers it', async () => {
       writeState({

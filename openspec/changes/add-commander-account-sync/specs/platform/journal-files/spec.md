@@ -16,7 +16,7 @@ ship-build or equipment-loadout record, the separate `platform/cross-device-reco
 synchronise only that record for a signed-in Commander. The remote record MUST NOT contain journal
 provenance, a source file name, a raw line or an event field outside its record contract.
 
-Source: 016/FR-001, 020/FR-007, 020/FR-012.
+Source: 016/FR-001, 024/FR-007, 024/FR-012.
 
 #### Scenario: Files are selected
 

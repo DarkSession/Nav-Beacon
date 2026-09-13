@@ -145,12 +145,12 @@ test.describe('the Commander account', () => {
     const dialog = accountDialog(page);
     await expect(dialog).toContainText(englishMessages['account.status.anonymous']);
     // What the account holds is stated before a Commander signs in, not after
-    // (020/FR-005).
+    // (024/FR-005).
     await expect(dialog).toContainText(englishMessages['account.data.title']);
     await expect(dialog).toContainText(englishMessages['account.data.identity']);
     await expect(dialog).toContainText(englishMessages['account.data.credentials']);
     // Which of these actions need a network, said whether or not there is one
-    // (020/FR-022).
+    // (024/FR-022).
     await expect(dialog).toContainText(englishMessages['account.network.notice']);
     await scan(page, testInfo, 'account dialog, anonymous');
 
@@ -159,7 +159,7 @@ test.describe('the Commander account', () => {
     await expect(page).toHaveURL(/^https:\/\/auth\.frontierstore\.net\//, { timeout: 15_000 });
 
     // Frontier sends the Commander back, and the identity on screen is the one
-    // the session states rather than one this browser chose (020/FR-002).
+    // the session states rather than one this browser chose (024/FR-002).
     applyEverything(service);
     service.session = 'signed-in';
     await page.goto('/ships?account=signed-in');
@@ -193,7 +193,7 @@ test.describe('the Commander account', () => {
       .toBeGreaterThan(0);
     const offered = service.sent.flatMap((exchange) => exchange.changes);
     expect(offered.some((change) => change['type'] === 'write')).toBe(true);
-    // A note is local, and no request may carry one (020/FR-019).
+    // A note is local, and no request may carry one (024/FR-019).
     expect(JSON.stringify(service.sent)).not.toContain('"note"');
 
     await expect(library(page)).toContainText('Account plan', { timeout: 15_000 });
@@ -211,7 +211,7 @@ test.describe('the Commander account', () => {
       exchange: () => 'unreachable',
     });
 
-    // The save lands in this browser whatever the network does (020/FR-011).
+    // The save lands in this browser whatever the network does (024/FR-011).
     await planSomething(page);
     await openRecords(page);
     await expect(synchronisation(page)).toContainText(
@@ -239,7 +239,7 @@ test.describe('the Commander account', () => {
 
     // Nothing reaches the account while the records are made, so both saves are
     // still waiting when the account finally answers. A save that cannot reach
-    // the account is still a save (020/FR-011).
+    // the account is still a save (024/FR-011).
     service.exchange = () => 'unreachable';
 
     // The first is named, so the second gets a working record of its own rather
@@ -251,7 +251,7 @@ test.describe('the Commander account', () => {
     // The account is reachable again and disagrees about both records, holding
     // no copy of either: each is a record deleted on another device. One
     // response refuses them together, so two questions stand at once
-    // (020/FR-010).
+    // (024/FR-010).
     service.exchange = (request) => everyChangeConflicts(request);
 
     await openRecords(page);
@@ -263,7 +263,7 @@ test.describe('the Commander account', () => {
     // Setting the first question aside answers nothing and says nothing about
     // the second. The layer moves on to the record still unanswered, rather
     // than leaving it out of reach for the rest of the visit while the status
-    // above it goes on counting it (020/FR-009, 020/FR-010).
+    // above it goes on counting it (024/FR-009, 024/FR-010).
     await conflict.getByRole('button', { name: englishMessages['action.close'] }).click();
     await expect(conflict).toBeVisible();
 
@@ -288,7 +288,7 @@ test.describe('the Commander account', () => {
 
     // Another device deletes that record. The account's own stream is where
     // this page finds the deletion, while it still holds the record itself
-    // (020/FR-010).
+    // (024/FR-010).
     service.exchange = () => ({
       status: 200,
       body: acceptedExchange({
@@ -300,7 +300,7 @@ test.describe('the Commander account', () => {
     await openRecords(page);
 
     // Three answers, and dismissing the layer answers none of them
-    // (020/FR-009, 020/FR-010).
+    // (024/FR-009, 024/FR-010).
     const conflict = conflictLayer(page);
     await expect(conflict).toBeVisible({ timeout: 15_000 });
     await expect(conflict).toContainText(englishMessages['sync.conflict.deleted.description']);
@@ -316,7 +316,7 @@ test.describe('the Commander account', () => {
     // Dismissing the layer is not a fourth answer. The layer goes, the record
     // stays listed, and nothing about it has been settled — this browser's copy
     // is not local-only, because nobody said to leave both as they are
-    // (020/FR-009, 020/FR-010).
+    // (024/FR-009, 024/FR-010).
     await conflict.getByRole('button', { name: englishMessages['action.close'] }).click();
     await expect(conflict).toHaveCount(0);
     await expectRecords(page, 1);
@@ -333,7 +333,7 @@ test.describe('the Commander account', () => {
     await expect(conflict).toHaveCount(0);
 
     // Both versions stay: this browser keeps its copy, and the copy stops
-    // synchronising until it is saved again (020/FR-010, 020/FR-024).
+    // synchronising until it is saved again (024/FR-010, 024/FR-024).
     await expectRecords(page, 1);
     await expect(synchronisation(page)).toContainText('kept in this browser only', {
       timeout: 15_000,
@@ -353,7 +353,7 @@ test.describe('the Commander account', () => {
       .click();
 
     // The destructive answer is behind a layer of its own, and says exactly
-    // what leaves the server and what stays here (020/FR-006).
+    // what leaves the server and what stays here (024/FR-006).
     const confirmation = deletionConfirmation(page);
     await expect(confirmation).toBeVisible();
     await expect(confirmation).toContainText(englishMessages['account.delete.description']);

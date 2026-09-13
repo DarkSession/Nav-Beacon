@@ -80,7 +80,7 @@ public sealed class RecordValidationProcess(RecordValidationProcessOptions optio
       // Read under its kind, as `ok` and `index` are, and the index under a
       // number it fits in. A command that answers either of another kind is a
       // command this server cannot read, and reading it regardless throws past
-      // the batch refusal below (020/FR-012).
+      // the batch refusal below (024/FR-012).
       var code =
         root.TryGetProperty("code", out var codeValue)
         && codeValue.ValueKind == JsonValueKind.String

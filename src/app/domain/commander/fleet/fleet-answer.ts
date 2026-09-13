@@ -14,7 +14,7 @@
  *
  * Nothing here is a calculated value, a hull or module name, a price, a hot
  * state or a raw journal event: the model is the package-produced ship model
- * and the two facts the service adds to it (020/FR-015).
+ * and the two facts the service adds to it (024/FR-015).
  */
 
 import {
@@ -48,7 +48,7 @@ export type FleetFailure =
  * Carried verbatim and never stored: the same `GET api/fleet` afterwards
  * answers `null` here. `message` is the package's text for the locale the
  * refresh asked in, and `null` where the package publishes none — which is
- * every locale but English today (020/FR-016).
+ * every locale but English today (024/FR-016).
  */
 export interface PackageRefusal {
   readonly code: string;
@@ -87,7 +87,7 @@ export type FleetErrorCode =
  *
  * `unavailable` is the answer that never arrived and the answer this browser
  * could not read. Both mean the same thing to every caller: nothing was
- * confirmed, so nothing may be claimed (020/FR-022).
+ * confirmed, so nothing may be claimed (024/FR-022).
  */
 export type FleetResponse =
   | { readonly kind: 'answered'; readonly answer: FleetAnswer }

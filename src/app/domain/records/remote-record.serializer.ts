@@ -11,11 +11,11 @@ import { REMOTE_RECORD_FORMAT, REMOTE_RECORD_VERSION, type RemoteRecord } from '
  * note, the save provenance, the local revision, the device claim, the listing
  * copies and the validation snapshot have no field to land in here, so no
  * caller and no future field on `LocalRecord` can put one in a request
- * (020/FR-007, 020/FR-012).
+ * (024/FR-007, 024/FR-012).
  *
  * A ship record carries its saved name in the build's ship name, because the
  * live contract holds no second name to put it in. A working record has no name
- * and keeps the build's own (020/FR-012).
+ * and keeps the build's own (024/FR-012).
  */
 export function toRemoteRecord(record: LocalRecord): RemoteRecord {
   const envelope = {

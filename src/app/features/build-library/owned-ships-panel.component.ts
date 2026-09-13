@@ -15,7 +15,7 @@ import { StatusNotice } from '../../ui/components/status/status-notice';
  *
  * An owned ship is read-only. Nothing here edits one; the copy action asks for
  * a separate saved build with its own identity, which is the only way a fleet
- * entry reaches the planning tools (020/FR-017).
+ * entry reaches the planning tools (024/FR-017).
  *
  * Every state states itself in words. The tone of a notice is a second
  * rendering of the sentence and never the only one, so nothing here is carried

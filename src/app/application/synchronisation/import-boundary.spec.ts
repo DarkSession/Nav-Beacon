@@ -143,7 +143,7 @@ const FORBIDDEN_FIELDS = [
  *
  * Read from the requests rather than from the stores: the constitution's
  * boundary is about what leaves the browser, so proving it means reading what
- * was sent (constitution I, 020/FR-007, 020/FR-012, 020/FR-021).
+ * was sent (constitution I, 024/FR-007, 024/FR-012, 024/FR-021).
  */
 function expectNothingBeyondTheRecord(api: FakeCommanderApi, sources: readonly string[]): void {
   const sent = JSON.stringify(api.requests);
@@ -217,7 +217,7 @@ describe('the boundary an import crosses to reach an account', () => {
       await settle();
 
       // Reconstruction alone is not an offer. Nothing is sent until the record
-      // exists in this browser (020/FR-007).
+      // exists in this browser (024/FR-007).
       expect(changesOfKind(api, 'write')).toHaveLength(0);
 
       TestBed.inject(AutosaveService).flush();
@@ -283,7 +283,7 @@ describe('the boundary an import crosses to reach an account', () => {
       const sent = changesOfKind(api, 'write');
       expect(sent).toHaveLength(2);
       // Every record offered is one this browser holds: the write follows the
-      // persistence rather than the line it was read from (020/FR-007).
+      // persistence rather than the line it was read from (024/FR-007).
       expect(persisted()).toEqual(expect.arrayContaining([...sent]));
       expectNothingBeyondTheRecord(api, [file.name, ...lines]);
     });

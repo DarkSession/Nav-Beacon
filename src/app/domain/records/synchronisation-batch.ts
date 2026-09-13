@@ -1,6 +1,6 @@
 import { changeBody, type RecordChange } from './record-synchronisation';
 
-/** The fixed bounds 020/FR-026 publishes, in bytes of UTF-8 JSON. */
+/** The fixed bounds 024/FR-026 publishes, in bytes of UTF-8 JSON. */
 export const MAXIMUM_RECORD_BYTES = 65_536;
 export const MAXIMUM_REQUEST_BYTES = 1_048_576;
 export const MAXIMUM_CHANGES = 100;
@@ -31,7 +31,7 @@ export interface BatchPlan {
  * The bounds are inclusive, and they are checked here rather than waited for:
  * an over-limit request is refused whole, so a batch that grew one change too
  * long would leave every change in it pending rather than just the one that
- * did not fit (020/FR-026).
+ * did not fit (024/FR-026).
  *
  * A record over its own 64 KiB bound is set aside rather than deferred. It
  * cannot be made to fit by waiting, and leaving it at the head of the queue

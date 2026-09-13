@@ -87,19 +87,25 @@
   <!--
     The Commander account, beside the frame for the same reason help is: an
     account belongs to the session rather than to a screen. Browser-only, and
-    eager rather than deferred, because the modal is also where a refused
-    sign-in callback and an expired session are stated, and a chunk fetched on
-    activation is a request that has nothing to say when the network is the
-    thing that failed (020/FR-001, 020/FR-003).
+    fetched with the session rather than on the press: the modal is also where a
+    refused sign-in callback and an expired session are stated, and a chunk
+    asked for at the moment it is opened is a request that has nothing to say
+    when the network is the thing that failed. `prefetch on immediate` is what
+    separates the two — the code leaves for the browser as the session starts,
+    so it is already here when one of those states raises the layer, and it
+    leaves the first payload carrying only what the first frame draws
+    (024/FR-001, 024/FR-003, constitution IV).
   -->
-  <ednb-account-dialog
-    [open]="account.open()"
-    [view]="account.view()"
-    (dismissed)="account.closeDialog()"
-    (actionSelected)="account.select($event)"
-    (deletionConfirmed)="account.confirmDeletion()"
-    (deletionCancelled)="account.cancelDeletion()"
-  />
+  @defer (when account.open(); prefetch on immediate) {
+    <ednb-account-dialog
+      [open]="account.open()"
+      [view]="account.view()"
+      (dismissed)="account.closeDialog()"
+      (actionSelected)="account.select($event)"
+      (deletionConfirmed)="account.confirmDeletion()"
+      (deletionCancelled)="account.cancelDeletion()"
+    />
+  }
 
   <!--
     The overlay a newer version puts up before it restarts the page under it.

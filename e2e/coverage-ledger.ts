@@ -53,7 +53,7 @@ export const COVERED_FEATURES: readonly string[] = [
   '019-first-frame-typefaces',
   '020-held-grade-ladder',
   '023-served-document-held',
-  '020-commander-account-sync',
+  '024-commander-account-sync',
 ];
 
 /** The five layout profiles, each run in both engines. */
@@ -2412,7 +2412,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   // ---------------------------------------------------------------------------
   {
     surfaceId: 'commander/account-dialog',
-    requirements: ['020/FR-001', '020/FR-002', '020/FR-005'],
+    requirements: ['024/FR-001', '024/FR-002', '024/FR-005'],
     journey: 'commander/account',
     axe: true,
     assertions: [
@@ -2426,7 +2426,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/session-and-credentials',
-    requirements: ['020/FR-003', '020/FR-004', '020/FR-023'],
+    requirements: ['024/FR-003', '024/FR-004', '024/FR-023'],
     journey: 'commander/account',
     axe: true,
     assertions: [
@@ -2439,7 +2439,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/account-deletion',
-    requirements: ['020/FR-006', '020/FR-024'],
+    requirements: ['024/FR-006', '024/FR-024'],
     journey: 'commander/account',
     axe: true,
     assertions: [
@@ -2454,7 +2454,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/record-synchronisation',
-    requirements: ['020/FR-007', '020/FR-011', '020/FR-022'],
+    requirements: ['024/FR-007', '024/FR-011', '024/FR-022'],
     journey: 'commander/records',
     axe: true,
     assertions: [
@@ -2469,7 +2469,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/first-merge',
-    requirements: ['020/FR-008', '020/FR-019', '020/FR-020', '020/FR-021'],
+    requirements: ['024/FR-008', '024/FR-019', '024/FR-020', '024/FR-021'],
     journey: 'commander/records',
     axe: true,
     assertions: [
@@ -2483,7 +2483,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/record-conflict',
-    requirements: ['020/FR-009', '020/FR-010'],
+    requirements: ['024/FR-009', '024/FR-010'],
     journey: 'commander/records',
     axe: true,
     assertions: [
@@ -2498,7 +2498,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/remote-record-contract',
-    requirements: ['020/FR-012', '020/FR-025', '020/FR-026'],
+    requirements: ['024/FR-012', '024/FR-025', '024/FR-026'],
     journey: 'commander/records',
     axe: true,
     assertions: [
@@ -2511,7 +2511,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/owned-ships',
-    requirements: ['020/FR-013', '020/FR-014', '020/FR-015', '020/FR-016', '020/FR-018'],
+    requirements: ['024/FR-013', '024/FR-014', '024/FR-015', '024/FR-016', '024/FR-018'],
     journey: 'commander/fleet',
     axe: true,
     assertions: [
@@ -2528,7 +2528,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/fleet-copy',
-    requirements: ['020/FR-017'],
+    requirements: ['024/FR-017'],
     journey: 'commander/fleet-copy',
     axe: true,
     assertions: [
@@ -2540,7 +2540,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'commander/responsive-and-localised',
-    requirements: ['020/FR-005', '020/FR-011', '020/FR-016', '020/FR-022'],
+    requirements: ['024/FR-005', '024/FR-011', '024/FR-016', '024/FR-022'],
     journey: 'commander/account',
     axe: true,
     assertions: [

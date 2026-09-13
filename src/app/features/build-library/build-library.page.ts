@@ -142,7 +142,7 @@ export class BuildLibraryPage {
    * Dismissing the question is not one of the three answers. The conflict
    * stands, both versions stay exactly as they are, and the account's own state
    * still says how many records are waiting — what is set aside is the layer,
-   * not the decision (020/FR-009, 020/FR-010).
+   * not the decision (024/FR-009, 024/FR-010).
    */
   readonly #setAside = signal<readonly string[]>([]);
 
@@ -151,7 +151,7 @@ export class BuildLibraryPage {
    *
    * The library is one of the moments the design synchronises at, so the
    * exchange is asked for when the layer is raised and what it answers is
-   * stated here (020/FR-011, design decision 6).
+   * stated here (024/FR-011, design decision 6).
    */
   readonly syncView = computed(() => {
     const view = this.#syncPresenter.view();
@@ -161,7 +161,7 @@ export class BuildLibraryPage {
     // layer is the only surface that offers the three answers: reading the
     // first alone would put every other standing conflict out of reach for the
     // rest of the visit, while the status over it still counts them
-    // (020/FR-009, 020/FR-010, constitution IV).
+    // (024/FR-009, 024/FR-010, constitution IV).
     const asked =
       this.#syncPresenter.conflicts().find((entry) => !setAside.includes(entry.recordId)) ?? null;
     return asked === view.conflict ? view : { ...view, conflict: asked };
@@ -459,7 +459,7 @@ export class BuildLibraryPage {
 
     // A record library opening is one of the moments the account exchanges at.
     // It does nothing at all while the browser is anonymous, and it never makes
-    // the list wait on a network (020/FR-011, design decision 6).
+    // the list wait on a network (024/FR-011, design decision 6).
     void this.#synchronisation.refresh();
   }
 
@@ -481,7 +481,7 @@ export class BuildLibraryPage {
    *
    * Dismissal is not one of the three answers. Both versions stay exactly as
    * they are and the question is asked again the next time the library is
-   * opened (020/FR-009, 020/FR-010).
+   * opened (024/FR-009, 024/FR-010).
    */
   dismissConflict(): void {
     const conflict = this.syncView().conflict;
@@ -606,7 +606,7 @@ export class BuildLibraryPage {
 
     // A deletion the Commander confirmed is a deletion of the account's copy
     // too. Nothing is queued while the browser is anonymous, and the local
-    // removal has already happened (020/FR-010, 020/FR-011).
+    // removal has already happened (024/FR-010, 024/FR-011).
     void this.#sync.recordDeleted(pending.recordId);
 
     this.#invalidation.announceDelete(pending.recordId);
@@ -868,7 +868,7 @@ export class BuildLibraryPage {
    * A copy, with a record identity of its own. The owned ship is read-only and
    * nothing here writes to it: what the builder receives is a separate build a
    * Commander may rename, edit and delete with the fleet entry untouched
-   * (020/FR-017).
+   * (024/FR-017).
    */
   async copyOwnedShip(): Promise<void> {
     this.#failure.set(null);

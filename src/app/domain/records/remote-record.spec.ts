@@ -129,7 +129,7 @@ describe('remote record contract', () => {
    * A version this browser does not know stays remote and unopened rather than
    * being read under this version's rules: a v2 record carrying the v1 key set
    * would otherwise be adopted into local storage as a v1 record, which is what
-   * 020/FR-012 forbids. The identity, kind and timestamps are the same
+   * 024/FR-012 forbids. The identity, kind and timestamps are the same
    * boundary — a record this browser cannot place in time or in a library is
    * not one it can hold.
    */

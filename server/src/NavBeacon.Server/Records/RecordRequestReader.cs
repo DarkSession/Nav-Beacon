@@ -12,7 +12,7 @@ public sealed record RecordRequestRead(
 );
 
 /// <summary>
-/// Reads one synchronisation request and applies every bound in 020/FR-026
+/// Reads one synchronisation request and applies every bound in 024/FR-026
 /// before the service compares or writes anything.
 /// </summary>
 public static class RecordRequestReader

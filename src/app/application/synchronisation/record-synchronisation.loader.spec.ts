@@ -37,8 +37,8 @@ import {
  * The engine arrives with the session rather than with the first payload of
  * every page, so what these tests read is the service: an anonymous browser
  * asks it for nothing at all, and a Commander becoming signed in is what brings
- * the engine in, from whatever page they are on (constitution I, 020/FR-007,
- * 020/FR-008).
+ * the engine in, from whatever page they are on (constitution I, 024/FR-007,
+ * 024/FR-008).
  */
 describe('reaching the record synchronisation engine', () => {
   let storage: MemoryStorage;
@@ -100,7 +100,7 @@ describe('reaching the record synchronisation engine', () => {
    * chunk is waited for. A chunk that never arrives then leaves a real pending
    * operation for the next trigger to send; waiting for it would leave the
    * record changed here with nothing at all waiting to offer it, and nothing
-   * rescans browser storage later (020/FR-011, 020/FR-026).
+   * rescans browser storage later (024/FR-011, 024/FR-026).
    */
   it.each([
     [
@@ -136,7 +136,7 @@ describe('reaching the record synchronisation engine', () => {
    * record exchange reaches this browser's own service, whose session and
    * anti-forgery token both still stand, so a save made in that window is
    * still the account's — and nothing rescans browser storage later
-   * (020/FR-011, constitution IV).
+   * (024/FR-011, constitution IV).
    */
   it('queues what a save owes while the Frontier authorisation has expired', async () => {
     writeCommanderState(storage);
@@ -159,7 +159,7 @@ describe('reaching the record synchronisation engine', () => {
    * the account is already in the queue, which is what the next trigger sends.
    * A save that queued nothing would leave the record diverged from the account
    * with nothing at all to retry, and nothing rescans browser storage later
-   * (020/FR-011, 020/FR-026).
+   * (024/FR-011, 024/FR-026).
    */
   it('leaves what a save owes in the queue when the engine never arrives', async () => {
     TestBed.configureTestingModule({
@@ -191,8 +191,8 @@ describe('reaching the record synchronisation engine', () => {
    * cursor and the queue all stay in browser storage for the same Commander to
    * carry on from. The queued operation carries the revision the record was
    * last in sync at, so another device's write or deletion meets it as the
-   * conflict it is rather than replacing it without a word (020/FR-009,
-   * 020/FR-010, 020/FR-011, constitution IV).
+   * conflict it is rather than replacing it without a word (024/FR-009,
+   * 024/FR-010, 024/FR-011, constitution IV).
    */
   it.each([
     ['the account that has just left it', CUSTOMER],
@@ -219,7 +219,7 @@ describe('reaching the record synchronisation engine', () => {
    * Taking a record out of a Commander's account is an instruction rather than
    * work to preserve, and a browser with no session has not been given one. A
    * record no account holds and a cancelled one are nobody's to queue either
-   * (constitution I, 020/FR-007, 020/FR-024).
+   * (constitution I, 024/FR-007, 024/FR-024).
    */
   it.each([
     [
@@ -253,7 +253,7 @@ describe('reaching the record synchronisation engine', () => {
    * Browser storage can refuse the queue write. The engine is then asked to
    * offer the record itself rather than to take up a change that is not there,
    * because taking up nothing would leave this browser saying the account holds
-   * a revision it was never sent (020/FR-011, 020/FR-026).
+   * a revision it was never sent (024/FR-011, 024/FR-026).
    */
   it('does not hand the engine a change browser storage refused to queue', async () => {
     writeCommanderState(storage);

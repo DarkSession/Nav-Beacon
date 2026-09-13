@@ -18,7 +18,7 @@ export const ANTI_FORGERY = 'token-1';
 
 /**
  * The model the service stores: the package's own build, without the fields
- * 020/FR-015 excludes.
+ * 024/FR-015 excludes.
  *
  * Built from the package rather than written out by hand, so a pinned release
  * that changes a hull's stock fitting changes this fixture with it.

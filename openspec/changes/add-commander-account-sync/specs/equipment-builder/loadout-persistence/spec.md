@@ -7,7 +7,7 @@ Commander's browser when the Commander is anonymous. When the Commander is signe
 and unnamed autosaves MUST also synchronise to that Commander's account under
 `platform/cross-device-records`.
 
-Source: 013/FR-018, 020/FR-020.
+Source: 013/FR-018, 024/FR-020.
 
 #### Scenario: The application is closed and reopened
 
@@ -50,7 +50,7 @@ remote protection deadline under `platform/cross-device-records`. If that remote
 while the live page is offline, the local copy MUST remain and the next synchronisation MUST
 report a remote deletion conflict.
 
-Source: 017/FR-007, 017/SC-003, 020/FR-025.
+Source: 017/FR-007, 017/SC-003, 024/FR-025.
 
 #### Scenario: Reloading the tab
 
@@ -116,7 +116,7 @@ unasked. It MUST NOT keep stating a discard that is not about the loadout it now
 A record deleted on this page MUST clear the bench. The deleted record MUST NOT be written again. A
 loadout the address still carries MUST open again from the address into a record of its own.
 
-Source: 017/FR-008, 020/FR-010.
+Source: 017/FR-008, 024/FR-010.
 
 #### Scenario: The browser refuses to store anything
 

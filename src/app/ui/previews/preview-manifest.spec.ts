@@ -54,7 +54,7 @@ describe('preview manifest', () => {
    * a note naming a record it does not hold. The product cannot reach that pair
    * — `SynchronisationPresenter` picks the narrower sentence the moment one
    * record is held back — so a catalogue page drawing it would be a design
-   * record of a state that does not exist (020/FR-011, constitution IV and
+   * record of a state that does not exist (024/FR-011, constitution IV and
    * VII).
    */
   it('draws no whole-device sentence over a note about a record the account lacks', () => {

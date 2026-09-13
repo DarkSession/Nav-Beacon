@@ -19,7 +19,7 @@ import { expectRecords, openLibrary, reachShellAction, savedToBrowser } from './
  * An owned ship is read-only. What the builder receives is a copy with a record
  * identity of its own, and the journey below proves it the only way that can be
  * proved: it changes the copy, deletes the copy, and reads the fleet entry
- * afterwards (020/FR-017).
+ * afterwards (024/FR-017).
  *
  * The account and the fleet are stubbed at the network boundary rather than
  * seeded into storage, because what is under test starts at the answer the
@@ -87,7 +87,7 @@ test.describe('the ships a Commander owns', () => {
     await savedToBrowser(page);
 
     // Autosave minted the copy a record of its own. The fleet entry is not one
-    // of them: an owned ship is not an application record (020/FR-017).
+    // of them: an owned ship is not an application record (024/FR-017).
     await expectRecords(page, 1);
     expect(await storedFleet(page)).toBe(fleetBefore);
   });
@@ -148,7 +148,7 @@ test.describe('the ships a Commander owns', () => {
 
     // The footer that opens, renames and deletes belongs to the stored records
     // and is not rendered over the fleet at all, so there is no button here to
-    // be disabled or ignored (020/FR-017).
+    // be disabled or ignored (024/FR-017).
     await expect(page.locator('.library__footer')).toHaveCount(0);
     await expect(
       library(page).getByRole('button', { name: englishMessages['library.action.delete'] }),

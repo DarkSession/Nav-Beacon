@@ -41,7 +41,7 @@ refresh. An exceeded response, line, process or output bound MUST stop before th
 response, MUST leave the last accepted fleet and cursor available, and MUST be stated to the
 Commander.
 
-Source: 020/FR-013.
+Source: 024/FR-013.
 
 #### Scenario: A journal day contains a Loadout event
 
@@ -104,7 +104,7 @@ identity MUST replace its older loadout projection even when both events have th
 later-order ship-sale event for that identity MUST remove the projection without retaining the sale
 event. Replaying an event at or before its accepted tuple MUST have no effect.
 
-Source: 020/FR-014.
+Source: 024/FR-014.
 
 #### Scenario: A ship receives another Loadout event
 
@@ -151,7 +151,7 @@ accepted `StoredShips` event MAY recompute that result.
 Server logs MUST NOT contain a Customer ID, Commander name, journal body, ship projection, `ShipId`
 or package diagnostic text.
 
-Source: 020/FR-015.
+Source: 024/FR-015.
 
 #### Scenario: A journal response contains unrelated events and fields
 
@@ -172,7 +172,7 @@ package diagnostic in the active supported locale, return it only as refresh fee
 store or privately translate it. An unavailable calculated value MUST be shown with the package
 reason and MUST NOT be substituted.
 
-Source: 020/FR-016.
+Source: 024/FR-016.
 
 #### Scenario: Available journal history does not cover every owned ship
 
@@ -198,7 +198,7 @@ An owned-ship record MUST NOT accept edits from the planning tools. A Commander 
 loadout into a separate saved build with its own application record identity. Editing or deleting
 that saved build MUST NOT change the owned ship.
 
-Source: 020/FR-017.
+Source: 024/FR-017.
 
 #### Scenario: A Commander plans from an owned ship
 
@@ -212,7 +212,7 @@ A signed-in Commander MUST be able to request a fleet refresh. The application M
 the owned fleet is current to the accepted journal cursor, waiting for Frontier, incomplete or
 blocked by expired authorisation. A failed refresh MUST leave the last accepted fleet available.
 
-Source: 020/FR-018.
+Source: 024/FR-018.
 
 #### Scenario: Frontier cannot complete a refresh
 

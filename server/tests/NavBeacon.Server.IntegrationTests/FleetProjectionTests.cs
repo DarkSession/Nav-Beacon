@@ -6,8 +6,8 @@ namespace NavBeacon.Server.IntegrationTests;
 
 /// <summary>
 /// Owned-ship upsert by `(CustomerId, ShipId)`, sale removal and `StoredShips`
-/// reconciliation in date-line order (020/FR-014), and the bounded batches the
-/// projection runs in (020/FR-013).
+/// reconciliation in date-line order (024/FR-014), and the bounded batches the
+/// projection runs in (024/FR-013).
 /// </summary>
 public sealed class FleetProjectionTests(PostgreSqlDatabaseFixture database)
   : IClassFixture<PostgreSqlDatabaseFixture>
@@ -450,7 +450,7 @@ public sealed class FleetProjectionTests(PostgreSqlDatabaseFixture database)
     var refreshed = await commander.RefreshFleetAsync();
 
     // An answer this server cannot read is no projection, which is a stated
-    // failure that leaves the cursor where it was (020/FR-016, 020/FR-018).
+    // failure that leaves the cursor where it was (024/FR-016, 024/FR-018).
     Assert.Equal("failed", refreshed.Result);
     Assert.Equal("projection-unavailable", refreshed.Failure);
     Assert.Equal(0, refreshed.CursorLine);

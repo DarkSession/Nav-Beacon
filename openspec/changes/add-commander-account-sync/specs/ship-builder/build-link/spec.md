@@ -7,7 +7,7 @@ NOT put build data in a request path, query, referrer or request to another orig
 is signed in, the reconstructed build MAY enter normal same-origin record synchronisation after it
 opens as an autosave.
 
-Source: 001/FR-015, 001/SC-004, 020/FR-021.
+Source: 001/FR-015, 001/SC-004, 024/FR-021.
 
 #### Scenario: Sharing a build as a link
 

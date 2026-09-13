@@ -153,7 +153,7 @@ not sufficient.
 | Owned ships layer                                 | 020   | obscured, dismissible | FR-011                 |
 | Record conflict layer                             | 020   | obscured, dismissible | FR-011                 |
 
-The four rows owned by feature 020 are the optional Commander account's own surfaces: the modal the
+The four rows owned by feature 024 are the optional Commander account's own surfaces: the modal the
 frame's account action raises, the question asked before an account is deleted, the ships a
 Commander owns inside the stored-build layer, and the layer that asks what happens to a record the
 account and this browser disagree about. Each covers the frame while it stands and each is

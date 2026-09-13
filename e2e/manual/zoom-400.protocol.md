@@ -1,7 +1,7 @@
 # Manual protocol: actual 400% browser zoom
 
 **Protocol id**: `zoom-400`
-**Covers**: 011 FR-011, FR-012, SC-003; 020 FR-005, FR-011, FR-016, FR-022
+**Covers**: 011 FR-011, FR-012, SC-003; 024 FR-005, FR-011, FR-016, FR-022
 **Version**: 4
 
 ## What is automated, and what is left

@@ -20,7 +20,7 @@ public static class FleetEndpoints
   /// `SHIPPED_LOCALES` in `src/app/i18n/locale-registry.ts` is where a locale is
   /// added, and this list follows it. A locale in one list and not the other is
   /// a Commander reading the package's answer in English while the rest of the
-  /// screen is in their own language (020/FR-016).
+  /// screen is in their own language (024/FR-016).
   /// </summary>
   private static readonly string[] SupportedLocales = ["en", "de"];
 
@@ -120,7 +120,7 @@ public static class FleetEndpoints
   /// <summary>
   /// The locale the refresh asks the package for. The request states it, and
   /// anything this application does not ship falls back to English rather than
-  /// asking the package for a locale it does not have (020/FR-016).
+  /// asking the package for a locale it does not have (024/FR-016).
   /// </summary>
   private static string Locale(HttpRequest request)
   {

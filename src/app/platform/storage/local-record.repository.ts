@@ -98,7 +98,7 @@ export class LocalRecordRepository {
    * Read from the keys alone. What asks for it — account deletion — needs to
    * know which records are retained and nothing about their content, and
    * decoding every one of them to answer that would read a Commander's whole
-   * library to count it (020/FR-024).
+   * library to count it (024/FR-024).
    */
   ids(): RepositoryResult<readonly string[]> {
     const keys = this.#storage.keys(EDNB_RECORD_KEY_PREFIX);

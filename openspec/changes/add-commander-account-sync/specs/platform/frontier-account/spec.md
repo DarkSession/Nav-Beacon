@@ -11,7 +11,7 @@ The application MUST offer Frontier as its only sign-in provider. A Commander wh
 MUST retain every non-Commander capability, including local save, autosave, import, export and
 fragment sharing. Commander account, synchronisation and fleet actions MUST require sign-in.
 
-Source: 020/FR-001.
+Source: 024/FR-001.
 
 #### Scenario: A Commander does not sign in
 
@@ -25,7 +25,7 @@ The account MUST use Frontier's numeric Customer ID as its stable identity and t
 from Frontier as its display value. A change to the Commander name MUST NOT create another account.
 The service MUST store no profile value beyond the Customer ID and Commander name.
 
-Source: 020/FR-002.
+Source: 024/FR-002.
 
 #### Scenario: A Commander changes their name
 
@@ -57,7 +57,7 @@ Server logs MUST NOT contain a Frontier Customer ID, Commander name, token, OAut
 OAuth state, browser-correlation value, anti-forgery value or cookie. Access logging MUST record the
 callback route template without its query.
 
-Source: 020/FR-003.
+Source: 024/FR-003.
 
 #### Scenario: A signed-in browser requests its account
 
@@ -121,7 +121,7 @@ Source: 020/FR-003.
 The account connection MUST request and accept only Frontier Live game data. Legacy game data MUST
 NOT populate any Commander capability.
 
-Source: 020/FR-004.
+Source: 024/FR-004.
 
 #### Scenario: Frontier identifies data as not Live
 
@@ -134,7 +134,7 @@ The browser MUST send Commander account and record requests only to the applicat
 The server MAY contact Frontier for the signed-in features the Commander requested. The application
 MUST identify Frontier before sign-in and MUST NOT send build, loadout or note data to Frontier.
 
-Source: 020/FR-005.
+Source: 024/FR-005.
 
 #### Scenario: A Commander starts sign-in
 
@@ -156,7 +156,7 @@ commit, a later sign-in MUST let the Commander retry deletion. If it committed, 
 create an empty account for that Customer ID. Neither outcome MAY upload the retained local-only
 records without an explicit new save or copy.
 
-Source: 020/FR-006.
+Source: 024/FR-006.
 
 #### Scenario: A Commander confirms account deletion
 

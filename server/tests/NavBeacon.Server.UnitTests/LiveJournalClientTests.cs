@@ -216,7 +216,7 @@ public sealed class LiveJournalClientTests
   /// <summary>
   /// The delay Frontier asks for here is longer than the bound a read waits
   /// inside a request and shorter than the delay a third failure carries, so
-  /// only one of the two rules gives the answer 020/FR-013 asks for: the later
+  /// only one of the two rules gives the answer 024/FR-013 asks for: the later
   /// of the two.
   /// </summary>
   [Fact]

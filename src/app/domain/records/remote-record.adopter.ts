@@ -24,12 +24,12 @@ export type RemoteAdoption =
  * The package is asked first. A record naming a hull, module, suit or weapon
  * this installation does not publish is not written: it stays remote and
  * unopened, and the application states that this version cannot open it rather
- * than storing something it cannot reconstruct (020/FR-012).
+ * than storing something it cannot reconstruct (024/FR-012).
  *
  * The note and the working copy's named source are carried across rather than
  * dropped. They are local by definition, the service never saw them, and
  * taking the account's version of a record a Commander has annotated must not
- * take the annotation with it (020/FR-007).
+ * take the annotation with it (024/FR-007).
  *
  * A ship record's name is the build's ship name, because the live contract
  * holds no second name. A named record whose ship name is absent falls back to

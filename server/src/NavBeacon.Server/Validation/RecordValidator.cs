@@ -25,7 +25,7 @@ public sealed class RecordValidationOptions
 /// <summary>
 /// Hands every live record in one bounded synchronisation request to the Node
 /// command that carries the browser's own parsers and the pinned Almanac
-/// packages (020/FR-012).
+/// packages (024/FR-012).
 /// </summary>
 public sealed class RecordValidator
 {

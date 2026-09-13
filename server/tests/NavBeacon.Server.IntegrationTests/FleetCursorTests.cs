@@ -6,7 +6,7 @@ namespace NavBeacon.Server.IntegrationTests;
 
 /// <summary>
 /// The 14-day initial cursor and the transactional date-and-line continuation
-/// of 020/FR-013, and the four metadata items 020/FR-015 allows beside it.
+/// of 024/FR-013, and the four metadata items 024/FR-015 allows beside it.
 /// </summary>
 public sealed class FleetCursorTests(PostgreSqlDatabaseFixture database)
   : IClassFixture<PostgreSqlDatabaseFixture>

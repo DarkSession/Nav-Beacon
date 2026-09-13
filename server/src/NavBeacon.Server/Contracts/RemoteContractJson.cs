@@ -66,7 +66,7 @@ public static class RemoteContractJson
   }
 
   /// <summary>
-  /// Reads one owned-ship model, so nothing outside 020/FR-015 reaches storage.
+  /// Reads one owned-ship model, so nothing outside 024/FR-015 reaches storage.
   /// </summary>
   public static OwnedShipPayloadContract ParseOwnedShip(string json)
   {

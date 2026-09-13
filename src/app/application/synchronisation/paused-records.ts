@@ -4,7 +4,7 @@ import { Injectable, signal } from '@angular/core';
  * The records whose autosave is held, answered on the spot.
  *
  * A live page whose record was deleted elsewhere keeps its active work and
- * stops writing to it until the Commander answers the conflict (020/FR-010).
+ * stops writing to it until the Commander answers the conflict (024/FR-010).
  * The synchronisation store is what decides that, and the store arrives with
  * the session rather than with the first payload
  * (`record-synchronisation.loader.ts`). An autosave asks this question in the
@@ -39,7 +39,7 @@ export class PausedRecords {
     this.#paused.update((paused) => paused.filter((entry) => entry !== recordId));
   }
 
-  /** Lets every page write again, for an account that has gone (020/FR-003). */
+  /** Lets every page write again, for an account that has gone (024/FR-003). */
   releaseAll(): void {
     this.#paused.set([]);
   }

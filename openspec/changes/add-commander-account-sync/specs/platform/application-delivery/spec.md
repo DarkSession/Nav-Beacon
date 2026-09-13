@@ -15,7 +15,7 @@ close a local interaction in progress. The application MUST request authenticati
 a protected network action needs it. No security expiry adds another WCAG 2.2.1 exclusion. Every
 conformance statement in this repository MUST name 2.2.1 among the excluded criteria.
 
-Source: 011/FR-025, 020/FR-023.
+Source: 011/FR-025, 024/FR-023.
 
 #### Scenario: A conformance statement is written
 

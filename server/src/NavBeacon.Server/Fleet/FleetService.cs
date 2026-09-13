@@ -10,7 +10,7 @@ namespace NavBeacon.Server.Fleet;
 ///
 /// A refresh reads dated Live journal responses from the account's cursor,
 /// projects candidate `Loadout` lines through the one bounded Node command and
-/// commits each batch with the cursor it reached (020/FR-013, 020/FR-014). It
+/// commits each batch with the cursor it reached (024/FR-013, 024/FR-014). It
 /// stops before any line it cannot accept, so the last accepted fleet and cursor
 /// stay exactly where they were and the same line is retried later.
 ///
@@ -48,13 +48,13 @@ public sealed class FleetService(
   /// read. Answering no there would take a refresh Frontier failed, or one a
   /// response too large ended, and report it on the next page load as a fleet
   /// the journal confirms whole — with nothing having been read in between
-  /// (020/FR-016).
+  /// (024/FR-016).
   ///
   /// A cursor inside the current day is answered no, and that is a choice
   /// rather than a fact. Fleet import metadata holds four items, and they
   /// cannot tell a refresh that read the day to its end from one that stopped
   /// on the batch bound inside it: both leave the same date and the same line
-  /// count, and a fifth item is what 020/FR-015 forbids. The coverage carries
+  /// count, and a fifth item is what 024/FR-015 forbids. The coverage carries
   /// that date and line either way, which is what states how far reading
   /// reached.
   ///
@@ -174,7 +174,7 @@ public sealed class FleetService(
             // advancing on it would pass over the rest of the day for good:
             // nothing brings the cursor back to a date it has left, so every
             // ship bought or refitted later that day would never be read. The
-            // coverage would state the day as read as well (020/FR-013,
+            // coverage would state the day as read as well (024/FR-013,
             // constitution IV).
             return await SettledAsync(customerId, cursor, false, null, cancellationToken);
           }
@@ -194,7 +194,7 @@ public sealed class FleetService(
       // flag: Frontier answers the current day complete as readily as a past
       // one. Nothing brings the cursor back to a date it has left, so a day
       // left early is a day whose remaining ships are never read, under a
-      // coverage that states it as taken in (020/FR-013, constitution IV).
+      // coverage that states it as taken in (024/FR-013, constitution IV).
       //
       // The lines read still commit either way. Only the date stays.
       var ended = complete && cursor.NextUnreadDate < today;
@@ -215,7 +215,7 @@ public sealed class FleetService(
         // reason can hold on a date that has ended, and a day that has ended
         // with journal left in it is what a later read answers `pending` from.
         // Answering `false` here would be contradicted by the next page load,
-        // off the same stored state (020/FR-016).
+        // off the same stored state (024/FR-016).
         await SaveNextPermittedAsync(cursor, read.NextPermittedRefreshAt, cancellationToken);
         return await SettledAsync(
           customerId,
@@ -243,7 +243,7 @@ public sealed class FleetService(
   /// <summary>
   /// Reads one dated response from the cursor line, in batches bounded by line
   /// count and size. A batch closes before its next candidate would cross a
-  /// bound, and a refresh handles at most ten of them (020/FR-013).
+  /// bound, and a refresh handles at most ten of them (024/FR-013).
   /// </summary>
   private async Task<DayResult> ReadDayAsync(
     RefreshContext context,
@@ -401,7 +401,7 @@ public sealed class FleetService(
   /// <summary>
   /// Applies one batch of accepted operations and the cursor it reached in one
   /// transaction, so a projection and the continuation it justifies commit
-  /// together (020/FR-013).
+  /// together (024/FR-013).
   /// </summary>
   private async Task<bool> CommitAsync(
     RefreshContext context,
@@ -499,7 +499,7 @@ public sealed class FleetService(
   /// plus the current ship the latest accepted `Loadout` identifies. A
   /// projection in neither set leaves; nothing here creates one. The stored
   /// result is the tuple and one word, and never the ship identities it
-  /// compared (020/FR-015).
+  /// compared (024/FR-015).
   /// </summary>
   private void ApplyStoredShips(
     RefreshContext context,

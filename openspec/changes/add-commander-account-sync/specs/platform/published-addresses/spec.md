@@ -7,7 +7,7 @@ cached Commander records and the last accepted fleet projection MUST remain read
 Sign-in, sign-out, account deletion, synchronisation and fleet refresh MAY require a network and
 MUST state that requirement without blocking local work.
 
-Source: 015/FR-013, 015/SC-006, 020/FR-022.
+Source: 015/FR-013, 015/SC-006, 024/FR-022.
 
 #### Scenario: A Commander goes offline
 

@@ -25,7 +25,7 @@ export interface CachedCommanderAccount {
  * A Customer ID binds the record to that account. `local-only` is a record that
  * stays in this browser until a Commander saves or copies it again. No entry at
  * all is an unbound record, which the first sign-in may bind and upload
- * (020/FR-024).
+ * (024/FR-024).
  */
 export type RecordAccountBinding = string | 'local-only';
 
@@ -38,7 +38,7 @@ export type PendingOperationKind = 'upload' | 'delete' | 'renew';
  * The record's content is not copied here. The operation names the record, and
  * the record's own key holds what will be sent, so a retry reads the work as it
  * stands rather than a copy that has gone stale beside it — and a note cannot
- * reach a request through a second copy of the record (020/FR-007).
+ * reach a request through a second copy of the record (024/FR-007).
  */
 export interface PendingRemoteOperation {
   /** This operation's own identity, stable across every retry. */
@@ -55,7 +55,7 @@ export interface PendingRemoteOperation {
 /**
  * Everything about an account this browser keeps between visits.
  *
- * One value under one key, because that is what makes the rule in 020/FR-026
+ * One value under one key, because that is what makes the rule in 024/FR-026
  * true: the cursor advances and the answered operations go in the same write
  * that records what the response said. A write that never lands leaves the
  * cursor where it was and the operations pending, and the service answers the
@@ -160,7 +160,7 @@ export function accountCursor(state: CommanderLocalState, customerId: string): n
  *
  * Nothing else in this value moves. A fleet is not a record: it binds nothing,
  * queues nothing and carries no revision, so caching one cannot change which
- * account a saved build belongs to (020/FR-022).
+ * account a saved build belongs to (024/FR-022).
  */
 export function withFleetAccepted(
   state: CommanderLocalState,
@@ -187,7 +187,7 @@ export function remoteRevisionOf(state: CommanderLocalState, recordId: string): 
  *
  * Unbound and already bound to this Commander are the two eligible states.
  * A record bound to another Customer ID stays local, and a local-only record
- * needs an explicit new save or copy first (020/FR-024).
+ * needs an explicit new save or copy first (024/FR-024).
  */
 export function canSynchroniseRecord(
   state: CommanderLocalState,
@@ -212,7 +212,7 @@ export function withRecordBound(
  *
  * This is what cancelling a conflict leaves behind: both versions keep their
  * content, this browser's copy stops being the account's, and nothing is
- * waiting to send it (020/FR-009, 020/FR-010).
+ * waiting to send it (024/FR-009, 024/FR-010).
  */
 export function withRecordLocalOnly(
   state: CommanderLocalState,
@@ -235,13 +235,13 @@ export function withRecordLocalOnly(
  * work and the revisions its records accepted go with it, and every retained
  * record it could still claim — its own and the unbound ones — becomes
  * local-only, so a later sign-in uploads none of them automatically
- * (020/FR-024). A record this browser no longer holds leaves with the account
+ * (024/FR-024). A record this browser no longer holds leaves with the account
  * rather than staying behind as a binding for nothing.
  *
  * Another Commander's records are not this deletion's to touch. Their
  * bindings, their revisions, their cursor and their queued work all stay
  * exactly as they are, because nothing ever takes a record out of `local-only`
- * and severing them would be permanent (020/FR-024).
+ * and severing them would be permanent (024/FR-024).
  */
 export function withAccountDeleted(
   state: CommanderLocalState,
@@ -266,7 +266,7 @@ export function withAccountDeleted(
     account: null,
     // This account's entry alone: the cache is keyed by Customer ID so that
     // two Commanders sharing a browser never read each other's ships, and the
-    // one being deleted is the only one leaving (020/FR-022, 020/FR-024).
+    // one being deleted is the only one leaving (024/FR-022, 024/FR-024).
     fleetCache: state.fleetCache.filter((entry) => entry.customerId !== customerId),
     accountCursors: without(state.accountCursors, [customerId]),
     pendingOperations: state.pendingOperations.filter(
@@ -335,11 +335,11 @@ export function withPendingOperation(
  * Every part of it lands together: the records the response accepted, the
  * records it removed, the operations it answered and the account cursor. The
  * cursor never moves backwards, so a response that arrives out of order cannot
- * ask this browser to read a stretch of the stream twice (020/FR-026).
+ * ask this browser to read a stretch of the stream twice (024/FR-026).
  *
  * A local-only record stays local-only. Only an explicit new save or copy takes
  * one back into an account, and a response can name a record this browser has
- * since cancelled (020/FR-024).
+ * since cancelled (024/FR-024).
  */
 export function withSynchronisationCommitted(
   state: CommanderLocalState,
@@ -378,7 +378,7 @@ export function withSynchronisationCommitted(
  * save on the same device queues its operation before the first one's answer
  * comes back, so sending the revision it was queued against would read to the
  * service as another device's write — and a Commander would be told their own
- * two consecutive edits are a cross-device conflict (020/FR-009).
+ * two consecutive edits are a cross-device conflict (024/FR-009).
  *
  * The base only ever moves forward. An operation given an explicit base is
  * answering a conflict with the revision the account holds, which is already at

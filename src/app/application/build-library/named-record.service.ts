@@ -179,7 +179,7 @@ export class NamedRecordService {
     }
     // Deleting a synchronised record deletes the remote one. Nothing is queued
     // while the browser is anonymous, and the local removal has already
-    // happened whatever the network does (020/FR-010, 020/FR-011).
+    // happened whatever the network does (024/FR-010, 024/FR-011).
     void this.#sync.recordDeleted(recordId);
     return { kind: 'missing' };
   }
@@ -262,7 +262,7 @@ export class NamedRecordService {
     }
     if (this.#records.remove(recordId).ok) {
       // The record the save replaced is gone from this browser, so the account
-      // stops holding it too (020/FR-010).
+      // stops holding it too (024/FR-010).
       void this.#sync.recordDeleted(recordId);
     }
   }
@@ -316,10 +316,10 @@ export class NamedRecordService {
    * Every named write passes through here, and only after the bytes are stored:
    * a record the browser has not persisted may not enter a request, and a
    * fragment, a SLEF document and a journal line never become one at all
-   * (020/FR-007, 020/FR-012, 020/FR-021).
+   * (024/FR-007, 024/FR-012, 024/FR-021).
    *
    * Nothing here waits on the network, and nothing here is queued while the
-   * browser is anonymous (020/FR-011).
+   * browser is anonymous (024/FR-011).
    */
   #synchronised(result: NamedSaveResult & { kind: 'saved' }): NamedSaveResult {
     void this.#sync.recordSaved(result.record.id);

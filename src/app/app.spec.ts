@@ -378,7 +378,7 @@ describe('App', () => {
 
     // One entry, named in words and described for a reader. An account belongs
     // to the session rather than to a screen, so the frame carries the one way
-    // to it and no capability draws a second (020/FR-001).
+    // to it and no capability draws a second (024/FR-001).
     expect(account.length).toBe(1);
     expect(account[0].label).toBe(BUNDLED_ENGLISH['account.action']);
     expect(account[0].description).toBe(BUNDLED_ENGLISH['account.action.description']);
@@ -396,16 +396,15 @@ describe('App', () => {
     );
   });
 
-  it('opens the account modal when the frame reports the account action', () => {
+  it('opens the account modal when the frame reports the account action', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const account = TestBed.inject(AccountPresenter);
 
-    // Mounted beside the frame, like help, rather than inside a capability,
-    // and mounted before anything asks for it.
-    expect(
-      (fixture.nativeElement as HTMLElement).querySelector('ednb-account-dialog'),
-    ).not.toBeNull();
+    // Beside the frame, like help, rather than inside a capability — and
+    // fetched with the session rather than drawn with it, so a session that
+    // never opens an account draws no layer at all (`app.html`).
+    expect((fixture.nativeElement as HTMLElement).querySelector('ednb-account-dialog')).toBeNull();
     expect(account.open()).toBe(false);
 
     fixture.componentInstance.selectAction('nothing.claims.this');
@@ -413,6 +412,32 @@ describe('App', () => {
 
     fixture.componentInstance.selectAction(ACCOUNT_ACTION);
     expect(account.open()).toBe(true);
+
+    // And the layer itself arrives, which is the half the state alone does not
+    // say: a modal a Commander asked for and never receives is the same to them
+    // as one that was never offered (024/FR-001).
+    //
+    // Opening it reaches the native modal methods, which jsdom does not
+    // implement. The prototype is shared with every other file in the run, so
+    // the stub goes back on the way out whatever happens here.
+    const prototype = HTMLDialogElement.prototype as unknown as Record<string, unknown>;
+    const original = { showModal: prototype['showModal'], close: prototype['close'] };
+    prototype['showModal'] = function showModal(this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    };
+    prototype['close'] = function close(this: HTMLDialogElement) {
+      this.removeAttribute('open');
+    };
+    try {
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('ednb-account-dialog'),
+      ).not.toBeNull();
+    } finally {
+      prototype['showModal'] = original.showModal;
+      prototype['close'] = original.close;
+    }
   });
 
   it('opens the modal when the frame reports the help action, and nothing else', () => {

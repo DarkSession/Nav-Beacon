@@ -9,7 +9,7 @@ namespace NavBeacon.Server.Records;
 /// <summary>
 /// Applies one synchronisation batch against the account revision stream. The
 /// service compares every change before it writes, so an invalid, cross-account
-/// or conflicting change leaves the account exactly as it was (020/FR-026).
+/// or conflicting change leaves the account exactly as it was (024/FR-026).
 /// </summary>
 public sealed class RecordSynchronisationService(
   NavBeaconDbContext database,
@@ -36,7 +36,7 @@ public sealed class RecordSynchronisationService(
 
   /// <summary>
   /// Replaces every unnamed record whose modification period and protection
-  /// deadline have both passed with a deletion marker (020/FR-025). Server time
+  /// deadline have both passed with a deletion marker (024/FR-025). Server time
   /// alone decides, so a skewed browser clock cannot expire a record early or
   /// hold an expired one.
   /// </summary>

@@ -63,7 +63,7 @@ export type SynchronisationFailure =
  *
  * Nothing here claims a device is current until the service has confirmed it,
  * which is why `current` carries the instant it was confirmed at and every
- * other state carries what is still owed (020/FR-011).
+ * other state carries what is still owed (024/FR-011).
  */
 export type SynchronisationStatus =
   | { readonly kind: 'inactive' }
@@ -80,13 +80,13 @@ export type SynchronisationStatus =
  * first merge after a sign-in, the exchange after a save, a deletion or an
  * explicit retry, the daily protection renewal a live page owes, and the three
  * answers to a conflict. It is one store because the rules are one rule — a
- * complete response commits at once, or nothing does (020/FR-026).
+ * complete response commits at once, or nothing does (024/FR-026).
  *
  * Three things are never done here. A local record is never removed because
  * the account no longer holds it while a live page still has it open or this
  * browser still owes it a write. A local-only record is never taken back into
  * an account. And the cursor never moves before the records the response
- * carried are in browser storage (020/FR-010, 020/FR-024, 020/FR-026).
+ * carried are in browser storage (024/FR-010, 024/FR-024, 024/FR-026).
  *
  * The interface states, the save paths and the renewal timer are elsewhere.
  * This holds the state they read and the operations they call.
@@ -137,7 +137,7 @@ export class RecordSynchronisationStore {
    * The records whose autosave is held.
    *
    * A live page whose record was deleted elsewhere keeps its active work and
-   * stops writing to it until the Commander answers the conflict (020/FR-010).
+   * stops writing to it until the Commander answers the conflict (024/FR-010).
    * Held in `PausedRecords` rather than here, because an autosave reads it
    * while it decides whether to write and this store arrives with the session.
    */
@@ -147,7 +147,7 @@ export class RecordSynchronisationStore {
   constructor() {
     // The merge is the account becoming signed in, not a screen opening: a
     // Commander who signs in from any page of the application has their
-    // records merged from that page (020/FR-008).
+    // records merged from that page (024/FR-008).
     effect(() => {
       const credentials = this.#account.credentials();
       if (credentials !== null && !this.#merged.has(credentials.customerId)) {
@@ -162,7 +162,7 @@ export class RecordSynchronisationStore {
    *
    * The queued operations and the cursor stay in browser storage: the same
    * Commander signing in again carries on where they stopped. What goes is what
-   * this page was saying about them (020/FR-003).
+   * this page was saying about them (024/FR-003).
    */
   signedOut(): void {
     this.#conflicts.set([]);
@@ -194,7 +194,7 @@ export class RecordSynchronisationStore {
    * A browser that has never committed a response for this Commander merges:
    * every eligible local record is offered, and the account's own records come
    * back in the same exchange. A browser that has synchronised before simply
-   * exchanges what it owes (020/FR-008).
+   * exchanges what it owes (024/FR-008).
    */
   async signedIn(credentials: AccountCredentials): Promise<void> {
     if (accountCursor(this.#state.read(), credentials.customerId) === 0) {
@@ -210,11 +210,11 @@ export class RecordSynchronisationStore {
    * Only unbound records and records already bound to this Commander are
    * offered. A record bound to another Customer ID and a local-only record stay
    * where they are, and neither appears in nor uploads to this account
-   * (020/FR-024).
+   * (024/FR-024).
    *
    * A record the installed package cannot reconstruct is not offered either. It
    * stays stored and unopened, and the service would refuse the whole batch it
-   * travelled in (020/FR-012).
+   * travelled in (024/FR-012).
    */
   async mergeFirstSignIn(credentials: AccountCredentials): Promise<void> {
     const listed = this.#records.list();
@@ -250,7 +250,7 @@ export class RecordSynchronisationStore {
    *
    * The service moves the deadline eight days forward and changes neither the
    * record revision nor the account revision, so a renewal never makes another
-   * device's unchanged write stale (020/FR-009, 020/FR-025).
+   * device's unchanged write stale (024/FR-009, 024/FR-025).
    */
   renewProtection(recordId: string, customerId: string): void {
     const now = this.#clock.now().getTime();
@@ -267,7 +267,7 @@ export class RecordSynchronisationStore {
    *
    * Each is a local change followed by one exchange, and each does nothing at
    * all while the browser is anonymous: an anonymous tool needs no account and
-   * queues nothing (constitution I, 020/FR-007).
+   * queues nothing (constitution I, 024/FR-007).
    */
   async recordSaved(recordId: string): Promise<void> {
     await this.#triggered((customerId) => {
@@ -291,7 +291,7 @@ export class RecordSynchronisationStore {
    * another Commander, and any deletion made while nobody is signed in all queue
    * nothing. The binding then names a record nothing can open, which the
    * synchronisation panel counts and states as a record a Commander could still
-   * save or copy — with nothing left to save (020/FR-024, constitution IV).
+   * save or copy — with nothing left to save (024/FR-024, constitution IV).
    *
    * Called after the removal the caller already made, and only where there is
    * something to drop: a browser that has never had an account knows nothing
@@ -316,7 +316,7 @@ export class RecordSynchronisationStore {
    * A record path that changed a record while this chunk was still on its way
    * writes what it owes the account through the loader, because a chunk that
    * never arrives must still leave a pending operation for the next trigger to
-   * send (`record-synchronisation.loader.ts`, 020/FR-011). What is left for this
+   * send (`record-synchronisation.loader.ts`, 024/FR-011). What is left for this
    * store is what its own rules decide, and the exchange that follows. Nothing
    * is queued again here: the change is in the queue once, and offering the
    * record twice would put a second revision of it in the account for one save.
@@ -344,7 +344,7 @@ export class RecordSynchronisationStore {
    *
    * The credential-free form of `resume`, for the autosave itself: it holds a
    * record and knows nothing about accounts, and an anonymous page resuming
-   * simply writes again (020/FR-010).
+   * simply writes again (024/FR-010).
    */
   async resumeRecord(recordId: string): Promise<ConflictResolution> {
     const credentials = this.#account.credentials();
@@ -365,12 +365,12 @@ export class RecordSynchronisationStore {
    *
    * One exchange runs at a time, because two overlapping requests would each
    * answer half the queue and move the cursor past what the other had not
-   * committed yet (020/FR-026). A trigger that arrives while one is in flight
+   * committed yet (024/FR-026). A trigger that arrives while one is in flight
    * therefore does not start a second request. What it queued is not dropped
    * either: the exchange already running reads the queue once more when it
    * finds that something was added after it had read it, so a record saved
    * while the last request was open is offered without waiting for some later
-   * save to carry it (020/FR-007).
+   * save to carry it (024/FR-007).
    */
   async synchronise(credentials: AccountCredentials): Promise<void> {
     if (this.#running !== null) {
@@ -392,7 +392,7 @@ export class RecordSynchronisationStore {
    * count as the new baseline, and a save made during the departure would go
    * out with credentials the Commander has just given up — refused, and
    * reported to them as a session that expired rather than one they ended
-   * (020/FR-003, 020/FR-006).
+   * (024/FR-003, 024/FR-006).
    */
   async #exchanges(credentials: AccountCredentials): Promise<void> {
     const departures = this.#account.signedOutRevision();
@@ -426,7 +426,7 @@ export class RecordSynchronisationStore {
    *
    * Resuming is an overwrite: the work the page kept goes back under the same
    * application record identity, at a revision newer than the deletion marker
-   * (020/FR-010).
+   * (024/FR-010).
    */
   async resume(recordId: string, credentials: AccountCredentials): Promise<ConflictResolution> {
     return this.resolve(recordId, 'overwrite', credentials);
@@ -448,7 +448,7 @@ export class RecordSynchronisationStore {
    * This browser's version takes a fresh application record identity and is
    * offered under it. The old identity is the account's: its live version is
    * taken where this browser can read it, and its deletion marker is left in
-   * place where the account holds one (020/FR-009, 020/FR-010).
+   * place where the account holds one (024/FR-009, 024/FR-010).
    */
   async #keepBoth(
     conflict: RecordConflict,
@@ -500,7 +500,7 @@ export class RecordSynchronisationStore {
    * The account keeps its version or its deletion marker, this browser keeps
    * its own copy, and that copy becomes local-only with nothing queued. It
    * needs an explicit new save or copy before it can synchronise again
-   * (020/FR-009, 020/FR-010, 020/FR-024).
+   * (024/FR-009, 024/FR-010, 024/FR-024).
    */
   #cancel(conflict: RecordConflict): ConflictResolution {
     if (!this.#state.markRecordLocalOnly(conflict.recordId).ok) {
@@ -516,7 +516,7 @@ export class RecordSynchronisationStore {
    *   It is read by the caller rather than here, because reading what the
    *   account is owed takes turns of its own and a Commander can sign out or
    *   confirm a deletion during one. A count taken after them would already be
-   *   the departed one and match itself at every later point (020/FR-006).
+   *   the departed one and match itself at every later point (024/FR-006).
    */
   async #exchange(credentials: AccountCredentials, departures: number): Promise<void> {
     const customerId = credentials.customerId;
@@ -553,7 +553,7 @@ export class RecordSynchronisationStore {
    * A record under an unanswered conflict, one the service has already refused
    * and one that belongs to another account are all left out: sending any of
    * them again would refuse the whole batch and hold up every other record in
-   * it (020/FR-026).
+   * it (024/FR-026).
    */
   async #candidates(
     state: CommanderLocalState,
@@ -599,7 +599,7 @@ export class RecordSynchronisationStore {
         // batch carrying it. The change stays queued, because a package that
         // carries the format again sends it; what goes is its place in the
         // count of changes on their way, which would otherwise say this device
-        // has work for the account that it will never offer (020/FR-012).
+        // has work for the account that it will never offer (024/FR-012).
         this.#unsendable.add(recordId);
         continue;
       }
@@ -624,7 +624,7 @@ export class RecordSynchronisationStore {
    * cursor moves last, in one write with the operations the response answered.
    * A storage failure anywhere in between leaves the cursor where it was, and
    * the retry reads the same stretch of the stream again and answers as a
-   * no-op (020/FR-026).
+   * no-op (024/FR-026).
    */
   async #accepted(
     response: Extract<SynchronisationResponse, { kind: 'accepted' }>,
@@ -666,7 +666,7 @@ export class RecordSynchronisationStore {
     // saved and queues its upload while this is still reading. Both reads are
     // taken again before the write, because the version in browser storage is
     // then the Commander's own work and the account's bytes would replace it
-    // without a word (020/FR-009, constitution IV).
+    // without a word (024/FR-009, constitution IV).
     const changedUnderUs = (recordId: string, opened: LocalRecord | null): boolean =>
       owed(this.#state.read(), recordId) ||
       (this.#openRecord(recordId)?.revisionId ?? null) !== (opened?.revisionId ?? null);
@@ -699,7 +699,7 @@ export class RecordSynchronisationStore {
       });
       if (!adoption.ok) {
         // The account holds it, this version cannot open it, and it stays
-        // remote and unopened rather than half-written here (020/FR-012).
+        // remote and unopened rather than half-written here (024/FR-012).
         //
         // Nothing is claimed about its revision either. Claiming one would say
         // this browser holds the account's version of a record it never read,
@@ -707,7 +707,7 @@ export class RecordSynchronisationStore {
         // against that revision and taken, replacing the newer version with an
         // older one and saying nothing to the Commander. Left unclaimed, that
         // edit carries the revision it was really made against, the service
-        // refuses it, and the Commander is told (020/FR-012, constitution IV).
+        // refuses it, and the Commander is told (024/FR-012, constitution IV).
         if (!unreadable.includes(recordId)) {
           unreadable.push(recordId);
         }
@@ -717,7 +717,7 @@ export class RecordSynchronisationStore {
         // The Commander's own edit is in browser storage and queued, so this
         // browser keeps it and claims nothing about the account's revision. The
         // queued upload carries the revision it was made against, which the
-        // service refuses as the conflict it is (020/FR-009).
+        // service refuses as the conflict it is (024/FR-009).
         continue;
       }
       if (this.#departed(departures)) {
@@ -791,7 +791,7 @@ export class RecordSynchronisationStore {
    * A refusal applies none of the batch, so every local change stays pending.
    * What changes here is only what this browser now knows: which records
    * conflict, which belong to another account and which cannot be sent as they
-   * stand (020/FR-026).
+   * stand (024/FR-026).
    */
   #refusal(
     response: Extract<SynchronisationResponse, { kind: 'refused' }>,
@@ -816,14 +816,14 @@ export class RecordSynchronisationStore {
 
     if (response.code === 'cross-account-record' && recordId !== null) {
       // The account holds that identity for someone else. This browser's copy
-      // stays, local-only, with nothing queued (020/FR-024).
+      // stays, local-only, with nothing queued (024/FR-024).
       if (!this.#state.markRecordLocalOnly(recordId).ok) {
         // That write is the only thing that takes the record out of the next
         // batch, and the service refuses a batch whole on this identity. A
         // browser that will not take it holds every other record's saves and
         // deletions behind it, for as long as the queue keeps naming it, so
         // this page leaves it out and states the failure a Commander can
-        // actually act on (020/FR-011, 020/FR-026).
+        // actually act on (024/FR-011, 024/FR-026).
         this.#refused.add(recordId);
         this.#blocked = { reason: 'storage' };
         this.#fail(customerId, this.#blocked);
@@ -850,7 +850,7 @@ export class RecordSynchronisationStore {
       }
       // Stated until the record changes again. A request that carries it once
       // more would refuse the batch it travelled in, so the reason stands
-      // rather than being replaced by a count of what is waiting (020/FR-012).
+      // rather than being replaced by a count of what is waiting (024/FR-012).
       this.#blocked = { reason: 'refused', code: response.code, recordId };
       this.#fail(customerId, this.#blocked);
       return;
@@ -864,7 +864,7 @@ export class RecordSynchronisationStore {
    * A deletion an unchanged copy receives is not always a conflict. A copy no
    * live page claims is simply removed once the account no longer holds it; a
    * copy a live page claims keeps its work and pauses autosave instead
-   * (020/FR-010).
+   * (024/FR-010).
    */
   #conflictFrom(result: ChangeResult, plan: BatchPlan, customerId: string): void {
     if (result.outcome !== 'conflict') {
@@ -935,7 +935,7 @@ export class RecordSynchronisationStore {
    * is stated as the storage failure it is rather than settled as work the
    * account is about to receive, because settling it would let this browser
    * call itself current while a Commander's save has never left it
-   * (020/FR-011, 020/FR-026).
+   * (024/FR-011, 024/FR-026).
    *
    * The reason stands rather than being replaced by a count of what is waiting,
    * as a refused record's does: the exchange that follows this trigger carries
@@ -977,7 +977,7 @@ export class RecordSynchronisationStore {
    * package wrote is a change it can also send. An exchange already in flight
    * read the queue before this change reached it, so it is told to read it once
    * more rather than leaving the change for some later trigger to carry
-   * (020/FR-007, 020/FR-026).
+   * (024/FR-007, 024/FR-026).
    */
   #queued(recordId: string, customerId: string): void {
     this.#refused.delete(recordId);
@@ -996,7 +996,7 @@ export class RecordSynchronisationStore {
    *
    * The cursor is passed as it stands, so nothing here can move it: these
    * writes answer something the service already told this browser, not a
-   * stretch of the stream it has read (020/FR-026).
+   * stretch of the stream it has read (024/FR-026).
    */
   #commitLocal(
     customerId: string,
@@ -1040,7 +1040,7 @@ export class RecordSynchronisationStore {
    * and until then no request can carry it, so counting it would say changes
    * are on their way that this device will never offer. The record is counted
    * instead beside the settled sentence, as one the account does not hold
-   * (020/FR-012, 020/FR-026, constitution IV).
+   * (024/FR-012, 024/FR-026, constitution IV).
    */
   #pendingCount(customerId: string): number {
     return this.#state
@@ -1057,7 +1057,7 @@ export class RecordSynchronisationStore {
    * The refusal says the session has ended, and this browser's account state
    * is what still says otherwise. The read clears that state and the fleet
    * cache, and leaves the planning records, the queue and the current work
-   * alone (020/FR-003). It is not waited for: this exchange already knows what
+   * alone (024/FR-003). It is not waited for: this exchange already knows what
    * it owes the Commander, which is the failure it states.
    *
    * Once, until the service accepts an exchange again. A session read
@@ -1083,7 +1083,7 @@ export class RecordSynchronisationStore {
    * account's data back into a browser that has just taken it out, and stating
    * a failure for it would have this page speaking for an account that has
    * gone. What it says is already what the departure left behind
-   * (020/FR-003, 020/FR-006).
+   * (024/FR-003, 024/FR-006).
    *
    * Read again at each point that writes rather than once for the response,
    * because reading a record the account sent takes a turn and a Commander can
@@ -1103,7 +1103,7 @@ export class RecordSynchronisationStore {
     if (oversized !== null) {
       // The request the service accepted left this record behind, and no
       // request can carry it. The bound is named rather than the wait
-      // (020/FR-026).
+      // (024/FR-026).
       this.#fail(customerId, {
         reason: 'bound',
         bound: 'record-too-large',

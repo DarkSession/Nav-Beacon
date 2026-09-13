@@ -9,7 +9,7 @@ namespace NavBeacon.Server.IntegrationTests;
 
 /// <summary>
 /// Covers conditional record writes, live-contract equality and the overwrite,
-/// keep-both and cancel outcomes of 020/FR-008 and 020/FR-009.
+/// keep-both and cancel outcomes of 024/FR-008 and 024/FR-009.
 /// </summary>
 public sealed class RecordConflictTests(PostgreSqlDatabaseFixture database)
   : IClassFixture<PostgreSqlDatabaseFixture>

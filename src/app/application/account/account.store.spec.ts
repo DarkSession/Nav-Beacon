@@ -34,7 +34,7 @@ const SIGNED_IN: CommanderSessionResult = {
  *
  * Every call is recorded, because the order of the calls is the thing under
  * test: the local transaction commits before the deletion is sent, and a
- * refused transaction sends nothing at all (020/FR-006).
+ * refused transaction sends nothing at all (024/FR-006).
  */
 class FakeCommanderApi implements CommanderApiPort {
   callback: 'signed-in' | 'fresh-sign-in-required' | null = null;
@@ -136,7 +136,7 @@ function setUp(
   }
   for (const recordId of retained) {
     // Only the key is read from a record here. Which records this browser
-    // holds is what account deletion asks, not what is in them (020/FR-024).
+    // holds is what account deletion asks, not what is in them (024/FR-024).
     storage.setItem(recordKey(recordId), '{}');
   }
   const api = new FakeCommanderApi();
@@ -201,7 +201,7 @@ describe('AccountStore', () => {
       expect(store.state()).toEqual({ kind: 'session-expired' });
       expect(stored(storage).account).toBeNull();
       expect(stored(storage).fleetCache).toEqual([]);
-      // Planning records are not the session's to discard (020/FR-003).
+      // Planning records are not the session's to discard (024/FR-003).
       expect(Object.keys(stored(storage).recordBindings)).toEqual(['record-1', 'record-2']);
     });
 
@@ -278,7 +278,7 @@ describe('AccountStore', () => {
      * where Frontier authorisation has expired. Answering the cancel with
      * `signed-in` would state a session in better standing than the one the
      * Commander has, and would take the fresh Frontier sign-in off the dialog
-     * that was offering it (020/FR-003, 020/FR-006, constitution IV).
+     * that was offering it (024/FR-003, 024/FR-006, constitution IV).
      */
     it('puts a cancelled deletion back to the state that offered it', async () => {
       const { store } = await signedIn();
@@ -300,7 +300,7 @@ describe('AccountStore', () => {
 
       // The one call, and the state storage held when it was made: account
       // gone, fleet cache gone, cursor and pending operations gone, and every
-      // retained record marked local-only (020/FR-006, 020/FR-024).
+      // retained record marked local-only (024/FR-006, 024/FR-024).
       expect(api.calls).toEqual(['read-session', 'delete-account']);
       const atRequest = JSON.parse(api.storedAtDeletion ?? '{}') as CommanderLocalState;
       expect(atRequest.account).toBeNull();
@@ -349,7 +349,7 @@ describe('AccountStore', () => {
 
       // Marking nothing would leave the retained records eligible for the next
       // account that signs in, so the deletion is refused instead
-      // (020/FR-024).
+      // (024/FR-024).
       expect(context.api.calls).not.toContain('delete-account');
       expect(context.store.state()).toEqual({ kind: 'delete-local-failed', account: ACCOUNT });
     });
@@ -476,7 +476,7 @@ describe('AccountStore', () => {
 
       // Frontier is the fleet's alone. The record exchange reaches Nav Beacon,
       // whose session and anti-forgery token both still stand, so a save made
-      // now still belongs to the account (020/FR-011, constitution IV).
+      // now still belongs to the account (024/FR-011, constitution IV).
       expect(store.credentials()).toEqual({
         customerId: ACCOUNT.customerId,
         antiForgeryToken: 'token-1',

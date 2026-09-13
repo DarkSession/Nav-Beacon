@@ -163,7 +163,7 @@ public sealed class FleetProjectorTests
     // fit does not stand. Those are its words, so they travel only in the
     // language it published them in: reading the English entry for a German
     // refresh would hand this application untranslated game text to show as an
-    // answer in the reader's language (020/FR-016, constitution VI).
+    // answer in the reader's language (024/FR-016, constitution VI).
     Assert.Equal("unsupported-combination", english.Refusal?.Code);
     Assert.Equal("unsupported-combination", german.Refusal?.Code);
     Assert.False(string.IsNullOrWhiteSpace(english.Refusal?.Message));

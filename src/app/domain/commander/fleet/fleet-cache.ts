@@ -11,7 +11,7 @@ import {
  *
  * A Commander who loads the application once and then goes offline can still
  * read the fleet they already have; only the refresh needs a network, and it
- * says so rather than emptying the list (020/FR-022, 015/FR-013).
+ * says so rather than emptying the list (024/FR-022, 015/FR-013).
  *
  * One entry per Frontier Customer ID, for the same reason the account cursors
  * are keyed that way: two Commanders sharing a browser never read each other's
@@ -21,7 +21,7 @@ import {
  * Only a settled answer is cached. `waiting`, `failed` and
  * `authorisation-expired` all leave the fleet this browser already accepted
  * exactly where it is, which is what makes a failed refresh harmless
- * (020/FR-018).
+ * (024/FR-018).
  */
 export type SettledFleetResult = Extract<FleetResult, 'current' | 'empty' | 'incomplete'>;
 
@@ -37,7 +37,7 @@ export interface CachedFleet {
    * as untrusted input every time, so a package update changes what this cache
    * resolves to without the cache having to be rewritten — and a ship the
    * installed package can no longer resolve is refused on reading rather than
-   * kept as something it is not (020/FR-016).
+   * kept as something it is not (024/FR-016).
    */
   readonly ships: readonly unknown[];
   readonly coverage: FleetCoverage | null;

@@ -217,7 +217,7 @@ describe('AccountPresenter', () => {
      * keep synchronising and both a sign-out and a deletion would reach the
      * service. A dialog that offered only the Frontier sign-in would leave a
      * signed-in Commander unable to sign out of, or delete, an account they
-     * still have (020/FR-003, 020/FR-006).
+     * still have (024/FR-003, 024/FR-006).
      */
     it('keeps sign-out and deletion beside the Frontier sign-in while authorisation is expired', () => {
       const { store, presenter } = setUp();

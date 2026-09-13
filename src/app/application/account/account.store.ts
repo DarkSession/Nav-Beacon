@@ -22,7 +22,7 @@ export type AccountState =
    * Frontier would not exchange — because it cannot tell a browser which
    * without saying something about the Commander's session with Frontier that
    * it has no standing to say. What is offered here is the same in all three:
-   * start again (020/FR-003).
+   * start again (024/FR-003).
    */
   | { readonly kind: 'correlation-refused' }
   | { readonly kind: 'signed-in'; readonly account: CachedCommanderAccount }
@@ -51,7 +51,7 @@ export class AccountStore {
    * `signed-in` back over a state that said Frontier authorisation is expired,
    * or that a sign-out did not finish, would answer a question the Commander
    * did not answer and state a session in better standing than the one they
-   * have (020/FR-003, 020/FR-006, constitution IV).
+   * have (024/FR-003, 024/FR-006, constitution IV).
    */
   #beforeDeletion: AccountState | null = null;
 
@@ -66,7 +66,7 @@ export class AccountStore {
    * account is done with here. Read rather than called, because what has to
    * happen next is the record synchronisation store forgetting what this page
    * was saying about the account — and this store may not reach for that store,
-   * which already reads this one (020/FR-003).
+   * which already reads this one (024/FR-003).
    */
   readonly signedOutRevision = this.#signedOut.asReadonly();
 
@@ -75,14 +75,14 @@ export class AccountStore {
    *
    * The token stays here rather than being handed around: everything that
    * reaches the account's own API reads this, and it empties the moment the
-   * session does (020/FR-003, 020/FR-005).
+   * session does (024/FR-003, 024/FR-005).
    *
    * An expired Frontier authorisation is not an expired Nav Beacon session.
    * Frontier is the fleet's alone; the record exchange reaches this browser's
    * own service with a session cookie and an anti-forgery token that both
    * still stand. Emptying this in that state would stop a Commander's saves
    * reaching the account they belong to, and nothing rescans browser storage
-   * afterwards, so the save would be lost rather than late (020/FR-011,
+   * afterwards, so the save would be lost rather than late (024/FR-011,
    * constitution IV).
    */
   readonly credentials = computed<AccountCredentials | null>(() => {
@@ -155,7 +155,7 @@ export class AccountStore {
     }
     this.#antiForgeryToken.set(null);
     // Account state and the fleet cache go; planning records and current work
-    // stay, and remain usable without an account (020/FR-003).
+    // stay, and remain usable without an account (024/FR-003).
     this.#local.clearSession();
     this.#state.set({ kind: 'anonymous' });
     this.#signedOut.update((revision) => revision + 1);
@@ -191,18 +191,18 @@ export class AccountStore {
    * deletion only once that transaction has committed. The order is what makes
    * every outcome the same outcome for a Commander: a committed server deletion
    * and a lost response both leave this browser anonymous, with its planning
-   * records kept and local-only, and nothing queued to upload (020/FR-006,
-   * 020/FR-024).
+   * records kept and local-only, and nothing queued to upload (024/FR-006,
+   * 024/FR-024).
    *
    * The records this browser holds are read first, because the account state
    * alone does not name them: a record whose upload never completed carries no
    * binding, and one bound to another Commander is not this deletion's to
-   * touch (020/FR-024).
+   * touch (024/FR-024).
    *
    * The account leaves this browser the moment that transaction commits, and
    * not when the request comes back: the two are separated by a network round
    * trip, and everything that was holding the account reads that moment to know
-   * it no longer has one (020/FR-006).
+   * it no longer has one (024/FR-006).
    *
    * A refused local transaction sends nothing. The failure is stated, the
    * session and its records are untouched, and deletion can be attempted again.
@@ -235,7 +235,7 @@ export class AccountStore {
     // this to know whether there is still an account to commit for. Raising it
     // afterwards would let that answer write the deleted account's records,
     // cursor and ships back into a browser that has just taken them out
-    // (020/FR-006, 020/FR-024).
+    // (024/FR-006, 024/FR-024).
     this.#signedOut.update((revision) => revision + 1);
     // The answer is not read, and a request that never comes back is not an
     // error here either. A refusal and a lost response both leave this browser

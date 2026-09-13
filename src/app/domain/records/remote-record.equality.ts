@@ -7,7 +7,7 @@ import type { RemoteRecord } from './remote-record';
  * The server revision, the server content time and the live-page protection
  * deadline are not in that contract and never enter this answer, which is what
  * lets a first sign-in accept the account's revision for a record it already
- * holds rather than offering a conflict over nothing (020/FR-008).
+ * holds rather than offering a conflict over nothing (024/FR-008).
  *
  * Two things are compared rather than the text. Key order inside a stored
  * record is not part of the contract — the payload comes back from the
@@ -17,7 +17,7 @@ import type { RemoteRecord } from './remote-record';
  * spelled differently is the same record.
  *
  * A difference anywhere, including the name and the named state, is a content
- * change and becomes a conflicting write (020/FR-008, 020/FR-009).
+ * change and becomes a conflicting write (024/FR-008, 024/FR-009).
  */
 export function remoteRecordsEqual(left: RemoteRecord, right: RemoteRecord): boolean {
   if (left.tool !== right.tool || left.id !== right.id || left.kind !== right.kind) {

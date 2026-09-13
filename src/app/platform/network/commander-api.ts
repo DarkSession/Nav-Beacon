@@ -116,7 +116,7 @@ export class CommanderApi implements CommanderApiPort {
    * Everything the answer says is read here, before any caller can commit it.
    * A request that does not arrive, and an answer this browser cannot read,
    * are the same outcome: nothing was accepted, so nothing may be written
-   * (020/FR-011, 020/FR-026).
+   * (024/FR-011, 024/FR-026).
    */
   async synchroniseRecords(
     request: SynchronisationRequest,
@@ -168,7 +168,7 @@ export class CommanderApi implements CommanderApiPort {
    * package diagnostic a refusal carries is asked for in the language the
    * Commander is reading. The service asks the package for it and answers with
    * what the package published, or with nothing; nothing here translates a
-   * diagnostic (020/FR-016).
+   * diagnostic (024/FR-016).
    */
   async refreshFleet(antiForgeryToken: string, locale: string): Promise<FleetResponse> {
     return this.#fleetRequest('api/fleet/refresh', {
@@ -182,8 +182,8 @@ export class CommanderApi implements CommanderApiPort {
    *
    * A request that does not arrive and an answer this browser cannot read are
    * the same outcome: nothing was confirmed, so nothing may be claimed. The
-   * fleet this browser already accepted stays valid either way (020/FR-018,
-   * 020/FR-022).
+   * fleet this browser already accepted stays valid either way (024/FR-018,
+   * 024/FR-022).
    */
   async #fleetRequest(path: string, init: RequestInit): Promise<FleetResponse> {
     // Asked for before the request goes, so the reader and the answer it reads
@@ -220,7 +220,7 @@ export class CommanderApi implements CommanderApiPort {
    *
    * The session half of this port is on every page, because the account dialog
    * states a refused sign-in and an expired session wherever a Commander is
-   * (020/FR-001, 020/FR-003). The record exchange is not: it runs for a
+   * (024/FR-001, 024/FR-003). The record exchange is not: it runs for a
    * signed-in Commander, from the synchronisation engine, which is itself
    * reached through a loader (`synchronisation/record-synchronisation.loader.ts`).
    * Its format travels with it rather than with the first payload of every
@@ -228,7 +228,7 @@ export class CommanderApi implements CommanderApiPort {
    *
    * A format that does not arrive answers as a request that does not arrive:
    * nothing was sent and nothing was accepted, so nothing may be written
-   * (020/FR-011, 020/FR-026).
+   * (024/FR-011, 024/FR-026).
    */
   #exchangeFormat(): Promise<typeof import('../../domain/records/record-synchronisation') | null> {
     return import('../../domain/records/record-synchronisation').catch(() => null);
@@ -242,7 +242,7 @@ export class CommanderApi implements CommanderApiPort {
    * A reader that does not arrive leaves this browser unable to read the answer,
    * which is the outcome it already states for an answer it cannot read: the
    * fleet this browser already accepted stays valid, and nothing new is claimed
-   * (020/FR-018, 020/FR-022).
+   * (024/FR-018, 024/FR-022).
    */
   #fleetFormat(): Promise<typeof import('../../domain/commander/fleet/fleet-answer') | null> {
     return import('../../domain/commander/fleet/fleet-answer').catch(() => null);
@@ -298,8 +298,8 @@ function frontierAuthorisationAddress(value: unknown): string | null {
  * built and tested apart, so a property one side adds alone is a session this
  * browser cannot read and a Commander who cannot sign in at all. The server's
  * `SessionContractTests` asserts its answer against the same file, which is
- * what keeps the two ends of this exchange the same shape (020/FR-001,
- * 020/FR-003).
+ * what keeps the two ends of this exchange the same shape (024/FR-001,
+ * 024/FR-003).
  */
 const SIGNED_IN_SESSION_PROPERTIES = [...SESSION_RESPONSE_CONTRACT.signedIn].sort().join(',');
 

@@ -89,7 +89,7 @@ describe('FleetCopyService', () => {
 
     // Nothing names it, nothing autosaves into anything yet, and it arrives
     // dirty — which is what makes autosave write a record of its own rather
-    // than over one that exists (020/FR-017, 001/FR-008).
+    // than over one that exists (024/FR-017, 001/FR-008).
     expect(active.autosaveRecordId()).toBeNull();
     expect(active.sourceNamed()).toBeNull();
     expect(active.provenance()).toBe('working');
@@ -120,7 +120,7 @@ describe('FleetCopyService', () => {
 
     // A build is edited in place, so this is the assertion that the builder was
     // handed a copy: the edit reached the copy and nothing reached the fleet
-    // entry (020/FR-017).
+    // entry (024/FR-017).
     expect(JSON.stringify(toBuildSnapshotV1(ship.loadout))).toBe(before);
     expect(JSON.stringify(toBuildSnapshotV1(held))).not.toBe(before);
   });

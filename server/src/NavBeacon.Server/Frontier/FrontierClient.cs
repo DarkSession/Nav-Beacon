@@ -236,7 +236,7 @@ public sealed class FrontierClient(
   /// nothing here owns them: a body of the wrong shape is a Frontier this
   /// server cannot read, and it is answered as no identity. Reading it
   /// regardless would end a sign-in or a fleet refresh in a failure that states
-  /// nothing (020/FR-001, 020/FR-018).
+  /// nothing (024/FR-001, 024/FR-018).
   /// </summary>
   private static async Task<JsonDocument?> ReadDocumentAsync(
     HttpResponseMessage response,
@@ -281,7 +281,7 @@ public sealed class FrontierClient(
   /// dialog already states, and a fleet refresh in the refusal it already
   /// draws. Letting the failure out instead would end the request in an empty
   /// 500, which leaves a Commander on a blank page with nothing to do
-  /// (020/FR-001, 020/FR-003, 020/FR-018).
+  /// (024/FR-001, 024/FR-003, 024/FR-018).
   /// </summary>
   private async Task<HttpResponseMessage?> SendAsync(
     HttpRequestMessage request,

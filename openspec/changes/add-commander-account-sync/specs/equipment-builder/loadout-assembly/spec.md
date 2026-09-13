@@ -6,7 +6,7 @@ This requirement applies to every local capability of the equipment bench. Every
 capability MUST remain usable offline after first load. If the Commander is signed in, a remote
 synchronisation that needs the network MUST remain pending without blocking the bench.
 
-Source: 013/FR-026, 013/SC-006, 020/FR-011.
+Source: 013/FR-026, 013/SC-006, 024/FR-011.
 
 #### Scenario: The bench is used with no network connection
 

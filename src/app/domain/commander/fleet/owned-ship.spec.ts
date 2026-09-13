@@ -298,7 +298,7 @@ describe('owned ships the package cannot resolve', () => {
     // Two refusals side by side. The package published a diagnostic about the
     // first and nothing about the second, which this application found by
     // asking where the stored module went. Only the first has words to carry
-    // (020/FR-016).
+    // (024/FR-016).
     const anaconda = ShipLoadout.default('Anaconda');
     const model = modelOf(anaconda);
     const stated = mapOwnedShip(

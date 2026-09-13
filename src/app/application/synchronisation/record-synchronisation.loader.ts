@@ -28,7 +28,7 @@ interface RecordSynchronisationEngine {
  * What this adds is when the code behind them arrives, and the one write that
  * cannot wait for it: a record path that changes a record while the engine's
  * chunk is still on its way queues what that owes the account here
- * (020/FR-011). The engine is the rules
+ * (024/FR-011). The engine is the rules
  * for every record an account holds — the batch plan, the conflict answers, the
  * remote record format and the local state they are committed against — and it
  * is reached from the shell rather than from a screen, so importing it puts all
@@ -36,7 +36,7 @@ interface RecordSynchronisationEngine {
  *
  * It arrives with the session instead. Nothing here sends or exchanges anything
  * while the browser has no session, because an anonymous tool needs no account
- * (constitution I, 020/FR-007) — so such a page never fetches the engine at
+ * (constitution I, 024/FR-007) — so such a page never fetches the engine at
  * all, and a Commander who signs in pays for it once, from whatever page they
  * signed in on. That is the shape `build-link-codec-loader.ts` and
  * `build/build-snapshot.reconstructor-loader.ts` already use. The one write it
@@ -75,7 +75,7 @@ export class RecordSynchronisationLoader {
    *
    * Read while an autosave decides whether to write, so it is answered from the
    * eager holder rather than from a chunk that may still be on its way
-   * (020/FR-010).
+   * (024/FR-010).
    */
   readonly pausedRecords = this.#paused.records;
 
@@ -85,8 +85,8 @@ export class RecordSynchronisationLoader {
    * Watched as a signal rather than asked once, because a Commander signs in
    * from whatever page they are on: the first merge belongs to the account
    * becoming signed in, so the engine follows the credentials rather than a
-   * screen (020/FR-008). The coordinator's renewal watch starts with it, for
-   * as long as the page is live (020/FR-025).
+   * screen (024/FR-008). The coordinator's renewal watch starts with it, for
+   * as long as the page is live (024/FR-025).
    *
    * Returns an unsubscribe, as the watch it starts does: the application runs
    * one of these for the life of the page, and a second one would put every
@@ -132,7 +132,7 @@ export class RecordSynchronisationLoader {
    * arrive and a store that does nothing without a session: a change that
    * waited for either would leave the record altered here with nothing at all
    * waiting to offer it, and nothing rescans browser storage later
-   * (020/FR-010, 020/FR-011, 020/FR-026). The engine then takes up what is
+   * (024/FR-010, 024/FR-011, 024/FR-026). The engine then takes up what is
    * already queued rather than queueing it a second time, which would put two
    * revisions in the account for one save.
    */
@@ -156,7 +156,7 @@ export class RecordSynchronisationLoader {
    * Whether it is there is what comes back, because browser storage can refuse
    * the write: a change that was not queued has nothing waiting to offer it,
    * and saying it was would leave the engine claiming the account holds a
-   * revision this browser never sent (020/FR-011, 020/FR-026).
+   * revision this browser never sent (024/FR-011, 024/FR-026).
    */
   #queue(recordId: string, kind: PendingOperationKind): boolean {
     const state = this.#state.read();
@@ -180,22 +180,22 @@ export class RecordSynchronisationLoader {
    * The session names it while there is one. Where there is none, a save to a
    * record an account already holds is named by that record's own binding,
    * whichever Commander it names: the operation carries them, and only their
-   * own exchanges ever send it (020/FR-024). Signing out is the ordinary case —
+   * own exchanges ever send it (024/FR-024). Signing out is the ordinary case —
    * it leaves that binding, the cursor and the queue in browser storage for the
    * same Commander to carry on from, and a Commander who keeps planning while
    * signed out is doing work that nothing else will ever offer.
    * The operation carries the revision that record was last in sync at, so
    * another device's write or deletion meets it as the conflict it is rather
-   * than replacing it without a word (020/FR-009, 020/FR-010, constitution IV).
+   * than replacing it without a word (024/FR-009, 024/FR-010, constitution IV).
    *
    * A deletion made without a session is not kept that way. Taking a record out
    * of a Commander's account is an instruction rather than work to preserve,
    * and a browser with no session has not been given one: the local copy goes,
-   * the account's stays, and a signed-in device decides the rest (020/FR-024).
+   * the account's stays, and a signed-in device decides the rest (024/FR-024).
    *
    * An unbound record and a local-only one are nobody's to queue, because an
    * anonymous tool needs no account and neither does a record this account may
-   * not take (constitution I, 020/FR-007, 020/FR-024).
+   * not take (constitution I, 024/FR-007, 024/FR-024).
    */
   #owner(state: CommanderLocalState, recordId: string, kind: PendingOperationKind): string | null {
     const credentials = this.#account.credentials();
@@ -216,7 +216,7 @@ export class RecordSynchronisationLoader {
    * asks: a resume that waited for the engine to arrive would answer the
    * Commander's explicit request by writing nothing at all. The engine then
    * puts the work back under the same identity, at a revision newer than the
-   * deletion marker (020/FR-010).
+   * deletion marker (024/FR-010).
    *
    * An anonymous page resuming simply writes again, which is what the unknown
    * answer says: there is no account to put the work back into.
@@ -236,8 +236,8 @@ export class RecordSynchronisationLoader {
     this.#engine ??= this.#load().catch(() => {
       // The chunk did not arrive, so nothing was exchanged. What the triggers
       // above queued is already in browser storage, the cursor stays where it
-      // was, and the next trigger asks for the engine again (020/FR-011,
-      // 020/FR-026).
+      // was, and the next trigger asks for the engine again (024/FR-011,
+      // 024/FR-026).
       this.#engine = null;
       return null;
     });
@@ -251,7 +251,7 @@ export class RecordSynchronisationLoader {
    * lifecycle and the one conflict answer a live page owes. A page that has the
    * engine has both, so the watch starts here rather than only from the
    * application's own initializer: an engine that arrived after a failed load
-   * is still a live page owing its open records a renewal (020/FR-025).
+   * is still a live page owing its open records a renewal (024/FR-025).
    */
   async #load(): Promise<RecordSynchronisationEngine> {
     const [store, coordinator] = await Promise.all([

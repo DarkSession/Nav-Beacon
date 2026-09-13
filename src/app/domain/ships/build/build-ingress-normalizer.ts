@@ -19,7 +19,7 @@ import type {
  * to a Commander, framed by `library.open.failed`, because a record stored
  * before this application completed rolls can carry a partial one.
  * `fleet-copy.service.ts` reads it for a refusal it cannot reach: an owned ship
- * states completed grades and no roll quality (020/FR-015), so the gate finds
+ * states completed grades and no roll quality (024/FR-015), so the gate finds
  * nothing partial there to complete. The note on `normalizeReconstructedBuild`
  * below holds why the ingress paths word their refusals this way, and what
  * would change it (constitution VI).
@@ -136,7 +136,7 @@ export function normalizeReconstructedBuild(candidate: ShipLoadout): IngressResu
   // `library.open.failed`, so only that one is owed a catalogued message.
   // `fleet-copy.service.ts` renders into that same frame but cannot reach its
   // own refusal: an owned ship states completed grades and no roll quality
-  // (020/FR-015), so the gate finds nothing partial there to complete.
+  // (024/FR-015), so the gate finds nothing partial there to complete.
   // `build-link.coordinator.ts` publishes a `LinkFailure` code the message
   // layer frames and never renders its `reason`, and `stock-build.creator.ts`
   // writes its reasons behind the same kind of guard as this one. This reason

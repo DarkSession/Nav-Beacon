@@ -49,7 +49,7 @@ import {
  * Read from the catalogue and compared by their opening words, so a test states
  * which of the two the panel chose rather than restating either one here. Both
  * begin the same way, which is why the whole-device sentence is checked for as
- * well as against (020/FR-011).
+ * well as against (024/FR-011).
  */
 function partialSentence(): string {
   return BUNDLED_ENGLISH['sync.status.current.partial'].split('{{when}}')[0];
@@ -69,7 +69,7 @@ function deletionConflict(): SynchronisationResponse {
  *
  * The account's copy comes back with the refusal, which is what makes this a
  * stale write rather than a deletion: there are two versions to choose between
- * (020/FR-010).
+ * (024/FR-010).
  */
 function staleConflict(): SynchronisationResponse {
   const account = toRemoteRecord(decoded(NAMED_RECORD_V1, FIXTURE_IDS.named));
@@ -133,7 +133,7 @@ function decoded(bytes: string, id: string): LocalRecord {
  * What the record libraries say about the account, in the Commander's language.
  *
  * Read through the real store, so each sentence is the one an actual exchange
- * produces rather than one a fixture asserts into place (020/FR-011).
+ * produces rather than one a fixture asserts into place (024/FR-011).
  */
 describe('what the record libraries say about the account', () => {
   let storage: MemoryStorage;
@@ -212,7 +212,7 @@ describe('what the record libraries say about the account', () => {
    * The frame beside this panel is drawing the Commander's name from the cached
    * account, and the account dialog says the service is unavailable. Telling
    * that Commander to sign in contradicts both and offers them nothing they can
-   * act on (020/FR-022, constitution IV).
+   * act on (024/FR-022, constitution IV).
    */
   it('says the account could not be reached rather than asking a signed-in Commander to sign in', async () => {
     writeCommanderState(storage);
@@ -246,7 +246,7 @@ describe('what the record libraries say about the account', () => {
    * A record kept in this browser only is on this device and is not in the
    * account, so the sentence that says the account has every record on this
    * device is not true while the note below it names one it does not have
-   * (020/FR-011, 020/FR-024, constitution IV).
+   * (024/FR-011, 024/FR-024, constitution IV).
    */
   it('does not claim the account has every record while one is held back', async () => {
     writeCommanderState(storage, {
@@ -269,7 +269,7 @@ describe('what the record libraries say about the account', () => {
    * Its bytes did not read, so nothing was queued for it and it took no
    * binding. The exchange settles with nothing outstanding, and the sentence
    * that says the account has every record on this device is not true over a
-   * record the account was never told about (020/FR-011, 020/FR-012,
+   * record the account was never told about (024/FR-011, 024/FR-012,
    * constitution IV).
    */
   it('does not claim the account has every record while one was never offered', async () => {
@@ -283,7 +283,7 @@ describe('what the record libraries say about the account', () => {
     expect(view.status.message.startsWith(wholeSentence())).toBe(false);
     // Nothing is said about it here. The library above lists it and says there
     // why it cannot be opened, and a Commander cannot save again what nothing
-    // can open (020/FR-012, constitution IV).
+    // can open (024/FR-012, constitution IV).
     expect(view.notes).toEqual([]);
   });
 
@@ -293,14 +293,14 @@ describe('what the record libraries say about the account', () => {
    * An unnamed record whose seven days run out leaves this browser without an
    * account state write of its own: it carried no binding and no remote
    * revision, so there is nothing about it to forget. The panel that counted it
-   * has to stop (020/FR-024, 020/FR-025).
+   * has to stop (024/FR-024, 024/FR-025).
    */
   /**
    * And the same when the record leaves from another page.
    *
    * The library list beside this panel re-reads storage on every invalidation,
    * so a panel that did not would go on counting a record whose row has gone
-   * from the screen it sits under (020/FR-024).
+   * from the screen it sits under (024/FR-024).
    */
   it('stops counting a record another page deleted', async () => {
     writeCommanderState(storage, {
@@ -449,7 +449,7 @@ describe('what the record libraries say about the account', () => {
    * Three bounds are published, the service says which one it refused on, and
    * each gets its own sentence. One sentence for all three would tell a
    * Commander whose batch was too long that a record of theirs is too large,
-   * which is a statement about their own data that is not true (020/FR-026,
+   * which is a statement about their own data that is not true (024/FR-026,
    * constitution IV).
    */
   for (const [code, key] of [
@@ -528,7 +528,7 @@ describe('what the record libraries say about the account', () => {
     // One response can refuse several records at once. A surface that sets one
     // question aside reads the rest from here, because asking only the first
     // would put every other standing conflict out of reach while the status
-    // over it still counts them (020/FR-009, 020/FR-010).
+    // over it still counts them (024/FR-009, 024/FR-010).
     const conflicts = presenter().conflicts();
     expect(conflicts.map((conflict) => conflict.recordId)).toEqual([
       FIXTURE_IDS.named,
@@ -554,7 +554,7 @@ describe('what the record libraries say about the account', () => {
     // Two versions exist, so the question is which one the account keeps —
     // not what happens to a record the account has already let go. Saying the
     // deletion sentence here would describe a loss that did not happen
-    // (020/FR-010, constitution IV).
+    // (024/FR-010, constitution IV).
     const view = presenter().view();
     expect(view.conflict).not.toBeNull();
     expect(view.conflict!.title).toBe(BUNDLED_ENGLISH['sync.conflict.stale.title']);
@@ -588,7 +588,7 @@ describe('what the record libraries say about the account', () => {
   });
 
   /**
-   * The bindings deliberately outlive the session (020/FR-003), so after a
+   * The bindings deliberately outlive the session (024/FR-003), so after a
    * sign-out every one of them names an account this browser can no longer
    * compare against. Counting them as another Commander's tells a Commander
    * their own saved builds are somebody else's (constitution IV).
@@ -608,7 +608,7 @@ describe('what the record libraries say about the account', () => {
   /**
    * An unreachable service empties the credentials and leaves the cached
    * account where it is, and the records bound to that account are still that
-   * Commander's (020/FR-022).
+   * Commander's (024/FR-022).
    */
   it('counts only the other account’s records while the service is unreachable', async () => {
     writeCommanderState(storage, {
@@ -655,7 +655,7 @@ describe('what the record libraries say about the account', () => {
    * A Commander whose session ended, whose browser would not take a write and
    * whose record the service refused are three different situations with three
    * different answers, and one sentence for all of them would tell two of the
-   * three something that is not so (020/FR-011, constitution IV).
+   * three something that is not so (024/FR-011, constitution IV).
    */
   it.each([
     [
@@ -702,7 +702,7 @@ describe('what the record libraries say about the account', () => {
    * answers anonymous and this browser holds no credentials any more. The
    * sentence belongs to the exchange that just failed, and putting the one for
    * a Commander who never signed in in its place would drop the only statement
-   * of why (020/FR-003, 020/FR-011, constitution IV).
+   * of why (024/FR-003, 024/FR-011, constitution IV).
    */
   it('still says the session ended once the service confirms it is gone', async () => {
     writeCommanderState(storage);
@@ -735,7 +735,7 @@ describe('what the record libraries say about the account', () => {
    * A browser that will not take the write that takes a refused record out of
    * the next batch says so, rather than naming the record the service refused.
    * The queue keeps offering that record, so the failure a Commander can act on
-   * is this browser's storage (020/FR-011, 020/FR-026).
+   * is this browser's storage (024/FR-011, 024/FR-026).
    */
   it('says the browser would not take the write when the record cannot be set aside', async () => {
     writeCommanderState(storage);
@@ -772,7 +772,7 @@ describe('what the record libraries say about the account', () => {
    * The first exchange of an account in this browser brings two sets of records
    * together; every later one carries what changed since. They are different
    * enough to a Commander watching them that they are different sentences
-   * (020/FR-008).
+   * (024/FR-008).
    */
   it.each([
     ['brings the two sets together on the first exchange', {}, 'sync.status.merging'],

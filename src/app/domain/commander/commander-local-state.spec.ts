@@ -197,7 +197,7 @@ describe('an account leaving this browser', () => {
     const deleted = withAccountDeleted(shared(), OWNER, ['record-1', 'record-2', 'record-3']);
 
     // The bound one and the unbound one both go local-only, so the next
-    // account to sign in uploads neither (020/FR-024).
+    // account to sign in uploads neither (024/FR-024).
     expect(recordBinding(deleted, 'record-1')).toBe('local-only');
     expect(recordBinding(deleted, 'record-2')).toBe('local-only');
     expect(canSynchroniseRecord(deleted, 'record-2', OTHER)).toBe(false);
@@ -251,7 +251,7 @@ describe('an account leaving this browser', () => {
     // The cache is keyed by Customer ID so that two Commanders sharing a
     // browser never read each other's ships. The account being deleted is the
     // only one leaving, and the other's last accepted fleet stays readable
-    // with no network (020/FR-022, 020/FR-024).
+    // with no network (024/FR-022, 024/FR-024).
     expect(deleted.fleetCache.map((entry) => entry.customerId)).toEqual([OTHER]);
   });
 });
@@ -322,7 +322,7 @@ describe('committing one synchronisation response', () => {
   it('leaves the value it committed from untouched', () => {
     // What an unwritten response leaves behind. A commit answers with a new
     // value, so the one this browser is still holding is the one a retry sends
-    // again, and the service answers that as a no-op (020/FR-026).
+    // again, and the service answers that as a no-op (024/FR-026).
     withSynchronisationCommitted(before, {
       customerId: OWNER,
       cursor: 11,
@@ -371,7 +371,7 @@ describe('committing one synchronisation response', () => {
    * The response commits one operation while another for the same record is
    * already queued behind it. Sending the revision that one was queued against
    * would read to the service as another device's write, so a surviving
-   * operation takes the revision the account has just confirmed (020/FR-009).
+   * operation takes the revision the account has just confirmed (024/FR-009).
    */
   it('advances a surviving operation to the revision the response confirmed', () => {
     const queued = state({
@@ -397,7 +397,7 @@ describe('committing one synchronisation response', () => {
    * The answer to a conflict is queued against the revision the account holds,
    * which is ahead of the one this browser had accepted. A base only ever moves
    * forward, so the answer still overwrites what it was told to overwrite
-   * (020/FR-009).
+   * (024/FR-009).
    */
   it('leaves a base revision that is already ahead where it is', () => {
     const queued = state({

@@ -31,7 +31,7 @@ public sealed record ServerConfiguration(
   /// only gets to do that if the transport let the request through. A limit
   /// equal to the bound would have Kestrel cut off the one request the refusal
   /// is written for, and the browser would read a bare 413 with no code
-  /// (020/FR-026).
+  /// (024/FR-026).
   /// </summary>
   public const long SmallestRequestBody = RecordSynchronisationLimits.MaximumRequestBytes + 1;
 

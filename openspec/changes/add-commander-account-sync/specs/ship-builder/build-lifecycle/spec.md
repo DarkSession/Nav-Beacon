@@ -7,7 +7,7 @@ or autosave MAY carry an application record identity to the same-origin service 
 synchronisation. That identity MUST NOT enter a build link or SLEF export. Device claim identities
 MUST remain local.
 
-Source: 001/FR-011, 020/FR-019.
+Source: 001/FR-011, 024/FR-019.
 
 #### Scenario: Sharing a build that carries a note
 
@@ -40,7 +40,7 @@ MUST offer overwrite, keep both and cancel.
 A record deleted on this page MUST leave this tab claiming nothing for the tool that was autosaving
 into it. A page built in this tab afterwards MUST NOT restore from that deleted record.
 
-Source: 001/FR-012, 017/FR-010, 020/FR-010.
+Source: 001/FR-012, 017/FR-010, 024/FR-010.
 
 #### Scenario: Another page deletes this page's record
 
@@ -109,7 +109,7 @@ Expiry is not a storage bound and MUST NOT be presented as one: at the browser s
 Commander MUST still be able to choose records to discard while the active in-memory build remains
 usable.
 
-Source: 001/FR-013, 020/FR-025.
+Source: 001/FR-013, 024/FR-025.
 
 #### Scenario: An unnamed record is returned to
 

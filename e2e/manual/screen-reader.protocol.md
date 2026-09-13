@@ -3,7 +3,7 @@
 **Protocol id**: `screen-reader`
 **Covers**: 011 FR-006, FR-007, FR-008, FR-009, FR-010, FR-013, FR-020, FR-023, FR-025,
 FR-026, SC-001; 017 FR-001, FR-002, FR-003, FR-004, FR-005, SC-001, SC-002; 018 FR-002,
-FR-006, FR-007; 020 FR-001, FR-005, FR-006, FR-009, FR-010, FR-013, FR-016, FR-018, FR-022
+FR-006, FR-007; 024 FR-001, FR-005, FR-006, FR-009, FR-010, FR-013, FR-016, FR-018, FR-022
 **Version**: 15
 
 ## What is automated, and what is left

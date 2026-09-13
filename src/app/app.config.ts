@@ -178,9 +178,9 @@ export const appConfig: ApplicationConfig = {
     // An initializer rather than something a screen does, for two reasons. The
     // first merge belongs to the account becoming signed in rather than to a
     // library being opened, so a Commander who signs in from the shipyard has
-    // their records merged from there (020/FR-008). And the protection a live
+    // their records merged from there (024/FR-008). And the protection a live
     // page owes its open records is owed while the page is live, not while a
-    // particular screen is drawn (020/FR-025).
+    // particular screen is drawn (024/FR-025).
     //
     // Through the loader rather than the coordinator itself, which is what
     // keeps the rules for an account's records out of the first payload of

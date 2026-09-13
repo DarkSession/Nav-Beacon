@@ -208,7 +208,7 @@ function indexed(change: Record<string, unknown>, index: number): Record<string,
  * A conflict is a refusal rather than an acceptance: the service applies none
  * of the batch and names what it holds for the change it could not take. A
  * `record` of `null` is the account's own deletion marker, which is what raises
- * the deletion conflict a Commander answers (020/FR-010, 020/FR-026).
+ * the deletion conflict a Commander answers (024/FR-010, 024/FR-026).
  */
 export function firstChangeConflicts(
   request: SentExchange,
@@ -239,7 +239,7 @@ export function firstChangeConflicts(
  *
  * One response can refuse several records at once, which is what a browser
  * holding more than one record the account disagrees about receives
- * (020/FR-009, 020/FR-010).
+ * (024/FR-009, 024/FR-010).
  */
 export function everyChangeConflicts(
   request: SentExchange,

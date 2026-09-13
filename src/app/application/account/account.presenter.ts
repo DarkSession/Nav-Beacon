@@ -77,7 +77,7 @@ export class AccountPresenter {
       status: this.#status(state),
       dataUseTitle: this.#messages.message('account.data.title'),
       // The exact account data use, stated where the account is offered rather
-      // than in a document a Commander would have to go and find (020/FR-005).
+      // than in a document a Commander would have to go and find (024/FR-005).
       dataUse: [
         this.#messages.message('account.data.identity'),
         this.#messages.message('account.data.credentials'),
@@ -87,7 +87,7 @@ export class AccountPresenter {
         this.#messages.message('account.data.destination'),
       ],
       // Which of these actions need a network, said before one is pressed and
-      // whether or not there is a network right now (020/FR-022).
+      // whether or not there is a network right now (024/FR-022).
       networkNotice: this.#messages.message('account.network.notice'),
       actions: this.#actions(state),
       busyLabel: this.#messages.message('action.busy'),
@@ -149,7 +149,7 @@ export class AccountPresenter {
       // both a sign-out and a deletion would reach the service. Offering only
       // the Frontier sign-in would take from a signed-in Commander the two
       // things they are entitled to do with the account they still have
-      // (020/FR-003, 020/FR-006).
+      // (024/FR-003, 024/FR-006).
       case 'authorisation-expired':
         return [
           this.#action('account.sign-in', 'sign-in', 'primary'),

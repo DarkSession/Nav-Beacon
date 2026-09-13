@@ -50,7 +50,7 @@ export interface OwnedShipRow {
  * locales only and documents `null` for every other one, so a German reader gets
  * no text from it. This application keeps no private translation of a package
  * diagnostic and writes none from a diagnostic code, because either would be
- * this application saying what the game data says (constitution II, 020/FR-016).
+ * this application saying what the game data says (constitution II, 024/FR-016).
  * `absentMessage` is the application's own localised sentence for that absence,
  * and the code, constraint and path beneath it are the package's own structured
  * answer, verbatim.
@@ -139,7 +139,7 @@ export class FleetPresenter {
       // rebuild has an empty list and is not an empty fleet. The notices above
       // it name those ships and the sentence over them says they are named
       // rather than listed, so a list saying no ship is confirmed yet would
-      // state a second fleet on the same screen (020/FR-016, constitution IV).
+      // state a second fleet on the same screen (024/FR-016, constitution IV).
       emptyLabel:
         state === 'sign-in-required' ||
         (holding?.ships.length ?? 0) > 0 ||
@@ -156,7 +156,7 @@ export class FleetPresenter {
       // The Frontier identity where the payload carried one, and its place in
       // the list where it did not. Two payloads with no readable identity would
       // otherwise share one id, and the list that tracks by it would draw one
-      // of the two notices (020/FR-016).
+      // of the two notices (024/FR-016).
       unresolved: (holding?.refused ?? []).map((entry, index) => ({
         id: entry.shipId === null ? `refused-unknown-${index}` : `refused-${entry.shipId}`,
         message: this.#unresolvedMessage(entry),
@@ -205,7 +205,7 @@ export class FleetPresenter {
       case 'refused':
       case 'unavailable':
         // A fleet already held is still readable; a browser that has none has
-        // nothing to show and says why (020/FR-022).
+        // nothing to show and says why (024/FR-022).
         return holding === null ? 'failed' : this.#settledState(holding);
       case 'reading':
       case 'refreshing':
@@ -252,7 +252,7 @@ export class FleetPresenter {
    * A refresh the service never answered leaves the ships listed and states
    * the failure instead of the settled sentence, because reading it as a
    * completed refresh would tell a Commander that their journal confirms a
-   * fleet nothing has checked (020/FR-018, 020/FR-022).
+   * fleet nothing has checked (024/FR-018, 024/FR-022).
    *
    * A fleet read out of this browser is the exception, and only where the
    * cached sentence is the one shown: that sentence already says that these are
@@ -260,7 +260,7 @@ export class FleetPresenter {
    * same fact in the words that fit it. An incomplete or empty cached fleet
    * says neither, so a refresh that never reached the service is stated there
    * as it is anywhere else. Leaving it out would read as a completed refresh
-   * that found nothing (020/FR-018).
+   * that found nothing (024/FR-018).
    */
   #settledStatus(state: OwnedShipsState, holding: FleetHolding | null): OwnedShipsView['status'] {
     if (this.#unanswered() && !this.#speaksForItself(state, holding)) {
@@ -283,8 +283,8 @@ export class FleetPresenter {
    * confirmed and this list does not carry. Naming it below while the sentence
    * above says every confirmed ship is listed here states two different fleets
    * on one screen, and the sentence is the one that is wrong. The cached
-   * sentence claims no completeness, so it stands as it is (020/FR-015,
-   * 020/FR-016, constitution IV).
+   * sentence claims no completeness, so it stands as it is (024/FR-015,
+   * 024/FR-016, constitution IV).
    */
   #settledSentence(holding: FleetHolding | null): OwnedShipsView['status'] {
     if (holding?.fromCache === true) {
@@ -304,7 +304,7 @@ export class FleetPresenter {
       tone: 'warning',
       // Counted, because an installed package that predates one module refuses
       // every ship carrying it. One sentence about "a ship" over five notices
-      // states a smaller gap than the list has (020/FR-016, constitution IV).
+      // states a smaller gap than the list has (024/FR-016, constitution IV).
       message:
         refused === 1
           ? this.#messages.message('fleet.status.unresolved.one')
@@ -328,7 +328,7 @@ export class FleetPresenter {
    *
    * A session that has ended and a service that could not be reached both
    * leave the held fleet standing and confirm nothing, and neither has a state
-   * of its own while a fleet is held (020/FR-018).
+   * of its own while a fleet is held (024/FR-018).
    */
   #unanswered(): boolean {
     const kind = this.#fleet.exchange().kind;
@@ -346,7 +346,7 @@ export class FleetPresenter {
       // what a Commander does about each of them is the same and none of them
       // is Frontier's doing. The code is carried for a reader of this state,
       // not turned into a different sentence this application cannot stand
-      // behind (020/FR-018).
+      // behind (024/FR-018).
       return this.#messages.message('fleet.status.refused');
     }
     if (exchange.kind !== 'failed') {
@@ -378,12 +378,12 @@ export class FleetPresenter {
     // Both states a stored fleet can settle into with journal left. A refresh
     // that stopped on its batch bound before the first `Loadout` answers
     // `empty`, and a Commander reading that alone would take it for the whole
-    // of what their journal confirms (020/FR-016).
+    // of what their journal confirms (024/FR-016).
     if ((state === 'incomplete' || state === 'empty') && holding?.pending === true) {
       return this.#messages.message('fleet.detail.pending');
     }
     // Every state that is not current says that the fleet already accepted is
-    // still there, because that is the fact a Commander needs (020/FR-018). A
+    // still there, because that is the fact a Commander needs (024/FR-018). A
     // refresh the service never answered is one of them: the ships stay listed
     // and the status above says why none of them is confirmed.
     if (
@@ -406,7 +406,7 @@ export class FleetPresenter {
    * what was read: at line zero nothing of its date has been opened, and at a
    * later line only the lines before it have. Reading the cursor date as an
    * inclusive end would claim days nobody read — the very overstatement the
-   * projection refuses to make in its own bookkeeping (020/FR-013,
+   * projection refuses to make in its own bookkeeping (024/FR-013,
    * constitution IV).
    */
   #coverageOf(holding: FleetHolding | null): string | null {
@@ -438,7 +438,7 @@ export class FleetPresenter {
    * name falls back to the hull, and two unnamed ships of one hull read from
    * one journal day are otherwise the same row twice. Where the journal stated
    * no plate the row says the hull and the day alone, and nothing stands in for
-   * the plate (020/FR-016, constitution IV).
+   * the plate (024/FR-016, constitution IV).
    */
   #row(ship: OwnedShip, chosen: OwnedShip | null): OwnedShipRow {
     const ident = ship.loadout.shipIdent;
@@ -460,7 +460,7 @@ export class FleetPresenter {
    *
    * Read off the build the package rebuilt, and nothing derived: an owned ship
    * is what the journal stated, and a figure this application worked out from
-   * it would be a figure nobody stated (020/FR-016).
+   * it would be a figure nobody stated (024/FR-016).
    */
   #factsOf(ship: OwnedShip): readonly Fact[] {
     return [
@@ -498,7 +498,7 @@ export class FleetPresenter {
    * the package's English inside a German sentence would pass untranslated game
    * text off as a translation, which is the one thing constitution VI forbids
    * doing with it; this application never writes the package's reason and never
-   * translates it (constitution II, VI, 020/FR-016).
+   * translates it (constitution II, VI, 024/FR-016).
    */
   #unresolvedMessage(entry: RefusedOwnedShip): string {
     const stated = entry.stated === null ? null : this.#gameText.loadoutIssueMessage(entry.stated);
@@ -515,7 +515,7 @@ export class FleetPresenter {
    * it published none — every locale but English, which the package's own API
    * documents as `null` — the application says so in its own words and shows
    * the structured refusal unchanged. It never writes the reason itself
-   * (020/FR-016).
+   * (024/FR-016).
    */
   #refusalOf(): PackageRefusalView | null {
     const exchange = this.#fleet.exchange();

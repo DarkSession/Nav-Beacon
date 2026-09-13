@@ -274,7 +274,7 @@ describe('RetentionService', () => {
   /**
    * The binding is what the synchronisation panel counts. Left behind, it names
    * a record nothing can open and the panel states it as one a Commander could
-   * still save or copy (020/FR-024, constitution IV).
+   * still save or copy (024/FR-024, constitution IV).
    */
   it('forgets what it knew about the removed record’s remote copy', () => {
     const { retention, clock, commander } = setup(seedOne);

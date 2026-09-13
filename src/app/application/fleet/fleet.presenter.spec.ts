@@ -137,7 +137,7 @@ describe('FleetPresenter', () => {
    * There is nothing to show and no failure to state, so the panel says it is
    * reading rather than claiming an empty fleet. A browser that already holds
    * one keeps showing it instead, which is the same rule the exchange failures
-   * follow (020/FR-022).
+   * follow (024/FR-022).
    */
   it('says it is reading while a read is in flight and there is nothing yet', async () => {
     writeState();
@@ -166,7 +166,7 @@ describe('FleetPresenter', () => {
    *
    * The ships are the ones the account confirmed, and replacing them with a
    * reading notice would take away what this browser can honestly still show
-   * (020/FR-022).
+   * (024/FR-022).
    */
   it('keeps showing a fleet it holds while a refresh is in flight', async () => {
     writeState();
@@ -195,7 +195,7 @@ describe('FleetPresenter', () => {
    *
    * One place asks for a Frontier sign-in and states what it is for, and the
    * fleet sends a Commander there rather than starting one of its own
-   * (020/FR-001, 020/FR-005).
+   * (024/FR-001, 024/FR-005).
    */
   it('opens the account panel where a sign-in is what comes next', () => {
     const account = TestBed.inject(AccountStore);
@@ -216,7 +216,7 @@ describe('FleetPresenter', () => {
     expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.current']);
     // The cursor stands at 2026-09-02 line 7, so every day up to Sep 1, 2026 was
     // read end to end and Sep 2, 2026 was only entered. Naming Sep 2, 2026 as
-    // the end would claim a day that is still half unread (020/FR-013).
+    // the end would claim a day that is still half unread (024/FR-013).
     expect(view.coverage).toBe(
       interpolate(BUNDLED_ENGLISH['fleet.coverage.partial'], {
         from: 'Aug 18, 2026',
@@ -232,7 +232,7 @@ describe('FleetPresenter', () => {
    * What the coverage sentence may claim.
    *
    * The stored cursor is the next unread date and line, never the last read one
-   * (020/FR-013). Each case below is a cursor a refresh really leaves behind,
+   * (024/FR-013). Each case below is a cursor a refresh really leaves behind,
    * and the sentence it earns states only the journal that was actually read —
    * a day entered is not a day read (constitution IV).
    */
@@ -320,7 +320,7 @@ describe('FleetPresenter', () => {
       // Neither settled sentence says a refresh was attempted, so unlike
       // `fleet.status.cached` neither can stand in for the failure. Showing one
       // here would read as a refresh that completed and found this
-      // (020/FR-018).
+      // (024/FR-018).
       const view = presenter.view();
       expect(view.state).toBe(result);
       expect(view.status.message).not.toBe(BUNDLED_ENGLISH[settled]);
@@ -400,7 +400,7 @@ describe('FleetPresenter', () => {
    * Commander does the same thing about both, and the rest are separate because
    * what stopped the refresh is different in each. A table rather than a chain,
    * so a failure that started reading as the wrong sentence is caught here
-   * rather than reaching a Commander (020/FR-018, constitution IV).
+   * rather than reaching a Commander (024/FR-018, constitution IV).
    */
   it.each([
     ['frontier-unavailable', 'fleet.status.failed.frontier'],
@@ -445,7 +445,7 @@ describe('FleetPresenter', () => {
     await presenter.refresh();
 
     // The ships stay listed, and the refresh that never arrived is stated
-    // rather than read as a completed one (020/FR-018, 020/FR-022).
+    // rather than read as a completed one (024/FR-018, 024/FR-022).
     const view = presenter.view();
     expect(view.state).toBe('current');
     expect(view.status.tone).toBe('warning');
@@ -463,7 +463,7 @@ describe('FleetPresenter', () => {
     await presenter.refresh();
 
     // The ships stay listed, and the sentence says what actually happened:
-    // Frontier was never the party that stopped this (020/FR-018).
+    // Frontier was never the party that stopped this (024/FR-018).
     const view = presenter.view();
     expect(view.state).toBe('current');
     expect(view.status.tone).toBe('warning');
@@ -536,7 +536,7 @@ describe('FleetPresenter', () => {
       // The pinned package publishes a diagnostic message for English locales
       // only and documents `null` for every other one. Where none arrives, this
       // application says so rather than translating a message it never received
-      // or writing one from the code (constitution II, 020/FR-016).
+      // or writing one from the code (constitution II, 024/FR-016).
       await refuseWith(null);
       const refusal = presenter.view().refusal;
 
@@ -583,7 +583,7 @@ describe('FleetPresenter', () => {
     expect(view.unresolved.length).toBe(1);
     expect(view.unresolved[0].id).toBe('refused-19');
     // And the sentence above the list does not claim the list is the whole
-    // fleet while one of its ships is named below it instead (020/FR-015,
+    // fleet while one of its ships is named below it instead (024/FR-015,
     // constitution IV).
     expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.unresolved.one']);
     expect(view.status.message).not.toBe(BUNDLED_ENGLISH['fleet.status.current']);
@@ -600,7 +600,7 @@ describe('FleetPresenter', () => {
    * An installed package that predates a module refuses every ship carrying it,
    * so a refusal is not a single event. The notices are tracked by the id this
    * presenter gives them, and one id for two of them would draw one notice
-   * (020/FR-016, constitution IV).
+   * (024/FR-016, constitution IV).
    */
   it('counts every ship it cannot rebuild and names each of them separately', async () => {
     writeState();
@@ -623,7 +623,7 @@ describe('FleetPresenter', () => {
     expect(view.status.tone).toBe('warning');
     // The list is empty because every confirmed ship is named above it instead.
     // Saying no ship is confirmed yet would contradict the sentence that just
-    // said two of them are (020/FR-016, constitution IV).
+    // said two of them are (024/FR-016, constitution IV).
     expect(view.ships).toEqual([]);
     expect(view.emptyLabel).toBeNull();
   });
@@ -683,7 +683,7 @@ describe('FleetPresenter', () => {
     expect(store.holding()?.refused[0].stated).toBeNull();
     expect(view.unresolved[0].message).toBe(BUNDLED_ENGLISH['fleet.unresolved.malformed']);
     // The whole sentence is one catalogue entry, so nothing written outside the
-    // localisation layer is spliced into it (020/FR-016).
+    // localisation layer is spliced into it (024/FR-016).
     expect(Object.values(BUNDLED_ENGLISH)).toContain(view.unresolved[0].message);
   });
 
@@ -703,7 +703,7 @@ describe('FleetPresenter', () => {
     // The package publishes these diagnostics for English locales only. Setting
     // its English inside a localised sentence would pass untranslated game text
     // off as a translation, so the sentence becomes the failure's own
-    // (constitution VI, 020/FR-016).
+    // (constitution VI, 024/FR-016).
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [

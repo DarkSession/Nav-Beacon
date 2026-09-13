@@ -28,10 +28,10 @@ export type CommanderStateWriteResult =
  * write leaves the previous one intact. What decides a record's account — its
  * binding, the remote revision it accepted, the operations waiting to be sent
  * and the account cursor — is in that one value together, which is what lets a
- * complete response commit at once (020/FR-026).
+ * complete response commit at once (024/FR-026).
  *
  * Notes and device claim identities are not here and are not sent. They belong
- * to the record's own key and to the live page (020/FR-007).
+ * to the record's own key and to the live page (024/FR-007).
  */
 @Injectable({ providedIn: 'root' })
 export class CommanderStateRepository {
@@ -60,7 +60,7 @@ export class CommanderStateRepository {
     // The fleet cache loses this account's entry and no other. It is keyed by
     // Customer ID precisely so that two Commanders sharing a browser never
     // read each other's ships, and emptying it whole would take the other
-    // Commander's last accepted fleet out with it (020/FR-022).
+    // Commander's last accepted fleet out with it (024/FR-022).
     const state = this.read();
     const customerId = state.account?.customerId ?? null;
     return this.#write({
@@ -79,7 +79,7 @@ export class CommanderStateRepository {
    * The records this browser holds are named by the caller, because a binding
    * is not the list of records: a record whose upload never completed has no
    * binding at all, and it must still be marked local-only for the deletion to
-   * hold (020/FR-024).
+   * hold (024/FR-024).
    */
   prepareAccountDeletion(
     customerId: string,
@@ -98,7 +98,7 @@ export class CommanderStateRepository {
    *
    * Only a settled answer reaches here. A refresh that is waiting, has failed
    * or has lost its authorisation leaves the fleet this browser already
-   * accepted exactly where it is (020/FR-018).
+   * accepted exactly where it is (024/FR-018).
    */
   storeFleet(fleet: CachedFleet): CommanderStateWriteResult {
     return this.#write(withFleetAccepted(this.read(), fleet));
@@ -129,7 +129,7 @@ export class CommanderStateRepository {
    *
    * The cursor advances and the answered operations go in this write and no
    * earlier one. A write that fails leaves both where they were, and the
-   * service answers the retry as a no-op (020/FR-026).
+   * service answers the retry as a no-op (024/FR-026).
    */
   commitSynchronisation(commit: SynchronisationCommit): CommanderStateWriteResult {
     return this.#write(withSynchronisationCommitted(this.read(), commit));

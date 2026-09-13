@@ -31,7 +31,7 @@ import { AccountStore } from '../account/account.store';
  * pinned version behind the one the projection was made with, or an identity
  * this installation does not carry. It is listed rather than dropped and
  * nothing is substituted for it: an owned ship is a statement about a
- * Commander's real ship (020/FR-016).
+ * Commander's real ship (024/FR-016).
  */
 export interface RefusedOwnedShip {
   /** Frontier's own identity, where the payload carried a readable one. */
@@ -61,7 +61,7 @@ export interface FleetHolding {
    *
    * The one thing a Commander offline has to be able to tell: these are the
    * ships they already had, not a fleet anything has just checked
-   * (020/FR-022).
+   * (024/FR-022).
    */
   readonly fromCache: boolean;
 }
@@ -72,7 +72,7 @@ export interface FleetHolding {
  * Nothing here claims a refresh completed unless the service answered one.
  * `unavailable` is both the request that never arrived and the answer this
  * browser could not read, because they mean the same thing: the fleet already
- * held still stands and nothing new was confirmed (020/FR-018, 020/FR-022).
+ * held still stands and nothing new was confirmed (024/FR-018, 024/FR-022).
  */
 export type FleetExchange =
   | { readonly kind: 'idle' }
@@ -98,7 +98,7 @@ export type FleetExchange =
    * refusal is not an answer about the journal at all — the service could not
    * read the fleet, or would not take the request as it stands — and reading
    * one as the other would name Frontier for something this application did
-   * (020/FR-018, constitution IV).
+   * (024/FR-018, constitution IV).
    */
   | { readonly kind: 'refused'; readonly code: FleetErrorCode }
   | { readonly kind: 'unavailable' };
@@ -111,12 +111,12 @@ export type FleetExchange =
  * from what came back. The fleet this browser last accepted is kept under the
  * account's own key and read first, so a Commander who has loaded the
  * application once can read their ships with no network at all — and a refresh
- * that does not arrive says so rather than emptying the list (020/FR-018,
- * 020/FR-022).
+ * that does not arrive says so rather than emptying the list (024/FR-018,
+ * 024/FR-022).
  *
  * An owned ship is read-only. Nothing here writes to one, and the copy a
  * Commander takes into the planning tools is a separate record with its own
- * identity (020/FR-017, `FleetCopyService`).
+ * identity (024/FR-017, `FleetCopyService`).
  *
  * No rendering, so it is testable without a component (constitution III).
  */
@@ -155,7 +155,7 @@ export class FleetStore {
    * Read from the account state rather than from the credentials, because the
    * two part company: an unreachable service leaves the cached account where
    * it is and empties the credentials, and the fleet in browser storage is
-   * still that Commander's (020/FR-022).
+   * still that Commander's (024/FR-022).
    */
   readonly #knownCustomerId = computed(() => {
     const state = this.#account.state();
@@ -168,7 +168,7 @@ export class FleetStore {
    * Not the same question as {@link signedIn}. An expired Frontier
    * authorisation and an unreachable service both leave the account known and
    * the credentials gone, and the fleet already accepted still belongs to that
-   * Commander — which is exactly the moment 020/FR-018 says the ships stay
+   * Commander — which is exactly the moment 024/FR-018 says the ships stay
    * readable. Only an account that has left this browser empties it.
    */
   readonly accountKnown = computed(() => this.#knownCustomerId() !== null);
@@ -189,7 +189,7 @@ export class FleetStore {
     // What empties this page is the account leaving the browser — a sign-out,
     // an account deletion or a session that ended — and not credentials going
     // quiet. An expired authorisation keeps the ships already accepted, because
-    // they are still that Commander's ships (020/FR-018).
+    // they are still that Commander's ships (024/FR-018).
     let signedOut = this.#account.signedOutRevision();
     effect(() => {
       const revision = this.#account.signedOutRevision();
@@ -210,7 +210,7 @@ export class FleetStore {
       // accepted are read out of browser storage and shown, because a
       // Commander offline reads the fleet they already have — there is no
       // later moment to do it in, since nothing else asks again until a
-      // session appears (020/FR-022, constitution I).
+      // session appears (024/FR-022, constitution I).
       this.#restore(known);
     });
   }
@@ -220,7 +220,7 @@ export class FleetStore {
    *
    * The stored copy is shown before the request is made rather than after it
    * fails, so an offline Commander reads their ships immediately and a slow
-   * network never empties the list (020/FR-022).
+   * network never empties the list (024/FR-022).
    */
   async load(): Promise<void> {
     const credentials = this.#account.credentials();
@@ -242,7 +242,7 @@ export class FleetStore {
    *
    * The answer decides what may be said. A refusal, a failure and an answer
    * that never arrived all leave the fleet already held exactly where it is,
-   * and none of them is reported as a completed refresh (020/FR-018).
+   * and none of them is reported as a completed refresh (024/FR-018).
    */
   async refresh(): Promise<void> {
     const credentials = this.#account.credentials();
@@ -251,14 +251,14 @@ export class FleetStore {
         // Nothing refused this session; this browser could not reach the
         // service to read it. Asking for a sign-in here would name a failure
         // that has not happened and send a Commander to a page that needs the
-        // same network (020/FR-022).
+        // same network (024/FR-022).
         this.#exchange.set({ kind: 'unavailable' });
         return;
       }
       // Which of the two sign-ins is owed, said as the account states it: a
       // Frontier authorisation that expired is not the same thing as a session
       // that ended, and asking for the wrong one sends a Commander somewhere
-      // that cannot help (020/FR-018).
+      // that cannot help (024/FR-018).
       this.#exchange.set(
         this.authorisationExpired()
           ? { kind: 'authorisation-expired' }
@@ -300,7 +300,7 @@ export class FleetStore {
    * and show it to whoever is at the screen; stating a failure for it would
    * have this page speaking for an account that has gone. The departure count
    * rising is that moment, and the answer is dropped where it has
-   * (020/FR-003, 020/FR-006).
+   * (024/FR-003, 024/FR-006).
    */
   #take(response: FleetResponse, customerId: string, departures: number): void {
     if (this.#account.signedOutRevision() !== departures) {
@@ -361,7 +361,7 @@ export class FleetStore {
       case 'authorisation-expired':
         this.#exchange.set({ kind: 'authorisation-expired' });
         // The account is what a fresh sign-in is asked for from, and it is the
-        // one surface that can ask for one (020/FR-018).
+        // one surface that can ask for one (024/FR-018).
         this.#account.markAuthorisationExpired();
         return;
       default:
@@ -381,7 +381,7 @@ export class FleetStore {
    * The refusal says the session has ended, and this browser's account state
    * is what still says otherwise. The read clears that state and the fleet
    * cache, and leaves the planning records and the current work alone
-   * (020/FR-003). It is not waited for: what this exchange owes a Commander is
+   * (024/FR-003). It is not waited for: what this exchange owes a Commander is
    * the answer it already states.
    *
    * Once, until the service answers a fleet again. A service that refuses
@@ -419,7 +419,7 @@ export class FleetStore {
  *
  * Every payload goes through `mapOwnedShip`, which is the one path from a
  * stored model to a build. A payload it refuses is listed with the failure it
- * answered rather than dropped or replaced (020/FR-015, 020/FR-016).
+ * answered rather than dropped or replaced (024/FR-015, 024/FR-016).
  */
 function holdingOf(cached: CachedFleet, pending: boolean, fromCache: boolean): FleetHolding {
   const ships: OwnedShip[] = [];

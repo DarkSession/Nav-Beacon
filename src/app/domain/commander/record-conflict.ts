@@ -6,7 +6,7 @@ import type { RemoteRecord } from '../records/remote-record';
  * A stale write is two live versions: this browser wrote against a revision
  * another device has already replaced. A remote deletion is one live version
  * and a deletion marker: the account no longer holds the record this browser
- * still has (020/FR-009, 020/FR-010).
+ * still has (024/FR-009, 024/FR-010).
  */
 export type RecordConflictKind = 'stale-write' | 'remote-deletion';
 

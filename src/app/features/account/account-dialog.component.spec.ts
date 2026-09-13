@@ -313,7 +313,7 @@ describe('AccountDialog', () => {
       const text = textOf(query(render(STATES[0].view), '.account-dialog'));
 
       // A Commander reads what the account holds before they sign in, not after
-      // (020/FR-005). The last of the three is the boundary itself: builds,
+      // (024/FR-005). The last of the three is the boundary itself: builds,
       // loadouts and notes never reach Frontier.
       expect(text).toContain(BUNDLED_ENGLISH['account.data.identity']);
       expect(text).toContain(BUNDLED_ENGLISH['account.data.frontier']);

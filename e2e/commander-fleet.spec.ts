@@ -19,7 +19,7 @@ import { openLibrary } from './shell';
  * a statement about what the service could and could not confirm. What the
  * journeys below hold it to is that the ships already accepted stay on screen
  * through every one of those states, and that nothing says the fleet is current
- * unless the service answered that it is (020/FR-016, 020/FR-018, 020/FR-022).
+ * unless the service answered that it is (024/FR-016, 024/FR-018, 024/FR-022).
  *
  * Copying an owned ship into the planning tools is its own journey, in
  * `fleet-copy.spec.ts`.
@@ -95,7 +95,7 @@ test.describe('the ships a Commander owns', () => {
     });
     await expect(fleet(page)).toContainText(englishMessages['fleet.status.current']);
     // The interval the projection covers, which is what makes an incomplete
-    // fleet checkable rather than a claim (020/FR-016).
+    // fleet checkable rather than a claim (024/FR-016).
     await expect(fleet(page)).toContainText('Journal read from');
     await scan(page, testInfo, 'owned ships, current');
 
@@ -131,7 +131,7 @@ test.describe('the ships a Commander owns', () => {
     await scan(page, testInfo, 'owned ships, refresh held');
 
     // And a refresh that stopped says so, and says the list is what was last
-    // accepted rather than what was just confirmed (020/FR-018).
+    // accepted rather than what was just confirmed (024/FR-018).
     await refresh(page);
     await expect(fleet(page)).toContainText(englishMessages['fleet.status.failed.frontier'], {
       timeout: 15_000,
@@ -148,7 +148,7 @@ test.describe('the ships a Commander owns', () => {
    * still a ship the Commander has. Leaving it out would make the list a
    * shorter fleet than the real one, and putting a placeholder in its place
    * would make it a different one. It is named as unresolved and nothing is put
-   * where it would have been (020/FR-015, 020/FR-016).
+   * where it would have been (024/FR-015, 024/FR-016).
    */
   test('states a ship the installed package cannot rebuild, putting nothing in its place', async ({
     page,
@@ -175,7 +175,7 @@ test.describe('the ships a Commander owns', () => {
     await expect(fleet(page).getByRole('button', { name: SECOND_SHIP })).toHaveCount(0);
 
     // And the sentence above the list does not claim the list is the whole
-    // fleet while one of its ships is named below it instead (020/FR-016).
+    // fleet while one of its ships is named below it instead (024/FR-016).
     await expect(fleet(page)).toContainText(englishMessages['fleet.status.unresolved.one']);
     await expect(fleet(page)).not.toContainText(englishMessages['fleet.status.current']);
     await scan(page, testInfo, 'owned ships, one unresolved');

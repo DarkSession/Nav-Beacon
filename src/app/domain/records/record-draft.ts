@@ -16,7 +16,7 @@ export interface CopyIdentity {
  * installation does not publish stays stored and unopened here and is not
  * uploaded, and the service would refuse it in any case — refusing the
  * complete batch with it, and holding up every other record behind it
- * (020/FR-012).
+ * (024/FR-012).
  *
  * The build half of the answer comes through the reconstructor's loader, which
  * is what keeps the outfitting catalogue out of the shell. Record exchange
@@ -35,7 +35,7 @@ export async function isReconstructable(record: LocalRecord): Promise<boolean> {
  * This is what keeping both versions of a conflict is made of: the local
  * version keeps every field a Commander chose, including its note, and takes a
  * new application record identity so that the account's version can keep the
- * old one (020/FR-009, 020/FR-010).
+ * old one (024/FR-009, 024/FR-010).
  *
  * The stored verdict travels with a build rather than being recomputed, so a
  * copy states what was true when the work was written. A loadout is rebuilt

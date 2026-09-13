@@ -10,7 +10,7 @@ public static class CommanderLogging
   /// authorisation code, the OAuth state and the Frontier Customer ID. Server
   /// logs may not contain any of those, so this is not a level a deployment
   /// chooses — which is why the rules are not merely added alongside the
-  /// configured ones (020/FR-003).
+  /// configured ones (024/FR-003).
   ///
   /// A rule is selected by the provider it names first and by the length of the
   /// category second, so a configured `Microsoft.AspNetCore` beats a

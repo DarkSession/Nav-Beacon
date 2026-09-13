@@ -109,7 +109,7 @@ public sealed class WeaponContract
 /// <summary>
 /// The package-produced ship model the fleet service stores, and nothing
 /// beside it. The roll quality an ordinary engineering block carries is absent
-/// on purpose: an owned ship states a completed grade, and 020/FR-015 excludes
+/// on purpose: an owned ship states a completed grade, and 024/FR-015 excludes
 /// the quality figure from fleet storage.
 /// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

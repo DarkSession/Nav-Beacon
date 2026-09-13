@@ -103,7 +103,7 @@ public static class AccountEndpoints
   // A refusal says only that there is no session. The browser clears its account
   // state and the fleet cache whenever it reads one, and it knows from the
   // request it made whether that is an expiry or plain anonymity, so neither
-  // judgement is the server's to send (020/FR-003).
+  // judgement is the server's to send (024/FR-003).
   private static async Task<IResult> ReadSessionAsync(
     CommanderSessionService sessions,
     IAntiforgery antiforgery,

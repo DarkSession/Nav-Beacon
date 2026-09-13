@@ -80,7 +80,7 @@ internal sealed class FakeJournalClient : ILiveJournalClient
   /// those tests about something they are not. A test about the tokens sets it,
   /// and what it sets it to is what the real client asks: the stored token
   /// first, then one forced refresh where Frontier refused that token
-  /// (<see cref="LiveJournalClient" />, 020/FR-013).
+  /// (<see cref="LiveJournalClient" />, 024/FR-013).
   /// </remarks>
   public List<bool> AuthorisationQuestions { get; } = [];
 

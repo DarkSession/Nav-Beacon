@@ -97,7 +97,7 @@ describe('the account side of browser storage', () => {
     repository.queueOperation(upload({ id: 'operation-2', recordId: 'record-2' }));
 
     // Nothing has committed yet: the cursor is where it was and both changes
-    // are still waiting (020/FR-026).
+    // are still waiting (024/FR-026).
     expect(stored(storage).accountCursors).toEqual({});
     expect(stored(storage).pendingOperations).toHaveLength(2);
 
@@ -175,7 +175,7 @@ describe('the account side of browser storage', () => {
 
     // The cache is keyed by Customer ID so that two Commanders sharing a
     // browser never read each other's ships. One signing out does not take the
-    // other's last accepted fleet with it (020/FR-022).
+    // other's last accepted fleet with it (024/FR-022).
     expect(repository.read().fleetCache.map((entry) => entry.customerId)).toEqual([OTHER]);
   });
 
@@ -215,7 +215,7 @@ describe('the account side of browser storage', () => {
     expect(state.pendingOperations).toEqual([]);
     expect(state.recordRevisions).toEqual({});
     // The retained bound record and the retained unbound one both go
-    // local-only; the other Commander's record keeps its binding (020/FR-024).
+    // local-only; the other Commander's record keeps its binding (024/FR-024).
     expect(state.recordBindings).toEqual({
       'record-1': 'local-only',
       'record-2': OTHER,

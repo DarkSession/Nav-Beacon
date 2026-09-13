@@ -189,7 +189,7 @@ Record mode receives only the already bounded synchronisation request. One comma
 request, has a 30-second deadline and can return at most 64 KiB. A timeout, oversized output, crash or
 non-zero exit refuses the complete synchronisation batch before a database write.
 
-An owned-ship payload contains only the package-produced model listed by 020/FR-015. No table stores
+An owned-ship payload contains only the package-produced model listed by 024/FR-015. No table stores
 a raw CAPI response, a general journal event or an unresolved identity.
 
 Alternative considered: normalise every module field into relational tables. It makes each existing
@@ -296,7 +296,7 @@ diagnostic text or maintain its own translation of a game diagnostic.
 The service adds Frontier `ShipId` and the source date-line tuple to each accepted model. It stores
 only hull symbol, game slot keys, module symbols, package-identified pre-engineering, blueprint
 `fdname`, completed grade, experimental-effect `fdname`, enabled state, priority, ship name and
-ident. It explicitly drops the fields excluded by 020/FR-015.
+ident. It explicitly drops the fields excluded by 024/FR-015.
 
 A later journal-order `Loadout` replaces the projection for its `(CustomerId, ShipId)` even when two
 events have the same timestamp. `ShipyardSell` removes that ship in journal order. A later
@@ -368,9 +368,9 @@ WCAG 2.2 AA except 2.1.1, 2.1.2, 2.1.4, 2.2.1, 2.4.1, 2.4.3, 2.4.7 and 2.4.11.
 
 | Surface                                                 | Design-system composition                                                                | States                                                                                                                                                                                                                                       | Requirements                                   |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Application frame account action and account dialog     | Frame action, modal, status text, action buttons and confirmation dialog                 | Reading the session, anonymous, redirect pending, correlation refused, signed in, offline, expired session, expired Frontier authorisation, sign-out and account-deletion confirmation                                                       | 020/FR-001–006, 020/FR-022–024                 |
-| Ship-build and equipment-loadout record libraries       | Existing record list and editors, sync status, pending marker and shared conflict modal  | Local only, account unreachable, first merge, current, current for what this device sends, pending, failed, account-bound, local-only, stale-write conflict, remote deletion conflict and unsupported remote version                         | 020/FR-007–012, 020/FR-019–022, 020/FR-024–026 |
-| Owned ships view in the Ship Builder stored-build layer | Existing layer, view selector, responsive ship list, selected-ship facts and copy action | Sign-in required, loading, current, read from this browser, a confirmed ship the package will not rebuild, incomplete coverage, no confirmed ships, waiting for Frontier, failed refresh, expired authorisation and refused package identity | 020/FR-013–018, 020/FR-022                     |
+| Application frame account action and account dialog     | Frame action, modal, status text, action buttons and confirmation dialog                 | Reading the session, anonymous, redirect pending, correlation refused, signed in, offline, expired session, expired Frontier authorisation, sign-out and account-deletion confirmation                                                       | 024/FR-001–006, 024/FR-022–024                 |
+| Ship-build and equipment-loadout record libraries       | Existing record list and editors, sync status, pending marker and shared conflict modal  | Local only, account unreachable, first merge, current, current for what this device sends, pending, failed, account-bound, local-only, stale-write conflict, remote deletion conflict and unsupported remote version                         | 024/FR-007–012, 024/FR-019–022, 024/FR-024–026 |
+| Owned ships view in the Ship Builder stored-build layer | Existing layer, view selector, responsive ship list, selected-ship facts and copy action | Sign-in required, loading, current, read from this browser, a confirmed ship the package will not rebuild, incomplete coverage, no confirmed ships, waiting for Frontier, failed refresh, expired authorisation and refused package identity | 024/FR-013–018, 024/FR-022                     |
 
 The owned-ships view uses the existing `/outfitting` address and adds no advertised address. Help
 remains reachable through the common frame action after the stored-build layer closes. The help
@@ -408,7 +408,7 @@ view.
   retention policy only when the product can prove that every supported offline device has passed
   the marker.
 - [JSON payloads become an unreviewed data sink] → Accept only the exact versioned fields in
-  020/FR-015 and the existing record contracts.
+  024/FR-015 and the existing record contracts.
 - [The package is ESM-only while the server is .NET] → Invoke one bounded Node command per refresh,
   pass candidate lines through standard input and fail the refresh if the command fails.
 - [Protected tokens outlive a server deployment] → Share and back up the protected key ring, encrypt

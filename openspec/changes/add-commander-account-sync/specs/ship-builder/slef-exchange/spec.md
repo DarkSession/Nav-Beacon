@@ -8,7 +8,7 @@ import is accepted and browser persistence creates a build record, the separate
 Commander. The remote record MUST NOT contain the SLEF document, import provenance or capture-only
 fields.
 
-Source: 004/FR-014, 004/SC-004, 020/FR-007, 020/FR-012.
+Source: 004/FR-014, 004/SC-004, 024/FR-007, 024/FR-012.
 
 #### Scenario: The largest hull is exchanged
 

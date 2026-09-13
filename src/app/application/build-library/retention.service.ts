@@ -102,7 +102,7 @@ export class RetentionService {
    * expires a remote autosave only after that period and the protection
    * deadline have both passed. A browser whose clock is days fast would
    * otherwise delete, from every one of a Commander's devices, a record none of
-   * them had finished with (020/FR-025).
+   * them had finished with (024/FR-025).
    */
   sweep(): void {
     const listed = this.#records.list();
@@ -124,12 +124,12 @@ export class RetentionService {
       // What this browser knew about the record's remote copy goes with it.
       // Kept, it is a binding naming a record nothing can open, which the
       // synchronisation panel counts and states as a record a Commander could
-      // still save or copy (020/FR-024, constitution IV).
+      // still save or copy (024/FR-024, constitution IV).
       //
       // After the removal, so a refused removal leaves the record and its
       // binding together: an unbound record an anonymous page later edits is
       // nobody's to upload, and it would stop reaching the account it belongs
-      // to (020/FR-007).
+      // to (024/FR-007).
       //
       // Only where there is something to drop. A browser that has never had an
       // account knows nothing about any record's remote copy, and writing

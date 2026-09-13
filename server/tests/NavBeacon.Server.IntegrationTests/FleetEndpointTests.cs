@@ -8,7 +8,7 @@ namespace NavBeacon.Server.IntegrationTests;
 /// The authenticated fleet read and refresh endpoints: every result the
 /// application states, the last accepted fleet after a failure, package
 /// feedback in the requested locale and one account's separation from another
-/// (020/FR-016 and 020/FR-018).
+/// (024/FR-016 and 024/FR-018).
 /// </summary>
 public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
   : IClassFixture<PostgreSqlDatabaseFixture>
@@ -115,7 +115,7 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
     Assert.False(refreshed.Pending);
     // Yesterday is read and left behind; today is read and kept, because the
     // day has not ended and the cursor never returns to a date it leaves
-    // (020/FR-013).
+    // (024/FR-013).
     Assert.Equal(Today.ToString("yyyy-MM-dd"), refreshed.CursorDate);
     Assert.True(refreshed.StoredShips!["complete"]!.GetValue<bool>());
     Assert.Equal(FleetResults.Current, read.Result);
@@ -216,7 +216,7 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
     // Yesterday has ended and nothing in it was read. Answering the reload
     // from the stored fleet alone would state a fleet the journal confirms
     // whole, with the refresh that was to confirm it having failed
-    // (020/FR-016).
+    // (024/FR-016).
     Assert.True(read.Pending);
     Assert.Equal(FleetResults.Incomplete, read.Result);
     Assert.Equal(Yesterday.ToString("yyyy-MM-dd"), read.CursorDate);
@@ -242,7 +242,7 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
     // it and the rest of that day is still to read. The refresh and the reload
     // are looking at one stored state, so they answer it the same way: a
     // refresh that said `false` here would be contradicted by the next page
-    // load (020/FR-016).
+    // load (024/FR-016).
     Assert.True(refreshed.Pending);
     Assert.Equal(read.Pending, refreshed.Pending);
     Assert.Equal(Yesterday.ToString("yyyy-MM-dd"), refreshed.CursorDate);
@@ -251,7 +251,7 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
   /// <summary>
   /// A journal response too large to read is its own failure, and not the one a
   /// Commander reads as Frontier being unreachable. What stopped the refresh is
-  /// different, so the sentence it produces is different (020/FR-018).
+  /// different, so the sentence it produces is different (024/FR-018).
   /// </summary>
   [Fact]
   public async Task AJournalResponseTooLargeToReadIsStatedAsItsOwnFailure()
@@ -384,7 +384,7 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
   /// only where Frontier refused that token. Answering the first question with
   /// a refresh would spend the account's refresh token on every dated read, and
   /// answering the second with the stored token would hand back the very token
-  /// Frontier had just refused and end the read there (020/FR-013).
+  /// Frontier had just refused and end the read there (024/FR-013).
   /// </remarks>
   [Fact]
   public async Task AStoredTokenAnswersTheFirstQuestionAndOnlyAForcedOneAsksFrontierAgain()

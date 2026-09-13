@@ -43,7 +43,7 @@ public sealed record FramedJournalLine(
 /// Frames one dated journal response line by line and reads only what the
 /// fleet needs from each: its event name, the ship identity it names and, for
 /// `StoredShips`, the identities it lists. The line itself travels on unchanged
-/// for `inspectSlef` (020/FR-013).
+/// for `inspectSlef` (024/FR-013).
 ///
 /// A journal is read in order and stops where it cannot go on, so this streams:
 /// one line is materialised at a time and a caller that stops reading leaves the

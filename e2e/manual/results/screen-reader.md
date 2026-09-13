@@ -242,7 +242,7 @@ it, through an open modal layer in particular, is what a person has to answer.
 | —    | —   | Chromium | TalkBack | —     | —        | mobile        | 22   | As stated in the protocol | —      | not run |
 | —    | —   | Chromium | TalkBack | —     | —        | tablet        | 22   | As stated in the protocol | —      | not run |
 
-## The Commander account (feature 020)
+## The Commander account (feature 024)
 
 Step 23 covers the three layers an account adds to the shell. Each is its own
 observation rather than one walk of the step: the account dialog is where a
@@ -250,7 +250,7 @@ Commander learns what an account holds and asks for it to be deleted, the
 conflict layer is the one place in this application where a reader is asked to
 choose between two copies of their own work, and the owned-ships view is a list
 of something the application only knows second hand. What a reader makes of
-"the account no longer holds this" is the judgment 020/FR-010 turns on, and it
+"the account no longer holds this" is the judgment 024/FR-010 turns on, and it
 is not the same judgment as "this fleet is as much as the journal has said so
 far".
 

@@ -94,7 +94,7 @@ describe('the remote record one local record becomes', () => {
   it('drops a field a caller added to the record it was handed', () => {
     // The allowlist is what makes this true: a device claim, a note or a
     // calculated figure on the value handed in has no field to land in
-    // (020/FR-007, 020/FR-012).
+    // (024/FR-007, 024/FR-012).
     const carrying = {
       ...NAMED_BUILD(),
       note: NOTE,

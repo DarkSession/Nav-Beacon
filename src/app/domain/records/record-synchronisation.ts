@@ -12,7 +12,7 @@ import {
  * not had answered, and the service answers with one indexed result per change
  * and every record and deletion marker above that revision. A refusal applies
  * none of the batch, so everything here is read before anything is committed
- * (020/FR-026).
+ * (024/FR-026).
  */
 
 /** One change the browser asks the service to make. */
@@ -40,8 +40,8 @@ export type ChangeOutcome = 'applied' | 'unchanged' | 'conflict' | 'refused' | '
  * `deleted` is the account's deletion marker, which is what an offline live
  * page's renewal receives. `unreadable` is a record this version of the
  * application cannot read — a newer record format, or one the pinned package no
- * longer resolves — which must never be mistaken for a deletion (020/FR-010,
- * 020/FR-012).
+ * longer resolves — which must never be mistaken for a deletion (024/FR-010,
+ * 024/FR-012).
  */
 export type RemoteVersion =
   | { readonly kind: 'record'; readonly record: RemoteRecord }
@@ -155,7 +155,7 @@ export function changeBody(change: RecordChange): Record<string, unknown> {
  * than refused: a newer browser may have written it, and it stays remote and
  * unopened here. Anything else that does not read refuses the whole response,
  * because a half-read response committed against this browser's cursor would
- * skip the part it could not read (020/FR-012, 020/FR-026).
+ * skip the part it could not read (024/FR-012, 024/FR-026).
  */
 export async function parseAcceptedResponse(value: unknown): Promise<SynchronisationResponse> {
   if (
@@ -280,7 +280,7 @@ async function parseResult(value: unknown): Promise<ChangeResult | null> {
  *
  * A missing `record` reads as unreadable rather than as a deletion. Removing a
  * Commander's local copy on the strength of a field that is not there is the
- * one mistake this must never make (020/FR-010).
+ * one mistake this must never make (024/FR-010).
  */
 async function remoteVersion(value: unknown): Promise<RemoteVersion> {
   if (value === null) {

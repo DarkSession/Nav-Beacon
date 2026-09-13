@@ -19,7 +19,7 @@
     <!--
       What the account holds, stated in the place the account is offered from.
       It is drawn in every state, including the anonymous one, so a Commander
-      reads it before signing in rather than after (020/FR-005).
+      reads it before signing in rather than after (024/FR-005).
     -->
     <section class="account-dialog__data" [attr.aria-labelledby]="dataUseId">
       <h3 class="account-dialog__heading" [id]="dataUseId">{{ view().dataUseTitle }}</h3>
@@ -32,7 +32,7 @@
 
     <!--
       Which of these actions need a network, said whether or not there is one.
-      Local planning never waits on it (020/FR-022).
+      Local planning never waits on it (024/FR-022).
     -->
     <p class="account-dialog__network">{{ view().networkNotice }}</p>
 

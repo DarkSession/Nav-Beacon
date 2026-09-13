@@ -5,7 +5,7 @@ using NavBeacon.Server.Contracts;
 
 namespace NavBeacon.Server.Records;
 
-/// <summary>Fixed request bounds published by 020/FR-026.</summary>
+/// <summary>Fixed request bounds published by 024/FR-026.</summary>
 public static class RecordSynchronisationLimits
 {
   public const int MaximumChanges = 100;

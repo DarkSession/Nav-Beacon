@@ -65,7 +65,7 @@ public sealed class RefreshDelay : IRefreshDelay
 /// <summary>
 /// Reads one dated Live journal response from the Frontier companion service.
 ///
-/// The retry rules are 020/FR-013 exactly: at most three attempts for one dated
+/// The retry rules are 024/FR-013 exactly: at most three attempts for one dated
 /// response, one second before the second attempt and two before the third, a
 /// `Retry-After` honoured up to 30 seconds inside the request and ending it
 /// beyond that, and a next permitted time of the later of `Retry-After` and 60
@@ -134,7 +134,7 @@ public sealed class LiveJournalClient(
       // `Retry-After` between the in-request bound and the failure delay — 45
       // seconds, say — is longer than the one and shorter than the other, and
       // taking it alone would permit the next refresh before the floor
-      // (020/FR-013).
+      // (024/FR-013).
       if (attempts >= FleetLimits.MaximumAttempts)
       {
         var supplied = now + (attempt.RetryAfter ?? TimeSpan.Zero);

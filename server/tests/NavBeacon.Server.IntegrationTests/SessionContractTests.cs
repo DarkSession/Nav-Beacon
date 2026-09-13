@@ -49,7 +49,7 @@ public sealed class SessionContractTests(PostgreSqlDatabaseFixture database)
   // it accepts, and the two halves of this exchange are built and tested apart.
   // Both read `session-response.contract.json`, so a property either side adds
   // alone fails here rather than leaving every Commander unable to sign in
-  // (020/FR-001, 020/FR-003).
+  // (024/FR-001, 024/FR-003).
   [Fact]
   public async Task TheSessionAnswerCarriesExactlyThePropertiesTheBrowserAccepts()
   {

@@ -68,7 +68,7 @@ const SUIT: EquipmentLoadout = {
  *
  * Every test here reads what the service was sent. A named save, an autosave
  * and a delete are local acts first and offers second, and the offer only
- * exists for a signed-in Commander (020/FR-007, 020/FR-008, 020/FR-024).
+ * exists for a signed-in Commander (024/FR-007, 024/FR-008, 024/FR-024).
  */
 describe('joining the record libraries to synchronisation', () => {
   let storage: MemoryStorage;
@@ -297,7 +297,7 @@ describe('joining the record libraries to synchronisation', () => {
 
       // This page holds the record open, and the account no longer holds it:
       // the work stays and nothing is written to it until the Commander
-      // answers (020/FR-010).
+      // answers (024/FR-010).
       TestBed.inject(TabDescriptorRepository).write('equipment', held!);
       api.answers.push({
         kind: 'accepted',
@@ -373,7 +373,7 @@ describe('joining the record libraries to synchronisation', () => {
 
       // A browser whose clock is a year ahead sweeps its own copy away and
       // still sends no deletion: the account's period runs on the service's
-      // own clock (020/FR-025).
+      // own clock (024/FR-025).
       clock.advanceDays(365);
       TestBed.inject(RetentionService).sweep();
       await settle();

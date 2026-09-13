@@ -290,7 +290,7 @@ public sealed class PersistenceModelTests : IClassFixture<PostgreSqlDatabaseFixt
     // A `jsonb` column keeps the document, not the bytes: it returns its own
     // spelling of the same JSON. `RecordSynchronisationService.SameContent`
     // reads the stored payload back through the exact contract before comparing
-    // it, so an identical write is still the no-op 020/FR-026 requires.
+    // it, so an identical write is still the no-op 024/FR-026 requires.
     Assert.True(JsonNode.DeepEquals(JsonNode.Parse(storedRecord.Payload!), payload));
     Assert.Equal(now, storedRecord.CreatedAt);
     Assert.Equal(browserModified, storedRecord.BrowserModifiedAt);

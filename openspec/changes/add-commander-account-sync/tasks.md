@@ -31,7 +31,7 @@
       bounded package-backed Node validator; verify contract tests reject unknown fields, duplicate
       listing fields, notes, source relations, local revisions, device claims, derived values, unknown
       identities, invalid hull-slot, engineering, suit, mount, grade and modification combinations,
-      over-limit bodies and every field excluded by 020/FR-012 and 020/FR-015; verify the 30-second
+      over-limit bodies and every field excluded by 024/FR-012 and 024/FR-015; verify the 30-second
       record-validator deadline refuses at the boundary, 64 KiB output is accepted, one byte more is
       refused, and a timeout, crash or non-zero exit refuses the complete batch.
 - [x] 2.4 Configure a shared PostgreSQL ASP.NET Core Data Protection key ring with required
@@ -146,7 +146,7 @@
       integration tests prove line `n` advances to `n + 1`, a complete empty day advances to the next UTC
       date at line zero, an incomplete day does not advance to the next date, a repeated line is
       idempotent and two server instances cannot refresh one account together; verify stored import
-      metadata contains only the four items allowed by 020/FR-015, including the last `StoredShips`
+      metadata contains only the four items allowed by 024/FR-015, including the last `StoredShips`
       tuple and completeness result.
 - [x] 6.4 Implement owned-ship upsert by `(CustomerId, ShipId)`, `ShipyardSell` removal and
       `StoredShips` reconciliation in date-line order; verify equal-timestamp lines use line order,
@@ -185,7 +185,7 @@ run policy:specs` resolves every governing reference and help route.
 - [x] 8.2 Add deployment guidance for same-origin routing, EF migration execution, horizontal
       instances, key-ring backup and rollback order; verify every command against the local disposable
       deployment with two API instances.
-- [x] 8.3 Register 020/FR-001 through 020/FR-026 in the end-to-end coverage ledger and add journeys
+- [x] 8.3 Register 024/FR-001 through 024/FR-026 in the end-to-end coverage ledger and add journeys
       for optional sign-in, first merge, offline save, conflict handling, account deletion, fleet
       refresh and fleet copy; verify all ten Playwright projects run each registered journey with the
       accessibility scan enabled.

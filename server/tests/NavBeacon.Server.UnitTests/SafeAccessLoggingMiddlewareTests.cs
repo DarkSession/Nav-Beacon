@@ -96,7 +96,7 @@ public sealed class SafeAccessLoggingMiddlewareTests
   /// test that leaves configuration out asserts a property of a pipeline the
   /// server does not build, so this one reads the shipped file — and adds the
   /// settings a deployment would reach for to turn framework logging on, which
-  /// is the request that must not be granted (020/FR-003).
+  /// is the request that must not be granted (024/FR-003).
   /// </summary>
   [Theory]
   [InlineData("Microsoft.AspNetCore.Hosting.Diagnostics")]
