@@ -195,5 +195,5 @@ run policy:specs` resolves every governing reference and help route.
 - [x] 8.5 Run `openspec validate add-commander-account-sync --strict`, `pnpm run policy:specs`, the
       server restore, format, build and test commands, and `pnpm run check`; verify every command passes
       with no skipped, focused or quarantined test.
-- [ ] 8.6 Run the required implementation review against the complete diff, fix every actionable
+- [x] 8.6 Run the required implementation review against the complete diff, fix every actionable
       finding and rerun task 8.5; verify the final reviewer reports no actionable finding.
