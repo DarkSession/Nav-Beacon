@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -222,18 +223,37 @@ public sealed class PersistenceModelTests : IClassFixture<PostgreSqlDatabaseFixt
     // back are compared against what the column can hold rather than against a
     // precision the database never promised.
     var now = Microseconds(DateTimeOffset.UtcNow);
+    // Every instant is its own value. Two columns holding the same one would
+    // read the same back through a mapping that had swapped them.
+    var renewed = now.AddMinutes(5);
+    var browserModified = now.AddMinutes(6);
+    var serverContent = now.AddMinutes(7);
+    var tokenExpiry = now.AddMinutes(8);
+    var deadline = now.AddMinutes(9);
     var recordId = Guid.NewGuid();
+    var payload = new JsonObject { ["tool"] = "ship", ["revision"] = 3 };
+    var shipPayload = new JsonObject { ["shipId"] = 12 };
+
     var account = Account(10_007);
     account.RecordRevision = 1;
+    account.ProtectedAccessToken = "protected access";
+    account.ProtectedRefreshToken = "protected refresh";
+    account.AccessTokenExpiresAt = tokenExpiry;
     var session = Session(11, account.CustomerId, now);
-    var record = LiveRecord(account.CustomerId, recordId, 1, now);
-    record.ProtectionDeadline = now;
+    session.LastRenewedAt = renewed;
+    session.RenewableExpiresAt = renewed.AddDays(30);
+    var record = LiveRecord(account.CustomerId, recordId, 3, now);
+    record.Payload = payload.ToJsonString();
+    record.BrowserModifiedAt = browserModified;
+    record.ServerContentAt = serverContent;
+    record.ProtectionDeadline = deadline;
     var ship = Ship(account.CustomerId, 12, new DateOnly(2026, 9, 4), 8);
+    ship.Payload = shipPayload.ToJsonString();
     var cursor = Cursor(account.CustomerId);
     cursor.LastStoredShipsDate = new DateOnly(2026, 9, 3);
     cursor.LastStoredShipsLine = 7;
     cursor.LastStoredShipsComplete = false;
-    cursor.NextPermittedRefreshAt = now;
+    cursor.NextPermittedRefreshAt = deadline;
 
     context.Add(account);
     context.AddRange(session, record, ship, cursor);
@@ -248,21 +268,48 @@ public sealed class PersistenceModelTests : IClassFixture<PostgreSqlDatabaseFixt
     var storedRecord = await context.SynchronisedRecords.AsNoTracking().SingleAsync();
     var storedShip = await context.OwnedShips.AsNoTracking().SingleAsync();
 
-    Assert.Equal(1, stored.RecordRevision);
+    Assert.Equal(10_007, stored.CustomerId);
     Assert.Equal("Test Commander", stored.CommanderName);
-    Assert.Equal(now, storedSession.RenewableExpiresAt.AddDays(-30));
+    Assert.Equal(1, stored.RecordRevision);
+    // The two columns a mis-mapping would hurt most. They hold what the key
+    // ring produced, and the service has nothing else to authorise with.
+    Assert.Equal("protected access", stored.ProtectedAccessToken);
+    Assert.Equal("protected refresh", stored.ProtectedRefreshToken);
+    Assert.Equal(tokenExpiry, stored.AccessTokenExpiresAt);
+
+    Assert.Equal(Hash(11), storedSession.SessionHash);
+    Assert.Equal(10_007, storedSession.CustomerId);
+    Assert.Equal(now, storedSession.CreatedAt);
+    Assert.Equal(renewed, storedSession.LastRenewedAt);
+    Assert.Equal(renewed.AddDays(30), storedSession.RenewableExpiresAt);
+    Assert.Equal(now.AddDays(180), storedSession.AbsoluteExpiresAt);
+
     Assert.Equal(recordId, storedRecord.RecordId);
+    Assert.Equal(3, storedRecord.Revision);
     Assert.Equal("working", storedRecord.RecordKind);
-    Assert.Equal(now, storedRecord.ProtectionDeadline);
+    // A `jsonb` column keeps the document, not the bytes: it returns its own
+    // spelling of the same JSON. `RecordSynchronisationService.SameContent`
+    // reads the stored payload back through the exact contract before comparing
+    // it, so an identical write is still the no-op 020/FR-026 requires.
+    Assert.True(JsonNode.DeepEquals(JsonNode.Parse(storedRecord.Payload!), payload));
+    Assert.Equal(now, storedRecord.CreatedAt);
+    Assert.Equal(browserModified, storedRecord.BrowserModifiedAt);
+    Assert.Equal(serverContent, storedRecord.ServerContentAt);
+    Assert.Equal(deadline, storedRecord.ProtectionDeadline);
+
+    Assert.Equal(12, storedShip.ShipId);
     Assert.Equal(new DateOnly(2026, 9, 4), storedShip.SourceDate);
     Assert.Equal(8, storedShip.SourceLine);
+    Assert.True(JsonNode.DeepEquals(JsonNode.Parse(storedShip.Payload), shipPayload));
+
     Assert.NotNull(stored.JournalCursor);
+    Assert.Equal(new DateOnly(2026, 8, 28), stored.JournalCursor.CoverageStartDate);
     Assert.Equal(new DateOnly(2026, 9, 11), stored.JournalCursor.NextUnreadDate);
     Assert.Equal(0, stored.JournalCursor.NextUnreadLine);
     Assert.Equal(new DateOnly(2026, 9, 3), stored.JournalCursor.LastStoredShipsDate);
     Assert.Equal(7, stored.JournalCursor.LastStoredShipsLine);
     Assert.False(stored.JournalCursor.LastStoredShipsComplete);
-    Assert.Equal(now, stored.JournalCursor.NextPermittedRefreshAt);
+    Assert.Equal(deadline, stored.JournalCursor.NextPermittedRefreshAt);
   }
 
   /// <summary>

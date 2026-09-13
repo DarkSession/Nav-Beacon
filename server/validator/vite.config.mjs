@@ -1,6 +1,10 @@
 import { resolve } from 'node:path';
 
 export default {
+  // The bundle is the whole output. Without this, the browser application's own
+  // `public/` tree is Vite's default and is copied in beside it, because this
+  // config is run from the repository root.
+  publicDir: false,
   build: {
     emptyOutDir: true,
     lib: {
