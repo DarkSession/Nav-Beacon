@@ -76,9 +76,10 @@ public sealed class RecordValidationProcess(RecordValidationProcessOptions optio
         return new RecordValidationResult(true, RecordValidationFailure.None, null, null);
       }
 
-      // Read under its kind, as `ok` and `index` are. A command that answers a
-      // code of any other kind is a command this server cannot read, and
-      // reading it regardless throws past the batch refusal below (020/FR-012).
+      // Read under its kind, as `ok` and `index` are, and the index under a
+      // number it fits in. A command that answers either of another kind is a
+      // command this server cannot read, and reading it regardless throws past
+      // the batch refusal below (020/FR-012).
       var code =
         root.TryGetProperty("code", out var codeValue)
         && codeValue.ValueKind == JsonValueKind.String
@@ -87,8 +88,9 @@ public sealed class RecordValidationProcess(RecordValidationProcessOptions optio
       var index =
         root.TryGetProperty("index", out var indexValue)
         && indexValue.ValueKind == JsonValueKind.Number
-          ? (int?)indexValue.GetInt32()
-          : null;
+        && indexValue.TryGetInt32(out var indexNumber)
+          ? indexNumber
+          : (int?)null;
       return new RecordValidationResult(false, RecordValidationFailure.Refused, code, index);
     }
     catch (JsonException)

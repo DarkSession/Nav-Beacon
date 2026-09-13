@@ -109,10 +109,21 @@ public sealed class FrontierClient(
       return null;
     }
 
-    var payload = await response.Content.ReadFromJsonAsync<TokenResponse>(
-      JsonOptions,
-      cancellationToken
-    );
+    TokenResponse? payload;
+    try
+    {
+      payload = await response.Content.ReadFromJsonAsync<TokenResponse>(
+        JsonOptions,
+        cancellationToken
+      );
+    }
+    catch (Exception failure) when (failure is JsonException or NotSupportedException)
+    {
+      // A 200 that is not the token document. A proxy or a captive portal
+      // answers one, and so does Frontier on a day its own service is broken.
+      // It is no token, which is what a refused sign-in already states.
+      return null;
+    }
     if (
       payload is null
       || string.IsNullOrWhiteSpace(payload.AccessToken)
@@ -150,11 +161,12 @@ public sealed class FrontierClient(
       return null;
     }
 
-    using var payload = await JsonDocument.ParseAsync(
-      await response.Content.ReadAsStreamAsync(cancellationToken),
-      cancellationToken: cancellationToken
-    );
-    if (!payload.RootElement.TryGetProperty("customer_id", out var customerId))
+    using var payload = await ReadDocumentAsync(response, cancellationToken);
+    if (
+      payload is null
+      || payload.RootElement.ValueKind != JsonValueKind.Object
+      || !payload.RootElement.TryGetProperty("customer_id", out var customerId)
+    )
     {
       return null;
     }
@@ -188,20 +200,22 @@ public sealed class FrontierClient(
       return null;
     }
 
-    using var payload = await JsonDocument.ParseAsync(
-      await response.Content.ReadAsStreamAsync(cancellationToken),
-      cancellationToken: cancellationToken
-    );
+    using var payload = await ReadDocumentAsync(response, cancellationToken);
+    if (payload is null || payload.RootElement.ValueKind != JsonValueKind.Object)
+    {
+      return null;
+    }
     var root = payload.RootElement;
-    if (
-      root.TryGetProperty("gameVersion", out var gameVersion)
-      && !string.Equals(gameVersion.GetString(), "live", StringComparison.OrdinalIgnoreCase)
-    )
+    // A profile that states a version is taken only where it states the live
+    // one. A version of any other kind is not the live game either, so it is
+    // refused rather than read as an absent field.
+    if (root.TryGetProperty("gameVersion", out var gameVersion) && !IsLive(gameVersion))
     {
       return null;
     }
     if (
       !root.TryGetProperty("commander", out var commander)
+      || commander.ValueKind != JsonValueKind.Object
       || !commander.TryGetProperty("name", out var name)
       || name.ValueKind != JsonValueKind.String
       || string.IsNullOrWhiteSpace(name.GetString())
@@ -212,6 +226,37 @@ public sealed class FrontierClient(
 
     return name.GetString();
   }
+
+  /// <summary>
+  /// One answered body as a document, or `null` where it is not one.
+  ///
+  /// Frontier's answers are read under their own kinds throughout, because
+  /// nothing here owns them: a body of the wrong shape is a Frontier this
+  /// server cannot read, and it is answered as no identity. Reading it
+  /// regardless would end a sign-in or a fleet refresh in a failure that states
+  /// nothing (020/FR-001, 020/FR-018).
+  /// </summary>
+  private static async Task<JsonDocument?> ReadDocumentAsync(
+    HttpResponseMessage response,
+    CancellationToken cancellationToken
+  )
+  {
+    try
+    {
+      return await JsonDocument.ParseAsync(
+        await response.Content.ReadAsStreamAsync(cancellationToken),
+        cancellationToken: cancellationToken
+      );
+    }
+    catch (JsonException)
+    {
+      return null;
+    }
+  }
+
+  private static bool IsLive(JsonElement gameVersion) =>
+    gameVersion.ValueKind == JsonValueKind.String
+    && string.Equals(gameVersion.GetString(), "live", StringComparison.OrdinalIgnoreCase);
 
   private async Task<HttpResponseMessage> SendAuthorisedGetAsync(
     Uri address,

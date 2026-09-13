@@ -424,6 +424,39 @@ public sealed class FleetProjectionTests(PostgreSqlDatabaseFixture database)
     Assert.Empty(refreshed.Ships);
   }
 
+  [Fact]
+  public async Task ARefusalAtAnIndexThatIsNotAWholeNumberKeepsTheCursor()
+  {
+    var journal = new FakeJournalClient();
+    journal.Incomplete(Today, JournalFixtures.Loadout(12));
+    var frontier = new FakeFrontierClient();
+    using var server = new CommanderTestServer(
+      database,
+      frontier,
+      new ManualTimeProvider(Now),
+      journal: journal,
+      settings: new Dictionary<string, string>
+      {
+        ["FleetProjection:ScriptPath"] = Path.Combine(
+          AppContext.BaseDirectory,
+          "Fixtures",
+          "refusal-at-a-fractional-index.mjs"
+        ),
+      }
+    );
+    using var commander = await SignIn(server, frontier, 81_019);
+    await database.SeedCursorAsync(81_019, Today, 0);
+
+    var refreshed = await commander.RefreshFleetAsync();
+
+    // An answer this server cannot read is no projection, which is a stated
+    // failure that leaves the cursor where it was (020/FR-016, 020/FR-018).
+    Assert.Equal("failed", refreshed.Result);
+    Assert.Equal("projection-unavailable", refreshed.Failure);
+    Assert.Equal(0, refreshed.CursorLine);
+    Assert.Empty(refreshed.Ships);
+  }
+
   private CommanderTestServer NewServer(
     FakeJournalClient journal,
     out FakeFrontierClient frontier

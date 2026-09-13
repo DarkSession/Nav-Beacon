@@ -173,8 +173,10 @@ public sealed class FleetProjector
   )
   {
     var index =
-      root.TryGetProperty("index", out var value) && value.ValueKind == JsonValueKind.Number
-        ? value.GetInt32()
+      root.TryGetProperty("index", out var value)
+      && value.ValueKind == JsonValueKind.Number
+      && value.TryGetInt32(out var number)
+        ? number
         : -1;
     if (index < 0 || index >= candidates.Count)
     {

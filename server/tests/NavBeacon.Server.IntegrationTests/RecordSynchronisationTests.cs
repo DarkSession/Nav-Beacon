@@ -586,7 +586,7 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
   }
 
   [Fact]
-  public async Task ARefusalStatingACodeOfTheWrongKindStillRefusesTheBatch()
+  public async Task ARefusalStatingValuesOfTheWrongKindStillRefusesTheBatch()
   {
     var frontier = new FakeFrontierClient();
     using var server = new CommanderTestServer(
@@ -598,7 +598,7 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
         ["RecordValidation:ScriptPath"] = Path.Combine(
           AppContext.BaseDirectory,
           "Fixtures",
-          "refusal-without-a-code.mjs"
+          "refusal-of-another-shape.mjs"
         ),
       }
     );

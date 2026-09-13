@@ -14,7 +14,14 @@ public static class FleetEndpoints
   public const string FleetRoute = "api/fleet";
   public const string RefreshRoute = "api/fleet/refresh";
 
-  /// <summary>The locales this application ships, in the package's own spelling.</summary>
+  /// <summary>
+  /// The locales this application ships, in the package's own spelling.
+  ///
+  /// `SHIPPED_LOCALES` in `src/app/i18n/locale-registry.ts` is where a locale is
+  /// added, and this list follows it. A locale in one list and not the other is
+  /// a Commander reading the package's answer in English while the rest of the
+  /// screen is in their own language (020/FR-016).
+  /// </summary>
   private static readonly string[] SupportedLocales = ["en", "de"];
 
   public static IEndpointRouteBuilder MapFleetEndpoints(this IEndpointRouteBuilder endpoints)

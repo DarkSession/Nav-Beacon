@@ -119,6 +119,10 @@ public sealed class FrontierClientTests
   [InlineData("{\"expires_in\":3600}")]
   [InlineData("{\"access_token\":\"token\",\"expires_in\":0}")]
   [InlineData("{\"access_token\":\"token\",\"expires_in\":3600}")]
+  // A `200` that is not the token document at all, which is what a proxy or a
+  // captive portal answers.
+  [InlineData("<html>Gateway</html>")]
+  [InlineData("[]")]
   public async Task InvalidInitialTokenResponseIsRejected(string tokenResponse)
   {
     var client = CreateClient(new QueueHandler(Json(tokenResponse)));
@@ -139,6 +143,18 @@ public sealed class FrontierClientTests
   [InlineData("{\"customer_id\":\"not-a-number\"}", "{\"commander\":{\"name\":\"Test Commander\"}}")]
   [InlineData("{\"customer_id\":123}", "{}")]
   [InlineData("{\"customer_id\":123}", "{\"commander\":{\"name\":\"\"}}")]
+  // Bodies of a shape this server does not own. Frontier answers `200` and the
+  // reader takes each value under its own kind, so a sign-in is refused rather
+  // than ending in a failure that states nothing.
+  [InlineData("<html>Gateway</html>", "{\"commander\":{\"name\":\"Test Commander\"}}")]
+  [InlineData("[]", "{\"commander\":{\"name\":\"Test Commander\"}}")]
+  [InlineData("{\"customer_id\":123}", "<html>Gateway</html>")]
+  [InlineData("{\"customer_id\":123}", "[]")]
+  [InlineData(
+    "{\"customer_id\":123}",
+    "{\"gameVersion\":4,\"commander\":{\"name\":\"Test Commander\"}}"
+  )]
+  [InlineData("{\"customer_id\":123}", "{\"commander\":\"Test Commander\"}")]
   public async Task InvalidIdentityResponseIsRejected(string userInformation, string profile)
   {
     var client = CreateClient(
