@@ -90,13 +90,18 @@
     fetched with the session rather than on the press: the modal is also where a
     refused sign-in callback and an expired session are stated, and a chunk
     asked for at the moment it is opened is a request that has nothing to say
-    when the network is the thing that failed. `prefetch on immediate` is what
-    separates the two — the code leaves for the browser as the session starts,
-    so it is already here when one of those states raises the layer, and it
-    leaves the first payload carrying only what the first frame draws
-    (024/FR-001, 024/FR-003, constitution IV).
+    when the network is the thing that failed. `prefetch on idle` is what
+    separates the two — the code is fetched once the browser has nothing else
+    to do, so it is here long before a Commander reaches for the account, and
+    the first payload carries only what the first frame draws.
+
+    On idle rather than on immediate, because a fetch started with the session
+    lands inside the takeover a served document is still holding. That frame is
+    the one thing on this screen that may not move, and a chunk arriving in the
+    middle of it composes the list a second time
+    (024/FR-001, 024/FR-003, 015/FR-009, constitution IV).
   -->
-  @defer (when account.open(); prefetch on immediate) {
+  @defer (when account.open(); prefetch on idle) {
     <ednb-account-dialog
       [open]="account.open()"
       [view]="account.view()"
