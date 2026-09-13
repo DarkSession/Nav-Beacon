@@ -351,6 +351,20 @@ describe('FleetPresenter', () => {
     expect(view.detail).toBe(BUNDLED_ENGLISH['fleet.detail.pending']);
   });
 
+  it('says more journal is left over a fleet that has confirmed nothing yet', async () => {
+    writeState();
+    // A first refresh that stopped on its batch bound before any `Loadout`.
+    // The service answers `empty` whenever it holds no ship, pending or not.
+    api.reads.push(
+      answeredFleet({ result: 'empty', pending: true, coverage: coverage() as never }),
+    );
+    await signIn();
+
+    const view = presenter.view();
+    expect(view.state).toBe('empty');
+    expect(view.detail).toBe(BUNDLED_ENGLISH['fleet.detail.pending']);
+  });
+
   it('states an empty fleet in words rather than as an empty list', async () => {
     writeState();
     api.reads.push(answeredFleet({ result: 'empty' }));
@@ -607,6 +621,11 @@ describe('FleetPresenter', () => {
       BUNDLED_ENGLISH['fleet.status.unresolved.many'].replace('{{count}}', '2'),
     );
     expect(view.status.tone).toBe('warning');
+    // The list is empty because every confirmed ship is named above it instead.
+    // Saying no ship is confirmed yet would contradict the sentence that just
+    // said two of them are (020/FR-016, constitution IV).
+    expect(view.ships).toEqual([]);
+    expect(view.emptyLabel).toBeNull();
   });
 
   /**

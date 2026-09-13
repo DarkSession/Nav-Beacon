@@ -135,8 +135,15 @@ export class FleetPresenter {
       listLabel: this.#messages.message('fleet.list.label'),
       chosenLabel: this.#messages.message('fleet.list.chosen'),
       ships: (holding?.ships ?? []).map((ship) => this.#row(ship, chosen)),
+      // A fleet whose every confirmed ship is one the installed package will not
+      // rebuild has an empty list and is not an empty fleet. The notices above
+      // it name those ships and the sentence over them says they are named
+      // rather than listed, so a list saying no ship is confirmed yet would
+      // state a second fleet on the same screen (020/FR-016, constitution IV).
       emptyLabel:
-        state === 'sign-in-required' || (holding?.ships.length ?? 0) > 0
+        state === 'sign-in-required' ||
+        (holding?.ships.length ?? 0) > 0 ||
+        (holding?.refused.length ?? 0) > 0
           ? null
           : this.#messages.message('fleet.list.empty'),
       selectedLabel:
@@ -368,7 +375,11 @@ export class FleetPresenter {
             when: this.#instant(until),
           });
     }
-    if (state === 'incomplete' && holding?.pending === true) {
+    // Both states a stored fleet can settle into with journal left. A refresh
+    // that stopped on its batch bound before the first `Loadout` answers
+    // `empty`, and a Commander reading that alone would take it for the whole
+    // of what their journal confirms (020/FR-016).
+    if ((state === 'incomplete' || state === 'empty') && holding?.pending === true) {
       return this.#messages.message('fleet.detail.pending');
     }
     // Every state that is not current says that the fleet already accepted is
