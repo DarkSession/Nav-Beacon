@@ -216,6 +216,51 @@ public sealed class FrontierClientTests
   }
 
   [Theory]
+  [MemberData(nameof(UnreachableFrontier))]
+  public async Task AFrontierThisServerCannotReachIsAnsweredAsNoIdentity(Exception failure)
+  {
+    // A host that does not resolve, a refused connection and a request that ran
+    // out of time are all Frontier with no answer. Letting the failure out
+    // would end the callback in an empty 500, which leaves a Commander on a
+    // blank page instead of the fresh sign-in the account dialog states.
+    var client = CreateClient(new UnreachableHandler(failure));
+
+    Assert.Null(await client.AuthenticateAsync("code", CancellationToken.None));
+  }
+
+  [Fact]
+  public async Task AProfileThisServerCannotReachIsAnsweredAsNoIdentity()
+  {
+    // The token arrived and the identity behind it did not. Frontier answers
+    // the token and the profile from two hosts, so one can be reachable while
+    // the other is not.
+    var client = CreateClient(
+      new UnreachableHandler(
+        new HttpRequestException("Connection reset by peer."),
+        Json(
+          """
+          {"access_token":"access-token","refresh_token":"refresh-token","expires_in":3600}
+          """
+        )
+      )
+    );
+
+    Assert.Null(await client.AuthenticateAsync("code", CancellationToken.None));
+  }
+
+  [Theory]
+  [MemberData(nameof(UnreachableFrontier))]
+  public async Task ARefreshThisServerCannotReachReturnsNoTokens(Exception failure)
+  {
+    var client = CreateClient(new UnreachableHandler(failure));
+
+    Assert.Null(await client.RefreshAsync("expired-refresh", CancellationToken.None));
+  }
+
+  public static TheoryData<Exception> UnreachableFrontier() =>
+    [new HttpRequestException("No such host is known."), new TaskCanceledException()];
+
+  [Theory]
   [InlineData("", "secret", "https://navbeacon.example/api/auth/frontier/callback")]
   [InlineData("client", "", "https://navbeacon.example/api/auth/frontier/callback")]
   [InlineData("client", "secret", "not-an-address")]
@@ -236,7 +281,7 @@ public sealed class FrontierClientTests
   }
 
   private static FrontierClient CreateClient(
-    QueueHandler handler,
+    HttpMessageHandler handler,
     FrontierOptions? options = null
   ) =>
     new(
@@ -267,6 +312,28 @@ public sealed class FrontierClientTests
     string Body,
     string? Authorisation
   );
+
+  /// <summary>
+  /// Answers a queue, and once it is empty raises what the transport raises.
+  ///
+  /// A failure rather than a status code, because a host that does not resolve
+  /// never reaches the point of answering one.
+  /// </summary>
+  private sealed class UnreachableHandler(
+    Exception failure,
+    params HttpResponseMessage[] answered
+  ) : HttpMessageHandler
+  {
+    private readonly Queue<HttpResponseMessage> answers = new(answered);
+
+    protected override Task<HttpResponseMessage> SendAsync(
+      HttpRequestMessage request,
+      CancellationToken cancellationToken
+    ) =>
+      answers.Count > 0
+        ? Task.FromResult(answers.Dequeue())
+        : Task.FromException<HttpResponseMessage>(failure);
+  }
 
   private sealed class QueueHandler(params HttpResponseMessage[] responses) : HttpMessageHandler
   {

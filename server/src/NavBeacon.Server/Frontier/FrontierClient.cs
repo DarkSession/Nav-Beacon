@@ -99,12 +99,14 @@ public sealed class FrontierClient(
     CancellationToken cancellationToken
   )
   {
-    using var response = await httpClient.PostAsync(
-      TokenEndpoint,
-      new FormUrlEncodedContent(values),
+    using var response = await SendAsync(
+      new HttpRequestMessage(HttpMethod.Post, TokenEndpoint)
+      {
+        Content = new FormUrlEncodedContent(values),
+      },
       cancellationToken
     );
-    if (!response.IsSuccessStatusCode)
+    if (response is null || !response.IsSuccessStatusCode)
     {
       return null;
     }
@@ -156,7 +158,7 @@ public sealed class FrontierClient(
       accessToken,
       cancellationToken
     );
-    if (!response.IsSuccessStatusCode)
+    if (response is null || !response.IsSuccessStatusCode)
     {
       return null;
     }
@@ -195,7 +197,7 @@ public sealed class FrontierClient(
       accessToken,
       cancellationToken
     );
-    if (!response.IsSuccessStatusCode)
+    if (response is null || !response.IsSuccessStatusCode)
     {
       return null;
     }
@@ -258,16 +260,49 @@ public sealed class FrontierClient(
     gameVersion.ValueKind == JsonValueKind.String
     && string.Equals(gameVersion.GetString(), "live", StringComparison.OrdinalIgnoreCase);
 
-  private async Task<HttpResponseMessage> SendAuthorisedGetAsync(
+  private Task<HttpResponseMessage?> SendAuthorisedGetAsync(
     Uri address,
     string accessToken,
     CancellationToken cancellationToken
   )
   {
-    using var request = new HttpRequestMessage(HttpMethod.Get, address);
+    var request = new HttpRequestMessage(HttpMethod.Get, address);
     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
     request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-    return await httpClient.SendAsync(request, cancellationToken);
+    return SendAsync(request, cancellationToken);
+  }
+
+  /// <summary>
+  /// One answer from Frontier, or `null` where this server could not reach it.
+  ///
+  /// A host that does not resolve, a refused connection and a request that ran
+  /// out of time are all Frontier this server has no answer from, so they are
+  /// answered as no answer: a sign-in ends in the fresh sign-in the account
+  /// dialog already states, and a fleet refresh in the refusal it already
+  /// draws. Letting the failure out instead would end the request in an empty
+  /// 500, which leaves a Commander on a blank page with nothing to do
+  /// (020/FR-001, 020/FR-003, 020/FR-018).
+  /// </summary>
+  private async Task<HttpResponseMessage?> SendAsync(
+    HttpRequestMessage request,
+    CancellationToken cancellationToken
+  )
+  {
+    using (request)
+    {
+      try
+      {
+        return await httpClient.SendAsync(request, cancellationToken);
+      }
+      catch (HttpRequestException)
+      {
+        return null;
+      }
+      catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+      {
+        return null;
+      }
+    }
   }
 
   private void EnsureConfigured()
