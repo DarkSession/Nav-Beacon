@@ -15,20 +15,24 @@
  * and the two facts the service adds to it (020/FR-015).
  */
 
-/** What the owned fleet is, as the service states it. */
-export type FleetResult =
-  /** Stored, confirmed complete by the last comparison, nothing pending. */
-  | 'current'
-  /** No accepted `Loadout` yet, so the fleet is empty. */
-  | 'empty'
-  /** Stored, and journal coverage cannot confirm that this is the whole fleet. */
-  | 'incomplete'
-  /** Frontier or another refresh of this account holds the next attempt. */
-  | 'waiting'
-  /** The refresh stopped on a failure, and the last accepted fleet still stands. */
-  | 'failed'
-  /** Frontier authorisation is gone, so a fresh sign-in comes first. */
-  | 'authorisation-expired';
+import {
+  hasExactKeys,
+  isObject,
+  parseFleetCoverage,
+  type FleetCoverage,
+  type FleetResult,
+} from './fleet-coverage';
+
+// The coverage block, what it holds and the shape rules both readers work
+// under live in `fleet-coverage`, because the browser's fleet cache reads that
+// block back on every page and must not carry this reader with it. They are
+// published again here so that one import states the whole contract.
+export {
+  parseFleetCoverage,
+  type FleetCoverage,
+  type FleetResult,
+  type StoredShipsComparison,
+} from './fleet-coverage';
 
 /** Why a refresh stopped. Always with `result: "failed"`. */
 export type FleetFailure =
@@ -52,25 +56,6 @@ export interface PackageRefusal {
   readonly constraint: string | null;
   readonly path: string | null;
   readonly message: string | null;
-}
-
-/** The last `StoredShips` comparison, as the service holds it. */
-export interface StoredShipsComparison {
-  readonly date: string;
-  readonly line: number;
-  /** `true` when every ship Frontier listed has an accepted projection. */
-  readonly complete: boolean;
-}
-
-/** How far the account's journal coverage reaches. */
-export interface FleetCoverage {
-  /** The first date coverage reaches: 14 days before the first refresh. */
-  readonly startDate: string;
-  readonly cursorDate: string;
-  readonly cursorLine: number;
-  readonly storedShips: StoredShipsComparison | null;
-  /** The earliest instant a refresh will ask Frontier again, or `null`. */
-  readonly nextPermittedRefreshAt: string | null;
 }
 
 /**
@@ -135,14 +120,6 @@ const ERROR_CODES: readonly FleetErrorCode[] = [
 ];
 
 const ANSWER_KEYS = ['result', 'ships', 'coverage', 'pending', 'failure', 'packageRefusal'];
-const COVERAGE_KEYS = [
-  'startDate',
-  'cursorDate',
-  'cursorLine',
-  'storedShips',
-  'nextPermittedRefreshAt',
-];
-const STORED_SHIPS_KEYS = ['date', 'line', 'complete'];
 const REFUSAL_KEYS = ['code', 'constraint', 'path', 'message'];
 
 /**
@@ -193,53 +170,6 @@ export function parseFleetRefusal(status: number, value: unknown): FleetResponse
   };
 }
 
-/**
- * Reads the coverage block.
- *
- * `undefined` means the field did not read; `null` is the published absence.
- * Exported because the browser's fleet cache holds the same block and reads it
- * back under the same rule rather than a looser second one.
- */
-export function parseFleetCoverage(value: unknown): FleetCoverage | null | undefined {
-  if (value === null) {
-    return null;
-  }
-  if (!isObject(value) || !hasExactKeys(value, COVERAGE_KEYS)) {
-    return undefined;
-  }
-  const startDate = value['startDate'];
-  const cursorDate = value['cursorDate'];
-  const cursorLine = value['cursorLine'];
-  const nextPermittedRefreshAt = value['nextPermittedRefreshAt'];
-  if (!isDate(startDate) || !isDate(cursorDate) || !isIndex(cursorLine)) {
-    return undefined;
-  }
-  if (nextPermittedRefreshAt !== null && !isInstant(nextPermittedRefreshAt)) {
-    return undefined;
-  }
-  const storedShips = parseStoredShips(value['storedShips']);
-  if (storedShips === undefined) {
-    return undefined;
-  }
-  return { startDate, cursorDate, cursorLine, storedShips, nextPermittedRefreshAt };
-}
-
-function parseStoredShips(value: unknown): StoredShipsComparison | null | undefined {
-  if (value === null) {
-    return null;
-  }
-  if (!isObject(value) || !hasExactKeys(value, STORED_SHIPS_KEYS)) {
-    return undefined;
-  }
-  const date = value['date'];
-  const line = value['line'];
-  const complete = value['complete'];
-  if (!isDate(date) || !isIndex(line) || typeof complete !== 'boolean') {
-    return undefined;
-  }
-  return { date, line, complete };
-}
-
 function parseRefusal(value: unknown): PackageRefusal | null | undefined {
   if (value === null) {
     return null;
@@ -270,32 +200,4 @@ function isFailure(value: unknown): value is FleetFailure {
 
 function isNullableText(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
-}
-
-function isIndex(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-}
-
-/** A UTC calendar date, in the spelling a journal cursor uses. */
-function isDate(value: unknown): value is string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
-    return false;
-  }
-  const parsed = Date.parse(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed) && new Date(parsed).toISOString().startsWith(value);
-}
-
-/** A UTC instant, in the spelling the session contract uses. */
-function isInstant(value: unknown): value is string {
-  return typeof value === 'string' && !Number.isNaN(Date.parse(value));
-}
-
-function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const actual = Object.keys(value).sort();
-  const expected = [...keys].sort();
-  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

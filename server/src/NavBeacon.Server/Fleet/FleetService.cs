@@ -206,8 +206,10 @@ public sealed class FleetService(
       }
       if (!ended)
       {
-        // The day is still being written, so the cursor stays on it. A refresh
-        // that stopped on the ten-batch bound has more of it left to read.
+        // The cursor stays on the date for either of the two reasons that
+        // reach here: the date has not ended and is still being written, or
+        // Frontier answered it incomplete. In both, more of that day may still
+        // be readable, and a date the cursor leaves is never read again.
         await SaveNextPermittedAsync(cursor, read.NextPermittedRefreshAt, cancellationToken);
         return await SettledAsync(
           customerId,
