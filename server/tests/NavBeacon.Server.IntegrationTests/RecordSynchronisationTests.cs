@@ -441,6 +441,51 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
   }
 
   [Fact]
+  public async Task AMissingValidatorBundleRefusesABatchTooLargeForThePipe()
+  {
+    var frontier = new FakeFrontierClient();
+    using var server = new CommanderTestServer(
+      database,
+      frontier,
+      new ManualTimeProvider(InitialTime),
+      settings: new Dictionary<string, string>
+      {
+        ["RecordValidation:ScriptPath"] = Path.Combine(
+          AppContext.BaseDirectory,
+          "Fixtures",
+          "no-such-validator.mjs"
+        ),
+      }
+    );
+    using var commander = await SignInAsync(server, frontier, 70_018);
+
+    // Forty records is about 98 KiB of canonical JSON, past the 64 KiB pipe
+    // buffer Linux gives a child's stdin, so the request is still being written
+    // when the missing bundle exits. A batch that fits the buffer lands in it
+    // and is answered by the exit code instead. This is well inside the 100
+    // changes and 1 MiB a batch may carry, and is the size a first merge of a
+    // stored library sends (deployment document, "A bundle the instance cannot
+    // run").
+    var refused = await commander.SynchroniseAsync(
+      RecordFixtures.Request(
+        0,
+        [
+          .. Enumerable
+            .Range(0, 40)
+            .Select(_ => RecordFixtures.Write(RecordFixtures.Ship(Guid.NewGuid()))),
+        ]
+      )
+    );
+
+    Assert.Equal(HttpStatusCode.ServiceUnavailable, refused.Status);
+    Assert.Equal("validation-unavailable", refused.Code);
+    await using var context = database.CreateContext();
+    Assert.Empty(
+      await context.SynchronisedRecords.AsNoTracking().Where(r => r.CustomerId == 70_018).ToListAsync()
+    );
+  }
+
+  [Fact]
   public async Task ACancelledRequestWritesNothing()
   {
     using var server = NewServer(out var frontier, out var clock);

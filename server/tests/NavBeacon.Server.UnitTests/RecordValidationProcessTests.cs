@@ -86,6 +86,29 @@ public sealed class RecordValidationProcessTests
     Assert.Equal(2, result.Index);
   }
 
+  [Fact]
+  public async Task A_request_larger_than_the_pipe_is_refused_when_the_command_is_gone()
+  {
+    // A missing bundle exits while the request is still being written. Anything
+    // that fits the operating system's pipe buffer lands in it and the command
+    // is answered by its exit code; anything larger blocks on a pipe with no
+    // reader. Both callers send more than this routinely — a synchronisation
+    // batch is bounded at 1 MiB and a journal batch at a day of `Loadout`
+    // lines — so this is the ordinary shape of the failure, not the edge of it.
+    var process = new RecordValidationProcess(
+      new RecordValidationProcessOptions(
+        "node",
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", "no-such-validator.mjs"),
+        RecordValidationProcessOptions.DefaultTimeout,
+        RecordValidationProcessOptions.DefaultMaximumOutputBytes
+      )
+    );
+
+    var result = await process.ValidateAsync(new string('x', 1_048_576));
+
+    Assert.Equal(RecordValidationFailure.ProcessFailed, result.Failure);
+  }
+
   private static RecordValidationProcess Process(
     string mode,
     TimeSpan? timeout = null
