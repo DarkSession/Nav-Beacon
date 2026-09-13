@@ -53,7 +53,7 @@ describe('the Commander state a browser keeps', () => {
   });
 
   const refusals: readonly (readonly [string, Record<string, unknown>])[] = [
-    ['a value that is not this application’s', { format: 'other', version: 1 }],
+    ['a value that is not this application’s', { format: 'other' }],
     ['an unreadable account', { account: { customerId: 'not-a-customer', commanderName: 'A' } }],
     ['a cursor under something that is not a Customer ID', { accountCursors: { abc: 3 } }],
     ['a cursor that is not a whole number', { accountCursors: { [OWNER]: 1.5 } }],
@@ -101,7 +101,9 @@ describe('the Commander state a browser keeps', () => {
 
   it('refuses a version it does not publish', () => {
     expect(parseCommanderLocalState({ ...state(), version: 99 })).toBeNull();
-    expect(emptyCommanderLocalState().version).toBe(COMMANDER_LOCAL_STATE_VERSION);
+    // The number every stored value carries. Advancing it is what a stored
+    // value written by a released build would have to be read through.
+    expect(COMMANDER_LOCAL_STATE_VERSION).toBe(1);
   });
 
   /**
