@@ -200,23 +200,35 @@ describe('AccountPresenter', () => {
     it('offers sign-in wherever signing in is what a Commander can do next', () => {
       const { store, presenter } = setUp();
 
-      for (const kind of [
-        'anonymous',
-        'correlation-refused',
-        'session-expired',
-        'authorisation-expired',
-      ] as const) {
-        store.set(
-          kind === 'authorisation-expired'
-            ? { kind, account: ACCOUNT }
-            : ({ kind } as AccountState),
-        );
+      for (const kind of ['anonymous', 'correlation-refused', 'session-expired'] as const) {
+        store.set({ kind } as AccountState);
 
         expect(
           presenter.view().actions.map((action) => [action.kind, action.label]),
           kind,
         ).toEqual([['sign-in', BUNDLED_ENGLISH['account.sign-in']]]);
       }
+    });
+
+    /**
+     * An expired Frontier authorisation leaves the Nav Beacon session standing.
+     *
+     * The store keeps the credentials for this state on purpose, so the records
+     * keep synchronising and both a sign-out and a deletion would reach the
+     * service. A dialog that offered only the Frontier sign-in would leave a
+     * signed-in Commander unable to sign out of, or delete, an account they
+     * still have (020/FR-003, 020/FR-006).
+     */
+    it('keeps sign-out and deletion beside the Frontier sign-in while authorisation is expired', () => {
+      const { store, presenter } = setUp();
+
+      store.set({ kind: 'authorisation-expired', account: ACCOUNT });
+
+      expect(presenter.view().actions.map((action) => [action.kind, action.label])).toEqual([
+        ['sign-in', BUNDLED_ENGLISH['account.sign-in']],
+        ['sign-out', BUNDLED_ENGLISH['account.sign-out']],
+        ['delete', BUNDLED_ENGLISH['account.delete.action']],
+      ]);
     });
 
     it('offers sign-out beside deletion while there is an account to act on', () => {

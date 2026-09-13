@@ -1784,6 +1784,54 @@ describe('the record synchronisation store', () => {
       expect(lastRequest().changes).toEqual([{ type: 'renew', id: FIXTURE_IDS.named }]);
     });
 
+    /**
+     * A deletion the account is never told about still leaves the bindings
+     * clean.
+     *
+     * A record kept in this browser only, and a record belonging to another
+     * Commander, each queue nothing: neither is this account's to delete. Left
+     * behind, the binding names a record nothing can open, and the
+     * synchronisation panel counts it and offers to save or copy it — with
+     * nothing left to save (020/FR-024, constitution IV).
+     */
+    it('forgets a deleted record the account is never told about', async () => {
+      writeState({
+        recordBindings: {
+          [FIXTURE_IDS.named]: 'local-only',
+          [FIXTURE_IDS.working]: '900002',
+        },
+        recordRevisions: { [FIXTURE_IDS.working]: 3 },
+      });
+      api.requests.length = 0;
+
+      await store.recordDeleted(FIXTURE_IDS.named);
+      await store.recordDeleted(FIXTURE_IDS.working);
+
+      expect(api.requests.flatMap((request) => request.changes)).toEqual([]);
+      expect(commanderState().recordBindings).toEqual({});
+      expect(commanderState().recordRevisions).toEqual({});
+    });
+
+    /**
+     * A deletion the account has not answered keeps what its queued operation
+     * was raised against, so the retry still sends the revision the account
+     * holds rather than none (020/FR-010, 020/FR-026).
+     */
+    it('keeps a queued deletion’s own state until the account answers it', async () => {
+      writeState({
+        accountCursors: { [CREDENTIALS.customerId]: 4 },
+        recordBindings: { [FIXTURE_IDS.named]: CREDENTIALS.customerId },
+        recordRevisions: { [FIXTURE_IDS.named]: 4 },
+      });
+      api.answers.push({ kind: 'unavailable' });
+
+      await store.recordDeleted(FIXTURE_IDS.named);
+
+      expect(commanderState().pendingOperations).toHaveLength(1);
+      expect(recordBinding(commanderState(), FIXTURE_IDS.named)).toBe(CREDENTIALS.customerId);
+      expect(commanderState().recordRevisions[FIXTURE_IDS.named]).toBe(4);
+    });
+
     it('pulls on an explicit retry', async () => {
       await store.refresh();
 

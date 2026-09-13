@@ -155,6 +155,65 @@ describe('what the record libraries say about the account', () => {
     expect(view().conflict).toBeNull();
   });
 
+  /**
+   * A browser that knows whose records these are and could not reach the
+   * account is not a browser with nobody signed in.
+   *
+   * The frame beside this panel is drawing the Commander's name from the cached
+   * account, and the account dialog says the service is unavailable. Telling
+   * that Commander to sign in contradicts both and offers them nothing they can
+   * act on (020/FR-022, constitution IV).
+   */
+  it('says the account could not be reached rather than asking a signed-in Commander to sign in', async () => {
+    writeCommanderState(storage);
+    seedRecord();
+    api.session = { kind: 'unavailable' };
+
+    await TestBed.inject(AccountStore).refreshSession();
+    await settle();
+
+    const view = presenter().view();
+    expect(TestBed.inject(AccountStore).state().kind).toBe('offline');
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['sync.status.unreachable']);
+    expect(view.status.tone).toBe('warning');
+  });
+
+  /**
+   * A browser that has never had an account reads the local-only sentence, not
+   * the unreachable one: there is no account here that could not be reached.
+   */
+  it('still says the records stay here where an unreachable service has no account to name', async () => {
+    seedRecord();
+    api.session = { kind: 'unavailable' };
+
+    await TestBed.inject(AccountStore).refreshSession();
+    await settle();
+
+    expect(presenter().view().status.message).toBe(BUNDLED_ENGLISH['sync.status.local-only']);
+  });
+
+  /**
+   * A record kept in this browser only is on this device and is not in the
+   * account, so the sentence that says the account has every record on this
+   * device is not true while the note below it names one it does not have
+   * (020/FR-011, 020/FR-024, constitution IV).
+   */
+  it('does not claim the account has every record while one is held back', async () => {
+    writeCommanderState(storage, {
+      recordBindings: { [FIXTURE_IDS.named]: 'local-only' },
+    });
+    seedRecord();
+    await signedIn();
+
+    const view = presenter().view();
+    const partial = BUNDLED_ENGLISH['sync.status.current.partial'].split('{{when}}')[0];
+    const whole = BUNDLED_ENGLISH['sync.status.current'].split('{{when}}')[0];
+    expect(view.status.message.startsWith(partial)).toBe(true);
+    expect(view.status.message.startsWith(whole)).toBe(false);
+    expect(view.status.tone).toBe('success');
+    expect(view.notes.map((note) => note.id)).toEqual(['local-only']);
+  });
+
   it('names the instant the account confirmed this device at', async () => {
     writeCommanderState(storage);
     seedRecord();

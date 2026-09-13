@@ -78,6 +78,7 @@ export class SynchronisationPresenter {
     const status = this.#sync.status();
     const credentials = this.#account.credentials();
     const conflicts = this.#sync.conflicts();
+    const held = this.#heldBack(this.#knownCustomerId());
 
     return {
       heading: this.#messages.message('sync.title'),
@@ -87,7 +88,7 @@ export class SynchronisationPresenter {
       // not the same thing — a session the service ended leaves a failure whose
       // own cause emptied them, and that failure is the only statement of why
       // (020/FR-003, 020/FR-011).
-      status: this.#statusOf(status.kind === 'inactive' ? null : status),
+      status: this.#statusOf(status.kind === 'inactive' ? null : status, held),
       detail: this.#detailOf(status),
       // Offered only where pressing it would exchange something. An exchange
       // needs credentials, so a retry without them is a control that does
@@ -97,7 +98,7 @@ export class SynchronisationPresenter {
         status.kind === 'failed' && credentials !== null
           ? this.#messages.message('action.retry')
           : null,
-      notes: this.#notes(this.#knownCustomerId()),
+      notes: this.#notes(held),
       conflict: conflicts.length === 0 ? null : this.#conflictView(conflicts[0]),
     };
   });
@@ -118,10 +119,61 @@ export class SynchronisationPresenter {
     return 'account' in state && state.account !== null ? state.account.customerId : null;
   });
 
+  /**
+   * Whether this browser has an account here that it could not reach.
+   *
+   * Read from the account state's own word for it rather than from empty
+   * credentials, because several states empty those and only this one is the
+   * service being unreachable. A local write that would not commit, and a
+   * session the service ended, are different situations with different answers
+   * (020/FR-003, 020/FR-022).
+   */
+  readonly #accountUnreachable = computed(() => {
+    const state = this.#account.state();
+    return state.kind === 'offline' && state.account !== null;
+  });
+
+  /**
+   * The records on this device that this account does not hold.
+   *
+   * One read, because the status sentence and the notes are two statements
+   * about the same set and a Commander reads them together. Counted from the
+   * stored bindings, which is where a record's account state lives; the read is
+   * not a signal, so it is taken again whenever the exchange state or the
+   * session changes — which is when a binding can have changed (020/FR-024).
+   */
+  #heldBack(customerId: string | null): HeldBackRecords {
+    const bindings: Readonly<Record<string, RecordAccountBinding>> =
+      this.#state.read().recordBindings;
+    const values = Object.values(bindings);
+
+    return {
+      localOnly: values.filter((binding) => binding === 'local-only').length,
+      // Only where this browser knows whose account it has. Without a Customer
+      // ID nothing here is another Commander's rather than this one's, and every
+      // bound record would be counted as somebody else's — which is what a
+      // Commander reads after a sign-out, when the bindings deliberately stay
+      // (020/FR-003, constitution IV).
+      elsewhere:
+        customerId === null
+          ? 0
+          : values.filter((binding) => binding !== 'local-only' && binding !== customerId).length,
+    };
+  }
+
   #statusOf(
     status: ReturnType<RecordSynchronisationStore['status']> | null,
+    held: HeldBackRecords,
   ): SynchronisationPanelView['status'] {
     if (status === null) {
+      // A browser that knows whose records these are and could not reach the
+      // account is not a browser with nobody signed in. Telling that Commander
+      // to sign in states something untrue about their session and offers them
+      // nothing they can do, while the frame beside this panel is drawing their
+      // name (020/FR-022, constitution IV).
+      if (this.#accountUnreachable()) {
+        return { tone: 'warning', message: this.#messages.message('sync.status.unreachable') };
+      }
       // Anonymous, or signed in with no exchange attempted yet. Both are the
       // same sentence: the records are in this browser and nowhere else
       // (020/FR-007).
@@ -138,9 +190,18 @@ export class SynchronisationPresenter {
       case 'current':
         return {
           tone: 'success',
-          message: this.#messages.message('sync.status.current', {
-            when: this.#instant(status.at),
-          }),
+          message: this.#messages.message(
+            // A record kept in this browser only, and a record belonging to
+            // another Commander, are both on this device and neither is in this
+            // account. Saying the account has every record on this device over
+            // a note that names one it does not have states two different
+            // things about one library, and the sentence is the one that is
+            // wrong (020/FR-011, 020/FR-024, constitution IV).
+            held.localOnly + held.elsewhere > 0
+              ? 'sync.status.current.partial'
+              : 'sync.status.current',
+            { when: this.#instant(status.at) },
+          ),
         };
       case 'pending':
         return { tone: 'warning', message: this.#counted('sync.status.pending', status.changes) };
@@ -178,40 +239,26 @@ export class SynchronisationPresenter {
   /**
    * The sentences about sets of records, rather than about the exchange.
    *
-   * Read from the stored bindings, which is where a record's account state
-   * lives. The read is not a signal, so it is taken again whenever the exchange
-   * state or the session changes — which is when a binding can have changed
+   * The two counts arrive already taken, because the status sentence above them
+   * is decided by the same two and the panel must not state one set twice
    * (020/FR-024).
    */
-  #notes(customerId: string | null): readonly SynchronisationNote[] {
-    const bindings: Readonly<Record<string, RecordAccountBinding>> =
-      this.#state.read().recordBindings;
-    const values = Object.values(bindings);
+  #notes(held: HeldBackRecords): readonly SynchronisationNote[] {
     const notes: SynchronisationNote[] = [];
 
-    const localOnly = values.filter((binding) => binding === 'local-only').length;
-    if (localOnly > 0) {
+    if (held.localOnly > 0) {
       notes.push({
         id: 'local-only',
         tone: 'info',
-        message: this.#counted('sync.note.local-only', localOnly),
+        message: this.#counted('sync.note.local-only', held.localOnly),
       });
     }
 
-    // Only where this browser knows whose account it has. Without a Customer
-    // ID nothing here is another Commander's rather than this one's, and every
-    // bound record would be counted as somebody else's — which is what a
-    // Commander reads after a sign-out, when the bindings deliberately stay
-    // (020/FR-003, constitution IV).
-    const elsewhere =
-      customerId === null
-        ? 0
-        : values.filter((binding) => binding !== 'local-only' && binding !== customerId).length;
-    if (elsewhere > 0) {
+    if (held.elsewhere > 0) {
       notes.push({
         id: 'account-bound',
         tone: 'info',
-        message: this.#counted('sync.note.account-bound', elsewhere),
+        message: this.#counted('sync.note.account-bound', held.elsewhere),
       });
     }
 
@@ -308,6 +355,14 @@ type PairedStem<Key, All> = Key extends `${infer Stem}.one`
     ? Stem
     : never
   : never;
+
+/** The records on this device that the account does not hold. */
+interface HeldBackRecords {
+  /** Kept in this browser only, by an answered conflict or a refused identity. */
+  readonly localOnly: number;
+  /** Bound to a Commander account other than the one signed in here. */
+  readonly elsewhere: number;
+}
 
 type CountedMessageStem = PairedStem<MessageKey, MessageKey>;
 

@@ -271,6 +271,27 @@ describe('AccountStore', () => {
       expect(store.state()).toEqual({ kind: 'signed-in', account: ACCOUNT });
     });
 
+    /**
+     * A cancel puts the question away and settles nothing else.
+     *
+     * The deletion is offered wherever there is an account to delete, including
+     * where Frontier authorisation has expired. Answering the cancel with
+     * `signed-in` would state a session in better standing than the one the
+     * Commander has, and would take the fresh Frontier sign-in off the dialog
+     * that was offering it (020/FR-003, 020/FR-006, constitution IV).
+     */
+    it('puts a cancelled deletion back to the state that offered it', async () => {
+      const { store } = await signedIn();
+      store.markAuthorisationExpired();
+
+      store.requestDeletion();
+      expect(store.state()).toEqual({ kind: 'delete-confirmation', account: ACCOUNT });
+
+      store.cancelDeletion();
+
+      expect(store.state()).toEqual({ kind: 'authorisation-expired', account: ACCOUNT });
+    });
+
     it('commits the local transaction before it sends the deletion', async () => {
       const { api, store, storage } = await signedIn();
       store.requestDeletion();

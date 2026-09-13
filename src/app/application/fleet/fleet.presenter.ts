@@ -256,13 +256,27 @@ export class FleetPresenter {
       case 'empty':
         return { tone: 'info', message: this.#messages.message('fleet.status.empty') };
       default:
-        return {
-          tone: 'success',
-          message: this.#messages.message(
-            holding?.fromCache === true ? 'fleet.status.cached' : 'fleet.status.current',
-          ),
-        };
+        return { tone: 'success', message: this.#messages.message(this.#settledKey(holding)) };
     }
+  }
+
+  /**
+   * Which sentence a settled fleet reads under.
+   *
+   * A ship the installed package will not rebuild is a ship the journal
+   * confirmed and this list does not carry. Naming it below while the sentence
+   * above says every confirmed ship is listed here states two different fleets
+   * on one screen, and the sentence is the one that is wrong. The cached
+   * sentence claims no completeness, so it stands as it is (020/FR-015,
+   * 020/FR-016, constitution IV).
+   */
+  #settledKey(
+    holding: FleetHolding | null,
+  ): 'fleet.status.cached' | 'fleet.status.current' | 'fleet.status.unresolved' {
+    if (holding?.fromCache === true) {
+      return 'fleet.status.cached';
+    }
+    return (holding?.refused.length ?? 0) > 0 ? 'fleet.status.unresolved' : 'fleet.status.current';
   }
 
   /**

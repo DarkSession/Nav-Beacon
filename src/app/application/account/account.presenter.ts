@@ -143,8 +143,19 @@ export class AccountPresenter {
       case 'anonymous':
       case 'correlation-refused':
       case 'session-expired':
-      case 'authorisation-expired':
         return [this.#action('account.sign-in', 'sign-in', 'primary')];
+      // An expired Frontier authorisation is not an expired Nav Beacon session.
+      // The account is still signed in here, its records still synchronise, and
+      // both a sign-out and a deletion would reach the service. Offering only
+      // the Frontier sign-in would take from a signed-in Commander the two
+      // things they are entitled to do with the account they still have
+      // (020/FR-003, 020/FR-006).
+      case 'authorisation-expired':
+        return [
+          this.#action('account.sign-in', 'sign-in', 'primary'),
+          this.#action('account.sign-out', 'sign-out', 'secondary'),
+          this.#action('account.delete.action', 'delete', 'danger'),
+        ];
       case 'offline':
         return [this.#action('action.retry', 'retry', 'primary')];
       case 'signed-in':

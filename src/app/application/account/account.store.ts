@@ -44,6 +44,16 @@ export class AccountStore {
   readonly #open = signal(false);
   readonly #antiForgeryToken = signal<string | null>(null);
   readonly #signedOut = signal(0);
+  /**
+   * What the dialog said before the deletion question was asked.
+   *
+   * A cancel puts the question away; it does not settle anything else. Reading
+   * `signed-in` back over a state that said Frontier authorisation is expired,
+   * or that a sign-out did not finish, would answer a question the Commander
+   * did not answer and state a session in better standing than the one they
+   * have (020/FR-003, 020/FR-006, constitution IV).
+   */
+  #beforeDeletion: AccountState | null = null;
 
   readonly state = this.#state.asReadonly();
   readonly open = this.#open.asReadonly();
@@ -152,17 +162,24 @@ export class AccountStore {
   }
 
   requestDeletion(): void {
-    const account = accountFrom(this.#state());
+    const current = this.#state();
+    const account = accountFrom(current);
     if (account !== null) {
+      this.#beforeDeletion = current;
       this.#state.set({ kind: 'delete-confirmation', account });
     }
   }
 
   cancelDeletion(): void {
     const account = accountFrom(this.#state());
-    if (account !== null) {
-      this.#state.set({ kind: 'signed-in', account });
+    if (account === null) {
+      return;
     }
+    const before = this.#beforeDeletion;
+    this.#beforeDeletion = null;
+    this.#state.set(
+      before !== null && accountFrom(before) !== null ? before : { kind: 'signed-in', account },
+    );
   }
 
   /**

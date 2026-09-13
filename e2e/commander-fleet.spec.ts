@@ -173,6 +173,11 @@ test.describe('the ships a Commander owns', () => {
     // no row offering the ship it could not build.
     await expect(fleet(page)).toContainText(englishMessages['fleet.unresolved.unknown-hull']);
     await expect(fleet(page).getByRole('button', { name: SECOND_SHIP })).toHaveCount(0);
+
+    // And the sentence above the list does not claim the list is the whole
+    // fleet while one of its ships is named below it instead (020/FR-015).
+    await expect(fleet(page)).toContainText(englishMessages['fleet.status.unresolved']);
+    await expect(fleet(page)).not.toContainText(englishMessages['fleet.status.current']);
     await scan(page, testInfo, 'owned ships, one unresolved');
   });
 

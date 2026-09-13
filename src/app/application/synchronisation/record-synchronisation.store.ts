@@ -276,6 +276,35 @@ export class RecordSynchronisationStore {
     await this.#triggered((customerId) => {
       this.queueDelete(recordId, customerId);
     });
+    this.#forgetUnsent(recordId);
+  }
+
+  /**
+   * Drops what this browser knew about a record the account is never told about.
+   *
+   * A deletion the account is told about clears the binding when the response
+   * commits (`withSynchronisationCommitted`). A deletion it is not told about
+   * leaves one behind: a record kept in this browser only, a record belonging to
+   * another Commander, and any deletion made while nobody is signed in all queue
+   * nothing. The binding then names a record nothing can open, which the
+   * synchronisation panel counts and states as a record a Commander could still
+   * save or copy — with nothing left to save (020/FR-024, constitution IV).
+   *
+   * Called after the removal the caller already made, and only where there is
+   * something to drop: a browser that has never had an account knows nothing
+   * about any record's remote copy, and writing account state for it on a
+   * deletion alone would put some there (constitution I). A record the account
+   * still owes a deletion keeps what its queued operation was raised against.
+   */
+  #forgetUnsent(recordId: string): void {
+    const state = this.#state.read();
+    if (state.pendingOperations.some((operation) => operation.recordId === recordId)) {
+      return;
+    }
+    if (recordBinding(state, recordId) === null && remoteRevisionOf(state, recordId) === null) {
+      return;
+    }
+    this.#state.forgetRecord(recordId);
   }
 
   /**

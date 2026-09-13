@@ -568,6 +568,24 @@ describe('FleetPresenter', () => {
     expect(view.ships.length).toBe(1);
     expect(view.unresolved.length).toBe(1);
     expect(view.unresolved[0].id).toBe('refused-19');
+    // And the sentence above the list does not claim the list is the whole
+    // fleet while one of its ships is named below it instead (020/FR-015,
+    // constitution IV).
+    expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.unresolved']);
+    expect(view.status.message).not.toBe(BUNDLED_ENGLISH['fleet.status.current']);
+  });
+
+  /**
+   * And with nothing refused, the fleet does say it is the whole of what the
+   * journal confirms. The narrower sentence is for the state that needs it, not
+   * a hedge on every state.
+   */
+  it('says every confirmed ship is listed where every one of them was rebuilt', async () => {
+    writeState();
+    api.reads.push(answeredFleet({ ships: [ownedShipPayload(12)] }));
+    await signIn();
+
+    expect(presenter.view().status.message).toBe(BUNDLED_ENGLISH['fleet.status.current']);
   });
 
   /**
