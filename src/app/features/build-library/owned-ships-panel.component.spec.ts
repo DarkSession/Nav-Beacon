@@ -122,11 +122,11 @@ function view(overrides: Partial<OwnedShipsView> = {}): OwnedShipsView {
  * Every state the owned-ships view model names, as this layer draws it.
  *
  * Nine rows, against the eleven screen states design decision 10 gives the
- * view: `current` is a settled fleet, and which of its three sentences a
- * Commander reads is decided by whether the list came from the cache and
- * whether the installed package refused a confirmed ship. That choice is the
- * presenter's and is asserted there, because this layer draws whichever
- * sentence it is handed.
+ * view: `current` is a settled fleet, and which sentence a Commander reads is
+ * decided by whether the last exchange answered, whether the list came from
+ * the cache, and whether the installed package refused a confirmed ship. That
+ * choice is the presenter's and is asserted there, because this layer draws
+ * whichever sentence it is handed.
  */
 const STATES: readonly { readonly name: OwnedShipsState; readonly view: OwnedShipsView }[] = [
   {

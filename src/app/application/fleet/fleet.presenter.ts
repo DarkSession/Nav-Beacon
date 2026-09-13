@@ -14,9 +14,10 @@ import { FleetStore, type FleetHolding, type RefusedOwnedShip } from './fleet.st
  * What the owned-ships view is doing, as the view model names it.
  *
  * Nine names, against the eleven screen states design decision 10 gives the
- * view: `current` is a settled fleet, and which of its sentences a Commander
- * reads is decided below by whether the list came from the cache and whether
- * the installed package refused a confirmed ship. The names are published here
+ * view: `current` is a settled fleet, and which sentence a Commander reads is
+ * decided below, in this order, by whether the last exchange answered, whether
+ * the list came from the cache, and whether the installed package refused a
+ * confirmed ship. The names are published here
  * so a test, a preview and this presenter agree on what the view is showing
  * rather than inferring it from a tone.
  */
