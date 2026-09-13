@@ -214,6 +214,8 @@ public sealed class FleetProjectorTests
   [InlineData("crash")]
   [InlineData("short")]
   [InlineData("silent")]
+  // A batch of the asked-for length whose entries are not ships.
+  [InlineData("notships")]
   public async Task AnAnswerTheCallerCannotReadIsUnavailable(string answer)
   {
     var result = await Fixture().ProjectAsync([Candidate(12, 0, Anaconda)], answer, default);

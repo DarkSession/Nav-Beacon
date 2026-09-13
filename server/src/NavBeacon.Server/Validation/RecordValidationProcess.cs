@@ -65,7 +65,8 @@ public sealed class RecordValidationProcess(RecordValidationProcessOptions optio
       using var document = JsonDocument.Parse(run.Output);
       var root = document.RootElement;
       if (
-        !root.TryGetProperty("ok", out var ok)
+        root.ValueKind != JsonValueKind.Object
+        || !root.TryGetProperty("ok", out var ok)
         || ok.ValueKind is not (JsonValueKind.True or JsonValueKind.False)
       )
       {

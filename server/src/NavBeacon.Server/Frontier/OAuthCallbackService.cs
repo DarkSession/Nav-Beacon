@@ -64,7 +64,20 @@ public sealed class OAuthCallbackService(
     account.ProtectedAccessToken = tokenProtector.Protect(authentication.Tokens.AccessToken);
     account.ProtectedRefreshToken = tokenProtector.Protect(authentication.Tokens.RefreshToken);
     account.AccessTokenExpiresAt = authentication.Tokens.AccessTokenExpiresAt;
-    await database.SaveChangesAsync(cancellationToken);
+    try
+    {
+      await database.SaveChangesAsync(cancellationToken);
+    }
+    catch (DbUpdateException)
+    {
+      // A first sign-in for this Commander that another callback has already
+      // written. Two browsers can reach here with the row read as absent in
+      // both, and the second one writes into an account that now exists. It is
+      // answered as a sign-in to start again, which the next attempt completes
+      // against the stored account.
+      return new OAuthCallbackCompletion(OAuthCallbackResult.FreshSignInRequired);
+    }
+
     return new OAuthCallbackCompletion(OAuthCallbackResult.SignedIn, authentication.Identity);
   }
 }

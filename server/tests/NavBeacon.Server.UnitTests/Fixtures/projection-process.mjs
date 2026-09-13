@@ -17,6 +17,10 @@ if (request.locale === 'timeout') {
   process.stdout.write('not json');
 } else if (request.locale === 'crash') {
   process.exit(3);
+} else if (request.locale === 'notships') {
+  // One ship of the asked-for count, which is not an object. The batch is the
+  // right length and nothing in it can be read.
+  process.stdout.write('{"ok":true,"ships":[1]}');
 } else if (request.locale === 'short') {
   process.stdout.write('{"ok":true,"code":null,"index":null,"ships":[]}');
 } else {

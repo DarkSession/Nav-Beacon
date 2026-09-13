@@ -144,7 +144,11 @@ public sealed class FleetProjector
     var position = 0;
     foreach (var ship in ships.EnumerateArray())
     {
-      if (!ship.TryGetProperty("model", out var model) || model.ValueKind != JsonValueKind.Object)
+      if (
+        ship.ValueKind != JsonValueKind.Object
+        || !ship.TryGetProperty("model", out var model)
+        || model.ValueKind != JsonValueKind.Object
+      )
       {
         return null;
       }

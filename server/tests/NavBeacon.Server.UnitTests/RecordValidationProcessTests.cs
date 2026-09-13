@@ -77,6 +77,14 @@ public sealed class RecordValidationProcessTests
   }
 
   [Fact]
+  public async Task An_answer_that_is_not_an_object_is_refused()
+  {
+    var result = await Process("array").ValidateAsync("{}");
+
+    Assert.Equal(RecordValidationFailure.ProcessFailed, result.Failure);
+  }
+
+  [Fact]
   public async Task Command_refusal_keeps_its_index()
   {
     var result = await Process("refuse").ValidateAsync("{}");

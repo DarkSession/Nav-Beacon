@@ -1,7 +1,10 @@
+using System.Data.Common;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using NavBeacon.Server.Frontier;
 using NavBeacon.Server.Persistence;
+using Npgsql;
 
 namespace NavBeacon.Server.IntegrationTests;
 
@@ -307,6 +310,37 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
   }
 
   [Fact]
+  public async Task AFirstSignInAnotherCallbackAlreadyWroteIsAnsweredAsAFreshSignIn()
+  {
+    var clock = new ManualTimeProvider(InitialTime);
+    var protection = new EphemeralDataProtectionProvider();
+    // The other callback: it writes the account between this one reading the
+    // row as absent and writing its own.
+    var other = new AccountWritingInterceptor(database.ConnectionString, 20_009);
+    await using var context = database.CreateContext(other);
+    var states = new OAuthStateService(context, clock);
+    var frontier = new FakeFrontierClient
+    {
+      Authentication = FakeFrontierClient.Identity(20_009, "Test Commander", clock.GetUtcNow()),
+    };
+    var callback = new OAuthCallbackService(states, frontier, context, protection);
+    var attempt = await states.StartAsync(CancellationToken.None);
+
+    var completion = await callback.CompleteAsync(
+      attempt.State,
+      attempt.BrowserCorrelation,
+      "code",
+      CancellationToken.None
+    );
+
+    // The browser is sent back to sign in again, which is what every other
+    // callback that ends with nobody signed in answers.
+    Assert.Equal(OAuthCallbackResult.FreshSignInRequired, completion.Result);
+    Assert.Null(completion.Identity);
+    Assert.True(other.Wrote);
+  }
+
+  [Fact]
   public async Task TokensStoredUnderALostKeyRingAreAnsweredAsNoToken()
   {
     var clock = new ManualTimeProvider(InitialTime);
@@ -356,4 +390,48 @@ public sealed class OAuthStateAndAccountTests(PostgreSqlDatabaseFixture database
       ProtectedRefreshToken = protector.Protect("refresh-token"),
       AccessTokenExpiresAt = accessTokenExpiresAt,
     };
+}
+
+/// <summary>
+/// Writes this account from another connection, the first time the account row
+/// is read.
+///
+/// It stands in for a second browser whose callback for the same Commander
+/// completed first. The row is absent when this request reads it and present
+/// when this request writes.
+/// </summary>
+internal sealed class AccountWritingInterceptor(string connectionString, long customerId)
+  : DbCommandInterceptor
+{
+  public bool Wrote { get; private set; }
+
+  public override ValueTask<DbDataReader> ReaderExecutedAsync(
+    DbCommand command,
+    CommandExecutedEventData eventData,
+    DbDataReader result,
+    CancellationToken cancellationToken = default
+  )
+  {
+    // After the read has run, so this request still finds no account and goes
+    // on to insert one of its own.
+    if (
+      !Wrote
+      && command.CommandText.Contains("commander_accounts", StringComparison.Ordinal)
+      && command.CommandText.Contains("SELECT", StringComparison.Ordinal)
+    )
+    {
+      Wrote = true;
+      using var connection = new NpgsqlConnection(connectionString);
+      connection.Open();
+      using var insert = connection.CreateCommand();
+      insert.CommandText =
+        "INSERT INTO commander_accounts "
+        + "(customer_id, commander_name, protected_access_token, protected_refresh_token, "
+        + "access_token_expires_at, record_revision) "
+        + "VALUES (@customerId, 'Test Commander', '', '', now(), 0)";
+      insert.Parameters.Add(new NpgsqlParameter("customerId", customerId));
+      insert.ExecuteNonQuery();
+    }
+    return base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
+  }
 }

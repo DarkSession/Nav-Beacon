@@ -18,6 +18,10 @@ if (mode === 'timeout') {
   process.stdout.write('{"ok":true,"padding":"' + 'x'.repeat(4_000_000) + '"}');
 } else if (mode === 'empty') {
   process.exit(0);
+} else if (mode === 'array') {
+  // Well-formed JSON that is not the answer document. Every field is read off
+  // an object, so the root is taken under its kind before any of them.
+  process.stdout.write('[]');
 } else {
   process.stdin.resume();
   process.stdin.on('end', () =>
