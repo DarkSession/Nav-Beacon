@@ -86,9 +86,9 @@ const SIGNED_IN_ACTIONS = [
 /**
  * Every state the screen inventory gives this surface, as the dialog draws it.
  *
- * Eight entries for eight states. The inventory's "expired session or
- * authorisation" is one state of the dialog with two reasons, and both are
- * drawn, so the table carries nine rows for eight states.
+ * Ten rows for the ten states design decision 10 names. Each row is one view
+ * the presenter can hand this layer, so the assertions below run over all of
+ * them rather than over the two or three a test happens to name.
  */
 const STATES: readonly { readonly name: string; readonly view: AccountDialogView }[] = [
   {
@@ -165,6 +165,15 @@ const STATES: readonly { readonly name: string; readonly view: AccountDialogView
       commanderName: COMMANDER,
       status: { tone: 'warning', message: BUNDLED_ENGLISH['account.status.delete-confirmation'] },
       deletionConfirmation: true,
+    }),
+  },
+  // Last, because the rows before it are read by position. A browser that has
+  // not answered yet: the layer opens on it whenever the frame action is
+  // pressed before the session reads.
+  {
+    name: 'reading the session',
+    view: view({
+      status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.loading'] },
     }),
   },
 ];

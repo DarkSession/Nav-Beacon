@@ -39,15 +39,15 @@ describe('the local record one remote record becomes', () => {
     if (!adoption.ok) {
       return;
     }
+    // The verdict is the package's, read off the rebuilt loadout rather than
+    // copied from the remote record: a record written against an older package
+    // states what that one said, and this browser stores what its own says.
     expect(adoption.draft).toMatchObject({
       id: FIXTURE_IDS.named,
       kind: 'named',
       name: 'Anaconda explorer',
-      payload: { tool: 'ship' },
+      payload: { tool: 'ship', validation: { valid: true, complete: true } },
     });
-    expect(
-      adoption.draft.payload.tool === 'ship' && adoption.draft.payload.validation,
-    ).toBeDefined();
   });
 
   it('leaves a working build unnamed', async () => {

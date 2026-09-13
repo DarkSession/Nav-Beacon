@@ -9,9 +9,9 @@ optional same-origin Commander service supports account features.
 - [`CONSTITUTION.md`](./CONSTITUTION.md) — the project's non-negotiable
   principles. Everything below is their short form; where the two differ, the
   constitution wins.
-- [`openspec/specs/`](./openspec/specs) — four group directories
-  (`ship-builder/`, `equipment-builder/`, `commander/`, `platform/`). Each
-  capability has one directory and a `spec.md`. Read the capability you touch.
+- [`openspec/specs/`](./openspec/specs) — one directory per capability group,
+  one directory per capability inside each, and a `spec.md` stating what that
+  capability does. Read the capability you touch.
 
 ## Non-negotiables
 

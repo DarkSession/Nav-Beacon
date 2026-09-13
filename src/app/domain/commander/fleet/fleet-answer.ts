@@ -7,8 +7,10 @@
  * whole rather than read as an absence.
  *
  * `GET api/fleet` reads stored state only, so it answers `current`, `empty` or
- * `incomplete` with nothing pending, no failure and no package refusal. The
- * other three results and every failure belong to a refresh.
+ * `incomplete`, with no failure and no package refusal. It can still answer
+ * `pending`: a stored cursor left on a day that has ended says there is journal
+ * left to read. The other three results and every failure belong to a
+ * refresh.
  *
  * Nothing here is a calculated value, a hull or module name, a price, a hot
  * state or a raw journal event: the model is the package-produced ship model

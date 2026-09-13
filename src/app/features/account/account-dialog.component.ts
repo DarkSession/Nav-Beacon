@@ -12,8 +12,9 @@ import { StatusNotice } from '../../ui/components/status/status-notice';
 /**
  * The one Commander account modal, opened from the frame's account action.
  *
- * Four regions in one reading order at every width: who is signed in, what the
- * session is doing, what the account holds, and what can be done about it. The
+ * Five regions in one reading order at every width: who is signed in, what the
+ * session is doing, what the account holds, what needs a network, and what can
+ * be done about it. The
  * account-deletion question is the shared confirmation layer rather than a
  * second set of buttons in this one, so the destructive answer is behind a
  * layer of its own and a dismissal is always a cancel.

@@ -52,26 +52,6 @@ describe('the Commander state a browser keeps', () => {
     expect(parseCommanderLocalState(JSON.parse(JSON.stringify(stored)))).toEqual(stored);
   });
 
-  const refusals: readonly (readonly [string, Record<string, unknown>])[] = [
-    ['a value that is not this application’s', { format: 'other' }],
-    ['an unreadable account', { account: { customerId: 'not-a-customer', commanderName: 'A' } }],
-    ['a cursor under something that is not a Customer ID', { accountCursors: { abc: 3 } }],
-    ['a cursor that is not a whole number', { accountCursors: { [OWNER]: 1.5 } }],
-    ['a revision that is not a number', { recordRevisions: { 'record-1': 'seven' } }],
-    ['a binding that is neither an account nor local-only', { recordBindings: { r: 'nothing' } }],
-    ['an operation naming no record', { pendingOperations: [{ ...operation(), recordId: '' }] }],
-    ['an operation with an unknown kind', { pendingOperations: [{ ...operation(), kind: 'x' }] }],
-    [
-      'an operation with an unreadable time',
-      { pendingOperations: [{ ...operation(), queuedAt: 'whenever' }] },
-    ],
-    ['operations that are not a list', { pendingOperations: {} }],
-  ];
-
-  it.each(refusals)('refuses %s', (_name, overrides) => {
-    expect(parseCommanderLocalState({ ...state(), ...overrides })).toBeNull();
-  });
-
   it('reads the fleet this browser accepted back, under the account it belongs to', () => {
     const fleet = {
       customerId: OWNER,
@@ -114,15 +94,22 @@ describe('the Commander state a browser keeps', () => {
    * refuses everything rather than keeping the part that did read.
    */
   it.each([
+    ['a format this application does not write', { format: 'other' }],
     ['an account that is not an object', { account: 'Hadley' }],
     ['an account carrying a field nobody agreed on', { account: { ...ACCOUNT, email: 'a@b' } }],
     ['an account missing its name', { account: { customerId: OWNER } }],
     ['a customer identity that is not one', { account: { ...ACCOUNT, customerId: 'me' } }],
     ['cursors that are not an object', { accountCursors: [] as unknown }],
     ['a cursor that is not a revision', { accountCursors: { [OWNER]: -1 } }],
+    ['a cursor that is not a whole number', { accountCursors: { [OWNER]: 1.5 } }],
     ['a cursor under an identity that is not one', { accountCursors: { me: 4 } }],
     ['revisions that are not an object', { recordRevisions: 4 as unknown }],
     ['a revision that is not whole', { recordRevisions: { 'record-1': 1.5 } }],
+    ['a revision that is not a number at all', { recordRevisions: { 'record-1': 'seven' } }],
+    [
+      'a binding that is neither an account nor local-only',
+      { recordBindings: { 'record-1': 'nothing' } },
+    ],
     ['a queue that is not a list', { pendingOperations: {} as unknown }],
     ['a queued operation with no identity', { pendingOperations: [operation({ id: '' })] }],
     ['a queued operation with no record', { pendingOperations: [operation({ recordId: '' })] }],
@@ -332,11 +319,25 @@ describe('committing one synchronisation response', () => {
     expect(committed.pendingOperations.map((pending) => pending.id)).toEqual(['operation-2']);
   });
 
-  it('leaves the cursor and the queue alone when nothing commits', () => {
-    // What an unwritten response leaves behind: the retry sends the same work
-    // again and the service answers it as a no-op (020/FR-026).
+  it('leaves the value it committed from untouched', () => {
+    // What an unwritten response leaves behind. A commit answers with a new
+    // value, so the one this browser is still holding is the one a retry sends
+    // again, and the service answers that as a no-op (020/FR-026).
+    withSynchronisationCommitted(before, {
+      customerId: OWNER,
+      cursor: 11,
+      accepted: [{ recordId: 'record-1', revision: 10 }],
+      removedRecordIds: ['record-3'],
+      completedOperationIds: ['operation-1'],
+    });
+
     expect(accountCursor(before, OWNER)).toBe(5);
-    expect(before.pendingOperations).toHaveLength(2);
+    expect(before.pendingOperations.map((pending) => pending.id)).toEqual([
+      'operation-1',
+      'operation-2',
+    ]);
+    expect(recordBinding(before, 'record-3')).toBe(OWNER);
+    expect(remoteRevisionOf(before, 'record-1')).toBeNull();
   });
 
   it('leaves a local-only record local-only', () => {
