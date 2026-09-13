@@ -4662,11 +4662,11 @@ registerPreview({
 // ---------------------------------------------------------------------------
 // Feature 020 — the Commander account
 //
-// One modal, eight states. The five required manifest states cannot name eight
-// screen states between them, so the dialog is declared three times — once for
-// the account's ordinary life, once for a session that cannot be used, and once
-// for the deletion question — and each declaration names the screen state its
-// fixture draws. Registering the same production component under a second id is
+// One modal, twelve states. The five required manifest states cannot name twelve
+// screen states between them, so the dialog is declared four times — once for
+// the account's ordinary life, once for a session that cannot be used, once for
+// the deletion question, and once for what the browser is still establishing —
+// and each declaration names the screen state its fixture draws. Registering the same production component under a second id is
 // what `tab-group-segmented` already does for a second set of renderings.
 //
 // Every fixture reads its words from the bundled English catalogue, so a
@@ -4890,7 +4890,7 @@ registerPreview({
       ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
       true,
     ),
-    // Expired session or authorisation.
+    // Expired session.
     state(
       'error',
       {
@@ -4991,6 +4991,70 @@ registerPreview({
       ],
       ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
       true,
+    ),
+    notApplicable(
+      'disabled',
+      'The account modal is open or closed. Its actions carry their own busy and disabled states; the modal has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'account-dialog-authorisation',
+  group: 'Layers',
+  component: AccountDialog,
+  contract: contract('account-dialog-authorisation', ACCOUNT_DIALOG_SEMANTICS, [
+    'default',
+    'loading',
+  ]),
+  states: [
+    // A Frontier authorisation that lapsed under a session that has not. The
+    // account is still signed in here, so the sign-out and the deletion stand
+    // beside the Frontier sign-in rather than going with the fleet.
+    state(
+      'default',
+      {
+        open: true,
+        view: accountView({
+          commanderName: PREVIEW_COMMANDER,
+          status: {
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['account.status.authorisation-expired'],
+          },
+          actions: [SIGN_IN_ACTION, ...SIGNED_IN_ACTIONS],
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'names the Commander whose session stands while the Frontier authorisation does not',
+        'offers the sign-out and the deletion beside the Frontier sign-in',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'empty',
+      'The modal states what it is establishing while it establishes it. The modal with nothing to say about the session is the anonymous state, declared under account-dialog.',
+    ),
+    // The session being read, at the start of a browser session.
+    state(
+      'loading',
+      {
+        open: true,
+        view: accountView({
+          status: { tone: 'loading', message: BUNDLED_ENGLISH['account.status.loading'] },
+        }),
+      },
+      [
+        ...ACCOUNT_DIALOG_EXPECTATIONS,
+        'states that the session is being read, and offers no action until it answers',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+      true,
+    ),
+    notApplicable(
+      'error',
+      'Reading the session either answers or fails, and a failure is a session that cannot be used — the states declared under account-dialog-session.',
     ),
     notApplicable(
       'disabled',
@@ -5251,6 +5315,22 @@ function synchronisationView(
 const PREVIEW_INSTANT = '12 Sep 2026, 09:41';
 const PREVIEW_RECORD = 'Deep space explorer';
 
+/** One catalogue sentence, with the instant a Commander would read in it. */
+function atPreviewInstant(key: MessageKey): string {
+  return BUNDLED_ENGLISH[key].replace('{{when}}', PREVIEW_INSTANT);
+}
+
+/**
+ * One counted catalogue sentence, with the count a catalogue page shows.
+ *
+ * The stem and the count together choose the sentence, exactly as the message
+ * service does, so a fixture cannot draw the plural form over a count of one.
+ */
+function previewCount(stem: string, count: number): string {
+  const key = `${stem}.${count === 1 ? 'one' : 'many'}` as MessageKey;
+  return BUNDLED_ENGLISH[key].replace('{{count}}', String(count));
+}
+
 function synchronisationConflict(
   overrides: Partial<Record<string, unknown>> = {},
 ): Readonly<Record<string, unknown>> {
@@ -5258,7 +5338,7 @@ function synchronisationConflict(
     recordId: 'preview-record',
     title: BUNDLED_ENGLISH['sync.conflict.stale.title'],
     description: BUNDLED_ENGLISH['sync.conflict.stale.description'],
-    recordLabel: `Record: ${PREVIEW_RECORD}`,
+    recordLabel: BUNDLED_ENGLISH['sync.conflict.record'].replace('{{name}}', PREVIEW_RECORD),
     answers: [
       {
         choice: 'overwrite',
@@ -5316,7 +5396,7 @@ registerPreview({
         view: synchronisationView({
           status: {
             tone: 'success',
-            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+            message: atPreviewInstant('sync.status.current'),
           },
         }),
       },
@@ -5381,20 +5461,22 @@ registerPreview({
     'error',
   ]),
   states: [
-    // Account-bound: records this browser keeps for another Commander.
+    // Account-bound: records this browser keeps for another Commander. The
+    // settled sentence is the one that claims only what this device sends,
+    // because the note under it names records the account does not hold.
     state(
       'default',
       {
         view: synchronisationView({
           status: {
             tone: 'success',
-            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+            message: atPreviewInstant('sync.status.current.partial'),
           },
           notes: [
             {
               id: 'account-bound',
               tone: 'info',
-              message: '2 records belong to another Commander account and stay in this browser.',
+              message: previewCount('sync.note.account-bound', 2),
             },
           ],
         }),
@@ -5402,24 +5484,26 @@ registerPreview({
       [
         ...SYNCHRONISATION_EXPECTATIONS,
         'states that another account’s records stay here and never reach this one',
+        'claims no whole device above a note that names records the account does not hold',
       ],
       ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
     ),
-    // Local-only: records that need an explicit new save or copy.
+    // Local-only, under an account this browser has and could not reach. The
+    // region says the account is out of reach rather than asking a Commander
+    // whose name the frame beside it is drawing to sign in.
     state(
       'empty',
       {
         view: synchronisationView({
           status: {
-            tone: 'success',
-            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+            tone: 'warning',
+            message: BUNDLED_ENGLISH['sync.status.unreachable'],
           },
           notes: [
             {
               id: 'local-only',
               tone: 'info',
-              message:
-                '3 records are kept in this browser only. Save or copy one again to synchronise it.',
+              message: previewCount('sync.note.local-only', 3),
             },
           ],
         }),
@@ -5427,6 +5511,7 @@ registerPreview({
       [
         ...SYNCHRONISATION_EXPECTATIONS,
         'states that a local-only record needs an explicit new save or copy',
+        'states that the account is out of reach rather than asking for a sign-in',
       ],
       ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
     ),
@@ -5437,7 +5522,7 @@ registerPreview({
         view: synchronisationView({
           status: {
             tone: 'warning',
-            message: '2 changes waiting to reach your account. Your records are saved here.',
+            message: previewCount('sync.status.pending', 2),
           },
         }),
       },
@@ -5451,13 +5536,13 @@ registerPreview({
         view: synchronisationView({
           status: {
             tone: 'success',
-            message: `Your account has every record on this device, as of ${PREVIEW_INSTANT}.`,
+            message: atPreviewInstant('sync.status.current'),
           },
           notes: [
             {
               id: 'unsupported-version',
               tone: 'warning',
-              message: 'Your account holds 1 record this version of Nav Beacon cannot open.',
+              message: previewCount('sync.note.unsupported-version', 1),
             },
           ],
         }),
@@ -5491,7 +5576,7 @@ registerPreview({
         view: synchronisationView({
           status: {
             tone: 'warning',
-            message: '1 record needs your answer before it can synchronise.',
+            message: previewCount('sync.status.conflicted', 1),
           },
           conflict: synchronisationConflict(),
         }),
@@ -5522,7 +5607,7 @@ registerPreview({
         view: synchronisationView({
           status: {
             tone: 'warning',
-            message: '1 record needs your answer before it can synchronise.',
+            message: previewCount('sync.status.conflicted', 1),
           },
           conflict: synchronisationConflict({
             title: BUNDLED_ENGLISH['sync.conflict.deleted.title'],
@@ -5550,12 +5635,13 @@ registerPreview({
 // ---------------------------------------------------------------------------
 // Feature 020 — the owned ships, inside the stored-build layer
 //
-// One panel, nine states. The five required manifest states cannot name nine
-// screen states between them, so the panel is declared three times — once for
-// what the fleet is, once for what journal coverage says about it, and once for
-// what the account or the installed game data has to answer first — and each
-// declaration names the screen state its fixture draws. The same reason the
-// account region beside it is declared three times.
+// One panel, eleven states. The five required manifest states cannot name
+// eleven screen states between them, so the panel is declared four times — once
+// for what the fleet is, once for what journal coverage says about it, once for
+// what the account or the installed game data has to answer first, and once for
+// a settled fleet the current sentence does not fit — and each declaration names
+// the screen state its fixture draws. The same reason the account region beside
+// it is declared three times.
 //
 // Every fixture reads its words from the bundled English catalogue, so a
 // reworded sentence reaches the catalogue page and the product together. The
@@ -5853,6 +5939,65 @@ registerPreview({
         ...FLEET_EXPECTATIONS,
         'shows the installed game data own refusal unchanged: its code, its constraint and its path',
         'states in this application own words that the game data gives no reason in this language',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'disabled',
+      'The region states what the fleet is. Its actions carry their own busy and disabled states; the region has none.',
+    ),
+  ],
+});
+
+registerPreview({
+  componentId: 'owned-ships-settled',
+  group: 'Library',
+  component: OwnedShipsPanel,
+  contract: contract('owned-ships-settled', FLEET_SEMANTICS, ['default', 'error']),
+  states: [
+    // Read out of this browser, because no refresh answered.
+    state(
+      'default',
+      {
+        view: fleetView({
+          status: { tone: 'success', message: BUNDLED_ENGLISH['fleet.status.cached'] },
+          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'states that these are the ships last accepted and that a refresh needs a network',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
+    ),
+    notApplicable(
+      'empty',
+      'A settled fleet the current sentence does not fit is a statement about ships that are in it. With none, the state is the empty one declared under owned-ships.',
+    ),
+    notApplicable(
+      'loading',
+      'A settled fleet is what an answer left behind. The refresh that carries it is the loading state declared under owned-ships.',
+    ),
+    // Settled, with a confirmed ship the installed package will not rebuild.
+    state(
+      'error',
+      {
+        view: fleetView({
+          coverage: `Journal read from 01 Jul 2026 to ${PREVIEW_DAY}.`,
+          status: { tone: 'warning', message: BUNDLED_ENGLISH['fleet.status.unresolved'] },
+          unresolved: [
+            {
+              id: 'refused-19',
+              message:
+                'The installed game data cannot rebuild one ship: Unknown module symbol Int_Powerplant_Size9_Class6.',
+            },
+          ],
+        }),
+      },
+      [
+        ...FLEET_EXPECTATIONS,
+        'claims no whole fleet above a ship it names below the list instead',
+        'draws that sentence in the same tone as the rest of what the list does not carry',
       ],
       ['normal', 'expanded-copy', 'rtl', 'reduced-motion', 'long-identity'],
     ),

@@ -57,6 +57,26 @@ describe('LocalRecordRepository', () => {
     });
   });
 
+  /**
+   * A reader that counts records rather than drawing them cannot watch storage
+   * itself, so this is what tells it to read again. It counts what landed: a
+   * refused write left the previous value in place, and announcing one would
+   * send every reader back to storage to read what it already has.
+   */
+  it('counts a stored change and leaves a refused one uncounted', () => {
+    const { repository, storage } = setup();
+
+    expect(repository.revision()).toBe(0);
+    expect(repository.write(draft('r1')).ok).toBe(true);
+    expect(repository.revision()).toBe(1);
+    expect(repository.remove('r1').ok).toBe(true);
+    expect(repository.revision()).toBe(2);
+
+    storage.writeError = quotaError();
+    expect(repository.write(draft('r2')).ok).toBe(false);
+    expect(repository.revision()).toBe(2);
+  });
+
   it('keeps no index beside the records', () => {
     const { repository, storage } = setup();
 

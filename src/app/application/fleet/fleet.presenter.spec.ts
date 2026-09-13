@@ -573,6 +573,10 @@ describe('FleetPresenter', () => {
     // constitution IV).
     expect(view.status.message).toBe(BUNDLED_ENGLISH['fleet.status.unresolved']);
     expect(view.status.message).not.toBe(BUNDLED_ENGLISH['fleet.status.current']);
+    // And the tone says the same thing the sentence does, as it does for the
+    // other statement that this list is not the whole confirmed fleet
+    // (011/FR-010).
+    expect(view.status.tone).toBe('warning');
   });
 
   /**
@@ -586,6 +590,7 @@ describe('FleetPresenter', () => {
     await signIn();
 
     expect(presenter.view().status.message).toBe(BUNDLED_ENGLISH['fleet.status.current']);
+    expect(presenter.view().status.tone).toBe('success');
   });
 
   /**

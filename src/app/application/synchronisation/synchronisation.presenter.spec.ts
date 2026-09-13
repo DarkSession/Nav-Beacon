@@ -25,6 +25,7 @@ import {
   quotaError,
 } from '../../platform/storage/storage.spec-helpers';
 import { AccountStore } from '../account/account.store';
+import { RetentionService } from '../build-library/retention.service';
 import { RecordSynchronisationStore } from './record-synchronisation.store';
 import { SynchronisationPresenter } from './synchronisation.presenter';
 import {
@@ -39,6 +40,22 @@ import {
   signIn,
   writeCommanderState,
 } from './synchronisation.spec-helpers';
+
+/**
+ * The two settled sentences, up to the instant each of them carries.
+ *
+ * Read from the catalogue and compared by their opening words, so a test states
+ * which of the two the panel chose rather than restating either one here. Both
+ * begin the same way, which is why the whole-device sentence is checked for as
+ * well as against (020/FR-011).
+ */
+function partialSentence(): string {
+  return BUNDLED_ENGLISH['sync.status.current.partial'].split('{{when}}')[0];
+}
+
+function wholeSentence(): string {
+  return BUNDLED_ENGLISH['sync.status.current'].split('{{when}}')[0];
+}
 
 /** One refusal that names a record the account no longer holds. */
 function deletionConflict(): SynchronisationResponse {
@@ -101,10 +118,12 @@ function decoded(bytes: string, id: string): LocalRecord {
 describe('what the record libraries say about the account', () => {
   let storage: MemoryStorage;
   let api: FakeCommanderApi;
+  let clock: MovableClock;
 
   beforeEach(() => {
     storage = new MemoryStorage();
     api = new FakeCommanderApi();
+    clock = new MovableClock();
 
     TestBed.configureTestingModule({
       providers: [
@@ -112,7 +131,7 @@ describe('what the record libraries say about the account', () => {
         ...provideIsolatedLocaleEnvironment(),
         provideMemoryStorage(storage, new MemoryStorage()),
         { provide: COMMANDER_API, useValue: api },
-        { provide: ClockAdapter, useValue: new MovableClock() },
+        { provide: ClockAdapter, useValue: clock },
         { provide: UuidAdapter, useClass: SequentialUuid },
         { provide: ConnectivityAdapter, useValue: new SwitchableConnectivity() },
       ],
@@ -143,6 +162,17 @@ describe('what the record libraries say about the account', () => {
 
   function seedRecord(): void {
     storage.entries.set(recordKey(FIXTURE_IDS.named), NAMED_RECORD_V1);
+  }
+
+  /**
+   * Both fixture records, for a test that counts two of them.
+   *
+   * The panel counts the records this browser holds, so a binding is only half
+   * of what makes one countable: the record it names has to be here.
+   */
+  function seedTwoRecords(): void {
+    seedRecord();
+    storage.entries.set(recordKey(FIXTURE_IDS.working), WORKING_RECORD_V1);
   }
 
   it('says the records stay in this browser while nobody is signed in', () => {
@@ -206,12 +236,58 @@ describe('what the record libraries say about the account', () => {
     await signedIn();
 
     const view = presenter().view();
-    const partial = BUNDLED_ENGLISH['sync.status.current.partial'].split('{{when}}')[0];
-    const whole = BUNDLED_ENGLISH['sync.status.current'].split('{{when}}')[0];
-    expect(view.status.message.startsWith(partial)).toBe(true);
-    expect(view.status.message.startsWith(whole)).toBe(false);
+    expect(view.status.message.startsWith(partialSentence())).toBe(true);
+    expect(view.status.message.startsWith(wholeSentence())).toBe(false);
     expect(view.status.tone).toBe('success');
     expect(view.notes.map((note) => note.id)).toEqual(['local-only']);
+  });
+
+  /**
+   * A record the first merge could not offer is held back as surely as one a
+   * Commander kept here.
+   *
+   * Its bytes did not read, so nothing was queued for it and it took no
+   * binding. The exchange settles with nothing outstanding, and the sentence
+   * that says the account has every record on this device is not true over a
+   * record the account was never told about (020/FR-011, 020/FR-012,
+   * constitution IV).
+   */
+  it('does not claim the account has every record while one was never offered', async () => {
+    writeCommanderState(storage, { accountCursors: {} });
+    seedRecord();
+    storage.entries.set(recordKey(FIXTURE_IDS.unsupported), 'not a record this browser can read');
+    await signedIn();
+
+    const view = presenter().view();
+    expect(view.status.message.startsWith(partialSentence())).toBe(true);
+    expect(view.status.message.startsWith(wholeSentence())).toBe(false);
+    // Nothing is said about it here. The library above lists it and says there
+    // why it cannot be opened, and a Commander cannot save again what nothing
+    // can open (020/FR-012, constitution IV).
+    expect(view.notes).toEqual([]);
+  });
+
+  /**
+   * The count follows the records, not a listing taken once.
+   *
+   * An unnamed record whose seven days run out leaves this browser without an
+   * account state write of its own: it carried no binding and no remote
+   * revision, so there is nothing about it to forget. The panel that counted it
+   * has to stop (020/FR-024, 020/FR-025).
+   */
+  it('stops counting a record the account never took once it expires out of this browser', async () => {
+    writeCommanderState(storage, { recordBindings: { [FIXTURE_IDS.named]: CUSTOMER } });
+    seedRecord();
+    storage.entries.set(recordKey(FIXTURE_IDS.working), WORKING_RECORD_V1);
+    await signedIn();
+
+    const view = presenter().view;
+    expect(view().status.message.startsWith(partialSentence())).toBe(true);
+
+    clock.advanceDays(8);
+    TestBed.inject(RetentionService).sweep();
+
+    expect(view().status.message.startsWith(wholeSentence())).toBe(true);
   });
 
   it('names the instant the account confirmed this device at', async () => {
@@ -294,6 +370,7 @@ describe('what the record libraries say about the account', () => {
         [FIXTURE_IDS.working]: 'local-only',
       },
     });
+    seedTwoRecords();
     await signIn(api);
 
     const localOnly = presenter()
@@ -423,6 +500,7 @@ describe('what the record libraries say about the account', () => {
         [FIXTURE_IDS.working]: OTHER_CUSTOMER,
       },
     });
+    seedTwoRecords();
     await signIn(api);
 
     const notes = presenter().view().notes;
@@ -465,6 +543,7 @@ describe('what the record libraries say about the account', () => {
         [FIXTURE_IDS.working]: OTHER_CUSTOMER,
       },
     });
+    seedTwoRecords();
     await signIn(api);
     api.session = { kind: 'unavailable' };
     await TestBed.inject(AccountStore).refreshSession();

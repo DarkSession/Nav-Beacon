@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { decodeAndMigrate } from '../../domain/ships/build/record-migrations';
 import {
   serializeLocalRecord,
@@ -43,6 +43,20 @@ export interface ReadRecord {
 @Injectable({ providedIn: 'root' })
 export class LocalRecordRepository {
   readonly #storage = inject(LOCAL_STORAGE_PORT);
+
+  /**
+   * Counts the record writes and removals this page has made.
+   *
+   * Storage stays the authority on what is stored, so nothing here caches a
+   * listing. This says only that one moved, which is what lets a screen that
+   * counts records rather than drawing them read again after a save or a
+   * deletion made anywhere in this page. Another page's writes are not counted
+   * here: they arrive as invalidations, which `RecordInvalidationService`
+   * publishes.
+   */
+  readonly #revision = signal(0);
+
+  readonly revision = this.#revision.asReadonly();
 
   /** Whether the browser is letting this application store anything at all. */
   available(): boolean {
@@ -197,12 +211,20 @@ export class LocalRecordRepository {
    */
   write(draft: RecordDraft): RepositoryResult<void> {
     const json = serializeLocalRecord(draft);
-    return this.#storage.write(recordKey(draft.id), json);
+    return this.#announce(this.#storage.write(recordKey(draft.id), json));
   }
 
   /** Removes one record. Only ever called after an explicit confirmation. */
   remove(id: string): RepositoryResult<void> {
-    return this.#storage.remove(recordKey(id));
+    return this.#announce(this.#storage.remove(recordKey(id)));
+  }
+
+  /** Counts a change that landed, and passes its result back unchanged. */
+  #announce(result: RepositoryResult<void>): RepositoryResult<void> {
+    if (result.ok) {
+      this.#revision.update((revision) => revision + 1);
+    }
+    return result;
   }
 }
 

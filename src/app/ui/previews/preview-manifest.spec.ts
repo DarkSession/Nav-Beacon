@@ -1,3 +1,4 @@
+import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
 import { COMPONENT_STATES } from '../component-contract';
 import { previewDeclarations, validatePreviewManifest } from './preview-manifest';
 
@@ -42,6 +43,36 @@ describe('preview manifest', () => {
             `${declaration.componentId} / ${state.state}`,
           ).toBeGreaterThan(0);
         }
+      }
+    }
+  });
+
+  /**
+   * A fixture is presentation data, and nothing else checks what it says. This
+   * is the one contradiction that is cheap to check and expensive to ship: the
+   * sentence claiming the account holds every record on this device, drawn over
+   * a note naming a record it does not hold. The product cannot reach that pair
+   * — `SynchronisationPresenter` picks the narrower sentence the moment one
+   * record is held back — so a catalogue page drawing it would be a design
+   * record of a state that does not exist (020/FR-011, constitution IV and
+   * VII).
+   */
+  it('draws no whole-device sentence over a note about a record the account lacks', () => {
+    const whole = BUNDLED_ENGLISH['sync.status.current'].split('{{when}}')[0];
+    const held = ['local-only', 'account-bound'];
+
+    for (const declaration of previewDeclarations()) {
+      for (const state of declaration.states) {
+        const view = state.fixture?.['view'] as
+          { status?: { message?: string }; notes?: { id?: string }[] } | undefined;
+        if (view?.status?.message === undefined || !view.status.message.startsWith(whole)) {
+          continue;
+        }
+
+        expect(
+          (view.notes ?? []).map((note) => note.id).filter((id) => held.includes(id ?? '')),
+          `${declaration.componentId} / ${state.state}`,
+        ).toEqual([]);
       }
     }
   });

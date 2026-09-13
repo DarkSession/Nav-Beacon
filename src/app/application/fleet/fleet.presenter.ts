@@ -255,8 +255,17 @@ export class FleetPresenter {
         return { tone: 'warning', message: this.#messages.message('fleet.status.incomplete') };
       case 'empty':
         return { tone: 'info', message: this.#messages.message('fleet.status.empty') };
-      default:
-        return { tone: 'success', message: this.#messages.message(this.#settledKey(holding)) };
+      default: {
+        const key = this.#settledKey(holding);
+        return {
+          // A ship named below rather than listed is a list that does not carry
+          // the confirmed fleet, which is what `fleet.status.incomplete` says
+          // above it in a warning. Drawing the same fact as a success would be
+          // a second rendering of a different sentence (011/FR-010).
+          tone: key === 'fleet.status.unresolved' ? 'warning' : 'success',
+          message: this.#messages.message(key),
+        };
+      }
     }
   }
 

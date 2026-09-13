@@ -1,8 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import {
-  accountCursor,
-  type RecordAccountBinding,
-} from '../../domain/commander/commander-local-state';
+import { accountCursor, recordBinding } from '../../domain/commander/commander-local-state';
 import type { ConflictChoice, RecordConflict } from '../../domain/commander/record-conflict';
 import { Formatters } from '../../i18n/formatters/formatters';
 import type { MessageKey } from '../../i18n/locale-registry';
@@ -137,28 +134,62 @@ export class SynchronisationPresenter {
    * The records on this device that this account does not hold.
    *
    * One read, because the status sentence and the notes are two statements
-   * about the same set and a Commander reads them together. Counted from the
-   * stored bindings, which is where a record's account state lives; the read is
-   * not a signal, so it is taken again whenever the exchange state or the
-   * session changes — which is when a binding can have changed (020/FR-024).
+   * about the same set and a Commander reads them together.
+   *
+   * Counted over the records this browser actually holds rather than over the
+   * stored bindings, because a binding is not a record: an account can name one
+   * this device no longer has, and a record this device has can carry no
+   * binding at all. Neither store is cached here — both are read whole, because
+   * storage stays the authority on what is stored — and the record store's own
+   * revision is what makes the count follow them. A record leaving this browser
+   * is the one change that moves these counts on its own: a deletion made while
+   * nobody is signed in, and an expired unnamed record swept away, both take a
+   * record out without touching the session or the exchange. Every write that
+   * changes a binding under a record that stays — an exchange committing, a
+   * conflict answered, the account departing — moves one of those two, which
+   * the view reads beside this (020/FR-024, 020/FR-025).
    */
   #heldBack(customerId: string | null): HeldBackRecords {
-    const bindings: Readonly<Record<string, RecordAccountBinding>> =
-      this.#state.read().recordBindings;
-    const values = Object.values(bindings);
+    this.#records.revision();
 
-    return {
-      localOnly: values.filter((binding) => binding === 'local-only').length,
+    const state = this.#state.read();
+    const listed = this.#records.ids();
+    const ids = listed.ok ? listed.value : [];
+
+    let localOnly = 0;
+    let elsewhere = 0;
+    let unoffered = 0;
+
+    for (const id of ids) {
+      const binding = recordBinding(state, id);
+      if (binding === 'local-only') {
+        localOnly += 1;
+        continue;
+      }
       // Only where this browser knows whose account it has. Without a Customer
       // ID nothing here is another Commander's rather than this one's, and every
       // bound record would be counted as somebody else's — which is what a
       // Commander reads after a sign-out, when the bindings deliberately stay
       // (020/FR-003, constitution IV).
-      elsewhere:
-        customerId === null
-          ? 0
-          : values.filter((binding) => binding !== 'local-only' && binding !== customerId).length,
-    };
+      if (customerId === null) {
+        continue;
+      }
+      // A record this account has never taken. The first merge passes over one
+      // it cannot read or rebuild, and a refused upload leaves one where it is,
+      // so an unbound record is one the account does not hold. What is on its
+      // way to the account is not read from here: this count is only ever asked
+      // for under the settled sentence, which is the state where nothing of
+      // this Commander's is waiting (020/FR-012, 020/FR-026).
+      if (binding === null) {
+        unoffered += 1;
+        continue;
+      }
+      if (binding !== customerId) {
+        elsewhere += 1;
+      }
+    }
+
+    return { localOnly, elsewhere, unoffered };
   }
 
   #statusOf(
@@ -191,13 +222,14 @@ export class SynchronisationPresenter {
         return {
           tone: 'success',
           message: this.#messages.message(
-            // A record kept in this browser only, and a record belonging to
-            // another Commander, are both on this device and neither is in this
-            // account. Saying the account has every record on this device over
-            // a note that names one it does not have states two different
-            // things about one library, and the sentence is the one that is
-            // wrong (020/FR-011, 020/FR-024, constitution IV).
-            held.localOnly + held.elsewhere > 0
+            // A record kept in this browser only, a record belonging to
+            // another Commander, and a record this browser could not offer are
+            // all on this device and none of them is in this account. Saying
+            // the account has every record on this device states something
+            // about one library that its own notes contradict, and over a
+            // record it could not offer it states it with nothing beside it to
+            // read (020/FR-011, 020/FR-012, 020/FR-024, constitution IV).
+            held.localOnly + held.elsewhere + held.unoffered > 0
               ? 'sync.status.current.partial'
               : 'sync.status.current',
             { when: this.#instant(status.at) },
@@ -239,9 +271,15 @@ export class SynchronisationPresenter {
   /**
    * The sentences about sets of records, rather than about the exchange.
    *
-   * The two counts arrive already taken, because the status sentence above them
-   * is decided by the same two and the panel must not state one set twice
+   * The counts arrive already taken, because the status sentence above them is
+   * decided by the same ones and the panel must not state one set twice
    * (020/FR-024).
+   *
+   * A record this browser could not offer has no note. It is already listed in
+   * the library above, which says there why it cannot be opened or rebuilt, and
+   * a second sentence here would either repeat that or offer a Commander a
+   * remedy — save or copy it again — that a record nothing can open does not
+   * have (020/FR-012, constitution IV).
    */
   #notes(held: HeldBackRecords): readonly SynchronisationNote[] {
     const notes: SynchronisationNote[] = [];
@@ -362,6 +400,14 @@ interface HeldBackRecords {
   readonly localOnly: number;
   /** Bound to a Commander account other than the one signed in here. */
   readonly elsewhere: number;
+  /**
+   * Never taken by the account signed in here.
+   *
+   * A record the first merge passed over — its stored bytes did not read, or
+   * the installed package would not rebuild it — is never queued, so it takes
+   * no binding and the exchange settles without it (020/FR-012).
+   */
+  readonly unoffered: number;
 }
 
 type CountedMessageStem = PairedStem<MessageKey, MessageKey>;
