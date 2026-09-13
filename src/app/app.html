@@ -87,21 +87,25 @@
   <!--
     The Commander account, beside the frame for the same reason help is: an
     account belongs to the session rather than to a screen. Browser-only, and
-    fetched with the session rather than on the press: the modal is also where a
-    refused sign-in callback and an expired session are stated, and a chunk
-    asked for at the moment it is opened is a request that has nothing to say
-    when the network is the thing that failed. `prefetch on idle` is what
-    separates the two — the code is fetched once the browser has nothing else
-    to do, so it is here long before a Commander reaches for the account, and
-    the first payload carries only what the first frame draws.
+    reached rather than carried, so the first payload holds only what the first
+    frame draws.
 
-    On idle rather than on immediate, because a fetch started with the session
-    lands inside the takeover a served document is still holding. That frame is
-    the one thing on this screen that may not move, and a chunk arriving in the
-    middle of it composes the list a second time
-    (024/FR-001, 024/FR-003, 015/FR-009, constitution IV).
+    The worker prefetches every script with the shell
+    (`ngsw-config.json`, `app-shell`), so from the second visit on this code is
+    already in the cache and opening the account asks the network for nothing.
+    That is what lets the modal still state a refused sign-in callback and an
+    expired session, which are the moments the network is the thing that
+    failed: reaching Frontier and coming back is a fresh load of an
+    application the browser already holds.
+
+    No prefetch trigger of its own. A fetch started with the session lands
+    inside the takeover a served document is still holding, and that frame may
+    not move; one started on idle competes with the engine the session is
+    already fetching, on the one screen where a Commander is most likely to
+    reach for something else at the same time (024/FR-001, 024/FR-003,
+    015/FR-009, constitution IV).
   -->
-  @defer (when account.open(); prefetch on idle) {
+  @defer (when account.open()) {
     <ednb-account-dialog
       [open]="account.open()"
       [view]="account.view()"
