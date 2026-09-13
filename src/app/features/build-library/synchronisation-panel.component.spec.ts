@@ -44,6 +44,18 @@ const CURRENT = {
   message: BUNDLED_ENGLISH['sync.status.current'].replace('{{when}}', INSTANT),
 } as const;
 
+/**
+ * The settled sentence a library with something held back reads.
+ *
+ * The presenter chooses between this and `CURRENT` by the same count that
+ * raises the notes below, so a note about a held-back record never appears
+ * beside the sentence that says the account has everything.
+ */
+const PARTIAL = {
+  tone: 'success',
+  message: BUNDLED_ENGLISH['sync.status.current.partial'].replace('{{when}}', INSTANT),
+} as const;
+
 function view(overrides: Partial<SynchronisationPanelView> = {}): SynchronisationPanelView {
   return {
     heading: BUNDLED_ENGLISH['sync.title'],
@@ -89,12 +101,21 @@ function conflict(overrides: Record<string, unknown> = {}) {
 /**
  * Every state design decision 10 gives the two record libraries.
  *
- * Ten rows for the ten states the screen inventory names: local only, first
- * merge, current, pending, failed, account-bound, local-only, the two conflicts
- * and an unsupported remote version.
+ * Twelve rows for the twelve states the screen inventory names: local only, an
+ * unreachable account, first merge, current, current for what this device
+ * sends, pending, failed, account-bound, local-only, the two conflicts and an
+ * unsupported remote version. Each row is one view the presenter can hand this
+ * layer, so the sweeps below run over all of them rather than over the two or
+ * three a test happens to name.
  */
 const STATES: readonly { readonly name: string; readonly view: SynchronisationPanelView }[] = [
   { name: 'local only', view: view() },
+  {
+    name: 'account unreachable',
+    view: view({
+      status: { tone: 'warning', message: BUNDLED_ENGLISH['sync.status.unreachable'] },
+    }),
+  },
   {
     name: 'first merge',
     view: view({
@@ -102,6 +123,13 @@ const STATES: readonly { readonly name: string; readonly view: SynchronisationPa
     }),
   },
   { name: 'current', view: view({ status: CURRENT }) },
+  {
+    // Held back with no note of its own: a record the first merge passed over
+    // takes no binding, so the sentence is the only thing that says the account
+    // does not have everything.
+    name: 'current for what this device sends',
+    view: view({ status: PARTIAL }),
+  },
   {
     name: 'pending',
     view: view({
@@ -119,7 +147,7 @@ const STATES: readonly { readonly name: string; readonly view: SynchronisationPa
   {
     name: 'account-bound records',
     view: view({
-      status: CURRENT,
+      status: PARTIAL,
       notes: [
         { id: 'account-bound', tone: 'info', message: counted('sync.note.account-bound', 2) },
       ],
@@ -128,7 +156,7 @@ const STATES: readonly { readonly name: string; readonly view: SynchronisationPa
   {
     name: 'local-only records',
     view: view({
-      status: CURRENT,
+      status: PARTIAL,
       notes: [{ id: 'local-only', tone: 'info', message: counted('sync.note.local-only', 3) }],
     }),
   },
@@ -245,9 +273,23 @@ function ownDeclarations(): { selector: string; body: string }[] {
   return found;
 }
 
+/**
+ * One row of the table of states, by the name it carries.
+ *
+ * Named rather than read by position, so a state added to the table cannot
+ * quietly move which view a test renders.
+ */
+function stateNamed(name: string): SynchronisationPanelView {
+  const found = STATES.find((entry) => entry.name === name);
+  if (found === undefined) {
+    throw new Error(`No state named ${name}.`);
+  }
+  return found.view;
+}
+
 describe('SynchronisationPanel', () => {
   it('is one region, named by its own visible heading', () => {
-    const fixture = render(STATES[2].view);
+    const fixture = render(stateNamed('current'));
     const heading = region(fixture).querySelector('.sync__heading');
 
     expect(heading?.tagName.toLowerCase()).toBe('h3');
@@ -286,7 +328,7 @@ describe('SynchronisationPanel', () => {
     });
 
     it('states the supporting detail of a failure beside its sentence', () => {
-      const fixture = render(STATES[4].view);
+      const fixture = render(stateNamed('failed'));
 
       expect(textOf(region(fixture))).toContain(counted('sync.status.failed.pending', 2));
     });
@@ -321,7 +363,10 @@ describe('SynchronisationPanel', () => {
     });
 
     it('offers all three answers, by their visible names, in both conflicts', () => {
-      for (const state of [STATES[8].view, STATES[9].view]) {
+      for (const state of [
+        stateNamed('stale-write conflict'),
+        stateNamed('remote deletion conflict'),
+      ]) {
         const fixture = render(state);
         const answers = [...element(fixture).querySelectorAll<HTMLElement>('.sync__answer button')];
 
@@ -341,9 +386,10 @@ describe('SynchronisationPanel', () => {
       }
     });
 
-    it('tells the ten states apart by their words alone', () => {
+    it('tells the twelve states apart by their words alone', () => {
       // Nothing here is carried by colour: strip every class and attribute a
-      // tone could be drawn from, and the ten states are still ten sentences.
+      // tone could be drawn from, and the twelve states are still twelve
+      // sentences.
       const sentences = STATES.map((entry) => said(render(entry.view)));
 
       expect(new Set(sentences).size).toBe(STATES.length);
@@ -416,7 +462,7 @@ describe('SynchronisationPanel', () => {
 
   describe('what keeps the page from scrolling sideways', () => {
     it('states every length as a token, so nothing is pinned to a pixel box', () => {
-      render(STATES[4].view);
+      render(stateNamed('failed'));
       const declared = ownDeclarations();
 
       expect(declared.length).toBeGreaterThan(0);
@@ -428,16 +474,17 @@ describe('SynchronisationPanel', () => {
     });
 
     it('wraps its rows of actions rather than letting them run past the panel', () => {
-      expect(getComputedStyle(query(render(STATES[4].view), '.sync__actions')).flexWrap).toBe(
+      expect(getComputedStyle(query(render(stateNamed('failed')), '.sync__actions')).flexWrap).toBe(
         'wrap',
       );
-      expect(getComputedStyle(query(render(STATES[8].view), '.sync__answers')).flexWrap).toBe(
-        'wrap',
-      );
+      expect(
+        getComputedStyle(query(render(stateNamed('stale-write conflict')), '.sync__answers'))
+          .flexWrap,
+      ).toBe('wrap');
     });
 
     it('wraps the long words it does not own — a record name and a sentence', () => {
-      const fixture = render(STATES[7].view);
+      const fixture = render(stateNamed('unsupported remote version'));
 
       for (const selector of ['.sync__status', '.sync__note']) {
         expect(getComputedStyle(query(fixture, selector)).overflowWrap, selector).toBe('anywhere');
@@ -445,7 +492,7 @@ describe('SynchronisationPanel', () => {
     });
 
     it('asks no region of its own to scroll sideways', () => {
-      render(STATES[2].view);
+      render(stateNamed('current'));
 
       for (const { selector, body } of ownDeclarations()) {
         expect(body, selector).not.toContain('overflow-x');
@@ -491,7 +538,7 @@ describe('SynchronisationPanel', () => {
 
   describe('the intents it emits', () => {
     it('asks for another attempt rather than making one', () => {
-      const fixture = render(STATES[4].view);
+      const fixture = render(stateNamed('failed'));
       let asked = 0;
       fixture.componentInstance.retryRequested.subscribe(() => {
         asked += 1;
@@ -503,7 +550,7 @@ describe('SynchronisationPanel', () => {
     });
 
     it('names the answer a Commander chose rather than acting on it', () => {
-      const fixture = render(STATES[8].view);
+      const fixture = render(stateNamed('stale-write conflict'));
       const chosen: string[] = [];
       fixture.componentInstance.answered.subscribe((choice) => chosen.push(choice));
 
@@ -515,7 +562,7 @@ describe('SynchronisationPanel', () => {
     });
 
     it('treats dismissal as no answer at all', () => {
-      const fixture = render(STATES[9].view);
+      const fixture = render(stateNamed('remote deletion conflict'));
       const events: string[] = [];
       fixture.componentInstance.conflictDismissed.subscribe(() => events.push('dismissed'));
       fixture.componentInstance.answered.subscribe(() => events.push('answered'));

@@ -119,11 +119,14 @@ function view(overrides: Partial<OwnedShipsView> = {}): OwnedShipsView {
 }
 
 /**
- * Every state design decision 10 gives the owned-ships view.
+ * Every state the owned-ships view model names, as this layer draws it.
  *
- * Nine rows for the nine the screen inventory names: sign-in required, loading,
- * current, incomplete coverage, no confirmed ships, waiting for Frontier,
- * failed refresh, expired authorisation and a refused package identity.
+ * Nine rows, against the eleven screen states design decision 10 gives the
+ * view: `current` is a settled fleet, and which of its three sentences a
+ * Commander reads is decided by whether the list came from the cache and
+ * whether the installed package refused a confirmed ship. That choice is the
+ * presenter's and is asserted there, because this layer draws whichever
+ * sentence it is handed.
  */
 const STATES: readonly { readonly name: OwnedShipsState; readonly view: OwnedShipsView }[] = [
   {
@@ -288,7 +291,7 @@ describe('OwnedShipsPanel', () => {
   });
 
   describe('every state in the screen inventory', () => {
-    it('covers the nine design decision 10 names, once each', () => {
+    it('covers the nine view-model names, once each', () => {
       const named: readonly OwnedShipsState[] = [
         'sign-in-required',
         'loading',
