@@ -52,7 +52,7 @@ export interface SynchronisationPanelView {
 /**
  * What the record libraries say about the Commander's account, in words.
  *
- * Ten states in one view model, so the library draws the same region whatever
+ * Twelve states in one view model, so the library draws the same region whatever
  * the account is doing: where the records are, what is owed, what failed and
  * what needs an answer. A state with nothing to add to a region leaves the
  * region out rather than moving the ones around it.

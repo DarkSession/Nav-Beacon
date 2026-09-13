@@ -5305,11 +5305,14 @@ registerPreview({
 // ---------------------------------------------------------------------------
 // Feature 020 — the record libraries' account region
 //
-// One panel, ten states. The five required manifest states cannot name ten
-// screen states between them, so the panel is declared three times — once for
-// where the account stands, once for what is true of sets of records, and once
-// for the question only a Commander can answer — and each declaration names the
-// screen state its fixture draws. Registering one production component under a
+// One panel, twelve states. The five required manifest states cannot name
+// twelve screen states between them, so the panel is declared three times —
+// once for where the account stands, once for what is true of sets of records,
+// and once for the question only a Commander can answer — and each declaration
+// names the screen state or states its fixture draws. Two of them draw two: a
+// note about records the account does not hold is read under a sentence about
+// the device, so the fixture that carries the note carries that sentence with
+// it. Registering one production component under a
 // second id is what `tab-group-segmented` already does for a second set of
 // renderings.
 //

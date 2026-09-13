@@ -8,6 +8,29 @@ import type {
 } from './build-ingress-result';
 
 /**
+ * A diagnostic naming what the gate refused, mount by mount.
+ *
+ * It states only what the gate answered — a count and the codes it gave — and
+ * invents no cause for it (constitution IV). Every door that has to say why a
+ * refusal happened reads it from here, so one refusal is one sentence rather
+ * than a sentence for each door.
+ *
+ * It is the one English sentence the ingress paths leave uncatalogued.
+ * `record-open.service.ts` renders it to a Commander, framed by
+ * `library.open.failed`, because a record stored before this application
+ * completed rolls can carry a partial one. `fleet-copy.service.ts` reads it for
+ * a refusal it cannot reach: an owned ship states completed grades and no roll
+ * quality (020/FR-015), so the gate finds nothing partial there to complete.
+ * The note on `normalizeReconstructedBuild` below holds the reasoning, and what
+ * would change it (constitution VI).
+ */
+export function refusalReason(failures: readonly { readonly code: string | null }[]): string {
+  return `The Almanac could not complete ${failures.length} partial engineering roll(s): ${failures
+    .map((failure) => failure.code ?? 'unknown')
+    .join(', ')}.`;
+}
+
+/**
  * The one gate every incoming build passes through.
  *
  * Opening a record, loading a link, importing SLEF and restoring on reload all
@@ -68,22 +91,6 @@ import type {
  * the build. Neither has an engineering-provenance surface to be offered or
  * stated on.
  */
-/**
- * A diagnostic naming what the gate refused, mount by mount.
- *
- * Never Commander-facing text. It states only what the gate answered — a count
- * and the codes it gave — and invents no cause for it (constitution IV). Every
- * door that has to say why a refusal happened reads it from here, so one
- * refusal is one sentence rather than a sentence for each door. A door that
- * renders it to a Commander would owe the message layer a code instead
- * (constitution VI, and the note on `normalizeReconstructedBuild` below).
- */
-export function refusalReason(failures: readonly { readonly code: string | null }[]): string {
-  return `The Almanac could not complete ${failures.length} partial engineering roll(s): ${failures
-    .map((failure) => failure.code ?? 'unknown')
-    .join(', ')}.`;
-}
-
 export function normalizeIncomingBuild(event: LoadoutEvent): IngressResult {
   // Step 1. Read the source's partial rolls before construction consumes them.
   const partials = sourcePartials(event);
