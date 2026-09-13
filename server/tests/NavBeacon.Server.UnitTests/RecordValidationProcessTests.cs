@@ -92,9 +92,10 @@ public sealed class RecordValidationProcessTests
     // A missing bundle exits while the request is still being written. Anything
     // that fits the operating system's pipe buffer lands in it and the command
     // is answered by its exit code; anything larger blocks on a pipe with no
-    // reader. Both callers send more than this routinely — a synchronisation
-    // batch is bounded at 1 MiB and a journal batch at a day of `Loadout`
-    // lines — so this is the ordinary shape of the failure, not the edge of it.
+    // reader. Both callers can send far more than that buffer — a
+    // synchronisation batch carries up to 100 changes and 1 MiB, and a journal
+    // batch up to 100 `Loadout` lines and 4 MiB — so the larger request needs
+    // an answer of its own.
     var process = new RecordValidationProcess(
       new RecordValidationProcessOptions(
         "node",

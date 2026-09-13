@@ -44,6 +44,13 @@ public sealed class RecordSynchronisationService(
   {
     var now = timeProvider.GetUtcNow();
     var contentBefore = now - ModificationPeriod;
+    // Nothing read before this transaction is read inside it. Authenticating
+    // the request loaded this account, and a second device can commit between
+    // that read and this one — the validator subprocess holds the window open
+    // for as long as it runs. A locking re-read of an entity already tracked
+    // returns the tracked one and keeps its values, so the lock would be taken
+    // and the number under it would still be the stale one.
+    database.ChangeTracker.Clear();
     await using var transaction = await database.Database.BeginTransactionAsync(
       IsolationLevel.ReadCommitted,
       cancellationToken
@@ -86,13 +93,25 @@ public sealed class RecordSynchronisationService(
   )
   {
     var now = timeProvider.GetUtcNow();
+    // As in `ExpireAsync`, and for the records as well as the account: the
+    // expiry pass above has committed, and another device may have written one
+    // of these records since.
+    database.ChangeTracker.Clear();
     await using var transaction = await database.Database.BeginTransactionAsync(
       IsolationLevel.ReadCommitted,
       cancellationToken
     );
-    var account =
-      await LockAccountAsync(customerId, cancellationToken)
-      ?? throw new InvalidOperationException("The signed-in account has no record stream.");
+    var account = await LockAccountAsync(customerId, cancellationToken);
+    if (account is null)
+    {
+      // The account was deleted while this request was in flight. A deletion
+      // commits in its own request and takes the sessions with it, so a batch
+      // can arrive here with nothing to write to. It is answered as a request
+      // from an account that is not signed in, which is what a retry would be
+      // told anyway.
+      await transaction.RollbackAsync(cancellationToken);
+      return new RecordSynchronisationOutcome(RecordErrorCodes.Unauthorised, 0, [], []);
+    }
 
     var named = request.Changes.Select(change => change.RecordId).ToArray();
     var rows =

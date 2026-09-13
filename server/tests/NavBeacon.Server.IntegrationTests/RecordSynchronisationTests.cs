@@ -459,13 +459,12 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     );
     using var commander = await SignInAsync(server, frontier, 70_018);
 
-    // Forty records is about 98 KiB of canonical JSON, past the 64 KiB pipe
+    // Forty records is about 96 KiB of canonical JSON, past the 64 KiB pipe
     // buffer Linux gives a child's stdin, so the request is still being written
     // when the missing bundle exits. A batch that fits the buffer lands in it
     // and is answered by the exit code instead. This is well inside the 100
-    // changes and 1 MiB a batch may carry, and is the size a first merge of a
-    // stored library sends (deployment document, "A bundle the instance cannot
-    // run").
+    // changes and 1 MiB a batch may carry (deployment document, "Settings each
+    // instance reads").
     var refused = await commander.SynchroniseAsync(
       RecordFixtures.Request(
         0,
@@ -587,6 +586,53 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     return request.ToJsonString();
   }
 
+  [Fact]
+  public async Task AnAccountRevisionCommittedMidRequestIsNotOverwritten()
+  {
+    var race = new RevisionRaceInterceptor(database.ConnectionString);
+    using var server = NewServer(out var frontier, out _, race);
+    using var commander = await SignInAsync(server, frontier, 70_019);
+
+    var accepted = await commander.SynchroniseAsync(
+      RecordFixtures.Request(0, RecordFixtures.Write(RecordFixtures.Ship(Guid.NewGuid())))
+    );
+
+    Assert.Equal(HttpStatusCode.OK, accepted.Status);
+    await using var context = database.CreateContext();
+    var account = await context
+      .CommanderAccounts.AsNoTracking()
+      .SingleAsync(entry => entry.CustomerId == 70_019);
+    // The account revision only ever moves forward. Writing a number below one
+    // another device already holds would put this record behind that device's
+    // cursor, and it would never be sent (design decision "Records", one
+    // monotonic account revision).
+    Assert.True(
+      account.RecordRevision > race.Committed,
+      $"The account revision went from {race.Committed} to {account.RecordRevision}."
+    );
+  }
+
+  [Fact]
+  public async Task AnAccountDeletedMidRequestRefusesTheBatchAsUnauthorised()
+  {
+    using var server = NewServer(
+      out var frontier,
+      out _,
+      new AccountDeletingInterceptor(database.ConnectionString)
+    );
+    using var commander = await SignInAsync(server, frontier, 70_020);
+
+    var refused = await commander.SynchroniseAsync(
+      RecordFixtures.Request(0, RecordFixtures.Write(RecordFixtures.Ship(Guid.NewGuid())))
+    );
+
+    // An account that is gone is answered the way an unsigned request is, with
+    // a code the browser can read, rather than by an exception the endpoint
+    // does not catch and a body that states nothing.
+    Assert.Equal(HttpStatusCode.Unauthorized, refused.Status);
+    Assert.Equal("unauthorised", refused.Code);
+  }
+
   private CommanderTestServer NewServer(
     out FakeFrontierClient frontier,
     out ManualTimeProvider clock,
@@ -605,6 +651,82 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     FakeFrontierClient frontier,
     long customerId
   ) => SignedInCommander.SignInAsync(server, frontier, customerId, InitialTime);
+}
+
+/// <summary>
+/// Commits one revision for this account from another connection, the first
+/// time the account row is locked.
+///
+/// It stands in for a second device that synchronised while this request was
+/// between authenticating and applying — a window the validator subprocess
+/// holds open for as long as it runs.
+/// </summary>
+internal sealed class RevisionRaceInterceptor(string connectionString) : DbCommandInterceptor
+{
+  private bool done;
+
+  public long Committed { get; private set; }
+
+  public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+    DbCommand command,
+    CommandEventData eventData,
+    InterceptionResult<DbDataReader> result,
+    CancellationToken cancellationToken = default
+  )
+  {
+    // Before the lock is taken, so the other connection is never waiting on it.
+    if (!done && command.CommandText.Contains("FOR UPDATE", StringComparison.Ordinal)
+      && command.CommandText.Contains("commander_accounts", StringComparison.Ordinal))
+    {
+      done = true;
+      Committed = Raise();
+    }
+    return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+  }
+
+  private long Raise()
+  {
+    using var connection = new NpgsqlConnection(connectionString);
+    connection.Open();
+    using var command = connection.CreateCommand();
+    command.CommandText =
+      "UPDATE commander_accounts SET record_revision = record_revision + 5 "
+      + "RETURNING record_revision";
+    return (long)command.ExecuteScalar()!;
+  }
+}
+
+/// <summary>
+/// Deletes this account from another connection, the first time the account row
+/// is locked.
+///
+/// It stands in for a Commander who asked for deletion on one device while a
+/// batch from another was in flight. The deletion commits in its own request
+/// and takes the sessions with it.
+/// </summary>
+internal sealed class AccountDeletingInterceptor(string connectionString) : DbCommandInterceptor
+{
+  private bool done;
+
+  public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+    DbCommand command,
+    CommandEventData eventData,
+    InterceptionResult<DbDataReader> result,
+    CancellationToken cancellationToken = default
+  )
+  {
+    if (!done && command.CommandText.Contains("FOR UPDATE", StringComparison.Ordinal)
+      && command.CommandText.Contains("commander_accounts", StringComparison.Ordinal))
+    {
+      done = true;
+      using var connection = new NpgsqlConnection(connectionString);
+      connection.Open();
+      using var delete = connection.CreateCommand();
+      delete.CommandText = "DELETE FROM commander_accounts";
+      delete.ExecuteNonQuery();
+    }
+    return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+  }
 }
 
 /// <summary>Fails every record command, so the endpoint states a service failure.</summary>

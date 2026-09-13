@@ -99,12 +99,11 @@ public sealed class BoundedNodeProcess(BoundedNodeProcessOptions options)
     }
     catch (IOException)
     {
-      // The command went away while the request was being written to it. A
-      // request small enough to sit in the operating system's pipe buffer is
-      // answered by the exit code below; a larger one blocks on a pipe nothing
-      // is reading and ends here. Both are the command failing, and both
-      // callers send batches far over that buffer, so this is the ordinary
-      // shape of a missing or broken command rather than the edge of it.
+      // The command went away, or its pipes broke. A request small enough to
+      // sit in the operating system's pipe buffer is answered by the exit code
+      // below; a larger one blocks on a pipe nothing is reading and ends here.
+      // Both callers can send far more than that buffer, so a command that will
+      // not run has to be refused here as well as there.
       Kill(process);
       return Failed(BoundedProcessFailure.ProcessFailed);
     }

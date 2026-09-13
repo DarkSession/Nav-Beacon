@@ -52,6 +52,14 @@ public sealed class FrontierCredentialService(
       await transaction.CommitAsync(cancellationToken);
       return null;
     }
+    // A locking re-read of an entity this request already tracks returns the
+    // tracked one and keeps its values, so the row is read again here. The
+    // tokens and their expiry decide whether Frontier is asked to refresh, and
+    // a refresh answered on another request has already rotated them: acting on
+    // the values read before it would send a refresh token Frontier has
+    // retired. The tracker is not cleared instead, because a fleet refresh
+    // holds its journal cursor across this call.
+    await database.Entry(account).ReloadAsync(cancellationToken);
 
     if (!forceRefresh && account.AccessTokenExpiresAt > timeProvider.GetUtcNow())
     {
