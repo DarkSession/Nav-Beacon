@@ -1,6 +1,6 @@
 # Runs most of the gate `pnpm run check` runs, split into individual steps so a
 # failure names the stage that broke: formatting, the specification record,
-# types, server restore, server format, server build, server tests, the script
+# server restore, server format, server build, server tests, types, the script
 # tests, the Angular build, unit tests and the Playwright end-to-end suite across
 # the desktop, tablet and mobile viewports. The Angular and .NET unit tests both
 # enforce their 80% coverage floors. CI has one stage of its own, between the

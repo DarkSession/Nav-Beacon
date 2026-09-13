@@ -210,11 +210,17 @@ public sealed class FleetService(
         // reach here: the date has not ended and is still being written, or
         // Frontier answered it incomplete. In both, more of that day may still
         // be readable, and a date the cursor leaves is never read again.
+        //
+        // `Pending` is asked alongside the batch bound because the second
+        // reason can hold on a date that has ended, and a day that has ended
+        // with journal left in it is what a later read answers `pending` from.
+        // Answering `false` here would be contradicted by the next page load,
+        // off the same stored state (020/FR-016).
         await SaveNextPermittedAsync(cursor, read.NextPermittedRefreshAt, cancellationToken);
         return await SettledAsync(
           customerId,
           cursor,
-          day.Stopped,
+          day.Stopped || Pending(cursor),
           read.NextPermittedRefreshAt is null ? null : FleetResults.Waiting,
           cancellationToken
         );

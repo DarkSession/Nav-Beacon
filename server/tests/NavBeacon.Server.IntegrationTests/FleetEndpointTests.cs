@@ -222,6 +222,32 @@ public sealed class FleetEndpointTests(PostgreSqlDatabaseFixture database)
     Assert.Equal(Yesterday.ToString("yyyy-MM-dd"), read.CursorDate);
   }
 
+  [Fact]
+  public async Task ARefreshFrontierAnsweredIncompleteOnAnEndedDayIsPending()
+  {
+    var journal = new FakeJournalClient();
+    journal.Incomplete(
+      Yesterday,
+      JournalFixtures.Loadout(12),
+      JournalFixtures.StoredShips(shipIds: [12])
+    );
+    using var server = NewServer(journal, out var frontier);
+    using var commander = await SignIn(server, frontier, 82_019);
+    await database.SeedCursorAsync(82_019, Yesterday, 0);
+
+    var refreshed = await commander.RefreshFleetAsync();
+    var read = await commander.ReadFleetAsync();
+
+    // Frontier answered a day that has ended incomplete, so the cursor stays on
+    // it and the rest of that day is still to read. The refresh and the reload
+    // are looking at one stored state, so they answer it the same way: a
+    // refresh that said `false` here would be contradicted by the next page
+    // load (020/FR-016).
+    Assert.True(refreshed.Pending);
+    Assert.Equal(read.Pending, refreshed.Pending);
+    Assert.Equal(Yesterday.ToString("yyyy-MM-dd"), refreshed.CursorDate);
+  }
+
   /// <summary>
   /// A journal response too large to read is its own failure, and not the one a
   /// Commander reads as Frontier being unreachable. What stopped the refresh is

@@ -214,44 +214,62 @@ public sealed class PersistenceModelTests : IClassFixture<PostgreSqlDatabaseFixt
   }
 
   [Fact]
-  public void Persistence_records_expose_every_stored_value()
+  public async Task PostgreSql_stores_and_returns_every_value_a_record_holds()
   {
-    var now = DateTimeOffset.UtcNow;
+    await using var context = database.CreateContext();
+    await using var transaction = await context.Database.BeginTransactionAsync();
+    // Rounded to the microsecond PostgreSQL keeps, so the instants that come
+    // back are compared against what the column can hold rather than against a
+    // precision the database never promised.
+    var now = Microseconds(DateTimeOffset.UtcNow);
+    var recordId = Guid.NewGuid();
     var account = Account(10_007);
+    account.RecordRevision = 1;
     var session = Session(11, account.CustomerId, now);
-    var record = LiveRecord(account.CustomerId, Guid.NewGuid(), 1, now);
+    var record = LiveRecord(account.CustomerId, recordId, 1, now);
+    record.ProtectionDeadline = now;
     var ship = Ship(account.CustomerId, 12, new DateOnly(2026, 9, 4), 8);
     var cursor = Cursor(account.CustomerId);
     cursor.LastStoredShipsDate = new DateOnly(2026, 9, 3);
     cursor.LastStoredShipsLine = 7;
     cursor.LastStoredShipsComplete = false;
     cursor.NextPermittedRefreshAt = now;
-    record.ProtectionDeadline = now;
-    account.RecordRevision = 1;
-    account.JournalCursor = cursor;
-    session.Account = account;
-    record.Account = account;
-    ship.Account = account;
-    cursor.Account = account;
 
-    Assert.Equal(1, account.RecordRevision);
-    Assert.Same(cursor, account.JournalCursor);
-    Assert.Same(account, session.Account);
-    Assert.Same(account, record.Account);
-    Assert.Same(account, ship.Account);
-    Assert.Same(account, cursor.Account);
-    Assert.Equal(0, cursor.NextUnreadLine);
-    Assert.Equal(new DateOnly(2026, 9, 3), cursor.LastStoredShipsDate);
-    Assert.Equal(7, cursor.LastStoredShipsLine);
-    Assert.False(cursor.LastStoredShipsComplete);
-    Assert.Equal(now, cursor.NextPermittedRefreshAt);
-    Assert.Equal(now, record.ProtectionDeadline);
+    context.Add(account);
+    context.AddRange(session, record, ship, cursor);
+    await context.SaveChangesAsync();
+    context.ChangeTracker.Clear();
 
-    using var context = database.CreateContext();
-    Assert.NotNull(context.CommanderAccounts);
-    Assert.NotNull(context.OAuthAttempts);
-    Assert.NotNull(context.DataProtectionKeys);
+    var stored = await context
+      .CommanderAccounts.AsNoTracking()
+      .Include(entry => entry.JournalCursor)
+      .SingleAsync(entry => entry.CustomerId == account.CustomerId);
+    var storedSession = await context.Sessions.AsNoTracking().SingleAsync();
+    var storedRecord = await context.SynchronisedRecords.AsNoTracking().SingleAsync();
+    var storedShip = await context.OwnedShips.AsNoTracking().SingleAsync();
+
+    Assert.Equal(1, stored.RecordRevision);
+    Assert.Equal("Test Commander", stored.CommanderName);
+    Assert.Equal(now, storedSession.RenewableExpiresAt.AddDays(-30));
+    Assert.Equal(recordId, storedRecord.RecordId);
+    Assert.Equal("working", storedRecord.RecordKind);
+    Assert.Equal(now, storedRecord.ProtectionDeadline);
+    Assert.Equal(new DateOnly(2026, 9, 4), storedShip.SourceDate);
+    Assert.Equal(8, storedShip.SourceLine);
+    Assert.NotNull(stored.JournalCursor);
+    Assert.Equal(new DateOnly(2026, 9, 11), stored.JournalCursor.NextUnreadDate);
+    Assert.Equal(0, stored.JournalCursor.NextUnreadLine);
+    Assert.Equal(new DateOnly(2026, 9, 3), stored.JournalCursor.LastStoredShipsDate);
+    Assert.Equal(7, stored.JournalCursor.LastStoredShipsLine);
+    Assert.False(stored.JournalCursor.LastStoredShipsComplete);
+    Assert.Equal(now, stored.JournalCursor.NextPermittedRefreshAt);
   }
+
+  /// <summary>
+  /// One instant at the precision a `timestamptz` column keeps.
+  /// </summary>
+  private static DateTimeOffset Microseconds(DateTimeOffset value) =>
+    new(value.Ticks - (value.Ticks % 10), value.Offset);
 
   [Fact]
   public async Task Live_record_requires_server_content_time()
