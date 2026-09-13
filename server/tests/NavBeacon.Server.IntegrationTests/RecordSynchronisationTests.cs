@@ -463,8 +463,7 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     // buffer Linux gives a child's stdin, so the request is still being written
     // when the missing bundle exits. A batch that fits the buffer lands in it
     // and is answered by the exit code instead. This is well inside the 100
-    // changes and 1 MiB a batch may carry (deployment document, "Settings each
-    // instance reads").
+    // changes and 1 MiB a batch may carry (design decision 9).
     var refused = await commander.SynchroniseAsync(
       RecordFixtures.Request(
         0,
@@ -589,7 +588,7 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
   [Fact]
   public async Task AnAccountRevisionCommittedMidRequestIsNotOverwritten()
   {
-    var race = new RevisionRaceInterceptor(database.ConnectionString);
+    var race = new RevisionRaceInterceptor(database.ConnectionString, 70_019);
     using var server = NewServer(out var frontier, out _, race);
     using var commander = await SignInAsync(server, frontier, 70_019);
 
@@ -602,10 +601,13 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     var account = await context
       .CommanderAccounts.AsNoTracking()
       .SingleAsync(entry => entry.CustomerId == 70_019);
+    // The other device's commit, stated before the assertion that rests on it:
+    // a fresh account is at revision 0, so the interceptor leaves it at 5.
+    Assert.Equal(5, race.Committed);
     // The account revision only ever moves forward. Writing a number below one
     // another device already holds would put this record behind that device's
-    // cursor, and it would never be sent (design decision "Records", one
-    // monotonic account revision).
+    // cursor, and it would never be sent (design decision 6, one monotonic
+    // account revision).
     Assert.True(
       account.RecordRevision > race.Committed,
       $"The account revision went from {race.Committed} to {account.RecordRevision}."
@@ -618,7 +620,7 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     using var server = NewServer(
       out var frontier,
       out _,
-      new AccountDeletingInterceptor(database.ConnectionString)
+      new AccountDeletingInterceptor(database.ConnectionString, 70_020)
     );
     using var commander = await SignInAsync(server, frontier, 70_020);
 
@@ -631,6 +633,10 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
     // does not catch and a body that states nothing.
     Assert.Equal(HttpStatusCode.Unauthorized, refused.Status);
     Assert.Equal("unauthorised", refused.Code);
+    // And no cursor, as every other unsigned refusal states none. A `0` here
+    // would read as the cursor of an account that has stored nothing yet, which
+    // is a different answer from the account being gone.
+    Assert.Null(refused.Body["accountRevision"]);
   }
 
   private CommanderTestServer NewServer(
@@ -661,11 +667,17 @@ public sealed class RecordSynchronisationTests(PostgreSqlDatabaseFixture databas
 /// between authenticating and applying — a window the validator subprocess
 /// holds open for as long as it runs.
 /// </summary>
-internal sealed class RevisionRaceInterceptor(string connectionString) : DbCommandInterceptor
+internal sealed class RevisionRaceInterceptor(string connectionString, long customerId)
+  : DbCommandInterceptor
 {
   private bool done;
 
-  public long Committed { get; private set; }
+  /// <summary>
+  /// The revision the other connection left behind, or `null` where it never
+  /// ran. A test reads it to state that the race happened, because an
+  /// assertion about a revision this never committed proves nothing.
+  /// </summary>
+  public long? Committed { get; private set; }
 
   public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
     DbCommand command,
@@ -689,9 +701,12 @@ internal sealed class RevisionRaceInterceptor(string connectionString) : DbComma
     using var connection = new NpgsqlConnection(connectionString);
     connection.Open();
     using var command = connection.CreateCommand();
+    // Named, because every test in the class shares one database and the rows
+    // of the others must stay as their own tests left them.
     command.CommandText =
       "UPDATE commander_accounts SET record_revision = record_revision + 5 "
-      + "RETURNING record_revision";
+      + "WHERE customer_id = @customerId RETURNING record_revision";
+    command.Parameters.Add(new NpgsqlParameter("customerId", customerId));
     return (long)command.ExecuteScalar()!;
   }
 }
@@ -704,7 +719,8 @@ internal sealed class RevisionRaceInterceptor(string connectionString) : DbComma
 /// batch from another was in flight. The deletion commits in its own request
 /// and takes the sessions with it.
 /// </summary>
-internal sealed class AccountDeletingInterceptor(string connectionString) : DbCommandInterceptor
+internal sealed class AccountDeletingInterceptor(string connectionString, long customerId)
+  : DbCommandInterceptor
 {
   private bool done;
 
@@ -722,7 +738,9 @@ internal sealed class AccountDeletingInterceptor(string connectionString) : DbCo
       using var connection = new NpgsqlConnection(connectionString);
       connection.Open();
       using var delete = connection.CreateCommand();
-      delete.CommandText = "DELETE FROM commander_accounts";
+      // Named, for the reason the interceptor above names.
+      delete.CommandText = "DELETE FROM commander_accounts WHERE customer_id = @customerId";
+      delete.Parameters.Add(new NpgsqlParameter("customerId", customerId));
       delete.ExecuteNonQuery();
     }
     return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);

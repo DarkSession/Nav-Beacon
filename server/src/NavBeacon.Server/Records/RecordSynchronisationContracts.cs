@@ -81,9 +81,17 @@ public sealed record ChangeResult(
 
 public sealed record RecordStreamEntry(long Revision, string? Payload, Guid RecordId);
 
+/// <summary>
+/// What one synchronisation request produced.
+///
+/// `AccountRevision` is the cursor the account stands at. It is `null` only
+/// where there is no account to state one for, which is the account deleted
+/// between authenticating this request and locking its row: `0` cannot say
+/// that, because `0` is the cursor of an account that has stored nothing yet.
+/// </summary>
 public sealed record RecordSynchronisationOutcome(
   string? Code,
-  long AccountRevision,
+  long? AccountRevision,
   IReadOnlyList<ChangeResult> Results,
   IReadOnlyList<RecordStreamEntry> Stream
 );

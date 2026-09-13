@@ -110,7 +110,7 @@ public sealed class RecordSynchronisationService(
       // from an account that is not signed in, which is what a retry would be
       // told anyway.
       await transaction.RollbackAsync(cancellationToken);
-      return new RecordSynchronisationOutcome(RecordErrorCodes.Unauthorised, 0, [], []);
+      return new RecordSynchronisationOutcome(RecordErrorCodes.Unauthorised, null, [], []);
     }
 
     var named = request.Changes.Select(change => change.RecordId).ToArray();
