@@ -112,6 +112,8 @@ export class RecordSynchronisationStore {
 
   /** Records this browser cannot send as they stand, until they change again. */
   readonly #refused = new Set<string>();
+  /** Records the installed package cannot rebuild, so no request can carry them. */
+  readonly #unsendable = new Set<string>();
   /** Accounts this page has already merged, so a token refresh does not merge twice. */
   readonly #merged = new Set<string>();
   /** The instant each record's protection was last renewed, within this page. */
@@ -167,6 +169,7 @@ export class RecordSynchronisationStore {
     this.#paused.releaseAll();
     this.#unreadable.set([]);
     this.#refused.clear();
+    this.#unsendable.clear();
     this.#merged.clear();
     this.#renewedAt.clear();
     this.#oversized = null;
@@ -591,6 +594,13 @@ export class RecordSynchronisationStore {
         continue;
       }
       if (!(await isReconstructable(record))) {
+        // The installed package will not rebuild this record, so the service,
+        // which validates against the same pinned package, would refuse the
+        // batch carrying it. The change stays queued, because a package that
+        // carries the format again sends it; what goes is its place in the
+        // count of changes on their way, which would otherwise say this device
+        // has work for the account that it will never offer (020/FR-012).
+        this.#unsendable.add(recordId);
         continue;
       }
       candidates.push({
@@ -962,13 +972,16 @@ export class RecordSynchronisationStore {
   /**
    * What follows one change entering the queue, wherever it was written.
    *
-   * A record the service refused stops being refused once it has changed again.
-   * An exchange already in flight read the queue before this change reached it,
-   * so it is told to read it once more rather than leaving the change for some
-   * later trigger to carry (020/FR-007, 020/FR-026).
+   * A record the service refused stops being refused once it has changed again,
+   * and so does one the installed package could not rebuild: a change this
+   * package wrote is a change it can also send. An exchange already in flight
+   * read the queue before this change reached it, so it is told to read it once
+   * more rather than leaving the change for some later trigger to carry
+   * (020/FR-007, 020/FR-026).
    */
   #queued(recordId: string, customerId: string): void {
     this.#refused.delete(recordId);
+    this.#unsendable.delete(recordId);
     if (this.#refused.size === 0) {
       this.#blocked = null;
     }
@@ -1019,10 +1032,23 @@ export class RecordSynchronisationStore {
     );
   }
 
+  /**
+   * This account's changes that are on their way to it.
+   *
+   * A change over a record the installed package cannot rebuild is not one of
+   * them. It stays in the queue for a package that carries the format again,
+   * and until then no request can carry it, so counting it would say changes
+   * are on their way that this device will never offer. The record is counted
+   * instead beside the settled sentence, as one the account does not hold
+   * (020/FR-012, 020/FR-026, constitution IV).
+   */
   #pendingCount(customerId: string): number {
     return this.#state
       .read()
-      .pendingOperations.filter((operation) => operation.customerId === customerId).length;
+      .pendingOperations.filter(
+        (operation) =>
+          operation.customerId === customerId && !this.#unsendable.has(operation.recordId),
+      ).length;
   }
 
   /**

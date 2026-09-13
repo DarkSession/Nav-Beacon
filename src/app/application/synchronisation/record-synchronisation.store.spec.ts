@@ -394,6 +394,20 @@ describe('the record synchronisation store', () => {
       expect(commanderState().pendingOperations).toHaveLength(1);
     });
 
+    it('counts no change on its way for a record the package no longer carries', async () => {
+      seed(UNKNOWN_HULL_RECORD, FIXTURE_IDS.unknownHull);
+      store.queueUpload(FIXTURE_IDS.unknownHull, CREDENTIALS.customerId);
+
+      await store.synchronise(CREDENTIALS);
+
+      // The change stays queued for a package that carries the format again,
+      // and no request between now and then can carry it. Counting it would say
+      // a change is on its way to the account that this device will never
+      // offer; the record is read instead beside the settled sentence, as one
+      // the account does not hold (020/FR-012, constitution IV).
+      expect(store.status()).toMatchObject({ kind: 'current' });
+    });
+
     it('states the record bound for a record no request can carry', async () => {
       const large = JSON.parse(NAMED_RECORD_V1);
       large.name = 'x'.repeat(70_000);
