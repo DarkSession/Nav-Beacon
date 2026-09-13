@@ -156,7 +156,7 @@ describe('records in a browser that also holds account state', () => {
   /** A browser signed in once, with work bound, accepted and waiting to send. */
   const ACCOUNT_STATE = JSON.stringify({
     format: 'ednb.commander-state',
-    version: 2,
+    version: 1,
     account: { customerId: '900001', commanderName: 'Hadley' },
     fleetCache: [],
     accountCursors: { '900001': 12 },

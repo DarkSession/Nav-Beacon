@@ -50,7 +50,7 @@ describe('FleetStore', () => {
       EDNB_COMMANDER_STATE_KEY,
       JSON.stringify({
         format: 'ednb.commander-state',
-        version: 2,
+        version: 1,
         account: FLEET_ACCOUNT,
         fleetCache: [],
         accountCursors: { [CUSTOMER]: 4 },

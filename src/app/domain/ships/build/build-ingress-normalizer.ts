@@ -15,13 +15,13 @@ import type {
  * refusal happened reads it from here, so one refusal is one sentence rather
  * than a sentence for each door.
  *
- * It is the one English sentence the ingress paths leave uncatalogued.
- * `record-open.service.ts` renders it to a Commander, framed by
- * `library.open.failed`, because a record stored before this application
- * completed rolls can carry a partial one. `fleet-copy.service.ts` reads it for
- * a refusal it cannot reach: an owned ship states completed grades and no roll
- * quality (020/FR-015), so the gate finds nothing partial there to complete.
- * The note on `normalizeReconstructedBuild` below holds the reasoning, and what
+ * The sentence is English and uncatalogued. `record-open.service.ts` renders it
+ * to a Commander, framed by `library.open.failed`, because a record stored
+ * before this application completed rolls can carry a partial one.
+ * `fleet-copy.service.ts` reads it for a refusal it cannot reach: an owned ship
+ * states completed grades and no roll quality (020/FR-015), so the gate finds
+ * nothing partial there to complete. The note on `normalizeReconstructedBuild`
+ * below holds why the ingress paths word their refusals this way, and what
  * would change it (constitution VI).
  */
 export function refusalReason(failures: readonly { readonly code: string | null }[]): string {

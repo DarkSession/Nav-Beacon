@@ -46,7 +46,7 @@ describe('the account side of browser storage', () => {
 
     expect(repository.read()).toEqual({
       format: COMMANDER_LOCAL_STATE_FORMAT,
-      version: 2,
+      version: 1,
       account: null,
       fleetCache: [],
       accountCursors: {},

@@ -111,7 +111,7 @@ them: renaming them would change bytes a Commander has already saved.
 - Package manager is **pnpm**. `pnpm-lock.yaml` is committed; CI installs with
   `--frozen-lockfile`.
 - Run `pnpm run check` before proposing a change: format, typecheck, build, unit
-  tests with coverage, Playwright.
+  tests with coverage, server restore, format, build and tests, and Playwright.
 - During fixes, use the README's targeted-check procedure: reproduce the failing
   test and project, then run the affected capability across the matrix.
   Store full output under `dist/verification/` and read concise failure summaries.

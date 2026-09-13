@@ -5,15 +5,14 @@ export const COMMANDER_LOCAL_STATE_FORMAT = 'ednb.commander-state';
 /**
  * The published state version.
  *
- * Version 2 holds one account cursor per Frontier Customer ID, the remote
- * revision each record last accepted, and pending remote operations that name
- * the record they are for. Version 1 held a single cursor and operation
- * identities that name nothing, so the migration keeps that cursor under the
- * account it was accepted from and drops those identities: an identity on its
- * own cannot be retried, and the record bindings — the one thing another
- * account must never take over — are carried across untouched.
+ * Version 1 holds one account cursor per Frontier Customer ID, the remote
+ * revision each record last accepted, the pending remote operations, and which
+ * account each record belongs to. A stored value of any other version is
+ * refused rather than read: this key is the one that decides which account a
+ * record may be uploaded to, and a guessed reading of it is a record sent to
+ * the wrong Commander.
  */
-export const COMMANDER_LOCAL_STATE_VERSION = 2;
+export const COMMANDER_LOCAL_STATE_VERSION = 1;
 
 export interface CachedCommanderAccount {
   readonly customerId: string;
@@ -109,7 +108,7 @@ export function emptyCommanderLocalState(): CommanderLocalState {
 }
 
 /**
- * Reads the stored value as untrusted input, migrating it where it needs it.
+ * Reads the stored value as untrusted input.
  *
  * A field that does not read is the whole value refused, because a half-read
  * account state is one that could upload a record to the wrong account.
@@ -118,24 +117,23 @@ export function parseCommanderLocalState(value: unknown): CommanderLocalState | 
   if (!isObject(value) || value['format'] !== COMMANDER_LOCAL_STATE_FORMAT) {
     return null;
   }
-  const stored = migrateToCurrentVersion(value);
-  if (stored === null) {
+  if (value['version'] !== COMMANDER_LOCAL_STATE_VERSION) {
     return null;
   }
 
-  const account = parseAccount(stored['account']);
+  const account = parseAccount(value['account']);
   if (account === undefined) {
     return null;
   }
-  const fleetCache = parseFleetCache(stored['fleetCache']);
+  const fleetCache = parseFleetCache(value['fleetCache']);
 
-  const accountCursors = readCursors(stored['accountCursors']);
-  const pendingOperations = readOperations(stored['pendingOperations']);
-  const recordRevisions = readRevisions(stored['recordRevisions']);
+  const accountCursors = readCursors(value['accountCursors']);
+  const pendingOperations = readOperations(value['pendingOperations']);
+  const recordRevisions = readRevisions(value['recordRevisions']);
   if (accountCursors === null || pendingOperations === null || recordRevisions === null) {
     return null;
   }
-  const recordBindings = stored['recordBindings'];
+  const recordBindings = value['recordBindings'];
   if (!isBindings(recordBindings)) {
     return null;
   }
@@ -398,33 +396,6 @@ function withBaseRevisionAdvanced(
     return operation;
   }
   return { ...operation, baseRevision: accepted };
-}
-
-/**
- * Version 1 of this value, read as version 2.
- *
- * Its one cursor belongs to the account it was accepted from, and its operation
- * identities name no record, so nothing can retry them.
- */
-function migrateToCurrentVersion(value: Record<string, unknown>): Record<string, unknown> | null {
-  if (value['version'] === COMMANDER_LOCAL_STATE_VERSION) {
-    return value;
-  }
-  if (value['version'] !== 1) {
-    return null;
-  }
-  const account = parseAccount(value['account']);
-  const cursor = value['syncRevision'];
-  return {
-    ...value,
-    version: COMMANDER_LOCAL_STATE_VERSION,
-    accountCursors:
-      account === undefined || account === null || !isRevision(cursor) || cursor === 0
-        ? {}
-        : { [account.customerId]: cursor },
-    pendingOperations: [],
-    recordRevisions: {},
-  };
 }
 
 function parseAccount(value: unknown): CachedCommanderAccount | null | undefined {

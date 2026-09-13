@@ -53,7 +53,7 @@ describe('the Commander state a browser keeps', () => {
   });
 
   const refusals: readonly (readonly [string, Record<string, unknown>])[] = [
-    ['a value that is not this application’s', { format: 'other', version: 2 }],
+    ['a value that is not this application’s', { format: 'other', version: 1 }],
     ['an unreadable account', { account: { customerId: 'not-a-customer', commanderName: 'A' } }],
     ['a cursor under something that is not a Customer ID', { accountCursors: { abc: 3 } }],
     ['a cursor that is not a whole number', { accountCursors: { [OWNER]: 1.5 } }],
@@ -99,46 +99,9 @@ describe('the Commander state a browser keeps', () => {
     expect(parsed?.recordBindings).toEqual({ 'record-1': OWNER });
   });
 
-  it('reads a version-1 value, keeping its bindings and its one cursor', () => {
-    // Version 1 held one cursor and operation identities that name no record.
-    const version1 = {
-      format: COMMANDER_LOCAL_STATE_FORMAT,
-      version: 1,
-      account: { customerId: OWNER, commanderName: 'Hadley' },
-      fleetCache: [],
-      syncRevision: 42,
-      pendingOperationIds: ['operation-1'],
-      recordBindings: { 'record-1': OWNER, 'record-2': 'local-only' },
-    };
-
-    const parsed = parseCommanderLocalState(version1);
-
-    expect(parsed).toEqual(
-      state({
-        account: { customerId: OWNER, commanderName: 'Hadley' },
-        accountCursors: { [OWNER]: 42 },
-        recordBindings: { 'record-1': OWNER, 'record-2': 'local-only' },
-      }),
-    );
-    expect(parsed?.version).toBe(COMMANDER_LOCAL_STATE_VERSION);
-  });
-
-  it('reads a version-1 value that was never signed in', () => {
-    const parsed = parseCommanderLocalState({
-      format: COMMANDER_LOCAL_STATE_FORMAT,
-      version: 1,
-      account: null,
-      fleetCache: [],
-      syncRevision: 0,
-      pendingOperationIds: [],
-      recordBindings: {},
-    });
-
-    expect(parsed).toEqual(emptyCommanderLocalState());
-  });
-
   it('refuses a version it does not publish', () => {
     expect(parseCommanderLocalState({ ...state(), version: 99 })).toBeNull();
+    expect(emptyCommanderLocalState().version).toBe(COMMANDER_LOCAL_STATE_VERSION);
   });
 
   /**

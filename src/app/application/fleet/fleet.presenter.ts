@@ -11,11 +11,14 @@ import { AccountStore } from '../account/account.store';
 import { FleetStore, type FleetHolding, type RefusedOwnedShip } from './fleet.store';
 
 /**
- * The states design decision 10 gives the owned-ships view.
+ * What the owned-ships view is doing, as the view model names it.
  *
- * Nine, and each of them one sentence a Commander reads. They are named here so
- * a test, a preview and this presenter agree on what the view is showing rather
- * than inferring it from a tone.
+ * Nine names, against the eleven screen states design decision 10 gives the
+ * view: `current` is a settled fleet, and which of its sentences a Commander
+ * reads is decided below by whether the list came from the cache and whether
+ * the installed package refused a confirmed ship. The names are published here
+ * so a test, a preview and this presenter agree on what the view is showing
+ * rather than inferring it from a tone.
  */
 export type OwnedShipsState =
   | 'sign-in-required'
@@ -91,9 +94,10 @@ export interface OwnedShipsView {
 /**
  * What the Ship Builder's stored-build layer says about the owned fleet.
  *
- * Nine states in one view model, so the layer draws the same region whatever
- * the fleet is doing. Every sentence says what it means and the tone is a
- * second rendering of it, so nothing here is carried by colour (011/FR-010).
+ * One view model for every state the view has, so the layer draws the same
+ * region whatever the fleet is doing. Every sentence says what it means and the
+ * tone is a second rendering of it, so nothing here is carried by colour
+ * (011/FR-010).
  *
  * Presentation only. What the fleet is, and what a refresh answered, are
  * decided by the store below it (constitution III).

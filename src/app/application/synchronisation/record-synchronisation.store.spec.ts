@@ -234,7 +234,7 @@ describe('the record synchronisation store', () => {
       EDNB_COMMANDER_STATE_KEY,
       JSON.stringify({
         format: 'ednb.commander-state',
-        version: 2,
+        version: 1,
         account: ACCOUNT,
         fleetCache: [],
         accountCursors: {},
