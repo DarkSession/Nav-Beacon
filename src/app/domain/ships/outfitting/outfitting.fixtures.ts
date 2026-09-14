@@ -157,6 +157,29 @@ export function lockedArticleBuild(): { build: ShipLoadout; slot: string } {
   );
 }
 
+/** A final article whose package-owned experimental effect remains visible. */
+export function lockedEffectArticleBuild(): { build: ShipLoadout; slot: string } {
+  const build = ShipLoadout.default('Anaconda');
+  for (const slot of build.slots()) {
+    for (const module of build.modulesForSlot(slot.key) ?? []) {
+      const locked = (getPreEngineeredVariants(module.symbol) ?? []).find(
+        (variant) =>
+          variant.engineeringLocked === true &&
+          typeof variant.experimentalEffectSymbol === 'string',
+      );
+      if (locked !== undefined) {
+        build.setModule(slot.key, module);
+        build.setPreEngineeredVariant(slot.key, locked);
+        return { build, slot: slot.key };
+      }
+    }
+  }
+  throw new Error(
+    'The installed Almanac reports no fittable final article with an experimental effect. ' +
+      'Pick the regression subject from the package rather than writing one here.',
+  );
+}
+
 /**
  * A Mercenary article: bought with Merc Coin, engineered from grade 1 upward.
  *
@@ -176,6 +199,43 @@ export function mercenaryVariant(): PreEngineeredVariant {
     );
   }
   return variant;
+}
+
+/** A Mercenary article whose shop-supplied experimental effect cannot be edited. */
+export function fixedEffectMercenaryBuild(): {
+  readonly build: ShipLoadout;
+  readonly slot: string;
+  readonly variant: PreEngineeredVariant & { readonly experimentalEffectSymbol: string };
+} {
+  const variant = PRE_ENGINEERED_MODULES.find(
+    (
+      candidate,
+    ): candidate is PreEngineeredVariant & { readonly experimentalEffectSymbol: string } =>
+      candidate.acquisition === 'mercenary' &&
+      candidate.mercCoinCost !== undefined &&
+      typeof candidate.experimentalEffectSymbol === 'string',
+  );
+  if (variant === undefined) {
+    throw new Error(
+      'The installed Almanac reports no Merc-Coin article with an experimental effect. ' +
+        'Pick a new fixture from the package rather than writing one here.',
+    );
+  }
+
+  const build = defaultBuild();
+  const slot = build
+    .slots('hardpoint')
+    .find((candidate) =>
+      build.modulesForSlot(candidate.key).some((module) => module.symbol === variant.symbol),
+    );
+  if (slot === undefined) {
+    throw new Error(
+      "The fixture hull has no hardpoint for the package's fixed-effect Mercenary article.",
+    );
+  }
+
+  build.setPreEngineeredVariant(slot.key, variant);
+  return { build, slot: slot.key, variant };
 }
 
 /** Every package variant of the two-route module, in package order. */

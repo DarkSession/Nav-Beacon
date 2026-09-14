@@ -42,6 +42,7 @@ import {
   ExperimentalEffectList,
   type ExperimentalEffectView,
 } from '../../../../ui/outfitting/experimental-effect-list';
+import { FixedExperimentalEffect } from '../../../../ui/outfitting/fixed-experimental-effect';
 import { GradeSelector } from '../../../../ui/outfitting/grade-selector';
 
 /** What the editor is showing, as one value. */
@@ -75,6 +76,7 @@ export type EngineeringState =
     AttributeComparison,
     BlueprintChoiceList,
     ExperimentalEffectList,
+    FixedExperimentalEffect,
     GradeSelector,
     Layer,
     NgTemplateOutlet,
@@ -247,6 +249,15 @@ export class EngineeringEditor {
   readonly selectedBlueprint = computed(() => this.draft()?.selectedBlueprintFdname ?? null);
   readonly selectedGrade = computed(() => this.draft()?.selectedGrade ?? null);
   readonly selectedEffect = computed(() => this.draft()?.selectedEffectFdname ?? null);
+
+  /** A carried effect that the package reports as fixed rather than editable. */
+  readonly fixedEffect = computed(() => {
+    const draft = this.draft();
+    const fdname = draft?.current.effectFdname ?? null;
+    return fdname !== null && draft?.effects.length === 0
+      ? this.#gameText.experimentalEffectName(fdname)
+      : null;
+  });
 
   /** Whether the panel has a second column to draw. See `EngineeringPreview`. */
   readonly comparingAttributes = computed<boolean>(() => {

@@ -410,6 +410,8 @@
   "outfitting.engineering.grade.option": "Grad {{grade}}",
   "outfitting.engineering.grade.option-outside": "Grad {{grade}}, außerhalb dieser Blaupause",
   "outfitting.engineering.effect.legend": "Experimenteller Effekt",
+  "outfitting.engineering.effect.fixed": "Fester experimenteller Effekt",
+  "outfitting.engineering.effect.fixed-description": "Dieser Effekt ist festgelegt und kann nicht geändert werden.",
   "outfitting.engineering.effect.none": "Kein",
   "outfitting.engineering.effect.choose": "{{effect}} anwenden",
   "outfitting.engineering.attributes.legend": "Standard und modifiziert",

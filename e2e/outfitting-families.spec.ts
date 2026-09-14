@@ -224,7 +224,9 @@ test.describe('module families', () => {
       });
 
     await page.setViewportSize({ width: 2020, height: 1100 });
-    await expect.poll(async () => (await railWidth())?.rail ?? 0).toBeGreaterThan(0);
+    await expect
+      .poll(async () => Math.abs(((await railWidth())?.rail ?? 0) - 264))
+      .toBeLessThanOrEqual(2);
     const drawn = (await railWidth())!;
     expect(Math.abs(drawn.rail - 264)).toBeLessThanOrEqual(2);
 

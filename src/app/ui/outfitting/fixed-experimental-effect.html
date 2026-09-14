@@ -1,0 +1,11 @@
+<div class="fixed-effect">
+  <p class="fixed-effect__label">{{ legend() }}</p>
+  <p class="fixed-effect__name">
+    <ednb-game-text
+      [text]="effect().text"
+      [language]="effect().language"
+      [translationState]="effect().translationState"
+    />
+  </p>
+  <p class="fixed-effect__description">{{ description() }}</p>
+</div>

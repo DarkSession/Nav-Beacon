@@ -60,8 +60,14 @@
               current fixed state stays visible; no apply or clear control is
               drawn, because neither is an operation the package offers here
               (FR-009).
-            -->
+              -->
               <p class="engineering__state">{{ finalLabel() }}</p>
+              @if (fixedEffect(); as effect) {
+                <ednb-fixed-experimental-effect
+                  class="engineering__card engineering__fixed-effect"
+                  [effect]="effect"
+                />
+              }
             }
             @default {
               <!--
@@ -98,7 +104,12 @@
                 }
               </div>
 
-              @if (recipeChosen() && effectChoices().length > 0) {
+              @if (fixedEffect(); as effect) {
+                <ednb-fixed-experimental-effect
+                  class="engineering__card engineering__fixed-effect"
+                  [effect]="effect"
+                />
+              } @else if (recipeChosen() && effectChoices().length > 0) {
                 <ednb-experimental-effect-list
                   class="engineering__card"
                   [asDropdown]="!asLayer()"

@@ -10,8 +10,10 @@ import {
   FIXED_REWARD_REGRESSION,
   FIXTURE_SLOTS,
   defaultBuild,
+  fixedEffectMercenaryBuild,
   fixedRewardBuild,
   lockedArticleBuild,
+  lockedEffectArticleBuild,
 } from '../../../../domain/ships/outfitting/outfitting.fixtures';
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
@@ -290,6 +292,33 @@ describe('engineering editor surface', () => {
   });
 
   describe('a purchased article', () => {
+    it('states a fixed experimental effect without an edit control in both compositions', () => {
+      const { build, slot } = fixedEffectMercenaryBuild();
+      commit(build);
+
+      for (const fixture of [openInline(slot), openLayer(slot)]) {
+        const host = fixture.nativeElement as HTMLElement;
+        const fixed = host.querySelector('.engineering__fixed-effect');
+
+        expect(fixed?.textContent).toMatch(/fixed/i);
+        expect(fixed?.querySelector('ednb-game-text')).not.toBeNull();
+        expect(host.querySelector('ednb-experimental-effect-list')).toBeNull();
+      }
+    });
+
+    it('states a final article’s fixed effect in both compositions', () => {
+      const { build, slot } = lockedEffectArticleBuild();
+      commit(build);
+
+      for (const fixture of [openInline(slot), openLayer(slot)]) {
+        const host = fixture.nativeElement as HTMLElement;
+
+        expect(fixture.componentInstance.state()).toBe('final');
+        expect(host.querySelector('.engineering__fixed-effect ednb-game-text')).not.toBeNull();
+        expect(host.querySelector('ednb-experimental-effect-list')).toBeNull();
+      }
+    });
+
     it('keeps the purchase grade, which the choices themselves cannot show', () => {
       commit(fixedRewardBuild());
 

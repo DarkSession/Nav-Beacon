@@ -24,6 +24,7 @@ import {
   assertLargestChoiceSet,
   defaultBuild,
   finalArticlePartialQuality,
+  fixedEffectMercenaryBuild,
   fixedRewardBuild,
   fixedRewardVariant,
   routeDistinctVariants,
@@ -299,6 +300,30 @@ describe('installed Almanac acceptance', () => {
       const slot = FIXTURE_SLOTS.frameShiftDrive;
 
       expect(build.setExperimentalEffect(slot, null).kind).toBe('unchanged');
+    });
+  });
+
+  describe('Mercenary fixed experimental effects', () => {
+    it('keeps the shop effect fixed through later grades', () => {
+      const { build, slot, variant } = fixedEffectMercenaryBuild();
+      const purchase = build.fittedModuleAt(slot);
+
+      expect(purchase?.engineering?.ExperimentalEffect).toBe(variant.experimentalEffectSymbol);
+      expect(build.availableExperimentalEffects(slot)).toEqual([]);
+
+      const blueprint = build
+        .availableBlueprints(slot)
+        .find((candidate) => candidate.blueprintSymbol === variant.blueprintSymbol);
+      expect(blueprint).toBeDefined();
+      build.applyBlueprint(slot, variant.blueprintSymbol, {
+        grade: blueprint!.grades.at(-1)!,
+        quality: 1,
+      });
+
+      expect(build.fittedModuleAt(slot)?.engineering?.ExperimentalEffect).toBe(
+        variant.experimentalEffectSymbol,
+      );
+      expect(build.availableExperimentalEffects(slot)).toEqual([]);
     });
   });
 

@@ -1,6 +1,6 @@
 # Results: screen-reader journeys
 
-Protocol: [`screen-reader`](../screen-reader.protocol.md), version 14.
+Protocol: [`screen-reader`](../screen-reader.protocol.md), version 15.
 
 Each row is one observation: one step, in one configuration. Rows are appended,
 never edited — a later run is a new row, so the history of a regression stays
@@ -239,3 +239,26 @@ it, through an open modal layer in particular, is what a person has to answer.
 | —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 22   | As stated in the protocol | —      | not run |
 | —    | —   | Chromium | TalkBack | —     | —        | mobile        | 22   | As stated in the protocol | —      | not run |
 | —    | —   | Chromium | TalkBack | —     | —        | tablet        | 22   | As stated in the protocol | —      | not run |
+
+## A fixed experimental effect (change 023)
+
+Step 23 covers the fixed effect carried by a Mercenary hardpoint. The desktop
+run reads the fact in the inline engineering card. The mobile and tablet runs
+read the same fact in the engineering layer. Each run confirms that the effect
+stays named after a grade edit and that form-control navigation finds no effect
+editor.
+
+**Status: not yet executed.** No screen-reader run has been performed against
+this build. The rows below remain empty because automated checks cannot judge
+what a Commander understands from the spoken fixed state.
+
+The automated coverage for the same requirement is in
+`e2e/module-engineering.spec.ts`. It checks the visible fixed fact, the absent
+effect control, the retained effect after a grade edit, and an axe scan across
+all ten projects.
+
+| Date | OS  | Browser  | Reader   | Build | Viewport | Configuration | Step | Expected                  | Actual | Result  |
+| ---- | --- | -------- | -------- | ----- | -------- | ------------- | ---- | ------------------------- | ------ | ------- |
+| —    | —   | Firefox  | NVDA     | —     | —        | desktop       | 23   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | mobile        | 23   | As stated in the protocol | —      | not run |
+| —    | —   | Chromium | TalkBack | —     | —        | tablet        | 23   | As stated in the protocol | —      | not run |

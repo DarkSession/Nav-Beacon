@@ -89,6 +89,43 @@ async function stockBuild(hull = 'Anaconda'): Promise<ShipLoadout> {
   return core.ShipLoadout.default(hull);
 }
 
+/** One package-owned Mercenary article whose experimental state is fixed. */
+async function fixedEffectMercenaryArticle(): Promise<{
+  readonly slot: string;
+  readonly articleName: string;
+  readonly effectName: string;
+}> {
+  const [
+    { PRE_ENGINEERED_MODULES },
+    { getPreEngineeredVariantName },
+    { getExperimentalEffectName },
+  ] = await Promise.all([
+    import('@elite-dangerous-almanac/core/ships/pre-engineered'),
+    import('@elite-dangerous-almanac/core/i18n/pre-engineered'),
+    import('@elite-dangerous-almanac/core/i18n/experimental-effects'),
+  ]);
+  const variant = PRE_ENGINEERED_MODULES.find(
+    (candidate) =>
+      candidate.acquisition === 'mercenary' &&
+      typeof candidate.experimentalEffectSymbol === 'string',
+  );
+  expect(variant).toBeDefined();
+
+  const build = await stockBuild();
+  const slot = build
+    .slots('hardpoint')
+    .find((candidate) =>
+      build.modulesForSlot(candidate.key).some((module) => module.symbol === variant!.symbol),
+    );
+  const articleName = getPreEngineeredVariantName(variant!, 'en');
+  const effectName = getExperimentalEffectName(variant!.experimentalEffectSymbol!, 'en');
+  expect(slot).toBeDefined();
+  expect(articleName).not.toBeNull();
+  expect(effectName).not.toBeNull();
+
+  return { slot: slot!.key, articleName: articleName!, effectName: effectName! };
+}
+
 /**
  * The recipes the editor is currently offering, by their drawn name.
  *
@@ -657,10 +694,16 @@ test.describe('purchased and reward articles', () => {
   });
 
   test('prices a Mercenary upgrade above the grade it was bought at', async ({ page }) => {
+    const fixedArticle = await fixedEffectMercenaryArticle();
     await openStockBuild(page);
-    await fitArticle(page, 'SmallHardpoint1', /merc-coin/i);
+    await fitArticle(page, fixedArticle.slot, new RegExp(fixedArticle.articleName, 'i'));
 
-    await openEditor(page, 'SmallHardpoint1');
+    await openEditor(page, fixedArticle.slot);
+
+    const fixedEffect = page.locator('.engineering__fixed-effect');
+    await expect(fixedEffect).toContainText(fixedArticle.effectName);
+    await expect(fixedEffect).toContainText(/fixed/i);
+    await expect(page.locator('ednb-experimental-effect-list')).toHaveCount(0);
 
     // The bespoke recipe the article was bought with. Its own table begins
     // above the purchase grade, so the cells offered are the grades that are
@@ -715,8 +758,10 @@ test.describe('purchased and reward articles', () => {
     // showing the climbed article (constitution V).
     await applyDraft(page);
     if (await surfacesAreLayers(page)) {
-      await openEditor(page, 'SmallHardpoint1');
+      await openEditor(page, fixedArticle.slot);
     }
+    await expect(page.locator('.engineering__fixed-effect')).toContainText(fixedArticle.effectName);
+    await expect(page.locator('ednb-experimental-effect-list')).toHaveCount(0);
 
     // The climb's own Merc Coin, which Almanac 0.1.5 publishes per grade
     // (upstream #337). The editor prices no job of its own any more, so the
@@ -744,13 +789,13 @@ test.describe('purchased and reward articles', () => {
     // slower on a machine running the whole matrix.
     await expect(page).toHaveURL(/\/outfitting#b\./, { timeout: 15_000 });
 
-    const climbed = await applied(page, 'SmallHardpoint1');
+    const climbed = await applied(page, fixedArticle.slot);
     await page.locator('.grade').first().click();
     await expect(page.locator('.grade[data-selected="true"] .grade__number')).toHaveText('1');
     await applyDraft(page);
 
     expect(climbed).toMatch(/G5$/);
-    await expect.poll(() => applied(page, 'SmallHardpoint1')).toMatch(/G1$/);
+    await expect.poll(() => applied(page, fixedArticle.slot)).toMatch(/G1$/);
   });
 
   test('offers no apply on a final article', async ({ page }) => {
