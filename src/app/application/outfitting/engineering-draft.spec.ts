@@ -5,6 +5,7 @@ import {
   FIXTURE_HULL,
   FIXTURE_SLOTS,
   defaultBuild,
+  fixedEffectMercenaryBuild,
   fixedRewardBuild,
   mercenaryVariant,
   packageText,
@@ -243,6 +244,18 @@ describe('engineering draft', () => {
   });
 
   describe('purchase identity', () => {
+    it('keeps a fixed effect as current state and out of the edit menu', () => {
+      const { build, slot, variant } = fixedEffectMercenaryBuild();
+      const fitted = fittedModuleView(build.fittedModuleAt(slot)!, TEXT);
+      const current = engineeringView(fitted);
+
+      const draft = openEngineeringDraft(build, slot, 1, openingSelection(current), TEXT);
+
+      expect(draft?.current.effectFdname).toBe(variant.experimentalEffectSymbol);
+      expect(draft?.selectedEffectFdname).toBeNull();
+      expect(draft?.effects).toEqual([]);
+    });
+
     it('keeps the purchase grade separate from the grade now applied', () => {
       const merc = mercenaryVariant();
       const loadout = ShipLoadout.default(FIXTURE_HULL);

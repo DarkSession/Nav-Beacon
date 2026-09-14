@@ -167,7 +167,8 @@ a verbatim copy produced at build time — edit this file, never the copy.
   Frontier's own **in-game localisation** supplies the outfitting category labels behind
   the module families and their German, Spanish, French, Brazilian Portuguese and Russian
   display text, the engineering modification names in the six stored locales, the market
-  commodity names in `data/i18n/commodity-names.jsonc`, and the personal-equipment
+  commodity names in `data/i18n/commodity-names.jsonc`, the galactic codex region names
+  in `data/i18n/codex-region-names.jsonc`, and the personal-equipment
   display text in `data/i18n/`: the suit names and descriptions, the suit tool names, the
   handheld-weapon descriptions, and the names and descriptions of the engineer-applied
   suit and weapon modifications. The game's own **commodity registry** supplies the

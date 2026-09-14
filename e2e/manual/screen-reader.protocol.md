@@ -1,10 +1,10 @@
 # Manual protocol: screen-reader journeys
 
 **Protocol id**: `screen-reader`
-**Covers**: 011 FR-006, FR-007, FR-008, FR-009, FR-010, FR-013, FR-020, FR-023, FR-025,
-FR-026, SC-001; 017 FR-001, FR-002, FR-003, FR-004, FR-005, SC-001, SC-002; 018 FR-002,
-FR-006, FR-007
-**Version**: 14
+**Covers**: 002 FR-012; 011 FR-006, FR-007, FR-008, FR-009, FR-010, FR-013, FR-020, FR-023,
+FR-025, FR-026, SC-001; 017 FR-001, FR-002, FR-003, FR-004, FR-005, SC-001, SC-002; 018
+FR-002, FR-006, FR-007
+**Version**: 15
 
 ## What is automated, and what is left
 
@@ -474,6 +474,24 @@ disagrees or where the announcement is correct but unusable.
     refused action twice can tell, from speech alone, that the second press was
     received: the words do not move between the two, so what is being confirmed
     is that anything is said at all.
+
+23. **A fixed experimental effect.** Fit a Mercenary hardpoint that the Almanac
+    supplies with an experimental effect. Select its mount and open engineering.
+    In the desktop configuration, read the inline engineering card. In the mobile
+    and tablet configurations, open and read the engineering layer.
+
+    Expect a fixed experimental effect fact announced with its label, the
+    package name for the carried effect, and the statement that the effect is
+    fixed and cannot be changed. Move through every form control in the editor.
+    Expect blueprint and grade controls, but no experimental-effect control and
+    no `None` option that could remove the effect.
+
+    Apply a permitted higher grade and return to the same engineering state.
+    Expect the same effect name and fixed statement. Expect no
+    experimental-effect control. The judgment this step exists for is whether a
+    Commander who cannot see the missing control can still tell that the module
+    has an effect and that the application deliberately does not permit changing
+    it.
 
 ## Recording the result
 

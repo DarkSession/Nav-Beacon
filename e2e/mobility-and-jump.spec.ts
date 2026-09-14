@@ -141,6 +141,7 @@ test.describe('Drives & Mass', () => {
     const plates = page.locator('ednb-hull-anatomy ednb-hull-schematic .schematic');
     await expect(plates).toHaveCount(2);
     await expect(plates.first()).toHaveAttribute('data-state', 'ready');
+    await expect(plates.nth(1)).toHaveAttribute('data-state', 'ready');
     const mounts = page.locator('ednb-hull-anatomy .schematic__mount');
     const before = await mounts.evaluateAll((nodes) =>
       nodes.map((node) => `${node.getAttribute('data-slot')}/${node.getAttribute('aria-label')}`),
@@ -155,6 +156,7 @@ test.describe('Drives & Mass', () => {
     await modes.filter({ hasText: englishMessages['anatomy.mode.mounts'] }).click();
     await expect(plates).toHaveCount(2);
     await expect(plates.first()).toHaveAttribute('data-state', 'ready');
+    await expect(plates.nth(1)).toHaveAttribute('data-state', 'ready');
     expect(
       await mounts.evaluateAll((nodes) =>
         nodes.map((node) => `${node.getAttribute('data-slot')}/${node.getAttribute('aria-label')}`),

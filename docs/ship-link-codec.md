@@ -654,7 +654,7 @@ retained. A table committed before the hash existed is re-hashed the same way fo
 the rule has no bootstrap hole. `--overwrite` replaces a table in place and is sound only while no
 link has been published against it.
 
-The current application dependency is exactly pinned to Almanac `0.2.11`. Table 1 was overwritten in
+The current application dependency is exactly pinned to Almanac `0.2.12`. Table 1 was overwritten in
 place on 2026-08-22, while it is still pre-release and no link has been published against it, so
 that a module's pre-engineered variants contribute their blueprints to its candidate set — see
 "Where neither form fits" above. It was overwritten again on 2026-08-26, under the same rule, so
@@ -715,6 +715,14 @@ the same overwrite. Running `pnpm run codec:tables` reproduces table 1 at conten
 `f9f977a6ebda651eb56cd082e8589ab32ce143458e0daa88b068df9f64247b68`, at the same capacity — 272 of
 the 377 bytes a 500-character value carries.
 
+The ninth overwrite, under Almanac 0.2.12, records the package's complete Mercenary catalogue.
+Four package blueprints enter `BLUEPRINTS`. Four Mercenary variants enter
+`PRE_ENGINEERED_VARIANTS`, and one replaced missile-rack variant leaves it. `MODULES` and
+`EXPERIMENTAL_EFFECTS` keep the same identities. The sorted blueprint additions move later
+blueprint indices and their references. Running `pnpm run codec:tables` reproduces table 1 at
+content hash `c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370`, at the same capacity — 272
+of the 377 bytes a 500-character value carries.
+
 Every future Almanac upgrade must reproduce the committed table and pass the frozen literal-link
 reconstruction corpus. Protocol fixtures must not be regenerated merely to make an upgrade pass.
 After the first release, changed table content must use the next table number.
@@ -729,13 +737,12 @@ path for the affected table version.
 
 ## Reference corpus
 
-The frozen corpus currently produces these encoded data lengths. Each value and length includes
+The frozen corpus produces these encoded data lengths. Each value and length includes
 the `b.` protocol prefix. Packed spellings are untouched by the symbol models, so the minimal and
 stock references have held their exact text throughout; every engineered reference, whose canonical
 body is arithmetic, has been re-pinned under the pre-release regeneration rule at each in-place
-overwrite. The most recent, on 2026-09-03, re-pinned the Anaconda and the Corvette at their own
-lengths: Almanac 0.2.9 adds nine large SRV hangar symbols at index 841, which moves every module
-index above them and so respells the two references that name one, neither of them shorter for it:
+overwrite. The Almanac 0.2.12 table keeps the Anaconda value and re-pins the Corvette at its own
+length after the sorted blueprint additions move later blueprint indices:
 
 | Reference build               | Base70 encoded data                                                                | Data length |
 | ----------------------------- | ---------------------------------------------------------------------------------- | ----------: |
@@ -743,7 +750,7 @@ index above them and so respells the two references that name one, neither of th
 | Stock Krait Mk II             | `b.vz,jdQ_4`                                                                       |          10 |
 | Festive flak Krait            | `b.5S25TzaeLjTwhwDXHrX`                                                            |          21 |
 | Full engineered Anaconda*     | `b.8oUeO4wu5ZrfCrTfzkyEp9VJ1NAj-M4u5tBFFEp3.:aLg6tfRJSrwSAe4Dz6jB`                 |          64 |
-| Supplied engineered Corvette† | `b.26da!i-2iAMHR6!JZRgv2A4OO8ezAd.KALtMaTu1R3sY,Lfi0zRNpDcH3ulwYrH!LT9kA@3_!oKDpG` |          80 |
+| Supplied engineered Corvette† | `b.26da!i-2iAMHR6!JZRgv2A4OO8ezAd.KALtMaTu1R3sY,Lfi0zRNpDcH3ulwYrH!KjCD0l0tW3jj!i` |          80 |
 
 \* All 38 outfittable slots are occupied, every currently offered fixture blueprint is applied, and
 the fixed cargo hatch has an explicit power state. Cargo racks remain stock because Almanac 0.1.4

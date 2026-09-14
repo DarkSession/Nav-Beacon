@@ -4,7 +4,7 @@ import { getBlueprintsForModule } from '@elite-dangerous-almanac/core/ships/engi
 import { PRE_ENGINEERED_MODULES } from '@elite-dangerous-almanac/core/ships/pre-engineered';
 import { getPreEngineeredJournalModifiers } from '@elite-dangerous-almanac/core/ships/pre-engineered-stats';
 import { SHIPS } from '@elite-dangerous-almanac/core/ships/ships';
-import type { LoadoutEvent } from '@elite-dangerous-almanac/core/ships/slef';
+import type { EngineeringModifier, LoadoutEvent } from '@elite-dangerous-almanac/core/ships/slef';
 import { ArithmeticEncoder } from './build-link-arithmetic';
 import { BuildLinkCodecError, createBuildLinkCodec } from './build-link-codec';
 import { encodeBuildLinkBody } from './build-link-payload';
@@ -299,7 +299,7 @@ describe('build-link codec', () => {
     expect(minimalState(decoded)).toEqual(minimalState(source, true));
     expect(encodeBuildLinkFragment(decoded)).toBe(fragment);
     expect(fragment).toBe(
-      'b.26da!i-2iAMHR6!JZRgv2A4OO8ezAd.KALtMaTu1R3sY,Lfi0zRNpDcH3ulwYrH!LT9kA@3_!oKDpG',
+      'b.26da!i-2iAMHR6!JZRgv2A4OO8ezAd.KALtMaTu1R3sY,Lfi0zRNpDcH3ulwYrH!KjCD0l0tW3jj!i',
     );
     expect(`https://ships.example/#${fragment}`).toHaveLength(103);
   });
@@ -340,7 +340,7 @@ describe('build-link codec', () => {
 
   it('round-trips every package-identifiable fixed pre-engineered variant', () => {
     const identifiable = PRE_ENGINEERED_MODULES.filter(({ modifiers }) => modifiers?.length);
-    expect(identifiable).toHaveLength(54);
+    expect(identifiable).toHaveLength(79);
 
     for (const variant of identifiable) {
       const source = ShipLoadout.fromLoadout({
@@ -372,21 +372,17 @@ describe('build-link codec', () => {
     }
   });
 
-  it('pins which fixed variants the package publishes a modifier block for', () => {
-    // The 22/54 split is the axis both records turn on, so pin it in both directions: a
-    // non-Mercenary variant shipping without a modifier block would change what the
-    // pre-engineered record can restore, and must not pass unnoticed.
+  it('pins the modifier block published for every fixed variant', () => {
+    // The pre-engineered record can restore every package variant from its published modifier
+    // block. Pin both sets so a variant losing that block cannot pass unnoticed.
     const withoutModifiers = PRE_ENGINEERED_MODULES.filter(({ modifiers }) => !modifiers?.length);
-    const mercenary = PRE_ENGINEERED_MODULES.filter(
-      ({ acquisition }) => acquisition === 'mercenary',
-    );
-    expect(withoutModifiers).toHaveLength(22);
-    expect(mercenary).toHaveLength(22);
-    expect(new Set(withoutModifiers)).toEqual(new Set(mercenary));
+    const withModifiers = PRE_ENGINEERED_MODULES.filter(({ modifiers }) => modifiers?.length);
+    expect(withoutModifiers).toHaveLength(0);
+    expect(new Set(withModifiers)).toEqual(new Set(PRE_ENGINEERED_MODULES));
   });
 
   it('pins which Mercenary articles the shop sells with an experimental effect', () => {
-    // Ten of the 22 arrive with an effect already on them. The record encodes the effect against
+    // Twelve of the 25 arrive with an effect already on them. The record encodes the effect against
     // that pinned value rather than writing it out, so a row gaining or losing one changes the bit
     // layout of every link that names it. Pin the ten so it cannot move unnoticed.
     const baked = PRE_ENGINEERED_MODULES.filter(
@@ -418,7 +414,6 @@ describe('build-link codec', () => {
       ['Hpt_MultiCannon_Fixed_Medium', 'MultiCannon_Rapid', 1, 'special_phasing_sequence'],
       ['Hpt_Railgun_Fixed_Medium', 'RailGun_LongShot', 1, 'special_feedback_cascade_cooled'],
       ['Hpt_BasicMissileRack_Fixed_Medium', 'SeekerMissileRack_Drag', 1, 'special_drag_munitions'],
-      ['Hpt_BasicMissileRack_Fixed_Large', 'SeekerMissileRack_Drag', 1, 'special_drag_munitions'],
       [
         'Hpt_BasicMissileRack_Fixed_Medium',
         'SeekerMissileRack_LightWeightThermal',
@@ -437,6 +432,19 @@ describe('build-link codec', () => {
         1,
         'special_fsd_interrupt',
       ],
+      [
+        'Hpt_PulseLaserBurst_Gimbal_Medium',
+        'BurstLaser_Regenerative',
+        1,
+        'special_regeneration_sequence',
+      ],
+      ['Hpt_Cannon_Fixed_Huge', 'Cannon_ForceImpact', 1, 'special_force_shell'],
+      [
+        'Hpt_BasicMissileRack_Fixed_Large',
+        'SeekerMissileRackLarge_ExposingMissiles',
+        1,
+        'special_drag_munitions',
+      ],
     ]);
   });
 
@@ -449,7 +457,7 @@ describe('build-link codec', () => {
     // compared through `?? []`.
     let covered = 0;
     for (const variant of mercenaryVariants()) {
-      const build = ShipLoadout.empty('Krait_MkII');
+      const build = ShipLoadout.empty('Anaconda');
       const fitted = build.fittedModuleAt(fitMercenaryVariant(build, variant))!;
 
       expect(fitted.engineering?.Level).toBe(variant.grade);
@@ -460,7 +468,7 @@ describe('build-link codec', () => {
       covered += 1;
     }
 
-    expect(covered).toBe(22);
+    expect(covered).toBe(25);
 
     // One named article proves the block is not empty for all of them.
     const baked = mercenaryVariants().find(({ symbol }) => symbol === 'Hpt_Railgun_Fixed_Medium')!;
@@ -475,18 +483,18 @@ describe('build-link codec', () => {
   it('round-trips every baked Mercenary article fitted in the application', () => {
     // The shape a Commander reaches by buying one from the candidate list, which no capture is
     // involved in. The record carries the identity alone, so this is what proves the effect, the
-    // modifiers it moves and the stats they resolve to survive the trip for all ten.
+    // modifiers it moves and the stats they resolve to survive the trip for all twelve.
     const covered: string[] = [];
     for (const variant of mercenaryVariants()) {
       if (variant.experimentalEffectSymbol === undefined) continue;
-      const source = ShipLoadout.empty('Krait_MkII');
-      source.setPreEngineeredVariant('LargeHardpoint1', variant);
-      const before = source.fittedModuleAt('LargeHardpoint1')!;
+      const source = ShipLoadout.empty('Anaconda');
+      const slot = fitMercenaryVariant(source, variant);
+      const before = source.fittedModuleAt(slot)!;
       expect(before.preEngineeredVariant).toEqual(variant);
 
       const fragment = encodeBuildLinkFragment(source);
       const decoded = decodeBuildLinkFragment(fragment);
-      const after = decoded.fittedModuleAt('LargeHardpoint1')!;
+      const after = decoded.fittedModuleAt(slot)!;
 
       expect(after.preEngineeredVariant).toEqual(variant);
       expect(after.engineering?.ExperimentalEffect).toBe(variant.experimentalEffectSymbol);
@@ -496,19 +504,27 @@ describe('build-link codec', () => {
       covered.push(variant.blueprintSymbol);
     }
 
-    expect(covered).toHaveLength(10);
+    expect(covered).toHaveLength(12);
   });
 
-  it('round-trips every Mercenary variant imported at its purchase grade with no effect stated', () => {
+  it('round-trips every complete Mercenary purchase capture', () => {
     for (const variant of mercenaryVariants()) {
-      const source = mercenaryBuild(variant, variant.grade);
-      const sourceModule = source.fittedModuleAt('LargeHardpoint1')!;
+      const slot = mercenarySlot(variant);
+      const source = mercenaryBuild(
+        variant,
+        variant.grade,
+        getPreEngineeredJournalModifiers(variant),
+        variant.experimentalEffectSymbol,
+      );
+      const sourceModule = source.fittedModuleAt(slot)!;
       expect(sourceModule.preEngineeredVariant).toEqual(variant);
-      expect(sourceModule.engineering?.Modifiers ?? []).toHaveLength(0);
+      expect(sourceModule.engineering?.Modifiers).toEqual(
+        getPreEngineeredJournalModifiers(variant),
+      );
 
       const fragment = encodeBuildLinkFragment(source);
       const decoded = decodeBuildLinkFragment(fragment);
-      const decodedModule = decoded.fittedModuleAt('LargeHardpoint1')!;
+      const decodedModule = decoded.fittedModuleAt(slot)!;
 
       expect(decodedModule.preEngineeredVariant).toEqual(variant);
       expect(decodedModule.engineering?.Level).toBe(variant.grade);
@@ -525,17 +541,18 @@ describe('build-link codec', () => {
     // record restores none. A capture that states them would decode as a stock module, which is
     // why this is refused rather than encoded.
     for (const variant of mercenaryVariants()) {
+      const slot = mercenarySlot(variant);
       const source = mercenaryBuild(variant, variant.grade, [
         { Label: 'Mass', Value: 3, OriginalValue: 2 },
       ]);
-      const sourceModule = source.fittedModuleAt('LargeHardpoint1')!;
+      const sourceModule = source.fittedModuleAt(slot)!;
       expect(sourceModule.preEngineeredVariant).toEqual(variant);
       expect(sourceModule.engineering?.Modifiers).toHaveLength(1);
 
       // The ordinary record is the fallback, and no Mercenary blueprint offers the purchase grade
       // as a craftable one, so it cannot spell this either.
       const error = expectCodecError(() => encodeBuildLinkFragment(source), 'invalidPayload');
-      expect(error.message).toContain('LargeHardpoint1');
+      expect(error.message).toContain(slot);
     }
   });
 
@@ -624,14 +641,15 @@ describe('build-link codec', () => {
       expect(grades).not.toContain(variant.grade);
 
       for (const grade of grades) {
+        const slot = mercenarySlot(variant);
         const source = mercenaryBuild(variant, grade);
-        const sourceModule = source.fittedModuleAt('LargeHardpoint1')!;
+        const sourceModule = source.fittedModuleAt(slot)!;
         expect(sourceModule.preEngineeredVariant).toEqual(variant);
         expect(sourceModule.engineering?.Level).toBe(grade);
 
         const fragment = encodeBuildLinkFragment(source);
         const decoded = decodeBuildLinkFragment(fragment);
-        const decodedModule = decoded.fittedModuleAt('LargeHardpoint1')!;
+        const decodedModule = decoded.fittedModuleAt(slot)!;
 
         expect(decodedModule.engineering?.Level).toBe(grade);
         expect(decodedModule.preEngineeredVariant).toEqual(variant);
@@ -848,14 +866,12 @@ describe('build-link codec', () => {
   });
 
   it('pins the reviewed pre-release table 1 content hash', async () => {
-    // Table 1 was explicitly regenerated while the application and link format are still
-    // unpublished, most recently on 2026-09-03 under Almanac 0.2.9, which added the nine large
-    // SRV hangar symbols at index 841 and so moved every module index above them. Once released,
-    // a changed hash belongs under the next table number.
+    // Table 1 is regenerated in place while the application and link format remain unpublished.
+    // Once released, a changed hash belongs under the next table number.
     const { contentHash, tableVersion } = codecTable1.$generated;
     const { $generated: _omitted, ...payload } = codecTable1;
 
-    expect(contentHash).toBe('f9f977a6ebda651eb56cd082e8589ab32ce143458e0daa88b068df9f64247b68');
+    expect(contentHash).toBe('c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370');
     expect(await canonicalHash(payload)).toBe(contentHash);
     expect(tableVersion).toBe(1);
   });
@@ -1460,30 +1476,21 @@ function stockStats(symbol: string): unknown {
 
 function mercenaryVariants(): readonly (typeof PRE_ENGINEERED_MODULES)[number][] {
   const variants = PRE_ENGINEERED_MODULES.filter(({ acquisition }) => acquisition === 'mercenary');
-  expect(variants).toHaveLength(22);
+  expect(variants).toHaveLength(25);
   return variants;
 }
 
 /**
- * Fits a Mercenary variant into whichever Krait slot accepts it, and names that slot.
+ * Fits a Mercenary variant into whichever build slot accepts it, and names that slot.
  *
  * `setPreEngineeredVariant` is the application's own path and it throws on a slot the article does
- * not belong in. A test that walks all 22 therefore has to find each one its own mount rather than
- * assume a hardpoint.
+ * not belong in. A test that walks all 25 has to find each one its own mount.
  */
 function fitMercenaryVariant(
   build: ShipLoadout,
   variant: (typeof PRE_ENGINEERED_MODULES)[number],
 ): string {
-  for (const slot of [
-    'LargeHardpoint1',
-    'MediumHardpoint1',
-    'SmallHardpoint1',
-    'TinyHardpoint1',
-    'Slot01_Size6',
-    'Slot02_Size5',
-    'PowerDistributor',
-  ]) {
+  for (const { key: slot } of build.slots()) {
     try {
       build.setPreEngineeredVariant(slot, variant);
     } catch {
@@ -1491,28 +1498,33 @@ function fitMercenaryVariant(
     }
     if (build.fittedModuleAt(slot)?.preEngineeredVariant != null) return slot;
   }
-  throw new Error(`No Krait slot accepts ${variant.symbol} / ${variant.blueprintSymbol}.`);
+  throw new Error(`No slot accepts ${variant.symbol} / ${variant.blueprintSymbol}.`);
+}
+
+function mercenarySlot(variant: (typeof PRE_ENGINEERED_MODULES)[number]): string {
+  return fitMercenaryVariant(ShipLoadout.empty('Anaconda'), variant);
 }
 
 function mercenaryBuild(
   variant: (typeof PRE_ENGINEERED_MODULES)[number],
   grade: number,
-  modifiers?: readonly {
-    readonly Label: string;
-    readonly Value: number;
-    readonly OriginalValue: number;
-  }[],
+  modifiers?: readonly EngineeringModifier[],
+  experimentalEffectSymbol?: string,
 ): ShipLoadout {
+  const slot = mercenarySlot(variant);
   return ShipLoadout.fromLoadout({
-    Ship: 'Krait_MkII',
+    Ship: 'Anaconda',
     Modules: [
       {
-        Slot: 'LargeHardpoint1',
+        Slot: slot,
         Item: variant.symbol,
         Engineering: {
           BlueprintName: variant.blueprintSymbol,
           Level: grade,
           Quality: 1,
+          ...(experimentalEffectSymbol === undefined
+            ? {}
+            : { ExperimentalEffect: experimentalEffectSymbol }),
           ...(modifiers === undefined ? {} : { Modifiers: modifiers }),
         },
       },

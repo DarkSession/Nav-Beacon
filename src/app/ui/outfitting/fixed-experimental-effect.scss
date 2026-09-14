@@ -1,0 +1,26 @@
+@use '../../../styles/responsive' as layout;
+
+.fixed-effect {
+  @include layout.stack(var(--ednb-space-stack-tight));
+}
+
+.fixed-effect__label {
+  @include layout.micro-label(var(--ednb-text-subtle));
+
+  margin: 0;
+}
+
+.fixed-effect__name,
+.fixed-effect__description {
+  margin: 0;
+}
+
+.fixed-effect__name {
+  color: var(--ednb-text-info);
+  font-size: var(--ednb-text-size-body);
+}
+
+.fixed-effect__description {
+  color: var(--ednb-text-muted);
+  font-size: var(--ednb-text-size-compact);
+}

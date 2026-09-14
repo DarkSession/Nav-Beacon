@@ -84,3 +84,22 @@ the emulation can finish.
 | —    | —   | Chromium | —     | —        | portrait    | drives & mass / thrusters off | As above, with the package’s reasons in place of the envelope                                        | —      | not run |
 | —    | —   | Firefox  | —     | —        | landscape   | drives & mass / ready         | As above                                                                                             | —      | not run |
 | —    | —   | Firefox  | —     | —        | portrait    | drives & mass / thrusters off | As above                                                                                             | —      | not run |
+
+## Fixed experimental effect (change 023)
+
+The engineering layer replaces the surrounding module summary at compact
+widths. These observations confirm that actual browser chrome does not hide the
+fixed-effect fact, the grade controls, or the route out of the layer. They also
+confirm that the page has no sideways scroll and that no effect-edit control is
+presented.
+
+**Status: not yet executed.** No actual-zoom run has been performed against this
+build. The rows remain empty because viewport emulation cannot include real
+browser and operating-system chrome or judge practical use.
+
+| Date | OS  | Browser  | Build | Viewport | Orientation | Capability / state                   | Expected                                                                                           | Actual | Result  |
+| ---- | --- | -------- | ----- | -------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------- | ------ | ------- |
+| —    | —   | Chromium | —     | —        | landscape   | engineering / fixed effect and grade | Fixed fact, grade controls and exit reachable; no effect control, clipping or sideways page scroll | —      | not run |
+| —    | —   | Chromium | —     | —        | portrait    | engineering / fixed effect and grade | As above                                                                                           | —      | not run |
+| —    | —   | Firefox  | —     | —        | landscape   | engineering / fixed effect and grade | As above                                                                                           | —      | not run |
+| —    | —   | Firefox  | —     | —        | portrait    | engineering / fixed effect and grade | As above                                                                                           | —      | not run |

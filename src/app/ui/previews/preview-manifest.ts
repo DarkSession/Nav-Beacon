@@ -241,6 +241,7 @@ import { AcquisitionBadge } from '../outfitting/acquisition-badge';
 import { AttributeComparison } from '../outfitting/attribute-comparison';
 import { BlueprintChoiceList } from '../outfitting/blueprint-choice-list';
 import { ExperimentalEffectList } from '../outfitting/experimental-effect-list';
+import { FixedExperimentalEffect } from '../outfitting/fixed-experimental-effect';
 import { GradeSelector } from '../outfitting/grade-selector';
 import { IngressRefusalNotice } from '../outfitting/ingress-refusal-notice';
 import { PowerControls } from '../outfitting/power-controls';
@@ -3416,6 +3417,64 @@ registerPreview({
       'disabled',
       'A recipe with no grades renders no cells rather than five unusable ones.',
     ),
+  ],
+});
+
+registerPreview({
+  componentId: 'fixed-experimental-effect',
+  group: 'Engineering',
+  component: FixedExperimentalEffect,
+  contract: contract(
+    'fixed-experimental-effect',
+    {
+      role: 'text',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: [],
+      relationships: ['description', 'untranslated-disclosure'],
+      textEquivalents: ['the fixed restriction'],
+    },
+    ['default', 'empty'],
+    [
+      'normal',
+      'expanded-copy',
+      'rtl',
+      'canonical-untranslated',
+      'unavailable-text',
+      'long-identity',
+    ],
+  ),
+  states: [
+    state(
+      'default',
+      { effect: canonical('Auto Loader') },
+      [
+        'states the package effect as fixed content rather than a control',
+        'associates the canonical-text disclosure with the package value',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'canonical-untranslated', 'long-identity'],
+    ),
+    state(
+      'empty',
+      {
+        effect: {
+          text: null,
+          language: null,
+          translationState: 'unavailable',
+          disclosureKey: 'game-text.unavailable',
+        },
+      },
+      [
+        'states an unavailable package name without exposing a raw symbol',
+        'keeps the fixed restriction when the package name is unavailable',
+      ],
+      ['normal', 'unavailable-text'],
+    ),
+    notApplicable(
+      'loading',
+      'The carried effect and its package name resolve synchronously from the fitted module.',
+    ),
+    notApplicable('error', 'A fixed effect is content, not the outcome of an attempted edit.'),
+    notApplicable('disabled', 'A fixed effect is content, not a control.'),
   ],
 });
 

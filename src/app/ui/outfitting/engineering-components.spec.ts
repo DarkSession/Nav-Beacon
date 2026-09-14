@@ -14,6 +14,7 @@ import { AnnouncementService } from '../announcements/announcement.service';
 import { AttributeComparison } from './attribute-comparison';
 import { BlueprintChoiceList } from './blueprint-choice-list';
 import { ExperimentalEffectList } from './experimental-effect-list';
+import { FixedExperimentalEffect } from './fixed-experimental-effect';
 import { GradeSelector } from './grade-selector';
 import { IngressRefusalNotice } from './ingress-refusal-notice';
 import { sortMaterialLines } from './material-lines';
@@ -226,6 +227,50 @@ describe('experimental effect list', () => {
     expect(queryAll(fixture, '.effect__description')).toHaveLength(0);
     // The effect is still named, and a name the catalogue has lost still says so.
     expect(textOf(query(fixture, '.effect__name')).length).toBeGreaterThan(0);
+  });
+});
+
+describe('fixed experimental effect', () => {
+  it('states a localized effect and its fixed restriction', () => {
+    const fixture = renderComponent(FixedExperimentalEffect, { effect: named('Screening Shell') });
+
+    expect(textOf(element(fixture))).toContain('Screening Shell');
+    expect(textOf(element(fixture))).toContain('fixed and cannot be changed');
+  });
+
+  it('discloses canonical text in its actual language', () => {
+    const fixture = renderComponent(FixedExperimentalEffect, {
+      effect: {
+        text: 'Screening Shell',
+        language: 'en',
+        translationState: 'canonical',
+        disclosureKey: 'game-text.untranslated.description',
+      },
+    });
+    const value = query(fixture, '.game-text__value');
+
+    expect(value.getAttribute('lang')).toBe('en');
+    expect(value.getAttribute('aria-describedby')).not.toBeNull();
+    expect(textOf(query(fixture, '.game-text__disclosure'))).toContain('original language');
+  });
+
+  it('states unavailable text without exposing an identity', () => {
+    const fixture = renderComponent(FixedExperimentalEffect, {
+      effect: {
+        text: null,
+        language: null,
+        translationState: 'unavailable',
+        disclosureKey: 'game-text.unavailable',
+      },
+    });
+
+    expect(textOf(element(fixture))).toContain('Name unavailable');
+    expect(textOf(element(fixture))).not.toContain('special_');
+  });
+
+  it('ships its fixed-state text in German', () => {
+    expect(germanCatalogue['outfitting.engineering.effect.fixed']).toBeTruthy();
+    expect(germanCatalogue['outfitting.engineering.effect.fixed-description']).toBeTruthy();
   });
 });
 

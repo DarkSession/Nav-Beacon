@@ -410,6 +410,8 @@
   "outfitting.engineering.grade.option": "Grade {{grade}}",
   "outfitting.engineering.grade.option-outside": "Grade {{grade}}, outside this blueprint",
   "outfitting.engineering.effect.legend": "Experimental effect",
+  "outfitting.engineering.effect.fixed": "Fixed experimental effect",
+  "outfitting.engineering.effect.fixed-description": "This effect is fixed and cannot be changed.",
   "outfitting.engineering.effect.none": "None",
   "outfitting.engineering.effect.choose": "Apply {{effect}}",
   "outfitting.engineering.attributes.legend": "Stock and modified",
