@@ -132,14 +132,23 @@ describe('a published link the address lost', () => {
     // a push would truncate that entry and append its own and the count would
     // not move. A restoration puts back what the address already claimed to
     // hold, so it is not an edit and does not lengthen a Commander's history.
+    //
+    // Both spies, because no push is not the whole of it: a restoration written
+    // by assigning `location.hash` would add an entry without ever calling
+    // `pushState`. What wrote the fragment is read here as well as what did not.
     const pushed = vi.spyOn(window.history, 'pushState');
+    const replaced = vi.spyOn(window.history, 'replaceState');
     try {
       await goBack();
 
       expect(pushed).not.toHaveBeenCalled();
+      expect(replaced.mock.calls.some(([, , url]) => String(url).endsWith('#b.published'))).toBe(
+        true,
+      );
       expect(location.fragment()).toBe('b.published');
     } finally {
       pushed.mockRestore();
+      replaced.mockRestore();
       stop();
     }
   });

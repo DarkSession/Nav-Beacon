@@ -145,9 +145,8 @@ test.describe('publishing a build link', () => {
     await buildStockHull(page, 'Build');
 
     // Capped rather than open-ended: where the chunk never arrives as a request
-    // of its own, this journey fails on the assertion below, which names what
-    // went wrong, rather than on a timeout waiting for a request that is not
-    // coming.
+    // of its own, this journey fails on the assertion below rather than on a
+    // timeout waiting for a request that is not coming.
     await Promise.race([codecReached, new Promise((resolve) => setTimeout(resolve, 3_000))]);
 
     await openLibrary(page);

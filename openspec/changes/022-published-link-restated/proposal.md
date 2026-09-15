@@ -70,11 +70,11 @@ None.
 - `src/app/application/build-link/fragment-publisher.ts` gains the watcher that restores a lost
   link, beside the publication it already owns.
 - `src/app/platform/browser/history-location.adapter.ts` reads the address back when the router
-  writes it. The adapter is the application's only reader of the fragment, and a router restoring a
-  history entry writes the whole address from its own record of it — which holds no fragment put
-  there with `history.replaceState`. That write fires no `hashchange`, so without this the adapter
-  would report a fragment the address had stopped carrying and the watcher above would never learn
-  the link was dropped.
+  writes it. The adapter is the only place the application reads the fragment as a value, and a
+  router restoring a history entry writes the whole address from its own record of it — which holds
+  no fragment put there with `history.replaceState`. That write fires no `hashchange`, so without
+  this the adapter would report a fragment the address had stopped carrying and the watcher above
+  would never learn the link was dropped.
 - `src/app/features/build-library/library-presence.ts` is unchanged. This is the design question
   the issue was opened for, answered in design.md: the library does not reach into the build
   link, and the workspace is not the only way an address can lose a publication.

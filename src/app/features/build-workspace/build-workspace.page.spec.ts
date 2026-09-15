@@ -59,6 +59,12 @@ describe('BuildWorkspacePage persistence actions', () => {
     active = TestBed.inject(ActiveBuildStore);
   });
 
+  afterEach(() => {
+    // Given back as it was found. The case below ends with a build link on the
+    // address, and the address is the document's rather than the test's.
+    history.replaceState(null, '', location.pathname);
+  });
+
   /** A build on the workspace, as opening a stock hull leaves one. */
   function openBuild(symbol = 'Anaconda'): void {
     active.commit({
