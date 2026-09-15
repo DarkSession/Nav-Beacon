@@ -15,6 +15,7 @@ import { recordKey } from '../../platform/storage/storage-keys';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
 import { AutosaveService } from './autosave.service';
+import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinator';
 import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A lifecycle adapter a test can fire on demand. */
@@ -390,13 +391,19 @@ describe('AutosaveService', () => {
     expect(active.loadout()).not.toBeNull();
   });
 
-  it('lets another build replace one a store failure left in no record, without asking', () => {
+  it('lets another build replace one a store failure left in no record, without asking', async () => {
     // Replacing is never confirmed. A build carrying a decision is in the
     // record autosave keeps it in where the store can hold it, and where the
     // store refused that write the failure is stated on the screen rather than
     // held back to be asked at the moment a Commander asks for another build
     // (024/FR-001).
+    //
+    // Driven through `BuildIngressCoordinator`, which is the single path by
+    // which the active build is replaced. A question would have to be an
+    // outcome of that commit, and `CommitResult` carries none: it commits, it
+    // is superseded by a newer request, or it fails.
     const { autosave, active, storage } = setup();
+    const ingress = TestBed.inject(BuildIngressCoordinator);
     editedBuild(active, 'Anaconda', null);
     storage.writeError = quotaError();
 
@@ -408,9 +415,24 @@ describe('AutosaveService', () => {
 
     // The Commander opens another build, and gets it.
     storage.writeError = null;
-    const replacement = editedBuild(active, 'Eagle', null);
+    const replacement = ShipLoadout.default('Eagle');
+    const result = await ingress.commit(() => ({
+      ok: true,
+      candidate: {
+        loadout: replacement,
+        suppliedFit: suppliedFit(replacement.shipSymbol),
+        hullName: 'Eagle',
+        provenance: 'stock',
+        sourceNamed: null,
+        autosaveRecordId: null,
+        baseline: null,
+      },
+    }));
+    replacement.setModulePriority('FrameShiftDrive', 2);
+    active.touch();
     autosave.flush();
 
+    expect(result.kind).toBe('committed');
     expect(active.loadout()).toBe(replacement);
     expect(active.hullName()).toBe('Eagle');
     // One record, for the build that is on screen. The one the store never took

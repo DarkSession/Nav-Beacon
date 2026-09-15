@@ -20,6 +20,9 @@ import { fold } from './build-default';
  * promise, which stays true as the catalogue grows.
  */
 
+/** The mount a hull's cargo hatch sits in, which carries no outfitting module. */
+const CARGO_HATCH = 'CargoHatch';
+
 /** Every hull the package publishes a supplied fit for, with that fit. */
 const supplied = SHIPS.map((ship) => [ship.symbol, getDefaultLoadout(ship.symbol)] as const).filter(
   (entry): entry is readonly [string, NonNullable<ReturnType<typeof getDefaultLoadout>>] =>
@@ -29,6 +32,37 @@ const supplied = SHIPS.map((ship) => [ship.symbol, getDefaultLoadout(ship.symbol
 describe('the installed Almanac, on what a module symbol identifies', () => {
   it('publishes a supplied fit for hulls, so the comparison has something to read', () => {
     expect(supplied.length).toBeGreaterThan(0);
+  });
+
+  it('knows every supplied symbol but the cargo hatch, so the folding cases reach something', () => {
+    // Each case below filters on what the catalogue knows, so a catalogue that
+    // knew nothing would satisfy them all. A cargo hatch is not an outfitting
+    // module and the catalogue carries none; every other supplied article is
+    // one.
+    const unresolved = supplied.flatMap(([hull, fit]) =>
+      fit.modules
+        .filter((module) => getModuleBySymbol(module.symbol) === null)
+        .map((module) => `${hull} ${module.slot}=${module.symbol}`),
+    );
+
+    expect(unresolved.every((entry) => entry.includes(CARGO_HATCH))).toBe(true);
+    expect(supplied.flatMap(([, fit]) => fit.modules).length - unresolved.length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  it('names one hull whatever the case its symbol is asked in', () => {
+    // `suppliedFit` memoises a hull's fit under its folded symbol, so two hulls
+    // that folded together would answer each other's supplied fit.
+    const folded = new Set(SHIPS.map((ship) => fold(ship.symbol)));
+
+    expect(folded.size).toBe(SHIPS.length);
+
+    for (const ship of SHIPS) {
+      const published = getDefaultLoadout(ship.symbol);
+      expect(getDefaultLoadout(ship.symbol.toLowerCase())).toEqual(published);
+      expect(getDefaultLoadout(ship.symbol.toUpperCase())).toEqual(published);
+    }
   });
 
   it('folds a supplied symbol onto the spelling its module catalogue uses', () => {

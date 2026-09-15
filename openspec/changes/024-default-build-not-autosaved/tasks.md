@@ -11,8 +11,11 @@
       test, which is why no screen changes.
 - [x] 1.2 Add to `src/app/domain/ships/build/` a failing unit test that the snapshot of
       `ShipLoadout.default(<hull symbol>)` is reported at the hull's package default, that the same
-      build with one module replaced is not, and that the same build with a ship name or an ident is
-      not. Verify it fails because the comparison does not exist yet (024/FR-001).
+      build with one module replaced is not, that the same build with one mount emptied is not, and
+      that the same build with a ship name or an ident is not. The emptied mount is a case of its
+      own because it is answered by the module count rather than by the walk over the modules: every
+      module that remains is still the one the hull was supplied with. Verify it fails because the
+      comparison does not exist yet (024/FR-001).
 - [x] 1.3 Add to `src/app/domain/equipment/loadout/` the same failing unit test for the bench: the
       loadout the bench starts for a suit is reported at that suit's default, and the same loadout
       with a weapon fitted, a modification fitted or a raised suit grade is not. Verify it fails for
@@ -153,7 +156,11 @@
 - [x] 5.7 Verify the SLEF journey against its restated requirement: one selected event replaces the
       active build, writes no named record, and is in the address where it takes no record. Check
       `e2e/slef-import.spec.ts` asserts this, and that the batch still stores one named record per
-      event selected (024/FR-001).
+      event selected (024/FR-001). `e2e/slef-import.spec.ts` asserts the address an entry at the
+      package default takes no record in; the selection halves — one event opened, and the batch —
+      are asserted in `e2e/journal-import.spec.ts`, which is where the journey that selects events
+      lives. Assert "no named record" by opening the saved list and counting the named cards in it,
+      because the list is also where the derived rows are drawn and a closed list asserts nothing.
 - [x] 5.8 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts`, on every
       surface a task writes an assertion on: `build` and `equipment/bench-persistence` for the first
       two, `ships/:hull/create-stock-build` for task 5.4, `shell/journal-selection` for task 5.7, and

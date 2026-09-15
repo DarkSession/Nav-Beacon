@@ -93,6 +93,26 @@ describe('package default build', () => {
     expect(atDefault(toBuildSnapshotV1(withReplacedModule()))).toBe(false);
   });
 
+  it('reports an emptied mount as not at the default', () => {
+    // Emptying a mount is often a Commander's first edit, and it leaves a build
+    // holding fewer modules than the hull was supplied with rather than a
+    // different one in a slot. Counted before the modules are walked, because a
+    // walk over what remains finds every one of them still supplied
+    // (024/FR-001).
+    const build = ShipLoadout.default(FIXTURE_HULL);
+    expect(
+      build.fittedModuleAt(FIXTURE_SLOTS.fittedOptional),
+      'the fixture mount arrives filled',
+    ).not.toBeNull();
+
+    build.removeModule(FIXTURE_SLOTS.fittedOptional);
+    const snapshot = toBuildSnapshotV1(build);
+
+    expect(build.fittedModuleAt(FIXTURE_SLOTS.fittedOptional), 'the mount is emptied').toBeNull();
+    expect(snapshot.modules.length).toBeLessThan(suppliedFit(snapshot.shipSymbol)!.size);
+    expect(atDefault(snapshot)).toBe(false);
+  });
+
   it('reports a module put in another power group as not at the default', () => {
     // A power group is modelled state the snapshot carries and no name reads,
     // so it is a decision on the build although the build looks the same.

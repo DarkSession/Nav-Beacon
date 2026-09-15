@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow } from './accessibility/assertions';
-import { buildStockHull, reachShellAction, recordCount, setShipIdent } from './shell';
+import { buildStockHull, openLibrary, reachShellAction, recordCount, setShipIdent } from './shell';
 
 /**
  * Builds arriving from a Commander's own game journal.
@@ -166,7 +166,10 @@ test.describe('what a Commander chooses', () => {
     // name is a Commander's, and none was given here (016/FR-009, 024/FR-001).
     await expect.poll(() => page.evaluate(() => location.hash)).toMatch(/^#b\./);
     await expect.poll(() => recordCount(page)).toBe(1);
-    await expect(page.getByRole('dialog', { name: /saved builds/i })).toHaveCount(0);
+    await openLibrary(page);
+    await expect(
+      page.locator('ednb-saved-build-card .record__title:not(.record__title--derived)'),
+    ).toHaveCount(0);
   });
 
   test('saves every chosen build, opens none, and shows the saved builds', async ({ page }) => {
