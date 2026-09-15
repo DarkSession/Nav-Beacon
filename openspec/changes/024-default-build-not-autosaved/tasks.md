@@ -68,8 +68,12 @@
       into the record this tool still holds, at its default or not: the branch reads work that holds
       no record, and a resume is offered only while a record is held (024/FR-001, 024/FR-002).
 - [x] 3.3 Skip the coalescing timer in `#schedule` under the same condition, so an untouched build
-      wakes no timeout while it is open. Verify with a fake timer that no write is attempted across
-      repeated revisions of an untouched build, and that the first edit schedules one.
+      wakes no timeout while it is open. Read the condition outside the watcher's subscription: the
+      watcher is woken by an edit, and which record the tool holds is an answer to the gate rather
+      than an edit — subscribed to, minting a record wakes the watcher and arms a second timer that
+      stores the bytes the first one has just stored. Verify with a fake timer that no write is
+      attempted across repeated revisions of an untouched build, that the first edit schedules one,
+      and that one edit leaves one write and no armed timer behind it, in both tools.
 - [x] 3.4 Verify the record a tool already holds is unaffected: a build edited back to the package
       default keeps its record, and that record is written with the default state. Add the case to
       `src/app/application/build-library/autosave.service.spec.ts` and to

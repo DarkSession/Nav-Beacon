@@ -1,4 +1,4 @@
-import { Injector, computed, effect, signal } from '@angular/core';
+import { Injector, computed, effect, signal, untracked } from '@angular/core';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { PageLifecycleAdapter } from '../../platform/browser/page-lifecycle.adapter';
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
@@ -118,7 +118,14 @@ export class WorkingRecordAutosave {
         // object reference alone would never change.
         this.#subject.revision();
         this.#subject.fingerprint();
-        this.#schedule();
+        // And those two are the whole of it. `#schedule` asks the subject
+        // several more questions — which record it holds, whether the work is
+        // still the package default — and an answer to one of those is not an
+        // edit. Read as a subscription, minting a record would wake this
+        // watcher and arm a second timer, which stores the bytes the first one
+        // has just stored under a fresh revision and a later `modifiedAt`
+        // (024/FR-001).
+        untracked(() => this.#schedule());
       },
       { injector: this.#injector },
     );

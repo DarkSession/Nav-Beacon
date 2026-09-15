@@ -552,6 +552,18 @@ describe('LoadoutAutosaveService', () => {
       vi.advanceTimersByTime(600);
 
       expect(storage.entries.size).toBe(1);
+
+      // And one edit leaves one write behind it. Minting the record answers a
+      // question the gate asks, not a choice a Commander made, so a watcher that
+      // read the answer would wake here and store the same bytes again under a
+      // fresh revision — restamping `modifiedAt` on work nobody touched
+      // (024/FR-002).
+      const key = [...storage.entries.keys()][0]!;
+      const written = storage.entries.get(key);
+      TestBed.tick();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(2_000);
+      expect(storage.entries.get(key)).toBe(written);
       stop();
     } finally {
       vi.useRealTimers();

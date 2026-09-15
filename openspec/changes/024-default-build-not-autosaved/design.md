@@ -84,6 +84,12 @@ version, or left by a build since edited back — stays where it is and runs out
 `#schedule` also skips the timer in the same condition, so an untouched build does not wake a
 timeout every 400 ms for as long as it is open.
 
+The condition is read outside the watcher's subscription. The watcher subscribes to the revision and
+the fingerprint, which is what an edit changes; the gate asks two more questions of the subject, and
+the answer to neither is an edit. Subscribed to, minting a record at the first edit wakes the watcher
+a second time and arms a second timer, which stores the bytes the first one has just stored under a
+fresh revision and a later `modifiedAt`. So one edit writes once.
+
 ### What each store answers
 
 Both stores gain one computed signal, and `WorkingRecordSubject` gains it as a member beside
