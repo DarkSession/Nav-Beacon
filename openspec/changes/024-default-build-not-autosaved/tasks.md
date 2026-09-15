@@ -75,50 +75,58 @@
       it from the address, and a page built at an address carrying no fragment opens on the no-build
       state or the empty bench. Drive it in `build-workspace.page.spec.ts` and the bench page suite
       (024/FR-001, 024/FR-002).
-- [ ] 4.5 Verify the fragment carries the work from the moment it opens, which is what 4.4 restores
-      from: `FragmentPublisher` publishes for a build that becomes active and is not edited, and
+- [ ] 4.5 Verify the work is published from the moment it opens, which is what 4.4 restores from.
+      `FragmentPublisher` publishes for a build that becomes active and is not edited, and
       `LoadoutLinkCoordinator` for a suit chosen and nothing else done. Both start effects already
       run on the first revision, so add the cases to
       `src/app/application/build-link/build-link.spec.ts` and
-      `src/app/application/equipment/loadout-link.spec.ts` and verify they pass against the code as
+      `src/app/application/equipment/loadout-link.spec.ts`, and verify they pass against the code as
       it stands (024/FR-003).
-- [ ] 4.6 Verify a build the codec refuses publishes no link and leaves the fragment alone, so the
-      restated requirement does not contradict the refusal it sits beside. Add the case to
+- [ ] 4.6 Verify the rest of what the bench's added requirement states: each change replaces the
+      fragment without adding a history entry, and the path and the query carry no part of the
+      loadout. Add both to `src/app/application/equipment/loadout-link.spec.ts` (024/FR-003).
+- [ ] 4.7 Verify a build the codec refuses publishes no link and removes a fragment carrying an
+      earlier build's link, as the feature 001 link contract requires. Add the case to
       `src/app/application/build-link/build-link.spec.ts` (024/FR-003).
-- [ ] 4.7 Verify the bench case the restated storing requirement adds: delete the record the bench
+- [ ] 4.8 Verify the bench case the restated storing requirement adds: delete the record the bench
       autosaves into, return to the bench at an address carrying a loadout at its suit's default, and
       verify it opens into no record and the deleted record stays deleted. Add it to
       `src/app/application/equipment/loadout-autosave.service.spec.ts` (024/FR-002).
-- [ ] 4.8 Verify the help topic on browser storage still agrees with the requirement it cites. Read
+- [ ] 4.9 Verify the bench's import routes against the two scenarios that declare them: a loadout at
+      its suit's default arriving from a link or a single journal event takes no record, and a batch
+      still stores one named record for every loadout selected. Add both to
+      `src/app/application/equipment/loadout-import.coordinator.spec.ts` (024/FR-002).
+- [ ] 4.10 Verify the help topic on browser storage still agrees with the requirement it cites. Read
       `help.topic.browserPersistence.answer` in `src/app/i18n/locales/en.json` against the restated
       "Autosave of the active build", and record that it answers where work is kept rather than when
       a record is taken. Verify `pnpm run help:artifacts:check` and `pnpm run policy:specs` pass.
 
 ## 5. Journeys and the coverage record
 
-- [ ] 5.1 Update `e2e/build-working-state.spec.ts`: the journey that leaves four builds in a row
-      leaves none until each is edited, so edit each build and verify four records; add the journey
-      that creating a build and changing nothing leaves the library with no entry for it, and that
-      the first edit makes one appear. Verify both in the ten-project matrix (024/FR-001).
-- [ ] 5.2 Update `e2e/hull-detail.spec.ts` so its second-creation journey drops the assertion that
+- [ ] 5.1 Edit each of the four builds in the four-in-a-row journey of
+      `e2e/build-working-state.spec.ts`. Verify the library holds four records (024/FR-001).
+- [ ] 5.2 Add a journey to the same file: create a build and change nothing. Verify the library
+      holds no entry for it (024/FR-001).
+- [ ] 5.3 Extend that journey with the first modelled edit. Verify one entry appears (024/FR-001).
+- [ ] 5.4 Update `e2e/hull-detail.spec.ts` so its second-creation journey drops the assertion that
       the first build is stored, and verify it asserts what is true: the second creation replaces the
       first on screen without asking (024/FR-001).
-- [ ] 5.3 Update the bench persistence journey in `e2e/tool-bar-navigation.spec.ts`, which carries
+- [ ] 5.5 Update the bench persistence journey in `e2e/tool-bar-navigation.spec.ts`, which carries
       the `equipment/bench-persistence` surface: choosing a suit and doing nothing else leaves the
       saved list with no entry, the first change makes one appear, and starting an empty bench on an
       untouched default leaves nothing behind. That surface already carries `017/FR-006`, so it is
       where the restated empty-bench requirement is evidenced. Verify in the matrix (024/FR-002).
-- [ ] 5.4 Extend the address journeys: in `e2e/build-link.spec.ts`, a build that becomes active and
+- [ ] 5.6 Extend the address journeys: in `e2e/build-link.spec.ts`, a build that becomes active and
       is not edited has its link in the address, and a reload of that address restores it; in
       `e2e/equipment-link.spec.ts`, the same for a suit chosen and nothing else done. Verify both in
       the matrix (024/FR-003).
-- [ ] 5.5 Verify the SLEF journey against its restated requirement: one selected event replaces the
+- [ ] 5.7 Verify the SLEF journey against its restated requirement: one selected event replaces the
       active build, writes no named record, and is in the address where it takes no record. Check
       `e2e/slef-import.spec.ts` asserts this, and that the batch still stores one named record per
       event selected (024/FR-001).
-- [ ] 5.6 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts`, on every
+- [ ] 5.8 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts`, on every
       surface a task writes an assertion on: `build` and `equipment/bench-persistence` for the first
-      two, `ships/:hull/create-stock-build` for task 5.2, `shell/journal-selection` for task 5.5, and
+      two, `ships/:hull/create-stock-build` for task 5.4, `shell/journal-selection` for task 5.7, and
       `build/share-link` and `equipment/link` for the third. Restate the assertions those surfaces
       claim about records and the fragment, and add `024-default-build-not-autosaved` to
       `COVERED_FEATURES`. Verify `pnpm run policy:specs` passes and names no unregistered id.

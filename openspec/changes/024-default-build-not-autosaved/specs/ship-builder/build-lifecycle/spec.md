@@ -2,8 +2,9 @@
 
 ### Requirement: Build creation from the package default loadout
 
-Build creation MUST be explicit and MUST use the package default loadout. If no default is available,
-creation MUST be unavailable; the application MUST NOT invent one.
+Build creation MUST be explicit and MUST use the package default loadout,
+`ShipLoadout.default(<hull symbol>)` in `@elite-dangerous-almanac/core/ships/ship-loadout`. If no
+default is available, creation MUST be unavailable; the application MUST NOT invent one.
 
 Source: 001/FR-007, 024/FR-001.
 
@@ -164,9 +165,11 @@ and the confirmation named it. A manual save MUST consume the unnamed record it 
 leave no copy of it behind: naming an unnamed record MUST name that same local identity, and writing
 the build into an existing record MUST delete the unnamed record afterwards. Saving a copy under
 another name MUST create a further record and leave the original where it is. Replacing the active
-build MUST NOT be confirmed: a build that carries a decision is in the record autosave keeps it in,
-and a build at the package default is reached again by selecting the hull, so neither has anything
-to lose.
+build MUST NOT be confirmed: a build that carries a decision is in the record autosave keeps it in
+where the store can hold it, and a build at the package default is reached again by selecting the
+hull. A store failure leaves the earlier build in no record, and replacing MUST still not be
+confirmed. The bench refuses to clear in that state because clearing leaves nothing; replacing puts
+the build the Commander asked for in front of them, and the bench already states what the store did.
 
 A save from a build that holds no record has no unnamed record to consume and MUST write a named
 record of its own. A Commander who names a build has asked for it to be kept, whatever its modelled

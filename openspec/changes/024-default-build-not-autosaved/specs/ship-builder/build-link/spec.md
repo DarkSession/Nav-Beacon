@@ -6,13 +6,15 @@ Navigated and pasted links MUST use the same validation and replacement rules.
 
 A build's link MUST be published from the moment the build becomes active, not only after an edit.
 Build edits MUST replace the fragment without adding a history entry for each edit. Where the codec
-refuses the build, nothing is published, because there is no link to publish.
+refuses the build, nothing is published, and a fragment carrying an earlier build's link MUST be
+removed, so the address names no build the workspace does not hold.
 
 This is what makes a build that is in no record recoverable. A build still at the package default
 for its hull is stored nowhere, so a published link is the only thing holding it, and a Commander
 who reloads the tab gets the build back from the address that carries it.
 
-What the address does with a published link is stated by the requirement that keeps it there.
+What the address does with a published link is stated by "The address keeps the published link"
+(022/FR-001).
 
 Source: 001/FR-020, 024/FR-003.
 
@@ -36,7 +38,7 @@ Source: 001/FR-020, 024/FR-003.
 
 - **WHEN** the codec cannot represent the active build losslessly
 - **THEN** no link is published for it
-- **AND** the fragment is left as it is
+- **AND** a fragment carrying an earlier build's link is removed
 
 #### Scenario: The workspace is reloaded on a default build
 

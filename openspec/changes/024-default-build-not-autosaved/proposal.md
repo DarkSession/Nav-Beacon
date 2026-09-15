@@ -74,8 +74,8 @@ None.
 - `ship-builder/build-link`: "Link validation and history" ties fragment publication to build edits.
   It is restated so that a build's link is published from the moment the build becomes active, which
   is what a default build is recovered from (024/FR-003). It is scoped to publication, so what the
-  address holds afterwards is left to the requirement change 022 adds, and it says that a build the
-  codec refuses publishes nothing.
+  address holds afterwards is left to "The address keeps the published link" (022/FR-001). A build
+  the codec refuses publishes nothing, and a fragment carrying an earlier build's link is removed.
 - `ship-builder/slef-exchange`: "One selected event replaces the active build" gives autosave
   holding the import as the reason it is not also written to a named record. That reason is restated
   to cover the import that takes no record, and the batch that stores one named record per event is
@@ -111,3 +111,7 @@ None.
   the three requirement ids and this change's directory.
 - `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md` is not edited.
   It records what feature 001 built; the capability specification is the standing record.
+- This change is archived after `022-published-link-restated`. The restated link requirement defers
+  to 022/FR-001 for what the address holds, and an untouched default is the build 022's restoration
+  keeps recoverable. Two sentences in 022 give autosave as the reason a lost fragment costs nothing;
+  they are corrected here, because that is true only of a build that holds a record.

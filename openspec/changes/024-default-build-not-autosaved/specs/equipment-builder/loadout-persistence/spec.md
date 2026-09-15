@@ -230,10 +230,9 @@ Source: 017/FR-008, 024/FR-002.
 
 ### Requirement: The address carries the loadout on the bench
 
-While a loadout is on the bench, the address MUST carry it in the fragment. It MUST be there from
-the moment the loadout reaches the bench, not only after a change, and each change MUST replace the
-fragment without adding a history entry. A bench holding no loadout MUST carry none. The path and
-the query MUST NOT carry any part of it.
+The loadout MUST be published into the fragment from the moment it reaches the bench, not only
+after a change, and each change MUST replace the fragment without adding a history entry. A bench
+holding no loadout MUST publish none. The path and the query MUST NOT carry any part of it.
 
 This is what makes a loadout that is in no record recoverable. A loadout still at its suit's default
 is stored nowhere, so the fragment is the only thing holding it, and a Commander who reloads the tab
@@ -244,7 +243,7 @@ Source: 024/FR-003.
 #### Scenario: A suit is chosen and nothing else is done
 
 - **WHEN** a Commander chooses a suit at the gate and makes no other choice
-- **THEN** the fragment carries that loadout
+- **THEN** that loadout is published into the fragment
 
 #### Scenario: The bench is reloaded on a default loadout
 
