@@ -4,13 +4,15 @@
 
 Navigated and pasted links MUST use the same validation and replacement rules.
 
-While a build is active, the address MUST carry that build's link. It MUST be there from the moment
-the build becomes active, not only after an edit, and build edits MUST replace the fragment without
-adding a history entry for each edit.
+A build's link MUST be published from the moment the build becomes active, not only after an edit.
+Build edits MUST replace the fragment without adding a history entry for each edit. Where the codec
+refuses the build, nothing is published, because there is no link to publish.
 
-This is what makes a build that is in no record recoverable. A build still at the package default for
-its hull is stored nowhere, so the address is the only thing holding it, and a Commander who reloads
-the tab gets the build back from there.
+This is what makes a build that is in no record recoverable. A build still at the package default
+for its hull is stored nowhere, so a published link is the only thing holding it, and a Commander
+who reloads the tab gets the build back from the address that carries it.
+
+What the address does with a published link is stated by the requirement that keeps it there.
 
 Source: 001/FR-020, 024/FR-003.
 
@@ -22,7 +24,7 @@ Source: 001/FR-020, 024/FR-003.
 #### Scenario: A build becomes active
 
 - **WHEN** a build becomes active and the Commander edits nothing
-- **THEN** the address carries that build's link
+- **THEN** that build's link is published
 
 #### Scenario: A Commander edits the build
 
@@ -30,8 +32,15 @@ Source: 001/FR-020, 024/FR-003.
 - **THEN** the fragment is replaced
 - **AND** no history entry is added for the edit
 
+#### Scenario: The codec refuses the active build
+
+- **WHEN** the codec cannot represent the active build losslessly
+- **THEN** no link is published for it
+- **AND** the fragment is left as it is
+
 #### Scenario: The workspace is reloaded on a default build
 
 - **WHEN** a Commander reloads the tab while the workspace holds a build at the package default for
   its hull
+- **AND** the fragment carries that build's published link
 - **THEN** the same build is in the workspace

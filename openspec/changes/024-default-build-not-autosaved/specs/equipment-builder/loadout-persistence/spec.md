@@ -230,12 +230,13 @@ Source: 017/FR-008, 024/FR-002.
 
 ### Requirement: The address carries the loadout on the bench
 
-While a loadout is on the bench, the address MUST carry it. It MUST be there from the moment the
-loadout reaches the bench, not only after a change, and each change MUST replace it without adding a
-history entry. A bench holding no loadout MUST carry none.
+While a loadout is on the bench, the address MUST carry it in the fragment. It MUST be there from
+the moment the loadout reaches the bench, not only after a change, and each change MUST replace the
+fragment without adding a history entry. A bench holding no loadout MUST carry none. The path and
+the query MUST NOT carry any part of it.
 
 This is what makes a loadout that is in no record recoverable. A loadout still at its suit's default
-is stored nowhere, so the address is the only thing holding it, and a Commander who reloads the tab
+is stored nowhere, so the fragment is the only thing holding it, and a Commander who reloads the tab
 gets the loadout back from there.
 
 Source: 024/FR-003.
@@ -243,15 +244,21 @@ Source: 024/FR-003.
 #### Scenario: A suit is chosen and nothing else is done
 
 - **WHEN** a Commander chooses a suit at the gate and makes no other choice
-- **THEN** the address carries that loadout
+- **THEN** the fragment carries that loadout
 
 #### Scenario: The bench is reloaded on a default loadout
 
 - **WHEN** a Commander reloads the tab while the bench holds a loadout at its suit's default
+- **AND** the fragment carries that loadout
 - **THEN** the same loadout is on the bench
 
-#### Scenario: Each change replaces what the address carries
+#### Scenario: The bench is opened at an address carrying no loadout
+
+- **WHEN** a Commander opens the bench at an address whose fragment carries no loadout
+- **THEN** the bench opens on the suit gate
+
+#### Scenario: Each change replaces what the fragment carries
 
 - **WHEN** a Commander makes a change on the bench
-- **THEN** the address carries the changed loadout
+- **THEN** the fragment carries the changed loadout
 - **AND** no history entry is added for the change

@@ -5,7 +5,7 @@
 Build creation MUST be explicit and MUST use the package default loadout. If no default is available,
 creation MUST be unavailable; the application MUST NOT invent one.
 
-Source: 001/FR-007.
+Source: 001/FR-007, 024/FR-001.
 
 #### Scenario: Creating a build for a hull
 

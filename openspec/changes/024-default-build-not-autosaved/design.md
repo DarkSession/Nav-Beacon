@@ -84,7 +84,7 @@ Both stores gain one computed signal, and `WorkingRecordSubject` gains it as a m
 
 - `ActiveBuildStore`: the snapshot's fingerprint equals the fingerprint of the snapshot of
   `ShipLoadout.default(<hull symbol>)`. Ship name and ident are in the snapshot, so a named ship is
-  not at the default and needs no separate test.
+  not at the default without a branch of its own. The case is still unit tested, as task 1.2 asks.
 - `LoadoutStore`: the loadout's fingerprint equals the fingerprint of the bench's starting loadout
   for its suit family — that suit at the lowest grade `getSuitByFamily` publishes, no weapon on any
   mount, no modification fitted.
@@ -135,7 +135,16 @@ the address must carry a link that is published and must put it back when someth
 starts from a published link and does not say when publication starts, so it does not cover the
 build that has published nothing yet. It also touches the ship tool alone. The two changes edit the
 same capability file and no shared requirement: 022 adds a requirement, this change restates an
-accepted one.
+accepted one. The restated requirement is scoped to publication for the same reason — what the
+address holds after a link is published is 022's to state, so the two do not answer the refused link
+or the foreign fragment differently.
+
+**022 lands first.** The requirement here says a link is published; 022 is what keeps that link in
+the address when something else moves it. An untouched default has nothing else holding it, so the
+defect 022 fixes costs a Commander the build rather than only the link. Change 022 also argues that
+losing the fragment is harmless because the active build is autosaved and restored under 001/FR-008.
+That is true only of a build that holds a record, and this change makes it untrue of an untouched
+default, so 022's proposal and its task 4.1 are corrected to say so.
 
 ### Screens
 

@@ -75,11 +75,24 @@
       it from the address, and a page built at an address carrying no fragment opens on the no-build
       state or the empty bench. Drive it in `build-workspace.page.spec.ts` and the bench page suite
       (024/FR-001, 024/FR-002).
-- [ ] 4.5 Verify the address carries the work from the moment it opens, which is what 4.4 restores
+- [ ] 4.5 Verify the fragment carries the work from the moment it opens, which is what 4.4 restores
       from: `FragmentPublisher` publishes for a build that becomes active and is not edited, and
       `LoadoutLinkCoordinator` for a suit chosen and nothing else done. Both start effects already
-      run on the first revision, so add the cases to `build-link.spec.ts` and `loadout-link.spec.ts`
-      and verify they pass against the code as it stands (024/FR-003).
+      run on the first revision, so add the cases to
+      `src/app/application/build-link/build-link.spec.ts` and
+      `src/app/application/equipment/loadout-link.spec.ts` and verify they pass against the code as
+      it stands (024/FR-003).
+- [ ] 4.6 Verify a build the codec refuses publishes no link and leaves the fragment alone, so the
+      restated requirement does not contradict the refusal it sits beside. Add the case to
+      `src/app/application/build-link/build-link.spec.ts` (024/FR-003).
+- [ ] 4.7 Verify the bench case the restated storing requirement adds: delete the record the bench
+      autosaves into, return to the bench at an address carrying a loadout at its suit's default, and
+      verify it opens into no record and the deleted record stays deleted. Add it to
+      `src/app/application/equipment/loadout-autosave.service.spec.ts` (024/FR-002).
+- [ ] 4.8 Verify the help topic on browser storage still agrees with the requirement it cites. Read
+      `help.topic.browserPersistence.answer` in `src/app/i18n/locales/en.json` against the restated
+      "Autosave of the active build", and record that it answers where work is kept rather than when
+      a record is taken. Verify `pnpm run help:artifacts:check` and `pnpm run policy:specs` pass.
 
 ## 5. Journeys and the coverage record
 
@@ -103,11 +116,12 @@
       active build, writes no named record, and is in the address where it takes no record. Check
       `e2e/slef-import.spec.ts` asserts this, and that the batch still stores one named record per
       event selected (024/FR-001).
-- [ ] 5.6 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts` — the
-      first two on the `build` and `equipment/bench-persistence` surfaces, the third on
-      `build/share-link` and `equipment/link` — restate the assertions those surfaces claim about
-      records and the address, and add `024-default-build-not-autosaved` to `COVERED_FEATURES`.
-      Verify `pnpm run policy:specs` passes and names no unregistered id.
+- [ ] 5.6 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts`, on every
+      surface a task writes an assertion on: `build` and `equipment/bench-persistence` for the first
+      two, `ships/:hull/create-stock-build` for task 5.2, `shell/journal-selection` for task 5.5, and
+      `build/share-link` and `equipment/link` for the third. Restate the assertions those surfaces
+      claim about records and the fragment, and add `024-default-build-not-autosaved` to
+      `COVERED_FEATURES`. Verify `pnpm run policy:specs` passes and names no unregistered id.
 
 ## 6. The gate
 

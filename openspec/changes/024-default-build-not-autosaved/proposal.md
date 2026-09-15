@@ -29,11 +29,11 @@ then there is nothing to keep.
   that consumes one, or by the seven-day expiry, and by nothing else.
 - A tool holding an unrecorded default claims no record for this tab. A duplicated tab therefore has
   nothing to fork for that tool, and the other tool's claim is untouched.
-- An untouched default is restored from the address. The address carries the open build for as long
-  as a build is active, and the open loadout for as long as one is on the bench, which the ship
-  tool's requirement states only for edits and the bench states nowhere. Both are stated. At an
-  address carrying no fragment the workspace opens on the no-build state and the bench on the suit
-  gate, because nothing was stored.
+- An untouched default is restored from the fragment. A build's link is published from the moment
+  the build becomes active, and the bench's fragment carries the loadout from the moment it reaches
+  the bench. The ship tool's requirement states this for edits alone, and the bench states it
+  nowhere, so both are stated. At an address whose fragment carries nothing, the workspace opens on
+  the no-build state and the bench on the suit gate, because nothing was stored.
 - Starting an empty bench on an untouched default clears it and leaves nothing in the saved list.
   The bench still refuses to clear a loadout that carries a choice and is in no record, which is the
   store refusing writes rather than a state with nothing to keep.
@@ -51,9 +51,9 @@ The change declares three requirements:
 - **FR-002** (Equipment Builder) A loadout takes no record while its stored state is its suit at the
   lowest grade the package publishes, with no weapon on any mount and no modification fitted. A
   record is taken at the first state that differs, and a record already held is kept.
-- **FR-003** (Both tools) The address carries the open build from the moment a build becomes active,
-  and the open loadout from the moment one is on the bench, not only after the first edit. It is
-  what an untouched default is recovered from.
+- **FR-003** (Both tools) A build's link is published from the moment the build becomes active, and
+  the fragment carries the loadout from the moment it reaches the bench. Neither waits for the first
+  edit. This is what an untouched default is recovered from.
 
 ## Capabilities
 
@@ -72,17 +72,19 @@ None.
   replacing the active build is not confirmed. "Concurrent pages and records" gains the tool that
   claims nothing — the requirement that carries the claim for both tools.
 - `ship-builder/build-link`: "Link validation and history" ties fragment publication to build edits.
-  It is restated so that the address carries the build from the moment it becomes active, which is
-  what a default build is recovered from (024/FR-003).
+  It is restated so that a build's link is published from the moment the build becomes active, which
+  is what a default build is recovered from (024/FR-003). It is scoped to publication, so what the
+  address holds afterwards is left to the requirement change 022 adds, and it says that a build the
+  codec refuses publishes nothing.
 - `ship-builder/slef-exchange`: "One selected event replaces the active build" gives autosave
   holding the import as the reason it is not also written to a named record. That reason is restated
   to cover the import that takes no record, and the batch that stores one named record per event is
   untouched.
 - `equipment-builder/loadout-persistence`: "Autosave of the open loadout" states that a record is
-  taken from the moment a loadout is on the bench. It is restated on the same terms as the ship
-  tool's, "Naming, saving, reopening and deleting a loadout" gains the save that has no unnamed
-  record to consume, "What the bench says about storing" covers the loadout that owes no write, and
-  a requirement is added for the address carrying the loadout on the bench (024/FR-003).
+  taken from the moment a loadout is on the bench. It is restated on the ship tool's terms.
+  "Naming, saving, reopening and deleting a loadout" gains the save that has no unnamed record to
+  consume. "What the bench says about storing" covers the loadout that owes no write. A requirement
+  is added for the fragment carrying the loadout on the bench (024/FR-003).
 - `equipment-builder/loadout-assembly`: "Starting an empty bench" rests on the loadout always being
   in a record. It is restated so that a loadout at its suit's default is cleared without being kept,
   and so that the states where the bench refuses to clear are the store's failures alone.
