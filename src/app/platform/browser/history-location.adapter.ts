@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { DOCUMENT, Injectable, effect, inject, signal } from '@angular/core';
 
 /**
@@ -15,6 +16,7 @@ import { DOCUMENT, Injectable, effect, inject, signal } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class HistoryLocationAdapter {
   readonly #window = inject(DOCUMENT).defaultView;
+  readonly #routerAddress = inject(Location);
   readonly #fragment = signal(readFragment(this.#window?.location.hash ?? ''));
 
   /** The current fragment, without its leading `#`. Empty when there is none. */
@@ -26,10 +28,24 @@ export class HistoryLocationAdapter {
       return;
     }
 
-    const onHashChange = () => this.#fragment.set(readFragment(view.location.hash));
-    view.addEventListener('hashchange', onHashChange);
+    const readTheAddress = () => this.#fragment.set(readFragment(view.location.hash));
+    view.addEventListener('hashchange', readTheAddress);
+
+    // The router writes the whole address, fragment included, and it writes what
+    // it recorded for a history entry. A fragment put there with
+    // `history.replaceState` is in no record of its, so a router that restores an
+    // entry — going back out of a layer, most of all — writes the address without
+    // it. That write fires no `hashchange`, because the router goes through
+    // Angular's `Location`: an adapter listening for one alone would report a
+    // fragment the address had stopped carrying, and whoever publishes the
+    // fragment would never learn it had been dropped.
+    const stopReadingRouterWrites = this.#routerAddress.onUrlChange(readTheAddress);
+
     effect((onCleanup) => {
-      onCleanup(() => view.removeEventListener('hashchange', onHashChange));
+      onCleanup(() => {
+        view.removeEventListener('hashchange', readTheAddress);
+        stopReadingRouterWrites();
+      });
     });
   }
 

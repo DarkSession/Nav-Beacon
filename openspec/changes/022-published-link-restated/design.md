@@ -135,6 +135,30 @@ restoration is not a publication — it puts back what the address already claim
 `replaceState`, and the mechanism is all they share. The evidence for the restoration is
 registered under `022/FR-001`, so the standing requirement's assertions cannot stand in for it.
 
+### The adapter reads the address back when the router writes it
+
+**Decision.** `HistoryLocationAdapter` subscribes to Angular's `Location.onUrlChange` as well as to
+`hashchange`, and re-reads `location.hash` on both.
+
+**Why.** The watcher acts on the fragment signal, and that signal has to be the address. The router
+writes the whole address — path, query and fragment together — from the URL it recorded for a
+history entry, and a fragment written with `history.replaceState` is in no record of its. So going
+back out of the layer, the router writes `/outfitting` with no fragment, just after the watcher has
+stated the link again. The router writes through `Location`, which fires no `hashchange`, so the
+signal would go on reading `b.…` while the address carried nothing, and no later event would
+correct it: the watcher would never run again and the address would stay wrong, which is the defect
+this change exists to close.
+
+Reading the address back on the router's own write settles it in one more pass. The watcher states
+the link, the router drops it, the adapter reports the drop, the watcher states it again, and the
+router has no further navigation to write. The adapter's own `replaceFragment` goes straight to
+`history`, so nothing the application writes comes back through this listener and there is no loop.
+
+**Alternative rejected: publish through the router.** The fragment could be written with
+`Router.navigate([], { fragment, replaceUrl: true })`, which would put it in the record the router
+restores from. That makes every keystroke of a build edit a router navigation, and it moves the
+fragment out of the adapter that the build-link contract makes its only writer.
+
 ### The journey holds the window open by delaying the codec chunk
 
 The race needs the layer raised between the lazy import and the fragment write, and a journey that
@@ -165,7 +189,8 @@ injectable `encode`, so no coverage depends on the timing of a browser.
 - **The window stays open; this closes its consequence.** → A publication landing on a layer's
   entry is still a publication on the wrong entry, and a Commander who copies the address _while_
   the layer is up gets a link to the build, which is the address that entry was pushed to carry
-  anyway. What is fixed is that the workspace's own entry no longer stays wrong afterwards.
+  anyway. What this closes is the workspace's own entry staying wrong after the layer comes
+  down.
 - **Back to an earlier workspace entry that had no link puts the link straight back.** → A
   Commander who walks back past the point where their build was published arrives at an empty
   address and the watcher states the link again. This is the rule the requirement asks for: while

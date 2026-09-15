@@ -1,9 +1,27 @@
+import { BrowserPlatformLocation, Location, PlatformLocation } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { HistoryLocationAdapter } from './history-location.adapter';
 
 function adapter(): HistoryLocationAdapter {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({});
+  return TestBed.inject(HistoryLocationAdapter);
+}
+
+/**
+ * An adapter over the window's own history, as the browser gives it.
+ *
+ * The test environment hands `Location` a history of its own, which writes
+ * nothing to `window.location`. That is enough for every case above, and it is
+ * not enough for the one below: the question there is what the address carries
+ * after the router has written to it, so the router has to be writing to the
+ * same address the adapter reads.
+ */
+function adapterOverTheWindowsHistory(): HistoryLocationAdapter {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PlatformLocation, useClass: BrowserPlatformLocation }],
+  });
   return TestBed.inject(HistoryLocationAdapter);
 }
 
@@ -60,6 +78,21 @@ describe('HistoryLocationAdapter', () => {
     window.dispatchEvent(new HashChangeEvent('hashchange'));
 
     expect(port.fragment()).toBe('b.pasted');
+  });
+
+  it('follows the address the router rewrites under it', () => {
+    const port = adapterOverTheWindowsHistory();
+    port.replaceFragment('b.published');
+
+    // A router restores the address it recorded for a history entry, and a
+    // fragment written straight onto `history` is in no record of its. It writes
+    // through Angular's `Location`, and that fires no `hashchange` — so an
+    // adapter listening for one alone would go on reporting a fragment the
+    // address stopped carrying, and nothing reading it could tell.
+    TestBed.inject(Location).replaceState(window.location.pathname);
+
+    expect(window.location.hash).toBe('');
+    expect(port.fragment()).toBe('');
   });
 
   it('builds the canonical link for the current document', () => {

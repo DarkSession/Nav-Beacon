@@ -1,7 +1,9 @@
-import { TestBed } from '@angular/core/testing';
+import { BrowserPlatformLocation, PlatformLocation } from '@angular/common';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { ActiveBuildStore } from '../../application/active-build/active-build.store';
+import { FragmentPublisher } from '../../application/build-link/fragment-publisher';
 import { AutosaveService } from '../../application/build-library/autosave.service';
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { WebLocksAdapter } from '../../platform/browser/web-locks.adapter';
@@ -45,6 +47,11 @@ describe('BuildWorkspacePage persistence actions', () => {
         provideRouter([]),
         ...provideMemoryStorage((storage = new MemoryStorage())),
         { provide: WebLocksAdapter, useValue: new FakeLocks() },
+        // The saved-records layer pushes and pops through `Location`, and the
+        // build link is published onto `window.location`. The test environment
+        // gives `Location` a history of its own, and a race between the two is
+        // no race at all while they are two histories.
+        { provide: PlatformLocation, useClass: BrowserPlatformLocation },
       ],
     }).compileComponents();
     active = TestBed.inject(ActiveBuildStore);
@@ -109,6 +116,57 @@ describe('BuildWorkspacePage persistence actions', () => {
     fixture.componentInstance.actOnPersistence('manage');
 
     expect(layer.open()).toBe(true);
+    fixture.destroy();
+  });
+
+  /**
+   * Runs the effects, lets the encode they started resolve, and runs them again.
+   *
+   * Publication spans an await and the page starts publishing from a promise
+   * chain, so one pass is never the whole of either.
+   */
+  async function settle(fixture: ComponentFixture<BuildWorkspacePage>): Promise<void> {
+    for (let pass = 0; pass < 3; pass += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+    }
+  }
+
+  it('gives the address back the build link the saved records were raised over', async () => {
+    // The two are driven together here because `LibraryPresence` has no suite
+    // of its own, and the race needs both: `raise()` pushes an entry at the
+    // same address, so the publication's document guard passes and the fragment
+    // lands on the layer's entry. `lower()` goes back to the workspace's, which
+    // never received it (022/FR-001).
+    const fixture = TestBed.createComponent(BuildWorkspacePage);
+    fixture.detectChanges();
+
+    // Held open, so the layer goes up inside the window rather than racing it.
+    const publisher = TestBed.inject(FragmentPublisher);
+    let finish: (fragment: string) => void = () => {};
+    publisher.encode = () =>
+      new Promise<string>((resolve) => {
+        finish = resolve;
+      });
+    openBuild();
+    await settle(fixture);
+
+    const layer = TestBed.inject(LibraryPresence);
+    expect(layer.raise()).toBe(true);
+    finish('b.published');
+    await settle(fixture);
+    expect(window.location.hash).toBe('#b.published');
+
+    const closed = new Promise<void>((resolve) => {
+      window.addEventListener('hashchange', () => resolve(), { once: true });
+    });
+    layer.lower();
+    await closed;
+    await settle(fixture);
+
+    // The address a Commander copies from the bar is the build they are
+    // looking at, whether or not they glanced at their saved records first.
+    expect(window.location.hash).toBe('#b.published');
     fixture.destroy();
   });
 });
