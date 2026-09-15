@@ -287,6 +287,47 @@ describe('TabOwnershipCoordinator', () => {
     ]);
   });
 
+  it('lets go of the record a tool held once it takes up work that is in none', () => {
+    // A Commander autosaving into a record creates a build from the hull
+    // catalogue. The new build is at its hull's default and takes no record, so
+    // the claim on the old one is no longer this page's to hold: left behind,
+    // a reload would restore the record the Commander stepped off and a
+    // duplicated tab would fork it (024/FR-001, FR-012).
+    const { coordinator, active, channel } = setup();
+    hold(active, 'the-build');
+    coordinator.track(active);
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    hold(active, null);
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
+    // And said out loud, so a sibling page stops protecting a record nobody is
+    // writing to any more.
+    expect(channel.sent).toEqual([
+      { kind: 'working-release', tool: 'ship', pageNonce: coordinator.pageNonce },
+    ]);
+  });
+
+  it('leaves the claim a reload is about to read where it is', () => {
+    // The store is empty while the shell registers this tool, which is every
+    // page's first moment. Reading that as a tool letting go would have the
+    // page erase its own way back to the record it was working from (FR-012).
+    const session = new MemoryStorage();
+    const first = setup(session);
+    hold(first.active, 'id-held');
+    const stop = first.coordinator.track(first.active);
+    TestBed.tick();
+    stop();
+
+    const second = setup(session);
+    second.coordinator.track(second.active);
+    TestBed.tick();
+
+    expect(second.coordinator.claim('ship')).toBe('id-held');
+  });
+
   it('forks nothing for a tool holding no record when the tab is duplicated', () => {
     // The duplicate carries a copy of the session, so it claims the same
     // loadout and that tool forks. The build is in no record in either page:

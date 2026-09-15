@@ -143,7 +143,23 @@ export class TabOwnershipCoordinator {
     const watcher = effect(
       () => {
         const id = subject.autosaveRecordId();
-        if (id === null || id === this.#announced.get(subject.tool)) {
+        if (id === null) {
+          // A tool that holds no record claims none. Reached where a tool that
+          // was writing to one takes up work that is in no record instead: a
+          // build still at its hull's default, which is stored nowhere
+          // (024/FR-001). A claim left behind would have a reload restore the
+          // record the Commander stepped off, and a duplicated tab fork it.
+          //
+          // Only where this page announced something for this tool. On a page
+          // that has announced nothing the claim in the tab is the one a reload
+          // is about to read, and releasing it here would be this page erasing
+          // its own way back.
+          if (this.#announced.has(subject.tool)) {
+            this.release(subject.tool);
+          }
+          return;
+        }
+        if (id === this.#announced.get(subject.tool)) {
           return;
         }
         this.#announced.set(subject.tool, id);

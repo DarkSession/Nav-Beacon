@@ -268,6 +268,7 @@ export class ActiveBuildStore implements WorkingRecordSubject {
   clear(): void {
     this.#loadout.set(null);
     this.#hullName.set(null);
+    this.#suppliedFit.set(null);
     this.#provenance.set('none');
     this.#autosaveRecordId.set(null);
     this.#sourceNamed.set(null);

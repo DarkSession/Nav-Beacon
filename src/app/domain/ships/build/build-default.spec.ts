@@ -1,4 +1,8 @@
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
+import {
+  getPreEngineeredVariants,
+  type PreEngineeredVariant,
+} from '@elite-dangerous-almanac/core/ships/pre-engineered';
 import { FIXTURE_HULL, FIXTURE_SLOTS, UNKNOWN_HULL } from '../outfitting/outfitting.fixtures';
 import { atPackageDefault } from './build-default';
 import { suppliedFit } from './supplied-fit';
@@ -50,6 +54,31 @@ function asJournalWritesIt(build: ShipLoadout): BuildSnapshotV1 {
   );
 }
 
+/**
+ * A mount the hull is supplied with, and a pre-engineered article for what is
+ * already in it.
+ *
+ * Asked of the Almanac rather than named here: which supplied modules publish a
+ * variant is the package's own state, and an article fitted over a *different*
+ * module would be answered by the fit alone and say nothing about the article.
+ */
+function suppliedArticle(build: ShipLoadout): [string, PreEngineeredVariant] {
+  for (const slot of build.slots()) {
+    const symbol = slot.module?.symbol;
+    if (symbol === undefined) {
+      continue;
+    }
+    const variant = (getPreEngineeredVariants(symbol) ?? [])[0];
+    if (variant !== undefined) {
+      return [slot.key, variant];
+    }
+  }
+  throw new Error(
+    `The installed Almanac publishes no pre-engineered variant for any module ${FIXTURE_HULL} ` +
+      'is supplied with. Pick a hull that has one from the package rather than writing one here.',
+  );
+}
+
 /** The question as the store asks it: the build, and the fit its hull ships with. */
 function atDefault(snapshot: BuildSnapshotV1): boolean {
   return atPackageDefault(snapshot, suppliedFit(snapshot.shipSymbol));
@@ -87,6 +116,29 @@ describe('package default build', () => {
   it('reports a journal-written build carrying a replaced module as not at the default', () => {
     // The stated power on every module must not be able to hide a real choice.
     expect(atDefault(asJournalWritesIt(withReplacedModule()))).toBe(false);
+  });
+
+  it('reports an engineered module as not at the default', () => {
+    // Engineering is a decision on a module the hull was supplied with, so the
+    // fit still matches and the build is not the one the package hands out.
+    const build = ShipLoadout.default(FIXTURE_HULL);
+    build.applyBlueprint(FIXTURE_SLOTS.frameShiftDrive, 'FSD_LongRange', { grade: 5 });
+
+    expect(atDefault(toBuildSnapshotV1(build))).toBe(false);
+  });
+
+  it('reports a module carrying a pre-engineered article as not at the default', () => {
+    // A pre-engineered article is one a Commander went and got. This one is
+    // fitted in a mount the hull was supplied with and keeps that module's
+    // symbol, so the fit still matches and the article is the only thing
+    // saying the build was touched.
+    const build = ShipLoadout.default(FIXTURE_HULL);
+    const [slot, variant] = suppliedArticle(build);
+    build.setPreEngineeredVariant(slot, variant);
+    const snapshot = toBuildSnapshotV1(build);
+    expect(snapshot.modules.find((module) => module.slot === slot)?.symbol).toBe(variant.symbol);
+
+    expect(atDefault(snapshot)).toBe(false);
   });
 
   it('reports a named ship as not at the default', () => {

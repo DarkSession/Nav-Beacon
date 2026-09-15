@@ -104,8 +104,14 @@ None.
   `ActiveBuildStore` and `LoadoutStore` answer it from their own state.
 - `src/app/domain/ships/build/` and `src/app/domain/equipment/loadout/` each gain the comparison
   against the package default, beside the fingerprint the comparison is made of.
-- `src/app/application/active-build/stock-build.creator.ts` and the equipment bench are unchanged.
-  A creator that marked its own output would leave the same state arriving in a link unmarked.
+- The four routes into a build — `stock-build.creator.ts`, `record-open.service.ts`,
+  `build-link.coordinator.ts` and `slef-import.coordinator.ts` — each supply the hull's published
+  fit on the candidate they build, because the store that asks the question is started with the
+  shell and must reach no catalogue. None of them marks its own output: the comparison is made on
+  state alone, so the catalogue, a link, a paste and a journal event get one answer for one build.
+- `src/app/application/build-library/tab-ownership.coordinator.ts` lets go of the record a tool
+  held once that tool takes up work that is in none, which is new: before this change autosave
+  always minted a record to claim instead.
 - `src/app/application/equipment/empty-bench.service.ts` clears a bench holding an unrecorded
   default. Its flush already answers "nothing owed" rather than "write failed", which is the
   difference the requirement turns on.
