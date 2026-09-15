@@ -9,7 +9,7 @@ function adapter(): HistoryLocationAdapter {
 }
 
 /**
- * An adapter over the window's own history, as the browser gives it.
+ * An adapter over the history the browser itself keeps.
  *
  * The test environment hands `Location` a history of its own, which writes
  * nothing to `window.location`. That is enough for every other case in this
@@ -17,7 +17,7 @@ function adapter(): HistoryLocationAdapter {
  * address carries after the router has written to it, so the router has to
  * write to the address the adapter reads.
  */
-function adapterOverTheWindowsHistory(): HistoryLocationAdapter {
+function adapterOverTheBrowsersHistory(): HistoryLocationAdapter {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [{ provide: PlatformLocation, useClass: BrowserPlatformLocation }],
@@ -81,7 +81,7 @@ describe('HistoryLocationAdapter', () => {
   });
 
   it('follows the address the router rewrites under it', () => {
-    const port = adapterOverTheWindowsHistory();
+    const port = adapterOverTheBrowsersHistory();
     port.replaceFragment('b.published');
 
     // A router restores the address it recorded for a history entry, and a

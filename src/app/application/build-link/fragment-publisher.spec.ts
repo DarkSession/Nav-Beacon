@@ -312,6 +312,24 @@ describe('the bounds on stating a link into the address', () => {
     stop();
   });
 
+  it('states nothing once the workspace has stopped watching', async () => {
+    const { publisher, active, location } = setup();
+    encodes(publisher, 'b.published');
+    const stop = publisher.start();
+    commitAnaconda(active);
+    await settle();
+    expect(location.fragment()).toBe('b.published');
+
+    // The watcher lives exactly as long as the publication effect, because one
+    // unsubscribe ends both. A workspace that has closed states nothing into an
+    // address it no longer owns.
+    stop();
+    location.replaceFragment(null);
+    await settle();
+
+    expect(location.fragment()).toBe('');
+  });
+
   it('states nothing where the encode was refused', async () => {
     const { publisher, active, location } = setup();
     encodes(publisher, 'b.published');

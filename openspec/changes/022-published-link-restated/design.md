@@ -199,10 +199,9 @@ coverage depends on the timing of a browser.
   address and the watcher states the link again. This is the rule the requirement asks for: while
   a build is open and its link is published, the address describes it. The build on the screen has
   not changed, so the address is still true.
-- **One more effect over the fragment signal.** → It reads the fragment and the published link,
-  and returns without writing in every case but the defect's. `link()` moves twice per
-  publication, so it runs as often as the publication effect beside it, and on all but one of
-  those runs it reads the two signals and stops.
+- **One more effect over the fragment signal.** → It reads the fragment and the published link.
+  `link()` moves twice per publication, to `encoding` and then to `published`, so the effect runs
+  about twice for each one. On every run but the defect's it reads the two signals and stops.
 - **The journey rests on the codec arriving as a chunk of its own.** → It holds the one chunk
   whose body carries the codec table's content hash, so a build that folded the table into a
   chunk already loaded would leave it nothing to hold. The journey reads the empty address while
