@@ -99,6 +99,18 @@ Both stores gain one computed signal, and `WorkingRecordSubject` gains it as a m
 Each comparison lives in the domain beside the fingerprint it is made of, is pure, and is unit
 tested without rendering.
 
+**Letter case.** The ship comparison reads a projection of the snapshot with the hull symbol, every
+slot key and every module symbol in one case. The package spells one identity in more than one
+case: the default loadout it publishes for the Anaconda names `Int_SuperCruiseAssist`, and the same
+module decoded from a build link comes back as `Int_SupercruiseAssist`. Each of those identities is
+unique case-insensitively, so folding the case compares the same set of parts. Letter case is not a
+decision a Commander made, and a hull's default reached through a link is the hull's default.
+
+Only this comparison folds the case. `baselineFingerprint` stays as it is, because it answers
+whether the stored state moved, and a build whose stored spelling changed did move. The bench
+comparison folds nothing either: the loadout codec carries one spelling for every suit, weapon and
+modification, so there is no drift to fold.
+
 **Cost.** Building `ShipLoadout.default(symbol)` on every tick would be work repeated for no
 reason, so the default fingerprint is memoised per hull symbol, and per suit family on the bench.
 The comparison runs only while the tool holds no record, which lasts until the first edit.

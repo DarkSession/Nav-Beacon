@@ -212,7 +212,7 @@ async function settlePublication(location: HistoryLocationAdapter): Promise<void
 
 describe('FragmentPublisher', () => {
   it('publishes a build that becomes active and is never edited', async () => {
-    // What a reload restores such a build from, now that a build at the package
+    // What a reload restores such a build from, because a build at the package
     // default takes no record. The watcher runs on the first revision, so the
     // address carries the build from the moment it opens and no edit is needed
     // to put it there (024/FR-003).

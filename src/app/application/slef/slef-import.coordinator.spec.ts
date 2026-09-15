@@ -287,6 +287,22 @@ function storedNames(library: BuildLibraryStore): readonly (string | null)[] {
   return library.records().map((entry) => (entry.available ? entry.record.name : null));
 }
 
+/**
+ * One journal line holding the build the package publishes for the hull.
+ *
+ * Written from `ShipLoadout.default` through the package's own export, so it
+ * names every module the hull carries rather than the empty list `loadoutLine`
+ * writes. The package accepts `event` on the way in and never writes it, so the
+ * line names itself.
+ */
+function defaultLoadoutLine(timestamp: string): string {
+  return JSON.stringify({
+    timestamp,
+    event: 'Loadout',
+    ...ShipLoadout.default(FIXTURE_HULL).toLoadoutEvent(),
+  });
+}
+
 function loadoutLine(fields: Record<string, unknown>): string {
   return JSON.stringify({
     timestamp: '2026-09-01T10:00:00Z',
@@ -509,6 +525,30 @@ describe('builds a journal offers', () => {
       await coordinator.submit();
 
       expect(store.layer()).toBe('none');
+    });
+  });
+
+  describe('a batch holding a build at the package default', () => {
+    it('stores one named record for it, as it does for every other entry', async () => {
+      // Choosing a build in a batch is the decision. The build is not opened,
+      // so the address holds nothing, and a record is the only place it is
+      // kept — which is why the gate on an active build does not reach here
+      // (024/FR-001).
+      await coordinator.scanFiles([
+        journalFile('Journal.01.log', [
+          loadoutLine({ ShipName: 'Chosen', timestamp: '2026-09-02T09:00:00Z' }),
+          defaultLoadoutLine('2026-09-01T09:00:00Z'),
+        ]),
+      ]);
+      for (const entry of store.journalEntries().slice(1)) {
+        store.toggleSelection(entry.key);
+      }
+
+      const submission = await coordinator.submit();
+
+      expect(submission).toEqual({ kind: 'stored', stored: 2, refused: [] });
+      library.refresh();
+      expect([...storedNames(library)].sort()).toEqual(['Anaconda', 'Chosen']);
     });
   });
 

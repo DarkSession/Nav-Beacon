@@ -67,6 +67,25 @@ async function wearAndChoose(page: Page, name: string): Promise<void> {
   await raiseSuitGrade(page);
 }
 
+/**
+ * Draws the loadout ledger, however this arrangement holds it.
+ *
+ * The compact bench draws one region at a time and re-opens the row it was
+ * drilled into, so a journey that opened a row reads the item rather than the
+ * ledger when it comes back. The tab is what the wide bench answers with
+ * nothing, and the back control is what the drill-in answers with.
+ */
+async function openLedger(page: Page): Promise<void> {
+  await expect(page.locator('ednb-equipment-bench-page')).toBeAttached();
+  const tab = page.getByRole('tab', { name: 'Loadout' });
+  if ((await tab.count()) > 0) {
+    await tab.click();
+  }
+  if ((await page.locator('.bench__region--loadout').count()) === 0) {
+    await page.locator('.item__back').click();
+  }
+}
+
 /** Waits for the bench to have written what is on it, rather than for a delay. */
 async function autosaved(page: Page): Promise<void> {
   await expect(page.locator('ednb-equipment-bench-page')).toHaveAttribute(
@@ -268,6 +287,7 @@ test.describe('the bench and the address', () => {
     // The address is a Commander's deliberate arrival and the record is only
     // what this page was doing before it. Read from the suit's own row rather
     // than from the page, which also carries the list of suits to choose from.
+    await openLedger(page);
     const suit = page.locator('.ledger__row[data-target="suit"]');
     await expect(suit).toContainText('Dominator Suit');
     await expect(suit).not.toContainText('Maverick Suit');

@@ -93,7 +93,7 @@ describe('LoadoutLinkCoordinator', () => {
   });
 
   it('publishes a loadout for a suit chosen and nothing else done', () => {
-    // What a reload restores such a loadout from, now that a loadout at its
+    // What a reload restores such a loadout from, because a loadout at its
     // suit's default takes no record. The watcher runs on the first revision,
     // so the address carries the loadout from the moment the suit is chosen and
     // no further choice is needed to put it there (024/FR-003).
