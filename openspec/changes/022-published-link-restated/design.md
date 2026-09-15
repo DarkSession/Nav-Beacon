@@ -166,10 +166,13 @@ waits for neither reproduces it only by luck. The codec arrives as a lazily impo
 `page.route` installed once the workspace has loaded catches that request and holds it while the
 layer goes up. The suite already delays JavaScript this way in `e2e/first-frame.ts`.
 
-Where that chunk cannot be told from another lazy request, the journey asserts the post-condition
-only — the address carries the build link after the layer closes — and says so where it is read.
-The race itself is held open deterministically in the unit tests, through the publisher's
-injectable `encode`, so no coverage depends on the timing of a browser.
+That chunk is told from every other lazy request by its own content: the codec table carries a
+content hash, and the journey reads that hash out of the table in the source tree and holds the one
+chunk whose body contains it. With the chunk held the journey reads that the address carries
+nothing while the layer stands, which is what says the window was open — a journey reading the
+post-condition alone passes whether or not it ever held anything. The race is held open
+deterministically in the unit tests as well, through the publisher's injectable `encode`, so no
+coverage depends on the timing of a browser.
 
 ## Risks / Trade-offs
 
@@ -196,9 +199,10 @@ injectable `encode`, so no coverage depends on the timing of a browser.
   address and the watcher states the link again. This is the rule the requirement asks for: while
   a build is open and its link is published, the address describes it. The build on the screen has
   not changed, so the address is still true.
-- **One more effect over the fragment signal.** → It reads two signals and returns without writing
-  in every case but the defect's. The publication effect it sits beside runs on every keystroke;
-  this one cannot.
+- **One more effect over the fragment signal.** → It reads the fragment and the published link,
+  and returns without writing in every case but the defect's. `link()` moves twice per
+  publication, so it runs as often as the publication effect beside it, and on all but one of
+  those runs it reads the two signals and stops.
 - **No journey in the suite holds this race open.** → The two library journeys wait for the
   address to carry the build before opening the layer, which is right for what they read. This
   change brings its own reproducing unit coverage, driven through the publisher's injectable

@@ -145,22 +145,30 @@ describe('a published link the address lost', () => {
   });
 
   it('leaves the build that is open exactly as it is', async () => {
-    const { publisher, ingress, active, location, workspace } = setup();
-    const held = deferred<string>();
-    publisher.encode = () => held.promise;
-    const decode = vi.fn();
+    const { publisher, ingress, active, location } = setup();
+    encodes(publisher, 'b.published');
+    const decode = vi.fn(() => Promise.reject(new Error('the codec refused')));
     ingress.decode = decode as unknown as typeof ingress.decode;
     const stop = publisher.start();
     const listening = ingress.listen();
     commitAnaconda(active);
-    TestBed.tick();
-    window.history.pushState(null, '', workspace);
-    held.resolve('b.published');
+    await settle();
+    expect(location.fragment()).toBe('b.published');
+
+    // Another build link arrives and is refused. The build on the screen is
+    // untouched, and the fragment the ingress holds as accounted for is that
+    // link rather than the published one — which is what makes the marking
+    // below the only thing standing between a restoration and a decode.
+    location.replaceFragment('b.other');
     await settle();
     const revision = active.revision();
     const fingerprint = active.fingerprint();
+    const refusal = ingress.failure();
+    expect(refusal).not.toBeNull();
+    decode.mockClear();
 
-    await goBack();
+    location.replaceFragment(null);
+    await settle();
 
     // Read back as an arrival the restored link would be decoded and offered
     // for a build it already describes. `markPublished` is what stops it, and
@@ -168,7 +176,7 @@ describe('a published link the address lost', () => {
     expect(decode).not.toHaveBeenCalled();
     expect(active.revision()).toBe(revision);
     expect(active.fingerprint()).toBe(fingerprint);
-    expect(ingress.failure()).toBeNull();
+    expect(ingress.failure()).toBe(refusal);
     expect(location.fragment()).toBe('b.published');
     listening();
     stop();
