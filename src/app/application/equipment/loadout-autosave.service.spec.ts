@@ -528,14 +528,25 @@ describe('LoadoutAutosaveService', () => {
       const stop = autosave.start();
       benchLoadout(store, 'tacticalsuit', null);
 
-      store.select('PrimaryWeapon1');
-      store.select('suit');
+      // Choices that spend a revision and leave the loadout where it is: the
+      // suit it already wears, chosen again. A selection alone would spend
+      // none, and the watcher this is about would never re-run.
+      for (let index = 0; index < 5; index += 1) {
+        store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+      }
       TestBed.tick();
+
+      // The timer itself, not only what it would have written. A write is
+      // turned away a second time when it lands, so storage alone cannot tell
+      // a timeout that never woke from one that woke and wrote nothing.
+      expect(vi.getTimerCount()).toBe(0);
       vi.advanceTimersByTime(2_000);
       expect(storage.entries.size).toBe(0);
 
       store.dispatch({ kind: 'setSuitGrade', grade: 3 });
       TestBed.tick();
+
+      expect(vi.getTimerCount()).toBe(1);
       vi.advanceTimersByTime(600);
 
       expect(storage.entries.size).toBe(1);

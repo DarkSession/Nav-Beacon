@@ -334,12 +334,19 @@ describe('AutosaveService', () => {
         active.touch();
       }
       TestBed.tick();
+
+      // The timer itself, not only what it would have written. A write is
+      // turned away a second time when it lands, so storage alone cannot tell
+      // a timeout that never woke from one that woke and wrote nothing.
+      expect(vi.getTimerCount()).toBe(0);
       vi.advanceTimersByTime(2_000);
       expect(storage.entries.size).toBe(0);
 
       loadout.setModulePriority('FrameShiftDrive', 2);
       active.touch();
       TestBed.tick();
+
+      expect(vi.getTimerCount()).toBe(1);
       vi.advanceTimersByTime(600);
 
       expect(storage.entries.size).toBe(1);

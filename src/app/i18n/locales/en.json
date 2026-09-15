@@ -224,7 +224,7 @@
   "library.record.expires": "Deleted {{when}} unless it is saved",
   "library.chosen.none": "Choose a build to open or delete it.",
   "library.empty.title": "Nothing is stored yet",
-  "library.empty.description": "Builds you create are kept here in this browser until you discard them.",
+  "library.empty.description": "A build is kept here in this browser from your first change to it, until you discard it.",
   "library.record.unnamed": "Unnamed build",
   "library.record.forked-from": "Unsaved edits to “{{name}}”",
   "library.record.modified": "Last changed",

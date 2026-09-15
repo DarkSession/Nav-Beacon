@@ -40,9 +40,12 @@ then there is nothing to keep.
   store refusing writes rather than a state with nothing to keep.
 - Naming an untouched default still saves it. A save with no unnamed record to consume writes a
   named record, as a save already does where the record was deleted in another tab.
-- No wording changes. Persistence is `ready` rather than `saved` while no record is owed, and both
-  draw nothing. The help topic on browser storage answers where work is kept, not when a record is
-  minted, so it stands as written. No new words, so no catalogue keys.
+- One wording change, and no new key. The empty saved-builds screen promised that every build a
+  Commander creates is kept in this browser, which is what this change stops being true — and it is
+  the screen a Commander lands on right after creating one. `library.empty.description` now says a
+  build is kept from its first change. Persistence is `ready` rather than `saved` while no record is
+  owed, and both draw nothing. The help topic on browser storage answers where work is kept, not
+  when a record is minted, so it stands as written.
 
 The change declares three requirements:
 

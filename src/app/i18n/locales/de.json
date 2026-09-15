@@ -224,7 +224,7 @@
   "library.record.expires": "Wird {{when}} gelöscht, falls nicht gespeichert",
   "library.chosen.none": "Wähle einen Aufbau, um ihn zu öffnen oder zu löschen.",
   "library.empty.title": "Es ist noch nichts gespeichert",
-  "library.empty.description": "Aufbauten, die du erstellst, bleiben hier in diesem Browser, bis du sie verwirfst.",
+  "library.empty.description": "Ein Aufbau bleibt ab deiner ersten Änderung hier in diesem Browser, bis du ihn verwirfst.",
   "library.record.unnamed": "Unbenannter Aufbau",
   "library.record.forked-from": "Ungespeicherte Änderungen an „{{name}}“",
   "library.record.modified": "Zuletzt geändert",

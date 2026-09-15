@@ -1,12 +1,15 @@
 ## 1. Scope and the failing tests
 
-- [x] 1.1 Hold the change to what it is: no template, style sheet, component or catalogue file is
-      touched, and no string is added (design.md, Screens). Responsiveness, touch targets,
-      screen-reader semantics, localisation and design-system composition therefore have nothing new
-      to check, and are verified by the accessibility and responsive journeys passing unchanged in
-      `pnpm run check`. Verify against proposal.md — Impact: every changed path is under
-      `src/app/application/`, `src/app/domain/`, `src/app/features/`, `e2e/` or `openspec/`. The one
-      file under `src/app/features/` is a test, which is why no screen changes.
+- [x] 1.1 Hold the change to what it is: no template, style sheet or component is touched, and no
+      string is added (design.md, Screens). One string changes value — `library.empty.description`,
+      in every locale catalogue — because the empty saved-builds screen states a rule this change
+      replaces. Responsiveness, touch targets, screen-reader semantics and design-system composition
+      therefore have nothing new to check, and are verified by the accessibility and responsive
+      journeys passing unchanged in `pnpm run check`; the reworded sentence is verified by the
+      journeys that read that screen. Verify against proposal.md — Impact: every changed path is
+      under `src/app/application/`, `src/app/domain/`, `src/app/features/`, `src/app/i18n/`, `e2e/`
+      or `openspec/`. The one file under `src/app/features/` is a test, which is why no screen
+      changes.
 - [x] 1.2 Add to `src/app/domain/ships/build/` a failing unit test that the snapshot of
       `ShipLoadout.default(<hull symbol>)` is reported at the hull's package default, that the same
       build with one module replaced is not, and that the same build with a ship name or an ident is

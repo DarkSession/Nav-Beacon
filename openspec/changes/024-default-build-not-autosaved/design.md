@@ -233,9 +233,15 @@ untouched default the build, because nothing else holds one.
 
 This change introduces no screen and changes no screen's composition or states. The workspace, the
 bench, the saved-builds library and the saved-loadouts list draw what they already draw; what
-differs is which entries the two lists hold. Responsiveness, touch, accessibility and localisation
-are therefore unchanged, and are verified by the journeys already scanned across the ten-project
-matrix rather than by new surfaces.
+differs is which entries the two lists hold. Responsiveness, touch and accessibility are therefore
+unchanged, and are verified by the journeys already scanned across the ten-project matrix rather
+than by new surfaces.
+
+One sentence changes. The empty saved-builds screen stated the rule this change replaces — that a
+build is kept from the moment it is created — and it is the screen a Commander reaches right after
+creating one, which the journeys here drive on purpose. `library.empty.description` now states the
+rule that holds: a build is kept from its first change. The key is the same one, in every locale
+catalogue, so nothing is added and nothing is left untranslated.
 
 ## Risks / Trade-offs
 
