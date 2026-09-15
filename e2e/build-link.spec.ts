@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow } from './accessibility/assertions';
@@ -15,6 +16,23 @@ import { buildStockHull, openFirstHullFromManifest, openLibrary, reachShellActio
 
 /** The published bound, including the `b.` prefix and excluding the `#`. */
 const MAX_LENGTH = 500;
+
+/**
+ * The hash the codec table stamps on itself.
+ *
+ * Chunk file names are hashed by the build, so nothing about a request tells the
+ * lazily imported codec from any other lazy chunk. What is inside one does: the
+ * table snapshot carries the content hash its generator wrote into it, and
+ * nothing else in the bundle does. Read from the table rather than copied here,
+ * so a regenerated table keeps the journey below holding its window open instead
+ * of quietly stopping. Relative to the repository root, which is where the suite
+ * runs from.
+ */
+const CODEC_TABLE_CONTENT_HASH = (
+  JSON.parse(readFileSync('src/app/domain/ships/build-link/codec-table-1.json', 'utf8')) as {
+    $generated: { contentHash: string };
+  }
+).$generated.contentHash;
 
 /** Creates a stock build and waits for its link to be published. */
 async function buildWithLink(page: Page, hull = 'Anaconda'): Promise<string> {
@@ -84,6 +102,89 @@ test.describe('publishing a build link', () => {
     // One entry back is the hull the build was created from. If publication
     // pushed instead of replacing, this would be `/outfitting` with no fragment.
     await expect(page).toHaveURL(/\/ships\/Anaconda$/);
+  });
+
+  test('states its link again where the saved builds were raised over it', async ({
+    browser,
+    page,
+  }) => {
+    // Publication is one lazily imported chunk and one encode after the edit
+    // that asked for it. The saved builds push a history entry at the same
+    // address, so a layer raised inside that window takes the fragment onto its
+    // own entry, and closing it goes back to the entry that never received one.
+    // Holding the codec chunk opens that window deliberately rather than racing
+    // for it (022/FR-001).
+    test.slow();
+
+    let releaseCodec = (): void => {};
+    const codecHeld = new Promise<void>((resolve) => {
+      releaseCodec = resolve;
+    });
+    let codecRequested = (): void => {};
+    const codecReached = new Promise<void>((resolve) => {
+      codecRequested = resolve;
+    });
+
+    // Only the bundle's own chunk files are read, and only their bodies tell one
+    // from another. Everything else the page asks for is left alone: pulling
+    // every module through the test process to look at it makes the workspace
+    // take longer to arrive than this test's own timeout allows.
+    await page.route(/\/chunk-[^/?]+\.js(\?.*)?$/, async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      if (!body.includes(CODEC_TABLE_CONTENT_HASH)) {
+        await route.fulfill({ response, body });
+        return;
+      }
+      codecRequested();
+      await codecHeld;
+      await route.fulfill({ response, body });
+    });
+
+    await page.goto('/ships/Anaconda');
+    await buildStockHull(page, 'Build');
+
+    // Capped rather than open-ended: where the chunk never arrives as a request
+    // of its own, this journey fails on the assertion below rather than on a
+    // timeout waiting for a request that is not coming.
+    await Promise.race([codecReached, new Promise((resolve) => setTimeout(resolve, 3_000))]);
+
+    await openLibrary(page);
+    const layer = page.getByRole('dialog', { name: 'Saved builds' });
+    await expect(layer).toBeVisible();
+
+    // The window is open: the layer stands over an address carrying nothing, so
+    // the publication released below lands on the layer's entry. Read here, this
+    // is what stops the journey passing without ever having held the chunk.
+    expect(new URL(page.url()).hash).toBe('');
+
+    releaseCodec();
+
+    // The publication lands while the layer is up, which is the entry it lands
+    // on. Nothing here is wrong yet: that entry was pushed at this address.
+    await expect(page).toHaveURL(/\/outfitting#b\./);
+
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(layer).toBeHidden();
+
+    // And here, on the workspace's own entry, which the publication never
+    // reached. The address describes the build that is open because the link
+    // that was published is stated again.
+    await expect(page).toHaveURL(/\/outfitting#b\./);
+    const fragment = new URL(page.url()).hash.slice(1);
+
+    // Read where nothing else could have supplied the build. A fresh context
+    // holds no stored record, so what opens there came from the address and from
+    // nowhere else. A reload in this context would not discriminate: this build
+    // holds a record, and autosave restores it under 001/FR-008 whether the
+    // fragment came back or not.
+    const elsewhere = await browser.newContext();
+    const incoming = await elsewhere.newPage();
+    await incoming.goto(`/outfitting#${fragment}`);
+
+    await expect(incoming.getByRole('heading', { level: 1, name: /anaconda/i })).toBeVisible();
+    await buildIsOpen(incoming);
+    await elsewhere.close();
   });
 
   test('is reachable and readable with no accessibility violations', async ({ page }, testInfo) => {

@@ -2,13 +2,13 @@
 
 A Commander who opens the saved builds while the build's link is still being published loses that
 link from the address. The workspace comes back with `/outfitting` and no build on it, and stays
-that way until the next edit. The Commander loses nothing on the screen in front of them, and
-nothing on a reload either: the active build is autosaved and restored under
-`ship-builder/build-lifecycle`, "Autosave of the active build" (001/FR-008). What is lost is the
-address. Copied from the bar, opened in another tab or handed to somebody else, it carries no
-build. The in-app control that copies a link is unaffected, because it hands over the published
-URL rather than reading the address bar. That is why this goes unnoticed until somebody copies
-from the bar.
+that way until the next edit. The Commander loses nothing on the screen in front of them, and a
+build that holds a record loses nothing on a reload either: it is autosaved and restored under
+`ship-builder/build-lifecycle`, "Autosave of the active build" (001/FR-008). A build that holds no
+record has only the address to be restored from, and loses that. What is lost is the address.
+Copied from the bar, opened in another tab or handed to somebody else, it carries no build. The
+in-app control that copies a link is unaffected, because it hands over the published URL rather
+than reading the address bar. That is why this goes unnoticed until somebody copies from the bar.
 
 `LibraryPresence.raise` pushes a history entry at the address as it stands. `FragmentPublisher`
 reaches its `replaceFragment` only after a dynamic import of the codec and its table and an
@@ -48,8 +48,8 @@ The change declares requirement `022/FR-001`:
 
 A restoration adds no history entry, and `022/FR-001` is what states that. The standing
 requirement `ship-builder/build-link`, "Link validation and history" (001/FR-020) does not carry
-it: that requirement speaks about build edits, and a restoration is not an edit. The two rules
-have the same mechanism, `replaceState`, and different occasions.
+it: that requirement governs the fragment a build edit writes, and a restoration follows no edit.
+The two rules have the same mechanism, `replaceState`, and different occasions.
 
 ## Capabilities
 
@@ -69,13 +69,19 @@ None.
 
 - `src/app/application/build-link/fragment-publisher.ts` gains the watcher that restores a lost
   link, beside the publication it already owns.
+- `src/app/platform/browser/history-location.adapter.ts` reads the address back when the router
+  writes it. The adapter is the only place the application reads the fragment as a value, and a
+  router restoring a history entry writes the whole address from its own record of it — which holds
+  no fragment put there with `history.replaceState`. That write fires no `hashchange`, so without
+  this the adapter would report a fragment the address had stopped carrying and the watcher above
+  would never learn the link was dropped.
 - `src/app/features/build-library/library-presence.ts` is unchanged. This is the design question
   the issue was opened for, answered in design.md: the library does not reach into the build
   link, and the workspace is not the only way an address can lose a publication.
-- Nothing a Commander sees changes except the address bar, which now shows what it already
-  claimed to show. No new words, so no catalogue keys.
-- Two library journeys wait for the address to carry the build before opening the layer, which is
-  correct for what they read. No journey in the suite holds this race open, so this change brings
-  its own reproducing coverage rather than relying on theirs.
+- Nothing a Commander sees changes except the address bar, which shows what it already claimed
+  to show. No new words, so no catalogue keys.
+- `e2e/build-link.spec.ts` gains a journey that holds this race open, beside the two library
+  journeys, which wait for the address to carry the build before opening the layer and are right
+  to for what they read.
 
 Closes #86.

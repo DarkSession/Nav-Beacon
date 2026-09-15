@@ -3,12 +3,13 @@
 See proposal.md — Why, for the defect and the window it lives in. What matters here is the shape
 of the three moving parts.
 
-`HistoryLocationAdapter` holds the fragment as a signal, set from `hashchange` and from its own
-`replaceFragment`. `FragmentPublisher.publish` captures `currentDocument()` before its `await` and
-discards a publication whose document changed, which is what stops a finished encode from landing
-on a screen the Commander walked to. `BuildLinkCoordinator.listen` watches the same fragment
-signal and turns an incoming build link into a build, with `markPublished` telling it which
-fragment is the application's own output rather than something to ingest.
+`HistoryLocationAdapter` holds the fragment as a signal, set from `hashchange`, from Angular's
+`Location.onUrlChange` and from its own `replaceFragment`. `FragmentPublisher.publish` captures
+`currentDocument()` before its `await` and discards a publication whose document changed, which is
+what stops a finished encode from landing on a screen the Commander walked to.
+`BuildLinkCoordinator.listen` watches the same fragment signal and turns an incoming build link
+into a build, with `markPublished` telling it which fragment is the application's own output rather
+than something to ingest.
 
 The defect appears because `LibraryPresence.raise` pushes a history entry at the same document.
 The publication's document guard sees no change, because path and query are identical, so the
@@ -130,22 +131,53 @@ reads the restored fragment as an arrival and offers to replace the build with i
 
 ### A restoration adds no history entry
 
-`022/FR-001` carries this rule. `001/FR-020` does not: it governs build edits, and a restoration
-is not an edit — it puts back what the address already claimed to hold. Both write with
-`replaceState`, and the mechanism is all they share. The evidence for the restoration is
-registered under `022/FR-001`, so the standing requirement's assertions cannot stand in for it.
+`022/FR-001` carries this rule. `001/FR-020` does not: it governs the fragment a build edit
+writes, and a restoration follows no edit — it puts back what the address already claimed to
+hold. Both write with `replaceState`, and the mechanism is all they share. The evidence for the
+restoration is registered under `022/FR-001`, so the standing requirement's assertions cannot
+stand in for it.
+
+### The adapter reads the address back when the router writes it
+
+**Decision.** `HistoryLocationAdapter` subscribes to Angular's `Location.onUrlChange` as well as to
+`hashchange`, and re-reads `location.hash` on both.
+
+**Why.** The watcher acts on the fragment signal, and that signal has to be the address. The router
+writes the whole address — path, query and fragment together — from the URL it recorded for a
+history entry, and a fragment written with `history.replaceState` is in no record of its. So going
+back out of the layer, the router writes `/outfitting` with no fragment, and that write can land
+after the watcher has stated the link again. The router writes through `Location`, which fires no
+`hashchange`, so where it lands second the signal goes on reading `b.…` while the address carries
+nothing, and no later event corrects it: the watcher never runs again and the address stays wrong.
+Which of the two writes lands second is the browser's to decide, and subscribing takes the question
+away.
+
+Reading the address back on the router's own write settles it in one more pass. The watcher states
+the link, the router drops it, the adapter reports the drop, the watcher states it again, and the
+router has no further navigation to write. The adapter's own `replaceFragment` goes straight to
+`history`, so nothing the application writes comes back through this listener and there is no loop.
+
+**Alternative rejected: publish through the router.** The fragment could be written with
+`Router.navigate([], { fragment, replaceUrl: true })`, which would put it in the record the router
+restores from. That makes every keystroke of a build edit a router navigation, and it moves the
+fragment out of the adapter that the build-link contract makes its only writer.
 
 ### The journey holds the window open by delaying the codec chunk
 
 The race needs the layer raised between the lazy import and the fragment write, and a journey that
 waits for neither reproduces it only by luck. The codec arrives as a lazily imported chunk, so a
-`page.route` installed once the workspace has loaded catches that request and holds it while the
-layer goes up. The suite already delays JavaScript this way in `e2e/first-frame.ts`.
+`page.route` catches that request and holds it while the layer goes up. The route stands before the
+page is opened, because the encode starts with the first edit and a route installed after the
+workspace has loaded would miss the chunk it is there to hold. The suite already delays JavaScript
+this way in `e2e/first-frame.ts`.
 
-Where that chunk cannot be told from another lazy request, the journey asserts the post-condition
-only — the address carries the build link after the layer closes — and says so where it is read.
-The race itself is held open deterministically in the unit tests, through the publisher's
-injectable `encode`, so no coverage depends on the timing of a browser.
+That chunk is told from every other lazy request by its own content: the codec table carries a
+content hash, and the journey reads that hash out of the table in the source tree and holds the one
+chunk whose body contains it. With the chunk held the journey reads that the address carries
+nothing while the layer stands, which is what says the window was open — a journey reading the
+post-condition alone passes whether or not it ever held anything. The race is held open
+deterministically in the unit tests as well, through the publisher's injectable `encode`, so no
+coverage depends on the timing of a browser.
 
 ## Risks / Trade-offs
 
@@ -165,19 +197,21 @@ injectable `encode`, so no coverage depends on the timing of a browser.
 - **The window stays open; this closes its consequence.** → A publication landing on a layer's
   entry is still a publication on the wrong entry, and a Commander who copies the address _while_
   the layer is up gets a link to the build, which is the address that entry was pushed to carry
-  anyway. What is fixed is that the workspace's own entry no longer stays wrong afterwards.
+  anyway. What this closes is the workspace's own entry staying wrong after the layer comes down.
 - **Back to an earlier workspace entry that had no link puts the link straight back.** → A
   Commander who walks back past the point where their build was published arrives at an empty
   address and the watcher states the link again. This is the rule the requirement asks for: while
   a build is open and its link is published, the address describes it. The build on the screen has
   not changed, so the address is still true.
-- **One more effect over the fragment signal.** → It reads two signals and returns without writing
-  in every case but the defect's. The publication effect it sits beside runs on every keystroke;
-  this one cannot.
-- **No journey in the suite holds this race open.** → The two library journeys wait for the
-  address to carry the build before opening the layer, which is right for what they read. This
-  change brings its own reproducing unit coverage, driven through the publisher's injectable
-  `encode` so the window is held open deliberately rather than raced against.
+- **One more effect over the fragment signal.** → It reads the fragment and the published link.
+  `link()` moves twice per publication, to `encoding` and then to `published`, so the effect runs
+  about twice for each one. On every run but the defect's it reads the two signals and stops.
+- **The journey rests on the codec arriving as a chunk of its own.** → It holds the one chunk
+  whose body carries the codec table's content hash, so a build that folded the table into a
+  chunk already loaded would leave it nothing to hold. The journey reads the empty address while
+  the layer stands, so that build fails it there rather than passing on the post-condition alone.
+  The same window is held in the publisher's own suite through its injectable `encode`, so no
+  coverage rests on a browser's timing.
 
 ## Migration Plan
 

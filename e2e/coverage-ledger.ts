@@ -53,6 +53,7 @@ export const COVERED_FEATURES: readonly string[] = [
   '019-first-frame-typefaces',
   '020-held-grade-ladder',
   '023-served-document-held',
+  '022-published-link-restated',
 ];
 
 /** The five layout profiles, each run in both engines. */
@@ -931,6 +932,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
       '001/FR-020',
       '001/FR-021',
       '001/SC-003',
+      '022/FR-001',
     ],
     journey: 'product/build-link',
     axe: true,
@@ -941,6 +943,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
       'an invalid, truncated, over-limit or unsupported payload leaves the active build unchanged',
       'editing replaces the fragment without adding a history entry per edit',
       'a build the codec cannot represent is refused with its slot and reason, and offers SLEF',
+      'a published link the address loses while the saved builds stand over it is stated again once they close, and opens the same build in a context holding nothing',
     ],
     manualRecord: null,
   },

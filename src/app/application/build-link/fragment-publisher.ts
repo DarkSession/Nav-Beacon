@@ -34,6 +34,17 @@ export class FragmentPublisher {
   #token = 0;
 
   /**
+   * The document the published fragment was written onto.
+   *
+   * A build link belongs to the build it describes, so stating one again is
+   * bounded the way publishing one is: a Commander who publishes a link and
+   * then leaves the workspace must not arrive at another screen carrying it.
+   * This is bookkeeping rather than something the application says about the
+   * build, which is why it is here and not on `link()`.
+   */
+  #publishedDocument: string | null = null;
+
+  /**
    * How a build becomes a fragment.
    *
    * A property rather than a direct call so a test can control when an encode
@@ -43,10 +54,11 @@ export class FragmentPublisher {
   encode: (loadout: ShipLoadout) => Promise<string> = encodeBuildLinkFragment;
 
   /**
-   * Publishes after every modelled edit, for as long as the workspace is open.
+   * Publishes after every modelled edit, and keeps the address carrying what is
+   * published, for as long as the workspace is open.
    *
-   * Returns an unsubscribe: the watcher outlives no screen, and a second
-   * registration would encode the same build twice per keystroke.
+   * Returns an unsubscribe that ends both: neither watcher outlives a screen,
+   * and a second registration would encode the same build twice per keystroke.
    */
   start(): () => void {
     const watcher = effect(
@@ -61,7 +73,45 @@ export class FragmentPublisher {
       { injector: this.#injector },
     );
 
-    return () => watcher.destroy();
+    // The address can lose a publication whenever history moves. Encoding is
+    // one lazily imported chunk and one encode after the edit that asked for
+    // it, and a layer raised inside that window pushes an entry of its own at
+    // the same address: the fragment lands on the layer's entry, and closing it
+    // goes back to the one that never received it. The build is safe, because
+    // an absent fragment is ignored on ingest. The address is wrong, and it
+    // stays wrong until the next edit — so what is published is stated again
+    // whenever the address comes back carrying nothing (022/FR-001).
+    const keeper = effect(
+      () => {
+        const fragment = this.#location.fragment();
+        const link = this.#active.link();
+
+        // Only an empty address. A fragment the address already carries is
+        // left alone whichever kind it is: another build link is how a
+        // Commander reaches another build, and anything else belongs to
+        // whoever wrote it. Emptiness is tested here rather than asked of
+        // `recognizeBuildLinkFragment`, which answers `unrelated` for an empty
+        // fragment and a foreign one alike.
+        if (fragment !== '' || link.kind !== 'published') {
+          return;
+        }
+        if (this.#location.currentDocument() !== this.#publishedDocument) {
+          return;
+        }
+
+        // Marked first, as publication marks it. Without the mark the
+        // coordinator reads the restored fragment as an arrival, and decodes a
+        // build that is already open.
+        this.#ingress.markPublished(link.fragment);
+        this.#location.replaceFragment(link.fragment);
+      },
+      { injector: this.#injector },
+    );
+
+    return () => {
+      watcher.destroy();
+      keeper.destroy();
+    };
   }
 
   /** Encodes the current build and replaces the fragment with it. */
@@ -111,6 +161,7 @@ export class FragmentPublisher {
 
     this.#ingress.markPublished(fragment);
     this.#location.replaceFragment(fragment);
+    this.#publishedDocument = document;
     this.#active.setLink({ kind: 'published', fragment, revision });
   }
 
