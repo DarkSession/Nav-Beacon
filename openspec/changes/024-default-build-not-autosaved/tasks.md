@@ -4,7 +4,7 @@
       touched, and no string is added (design.md, Screens). Responsiveness, touch targets,
       screen-reader semantics, localisation and design-system composition therefore have nothing new
       to check, and are verified by the accessibility and responsive journeys passing unchanged in
-      `pnpm run check`. Verify by the changed-path list at the end of the change: every path is under
+      `pnpm run check`. Verify against proposal.md — Impact: every changed path is under
       `src/app/application/`, `src/app/domain/`, `e2e/` or `openspec/`.
 - [ ] 1.2 Add to `src/app/domain/ships/build/` a failing unit test that the snapshot of
       `ShipLoadout.default(<hull symbol>)` is reported at the hull's package default, that the same
@@ -75,24 +75,39 @@
       it from the address, and a page built at an address carrying no fragment opens on the no-build
       state or the empty bench. Drive it in `build-workspace.page.spec.ts` and the bench page suite
       (024/FR-001, 024/FR-002).
+- [ ] 4.5 Verify the address carries the work from the moment it opens, which is what 4.4 restores
+      from: `FragmentPublisher` publishes for a build that becomes active and is not edited, and
+      `LoadoutLinkCoordinator` for a suit chosen and nothing else done. Both start effects already
+      run on the first revision, so add the cases to `build-link.spec.ts` and `loadout-link.spec.ts`
+      and verify they pass against the code as it stands (024/FR-003).
 
 ## 5. Journeys and the coverage record
 
-- [ ] 5.1 Update `e2e/build-working-state.spec.ts`: the journey that leaves four builds in a row now
+- [ ] 5.1 Update `e2e/build-working-state.spec.ts`: the journey that leaves four builds in a row
       leaves none until each is edited, so edit each build and verify four records; add the journey
       that creating a build and changing nothing leaves the library with no entry for it, and that
       the first edit makes one appear. Verify both in the ten-project matrix (024/FR-001).
-- [ ] 5.2 Update `e2e/hull-detail.spec.ts` so its second-creation journey no longer asserts the first
-      build is stored, and verify it asserts what is true: the second creation replaces the first on
-      screen without asking (024/FR-001).
-- [ ] 5.3 Update the bench persistence journey in `e2e/equipment-library.spec.ts`: choosing a suit and
-      doing nothing else leaves the saved list with no entry, the first change makes one appear, and
-      starting an empty bench on an untouched default leaves nothing behind. Verify in the matrix
-      (024/FR-002).
-- [ ] 5.4 Register `024/FR-001` and `024/FR-002` in `e2e/coverage-ledger.ts` on the `build` and
-      `equipment/bench-persistence` surfaces, restate the assertions those surfaces claim about
-      records, and add `024-default-build-not-autosaved` to `COVERED_FEATURES`. Verify
-      `pnpm run policy:specs` passes and names no unregistered id.
+- [ ] 5.2 Update `e2e/hull-detail.spec.ts` so its second-creation journey drops the assertion that
+      the first build is stored, and verify it asserts what is true: the second creation replaces the
+      first on screen without asking (024/FR-001).
+- [ ] 5.3 Update the bench persistence journey in `e2e/tool-bar-navigation.spec.ts`, which carries
+      the `equipment/bench-persistence` surface: choosing a suit and doing nothing else leaves the
+      saved list with no entry, the first change makes one appear, and starting an empty bench on an
+      untouched default leaves nothing behind. That surface already carries `017/FR-006`, so it is
+      where the restated empty-bench requirement is evidenced. Verify in the matrix (024/FR-002).
+- [ ] 5.4 Extend the address journeys: in `e2e/build-link.spec.ts`, a build that becomes active and
+      is not edited has its link in the address, and a reload of that address restores it; in
+      `e2e/equipment-link.spec.ts`, the same for a suit chosen and nothing else done. Verify both in
+      the matrix (024/FR-003).
+- [ ] 5.5 Verify the SLEF journey against its restated requirement: one selected event replaces the
+      active build, writes no named record, and is in the address where it takes no record. Check
+      `e2e/slef-import.spec.ts` asserts this, and that the batch still stores one named record per
+      event selected (024/FR-001).
+- [ ] 5.6 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts` — the
+      first two on the `build` and `equipment/bench-persistence` surfaces, the third on
+      `build/share-link` and `equipment/link` — restate the assertions those surfaces claim about
+      records and the address, and add `024-default-build-not-autosaved` to `COVERED_FEATURES`.
+      Verify `pnpm run policy:specs` passes and names no unregistered id.
 
 ## 6. The gate
 

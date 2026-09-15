@@ -59,21 +59,25 @@ A loadout carries no choice while it holds its suit at the lowest grade the pack
 that suit — the grades of `getSuitByFamily(<suit family>)` in
 `@elite-dangerous-almanac/core/equipment/suits` — with no weapon on any mount and no modification
 fitted. That is the loadout the bench starts when a suit is chosen and nothing else is done to it.
-Such a loadout MUST take no record: none minted, and none taken over. The test MUST be the stored
-state alone and MUST NOT depend on where the loadout came from, so a default loadout that arrives
-in a link or in a journal import is kept the same way — by choosing the suit again.
+Such a loadout MUST take no record: none minted, and none taken over.
 
-A record a loadout already holds MUST be kept and MUST keep being written. Changing a loadout back
-to its suit's default MUST NOT remove its record, because a record is removed only by a confirmed
-deletion, by the manual save that consumes it, or by expiry.
+The test MUST be the stored state alone and MUST NOT depend on where the loadout came from. A default
+loadout reaches the bench by a suit chosen at the gate, by a link and by a journal event, and each is
+recovered the same way: by choosing the suit again. The rule holds over the loadout that reaches the
+bench. A record a Commander asked for by name is a deliberate save and is untouched by it, so a batch
+of journal events still stores one named record for every loadout selected.
+
+The unnamed record a loadout already holds MUST be kept and MUST keep being written. Changing a
+loadout back to its suit's default MUST NOT remove its record, because a record is removed only by a
+confirmed deletion, by the manual save that consumes it, or by expiry.
 
 The cost of taking no record is that a default loadout is recoverable only from the address, which
-carries the open loadout after every change. That is the state's whole content: a Commander who
-reaches the bench at an address carrying no loadout meets the empty bench, and reaches the same
-default again by choosing the suit.
+carries the open loadout for as long as one is on the bench. That is the state's whole content: a
+Commander who reaches the bench at an address carrying no loadout meets the empty bench, and reaches
+the same default again by choosing the suit.
 
-Wherever a record is taken for a loadout, an unnamed record already holding identical stored state
-MUST be taken over rather than a second copy of it stored. A record holding a ship build MUST NOT
+Wherever a record is taken for a loadout — at either of those two moments — an unnamed record already
+holding identical stored state MUST be taken over rather than a second copy of it stored. A record holding a ship build MUST NOT
 be taken over for a loadout, because the two hold different content and are never the same state.
 Autosave MUST NEVER write to a named record: a Commander who names a loadout has said which version
 they want kept, so editing a named loadout forks an unnamed record and the named record moves only
@@ -104,8 +108,15 @@ Source: 017/FR-007, 017/SC-003, 024/FR-002.
 
 #### Scenario: A default loadout arrives by another route
 
-- **WHEN** a loadout whose stored state is its suit's default arrives in a link or a journal import
+- **WHEN** a loadout whose stored state is its suit's default reaches the bench from a link or a
+  single journal event
 - **THEN** no record is stored for it, exactly as for a loadout started at the bench
+
+#### Scenario: A batch of journal events holds a default loadout
+
+- **WHEN** a Commander selects several journal events, one of which holds a loadout at its suit's
+  default
+- **THEN** a named record is stored for every loadout selected, that one included
 
 #### Scenario: Reloading a tab holding a default loadout
 
@@ -146,3 +157,101 @@ Source: 017/FR-007, 017/SC-003, 024/FR-002.
 - **WHEN** a Commander starts an empty bench or opens another loadout
 - **THEN** the loadout before it remains as the record it was autosaved to, where it holds one
 - **AND** the saved list still holds it
+
+### Requirement: What the bench says about storing
+
+A store that refuses a write MUST be stated where the Commander is, and MUST NOT make the
+loadout unusable: a Commander whose browser stores nothing MUST still be able to assemble,
+read, share and export a loadout. A blocked store, a full store and a failed write MUST each
+be stated in words rather than by an unchanged control.
+
+A record deleted by another live page MUST NOT clear the bench. The loadout MUST stay usable,
+autosave MUST pause, and resuming MUST be an explicit Commander action, because nobody at this
+page decided anything. Resuming MUST write the loadout, whether or not it has changed since
+the record was discarded.
+
+The pause MUST be about the discarded record alone. A bench that takes up another record —
+by opening a saved loadout, by reading one from an address, or by saving the loadout under a
+name — MUST store into that record unasked, and MUST NOT keep stating a discard that is not
+about the loadout it now holds.
+
+A record deleted on this page MUST clear the bench, which is the opposite answer to the
+opposite event: a Commander who deletes the record the bench autosaves into decided that here,
+and writing it back on the next change would undo what they confirmed. The deleted record MUST
+NOT be written again. A loadout the address still carries MUST open again from the address, as
+any loadout in an address does, into a record of its own where it carries a choice. A loadout
+at its suit's default opens from the address into no record, as it does by every other route,
+and the deleted record stays deleted either way.
+
+Source: 017/FR-008, 024/FR-002.
+
+#### Scenario: The browser refuses to store anything
+
+- **WHEN** the browser refuses every write while a loadout is on the bench
+- **THEN** the bench states that nothing is being stored
+- **AND** the loadout can still be changed, shared and exported
+
+#### Scenario: The store is full
+
+- **WHEN** the browser store is full and autosave cannot write
+- **THEN** the bench states what happened and offers a way to choose records to discard
+
+#### Scenario: This page deletes the record the bench autosaves into
+
+- **WHEN** a Commander deletes the record this bench autosaves into, from this page
+- **THEN** the bench holds no loadout
+- **AND** the deleted record is never written again
+
+#### Scenario: The address still carries the loadout whose record was deleted
+
+- **WHEN** a Commander returns to an address carrying the loadout whose record they deleted
+- **THEN** the loadout opens from the address, in a record of its own where it carries a choice
+- **AND** the record they deleted stays deleted
+
+#### Scenario: Resuming a loadout that has not changed
+
+- **WHEN** a Commander resumes autosave after another page deleted the record, without
+  having changed the loadout
+- **THEN** the loadout is written to a record again
+
+#### Scenario: Another loadout is opened while saving is paused
+
+- **WHEN** a Commander opens another loadout while autosave is paused on a discarded record
+- **THEN** the loadout that opens is stored without being asked for
+- **AND** the bench states nothing about the record that was discarded
+
+#### Scenario: Another page deletes this page's record
+
+- **WHEN** another live page deletes the record this bench autosaves into
+- **THEN** the loadout stays on the bench and autosave pauses
+- **AND** the Commander resumes autosave by an explicit action
+
+## ADDED Requirements
+
+### Requirement: The address carries the loadout on the bench
+
+While a loadout is on the bench, the address MUST carry it. It MUST be there from the moment the
+loadout reaches the bench, not only after a change, and each change MUST replace it without adding a
+history entry. A bench holding no loadout MUST carry none.
+
+This is what makes a loadout that is in no record recoverable. A loadout still at its suit's default
+is stored nowhere, so the address is the only thing holding it, and a Commander who reloads the tab
+gets the loadout back from there.
+
+Source: 024/FR-003.
+
+#### Scenario: A suit is chosen and nothing else is done
+
+- **WHEN** a Commander chooses a suit at the gate and makes no other choice
+- **THEN** the address carries that loadout
+
+#### Scenario: The bench is reloaded on a default loadout
+
+- **WHEN** a Commander reloads the tab while the bench holds a loadout at its suit's default
+- **THEN** the same loadout is on the bench
+
+#### Scenario: Each change replaces what the address carries
+
+- **WHEN** a Commander makes a change on the bench
+- **THEN** the address carries the changed loadout
+- **AND** no history entry is added for the change

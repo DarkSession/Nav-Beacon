@@ -38,19 +38,23 @@ build before it. Records MUST use local identities independent of their display 
 
 A build carries no decision while its modelled state is the package default loadout for its hull —
 `ShipLoadout.default(<hull symbol>)` in `@elite-dangerous-almanac/core/ships/ship-loadout` — with no
-ship name and no ident. Such a build MUST take no record: none minted, and none taken over. The test
-MUST be the modelled state alone and MUST NOT depend on where the build came from, so a default build
-created from the hull catalogue, decoded from a build link and reconstructed from a SLEF or journal
-import are all kept the same way — by selecting the hull again.
+ship name and no ident. Such a build MUST take no record: none minted, and none taken over.
 
-A record a build already holds MUST be kept and MUST keep being written. Editing a build back to the
-package default MUST NOT remove its record, because a record is removed only by a confirmed deletion,
-by the manual save that consumes it, or by the expiry this capability defines.
+The test MUST be the modelled state alone and MUST NOT depend on where the build came from. A default
+build reaches the workspace by creation from the hull catalogue, by a build link, by a SLEF paste and
+by a journal event, and each is recovered the same way: by selecting the hull again. The rule holds
+over the build that becomes active. A record a Commander asked for by name is a deliberate save and
+is untouched by it, so a batch of journal events still stores one named record for every event
+selected.
+
+The unnamed record a build already holds MUST be kept and MUST keep being written. Editing a build
+back to the package default MUST NOT remove its record, because a record is removed only by a
+confirmed deletion, by the manual save that consumes it, or by the expiry this capability defines.
 
 The cost of taking no record is that a default build is recoverable only from the address, which
-carries the open build after every modelled edit. That is the state's whole content: a Commander who
-reaches the workspace at an address carrying no build link meets the no-build state, and reaches the
-same default again by selecting the hull.
+carries the open build's link for as long as a build is active. That is the state's whole content: a
+Commander who reaches the workspace at an address carrying no build link meets the no-build state,
+and reaches the same default again by selecting the hull.
 
 Autosave stops at the named record deliberately. A Commander who names a build has said which version
 of it they want kept, and letting the next edit flow into that record would take the decision back
@@ -78,9 +82,15 @@ Source: 001/FR-008, 024/FR-001.
 
 #### Scenario: A default build arrives by another route
 
-- **WHEN** a build whose modelled state is the package default for its hull arrives in a build link,
-  a SLEF import or a journal import
+- **WHEN** a build whose modelled state is the package default for its hull becomes active from a
+  build link, a SLEF paste or a single journal event
 - **THEN** no record is stored for it, exactly as for a build created from the hull catalogue
+
+#### Scenario: A batch of journal events holds a default build
+
+- **WHEN** a Commander selects several journal events, one of which holds a build at the package
+  default for its hull
+- **THEN** a named record is stored for every event selected, that one included
 
 #### Scenario: A ship name on an otherwise default build
 

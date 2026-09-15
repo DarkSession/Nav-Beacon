@@ -10,13 +10,15 @@ Three facts shape the approach:
 - **Nothing is owed while the subject is clean.** `dirty()` compares the current fingerprint with
   the baseline the last store or open set. A build arriving from creation, a link or an import
   carries `baseline: null`, so it is dirty from its first tick and a record is minted for it.
-- **A fingerprint is the serialized state.** `baselineFingerprint` is `JSON.stringify` of the
+- **A fingerprint is the serialised state.** `baselineFingerprint` is `JSON.stringify` of the
   build snapshot; `loadoutFingerprint` is the same over the stored loadout. Both change when, and
   only when, a Commander changed something, and both are already the value the take-over rule
   compares.
 - **The address already carries the work.** `FragmentPublisher` and `LoadoutLinkCoordinator`
-  replace the fragment after every modelled edit, and the fragment outranks a restored record on
-  arrival. A build in no record is still restored by a reload of the address it is on.
+  publish from the moment a build is active or a loadout is on the bench, and replace the fragment
+  on every revision after that. The fragment outranks a restored record on arrival, so a reload of
+  the address restores a build that is in no record. The specifications say less than the code
+  does, which is why this change states the address requirement.
 
 ## Goals / Non-Goals
 
@@ -30,8 +32,7 @@ Three facts shape the approach:
 **Non-Goals:**
 
 - No new screen, and no change to an existing one. Persistence states `ready`, `saving` and
-  `saved` all draw nothing, so a build that is in no record and one that is saved look the same,
-  as they do today.
+  `saved` all draw nothing, so a build that is in no record and one that is saved look the same.
 - No removal of a record that already exists. Editing back to the default keeps the record.
 - No change to the seven-day expiry, to the take-over rule, or to what a manual save does.
 - No edit to `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md`.
@@ -70,8 +71,8 @@ honest answer: `flush()` asks whether letting go of the work loses anything, and
 cleared while a loadout the store refused to write still holds the bench.
 
 The branch is placed before `#allocate`, so a default build neither mints a record nor takes an
-existing one over. An unnamed record that already holds the default state — written before this
-change, or left by a build since edited back — stays where it is and runs out its seven days.
+existing one over. An unnamed record that already holds the default state — stored by an earlier
+version, or left by a build since edited back — stays where it is and runs out its seven days.
 
 `#schedule` also skips the timer in the same condition, so an untouched build does not wake a
 timeout every 400 ms for as long as it is open.
@@ -93,18 +94,17 @@ tested without rendering.
 
 **Cost.** Building `ShipLoadout.default(symbol)` on every tick would be work repeated for no
 reason, so the default fingerprint is memoised per hull symbol, and per suit family on the bench.
-The comparison runs only while the tool holds no record, which is the shortest part of a build's
-life.
+The comparison runs only while the tool holds no record, which lasts until the first edit.
 
 **A package release that changes a default.** The memo is per process, so an upgrade that changes a
-hull's default loadout takes effect on the next load, which is when the new package arrives. A build
-open across that upgrade keeps whatever record it already holds; the fingerprint is over stored
-state, so nothing the package recomputes moves it.
+hull's default loadout takes effect on the next load, which is when the upgraded package arrives. A
+build open across that upgrade keeps whatever record it already holds; the fingerprint is over
+stored state, so nothing the package recomputes moves it.
 
 ### Restoring an untouched default
 
-Nothing is stored, so a reload restores it from the address, which carries the build link after
-every edit. Two consequences are accepted rather than worked around:
+Nothing is stored, so a reload restores it from the address, which carries the build link for as
+long as a build is active. Two consequences are accepted rather than worked around:
 
 - At an address with no fragment, the workspace opens on the no-build state and the bench on the
   suit gate. The Commander reaches the same default by selecting the hull or the suit.
@@ -114,14 +114,34 @@ every edit. Two consequences are accepted rather than worked around:
 **Alternative rejected: keep a record and hide the entry.** The record could be written and left
 out of the library listing. It would restore a closed tab, and it would cost a write on every
 default build, a stored entry that the storage quota counts and the Commander cannot see, and an
-expiry sweep running over entries nobody was shown. A record nobody can read is not an honest
-record.
+expiry sweep running over entries nobody was shown. A record the Commander cannot see or delete is
+storage they did not agree to, which principle I refuses.
+
+### The address requirement is stated here
+
+**Decision.** This change states, in both tools' specifications, that the address carries the open
+work from the moment it opens rather than from its first edit. `ship-builder/build-link` restates
+"Link validation and history" for the ship tool, and `equipment-builder/loadout-persistence` adds
+the requirement for the bench.
+
+**Why it is needed.** A default build is in no record, so the address is the only thing that holds
+it. A requirement that ties publication to edits would leave an untouched default recoverable by
+nothing, and the bench states no address requirement at all. The code already publishes on
+activation — both coordinators' start effects run on the first revision — so this states what is
+built rather than asking for behaviour to change.
+
+**Why not lean on change 022.** Change 022 adds "The address keeps the published link", which says
+the address must carry a link that is published and must put it back when something removes it. It
+starts from a published link and does not say when publication starts, so it does not cover the
+build that has published nothing yet. It also touches the ship tool alone. The two changes edit the
+same capability file and no shared requirement: 022 adds a requirement, this change restates an
+accepted one.
 
 ### Screens
 
 This change introduces no screen and changes no screen's composition or states. The workspace, the
-bench, the saved-builds library and the saved-loadouts list all draw what they draw today; the
-change is which entries the two lists hold. Responsiveness, touch, accessibility and localisation
+bench, the saved-builds library and the saved-loadouts list draw what they already draw; what
+differs is which entries the two lists hold. Responsiveness, touch, accessibility and localisation
 are therefore unchanged, and are verified by the journeys already scanned across the ten-project
 matrix rather than by new surfaces.
 
@@ -134,14 +154,14 @@ matrix rather than by new surfaces.
   that does not change the comparison would make every new loadout take a record again, silently.
   → Both are built from the same domain function, and a unit test asserts that the loadout the bench
   starts is at its default by the comparison's own answer.
-- **A serialization change moves the fingerprint on one side only.** → The comparison is between two
-  fingerprints taken by the same function over the same shape, so a change to the serializer moves
-  both. The unit test that pins "a freshly created build is at its default" is what catches a change
-  that moves only one.
+- **A serialisation change moves the fingerprint on one side only.** → The comparison is between
+  two fingerprints taken by the same function over the same shape, so a change to the serialiser
+  moves both. The unit test that pins "a freshly created build is at its default" is what catches a
+  change that moves only one.
 - **A record left by an older version still holds a default build.** → It is an ordinary unnamed
   record. It is not taken over, it is listed, and it expires after seven days. No migration.
 - **A page reads `flush()` as "the work is stored".** → The one caller that acts on it is
-  `EmptyBenchService`, and the behaviour it needs is exactly the new answer: clear a bench whose
+  `EmptyBenchService`, and what it needs is exactly what the gate answers: clear a bench whose
   loadout costs nothing to let go of. The task list verifies the other states it refuses on are
   unchanged.
 

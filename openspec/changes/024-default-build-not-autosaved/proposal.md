@@ -7,18 +7,18 @@ writes a record of that suit at its lowest grade, with no weapon and no modifica
 
 None of those records holds a decision. Every one of them is the state
 `ShipLoadout.default(<hull symbol>)` or the bench's own starting loadout for a suit, which a
-Commander reaches again by selecting the hull or the suit. What they cost is a library that a
-Commander has to read past to find the builds they did make, and the seven-day notice on each entry
-that says something is about to be lost when nothing is.
+Commander reaches again by selecting the hull or the suit. What they cost is a library holding
+entries a Commander has to sort through to find the builds they made, and a seven-day notice on each
+of those entries that says something is about to be lost when nothing is.
 
-The record earns its place at the first state the package default does not already describe. Until
+A record is worth keeping at the first state the package default does not already describe. Until
 then there is nothing to keep.
 
 ## What Changes
 
 - A build whose modelled state is exactly the package default for its hull takes no record. Autosave
   mints or takes over a record at the first state that differs from that default, and from then on
-  the record is written as it is today.
+  the record is written on the terms that already govern it.
 - A loadout whose stored state is exactly the bench's starting loadout for its suit takes no record,
   on the same terms.
 - The test is the state, not the route. A default build that arrives in a link, in a SLEF import or
@@ -29,18 +29,21 @@ then there is nothing to keep.
   that consumes one, or by the seven-day expiry, and by nothing else.
 - A tool holding an unrecorded default claims no record for this tab. A duplicated tab therefore has
   nothing to fork for that tool, and the other tool's claim is untouched.
-- An untouched default is restored from the address, which already carries the open build or loadout
-  after every edit. At an address carrying no fragment the workspace opens on the no-build state and
-  the bench on the suit gate, because nothing was stored.
+- An untouched default is restored from the address. The address carries the open build for as long
+  as a build is active, and the open loadout for as long as one is on the bench, which the ship
+  tool's requirement states only for edits and the bench states nowhere. Both are stated. At an
+  address carrying no fragment the workspace opens on the no-build state and the bench on the suit
+  gate, because nothing was stored.
 - Starting an empty bench on an untouched default clears it and leaves nothing in the saved list.
   The bench still refuses to clear a loadout that carries a choice and is in no record, which is the
   store refusing writes rather than a state with nothing to keep.
 - Naming an untouched default still saves it. A save with no unnamed record to consume writes a
   named record, as a save already does where the record was deleted in another tab.
-- Nothing a Commander reads changes. Persistence is `ready` rather than `saved` while no record is
-  owed, and both draw nothing. No new words, so no catalogue keys.
+- No wording changes. Persistence is `ready` rather than `saved` while no record is owed, and both
+  draw nothing. The help topic on browser storage answers where work is kept, not when a record is
+  minted, so it stands as written. No new words, so no catalogue keys.
 
-The change declares two requirements:
+The change declares three requirements:
 
 - **FR-001** (Ship Builder) A build takes no record while its modelled state is the package default
   loadout for its hull, with no ship name and no ident. A record is taken at the first state that
@@ -48,6 +51,9 @@ The change declares two requirements:
 - **FR-002** (Equipment Builder) A loadout takes no record while its stored state is its suit at the
   lowest grade the package publishes, with no weapon on any mount and no modification fitted. A
   record is taken at the first state that differs, and a record already held is kept.
+- **FR-003** (Both tools) The address carries the open build from the moment a build becomes active,
+  and the open loadout from the moment one is on the bench, not only after the first edit. It is
+  what an untouched default is recovered from.
 
 ## Capabilities
 
@@ -65,10 +71,18 @@ None.
   removing a record" gains the save that has no unnamed record to consume, and restates why
   replacing the active build is not confirmed. "Concurrent pages and records" gains the tool that
   claims nothing — the requirement that carries the claim for both tools.
+- `ship-builder/build-link`: "Link validation and history" ties fragment publication to build edits.
+  It is restated so that the address carries the build from the moment it becomes active, which is
+  what a default build is recovered from (024/FR-003).
+- `ship-builder/slef-exchange`: "One selected event replaces the active build" gives autosave
+  holding the import as the reason it is not also written to a named record. That reason is restated
+  to cover the import that takes no record, and the batch that stores one named record per event is
+  untouched.
 - `equipment-builder/loadout-persistence`: "Autosave of the open loadout" states that a record is
-  taken from the moment a loadout is on the bench. It is restated on the same terms, and
-  "Naming, saving, reopening and deleting a loadout" gains the save that has no unnamed record to
-  consume.
+  taken from the moment a loadout is on the bench. It is restated on the same terms as the ship
+  tool's, "Naming, saving, reopening and deleting a loadout" gains the save that has no unnamed
+  record to consume, "What the bench says about storing" covers the loadout that owes no write, and
+  a requirement is added for the address carrying the loadout on the bench (024/FR-003).
 - `equipment-builder/loadout-assembly`: "Starting an empty bench" rests on the loadout always being
   in a record. It is restated so that a loadout at its suit's default is cleared without being kept,
   and so that the states where the bench refuses to clear are the store's failures alone.
@@ -76,8 +90,10 @@ None.
 ## Impact
 
 - `src/app/application/build-library/working-record.autosave.ts` gains the one gate: while the tool
-  holds no record and the work is at its default, nothing is owed. One place, so both tools follow
-  the same rule and every route into a build reaches it.
+  holds no record and the work is at its default, nothing is owed. It is the single base class both
+  tools' autosave services extend, so both follow the same rule and every route into a build reaches
+  it. Its two service specifications, `autosave.service.spec.ts` and
+  `loadout-autosave.service.spec.ts`, each cover the gate for their own tool.
 - `src/app/application/build-library/working-record.port.ts` gains the fact the gate reads, and
   `ActiveBuildStore` and `LoadoutStore` answer it from their own state.
 - `src/app/domain/ships/build/` and `src/app/domain/equipment/loadout/` each gain the comparison
@@ -87,8 +103,9 @@ None.
 - `src/app/application/equipment/empty-bench.service.ts` clears a bench holding an unrecorded
   default. Its flush already answers "nothing owed" rather than "write failed", which is the
   difference the requirement turns on.
-- `e2e/build-working-state.spec.ts`, `e2e/equipment-builder.spec.ts` and `e2e/hull-detail.spec.ts`
-  carry the journeys, and `e2e/coverage-ledger.ts` registers the two requirement ids and this
-  change's directory.
+- `e2e/build-working-state.spec.ts` carries the ship tool's journey, `e2e/tool-bar-navigation.spec.ts`
+  the bench's, `e2e/hull-detail.spec.ts` the second creation, and `e2e/build-link.spec.ts` and
+  `e2e/equipment-link.spec.ts` the address each tool publishes. `e2e/coverage-ledger.ts` registers
+  the three requirement ids and this change's directory.
 - `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md` is not edited.
   It records what feature 001 built; the capability specification is the standing record.

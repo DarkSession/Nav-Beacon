@@ -7,19 +7,20 @@ one MUST leave the bench in the state it holds before a suit is chosen, with the
 standing and every region drawn and inert.
 
 Starting an empty bench MUST clear the loadout's name, the saved record the loadout belongs
-to, the undo and redo history, the loadout the address carries, and this tab's claim on the
-record the loadout was autosaved into. It MUST NOT be confirmed: the loadout that was on the
-bench stays as the record it is autosaved to, so there is nothing to lose and nothing to ask
-about. The record itself MUST stay where it is, so a page built in this tab afterwards MUST
-open on an empty bench and MUST NOT restore the loadout that was cleared. Starting an empty
-bench while the bench is already empty MUST change nothing.
+to, the undo and redo history, the loadout the address carries, and, where the loadout holds
+a record, this tab's claim on it. It MUST NOT be confirmed: a loadout that holds a record
+stays as that record, so there is nothing to lose and nothing to ask about. The record itself
+MUST stay where it is, so a page built in this tab afterwards MUST open on an empty bench and
+MUST NOT restore the loadout that was cleared. Starting an empty bench while the bench is
+already empty MUST change nothing.
 
-A loadout still at its suit's default is in no record and MUST be cleared on the same terms,
-without being confirmed and without being kept. It carries no choice a Commander made, and the
-same suit at the same grade is reached again by choosing that suit, so there is nothing to lose
+A loadout still at its suit's default — the loadout the bench holds when that suit is chosen
+and nothing else is done — is in no record and MUST be cleared on the same terms, without
+being confirmed and without being kept. It carries no choice a Commander made, and the same
+suit at the same grade is reached again by choosing that suit, so there is nothing to lose
 here either. The saved list MUST then hold no entry for it.
 
-Where the loadout on the bench carries a choice and is not in a record — the store refuses
+Where the loadout on the bench carries a choice and is in no record — the store refuses
 writes, the store is full, a write failed, or autosave is paused because the record was
 discarded elsewhere — the bench MUST stay as it is. Nothing keeps the loadout in those states,
 so clearing the bench would lose work rather than cost nothing, and what the bench already
@@ -48,8 +49,8 @@ Source: 017/FR-006, 024/FR-002.
 
 #### Scenario: The store cannot hold the loadout
 
-- **WHEN** a Commander starts an empty bench while the store refuses writes, a write failed
-  or autosave is paused
+- **WHEN** a Commander starts an empty bench while a loadout that carries a choice is on it
+  and the store refuses writes, a write failed or autosave is paused
 - **THEN** the loadout stays on the bench
 - **AND** the bench still states what it says about storing
 
