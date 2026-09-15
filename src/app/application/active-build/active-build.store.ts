@@ -3,6 +3,7 @@ import type { PartialEngineeringFailure } from '../../domain/ships/build/build-i
 import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import type { BuildSnapshotV1 } from '../../domain/ships/build/build-snapshot';
 import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
+import { atPackageDefault } from '../../domain/ships/build/build-default';
 import { baselineFingerprint } from '../../domain/ships/build/build-fingerprint';
 import { isDirty } from '../../domain/records/record-fingerprint';
 import type {
@@ -100,6 +101,12 @@ export class ActiveBuildStore implements WorkingRecordSubject {
 
   /** Whether replacing this build would lose work. */
   readonly dirty = computed(() => isDirty(this.fingerprint(), this.#baseline()));
+
+  /** Whether the build is still the package's own default for its hull. */
+  readonly atDefault = computed(() => {
+    const snapshot = this.snapshot();
+    return snapshot !== null && atPackageDefault(snapshot);
+  });
 
   /**
    * What autosave writes for this build, or `null` while there is none.

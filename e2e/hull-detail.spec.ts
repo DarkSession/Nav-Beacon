@@ -11,8 +11,8 @@ import {
   manifestBuildControl,
   openHullFromManifest,
   reachShellLink,
+  recordCount,
   restsToRead,
-  savedToBrowser,
 } from './shell';
 
 /**
@@ -417,15 +417,21 @@ test.describe('hull detail', () => {
     await expect(page.locator('[data-slot-key]').first()).toBeVisible();
   });
 
-  test('replaces the build on screen without asking, and keeps the one it replaced', async ({
+  test('replaces the build on screen without asking, and stores no record for either', async ({
     page,
   }) => {
-    // Withdrawn on 2026-08-25: the build being replaced has a record of its own,
-    // so nothing is lost and nothing is asked. What is asserted instead is that
-    // the first build is still there afterwards (FR-008, FR-009).
+    // Withdrawn on 2026-08-25: nothing is asked before one build replaces
+    // another. What each creation leaves behind is the other half of it. A
+    // build straight from the catalogue is the loadout the package publishes
+    // for the hull, which holds nothing a Commander decided: it is worth no
+    // record, and a Commander reaches it again by selecting the hull
+    // (FR-008, FR-009, 024/FR-001).
     await buildStockHull(page, englishMessages['hullDetail.create']);
     await expect(page.locator('[data-slot-key]').first()).toBeVisible();
-    await savedToBrowser(page);
+    await expect(page.locator('ednb-build-workspace-page')).toHaveAttribute(
+      'data-persistence',
+      'ready',
+    );
 
     await openHullInApp(page, 'Sidewinder');
     await buildStockHull(page, englishMessages['hullDetail.create']);
@@ -434,16 +440,14 @@ test.describe('hull detail', () => {
     await expect(page).toHaveURL(/\/outfitting(#|$)/);
     await expect(page.getByRole('banner').getByText('Sidewinder').first()).toBeVisible();
 
-    // Two builds, two records: the Anaconda is on the library's list rather than
-    // gone. Polled rather than read once, because the second build's own write
-    // is coalesced and the status still reads "saved" from the first one.
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => Object.keys(localStorage).filter((key) => key.startsWith('ednb:record:')).length,
-        ),
-      )
-      .toBe(2);
+    // Nothing was stored for either of them. Read once rather than polled: a
+    // count that states nothing was written holds from the first attempt, and
+    // the status line beside it says the workspace never reached the store.
+    await expect(page.locator('ednb-build-workspace-page')).toHaveAttribute(
+      'data-persistence',
+      'ready',
+    );
+    expect(await recordCount(page)).toBe(0);
   });
 
   test('draws the stock-hull action only where the manifest is not the build', async ({ page }) => {

@@ -31,6 +31,13 @@ const COALESCE_MS = 400;
  * page believes it is holding — a record named in another tab, or written
  * before this rule existed, cannot be reached by a coalesced edit.
  *
+ * A third rule decides whether a record is owed at all. Work that holds no
+ * record and is still the default the package publishes for it — the hull's
+ * default loadout, or the loadout the bench starts for a suit — takes none:
+ * none minted, and none taken over. There is no decision in such work, and a
+ * Commander reaches it again by selecting the hull or the suit
+ * (024/FR-001, 024/FR-002).
+ *
  * Nothing refuses a write because many records already exist. The count limit
  * that once did was replaced on 2026-08-25 by the seven-day expiry of unnamed
  * records, which removes what nobody came back to rather than refusing what a
@@ -182,6 +189,29 @@ export class WorkingRecordAutosave {
       return true;
     }
 
+    // And nothing is owed on work that holds no record and is the default the
+    // package publishes for it. There is no decision in it: a Commander reaches
+    // the same build or the same loadout by selecting the hull or the suit, and
+    // a record would be an entry to sort past counting down seven days over
+    // nothing (024/FR-001, 024/FR-002).
+    //
+    // Before `#allocate`, so no record is minted and no unnamed record already
+    // holding that state is taken over. One stored by an earlier version, or
+    // left by work since edited back, stays where it is and runs out its own
+    // seven days.
+    //
+    // Governs autosave's own writes alone. A resume writes past it, exactly as
+    // it writes past the clean-subject return above, because a Commander who
+    // resumes has asked for the work to be kept. `true` is the honest answer:
+    // `flush()` asks whether letting go of the work loses anything, and it does
+    // not.
+    //
+    // A record this tool already holds is not reached by it at all, so editing
+    // back to the default keeps that record and keeps writing to it.
+    if (!force && this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
+      return true;
+    }
+
     const recordId = this.#allocate();
     if (recordId === null) {
       // Taken over: the record already holds this exact state.
@@ -306,6 +336,13 @@ export class WorkingRecordAutosave {
 
   #schedule(): void {
     if (this.paused() || this.#subject.fingerprint() === null) {
+      return;
+    }
+    // Nothing a timer could write. Work holding no record at its own default
+    // owes nothing, so waking a timeout every 400 ms for as long as it is open
+    // would be work done to decide that again each time. The first edit moves
+    // it off the default and the next revision schedules the write.
+    if (this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
       return;
     }
     this.#clearTimer();

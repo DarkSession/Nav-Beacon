@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { buildStockHull, savedToBrowser } from './shell';
+import { buildStockHull, regroupCoreMount, savedToBrowser } from './shell';
 
 /**
  * The plan's performance goals, measured rather than assumed.
@@ -63,6 +63,9 @@ test.describe('the workspace, on arrival', () => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
     await expect(page).toHaveURL(/\/outfitting(#|$)/);
+    // One decision on the build, so autosave has a record to write. A build
+    // still at its hull's package default is stored nowhere (024/FR-001).
+    await regroupCoreMount(page);
     await savedToBrowser(page);
 
     await page.reload();
@@ -78,6 +81,9 @@ test.describe('the workspace, on arrival', () => {
   test('coalesces autosaves instead of writing once per edit', async ({ page }) => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
+    // One decision on the build, so autosave has a record to write. A build
+    // still at its hull's package default is stored nowhere (024/FR-001).
+    await regroupCoreMount(page);
     await savedToBrowser(page);
 
     // One record, one key, however many revisions went into it.

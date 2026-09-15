@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { sweepOutfittingState } from './accessibility';
-import { reachShellAction } from './shell';
+import { reachShellAction, recordCount } from './shell';
 
 /**
  * Handing a loadout to someone else (US4).
@@ -71,6 +71,30 @@ async function openExport(page: Page) {
 }
 
 test.describe('handing a loadout to someone else', () => {
+  test('publishes a loadout nobody changed, and restores it from the address', async ({ page }) => {
+    // The address carries the loadout from the moment a suit is chosen, before
+    // any other choice is made on it. That is the whole of what holds it: a
+    // loadout at its suit's default is stored nowhere, so a fresh load of that
+    // address read it from the address and from nothing else (024/FR-002,
+    // 024/FR-003).
+    await page.goto('/equipment');
+    await wearSuit(page, 'Dominator Suit');
+
+    await expect(async () => {
+      expect(await page.evaluate(() => location.hash)).toMatch(/^#e\./);
+    }).toPass({ timeout: 5_000 });
+    const link = await page.evaluate(() => location.href);
+    expect(await recordCount(page)).toBe(0);
+
+    await page.goto('about:blank');
+    await page.goto(link);
+
+    await expect(page.locator('.gate')).toHaveCount(0);
+    await openRow(page, 'suit');
+    await expect(page.locator('.item__name')).toContainText('Dominator Suit');
+    expect(await recordCount(page)).toBe(0);
+  });
+
   test('publishes the loadout as the address, and restores it from there', async ({ page }) => {
     await page.goto('/equipment');
     await wearSuit(page, 'Dominator Suit');

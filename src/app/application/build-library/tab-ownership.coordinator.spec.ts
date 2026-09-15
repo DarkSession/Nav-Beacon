@@ -12,6 +12,7 @@ import { TabDescriptorRepository } from '../../platform/storage/tab-descriptor.r
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { LoadoutStore } from '../equipment/loadout.store';
+import { AutosaveService } from './autosave.service';
 import { TabOwnershipCoordinator } from './tab-ownership.coordinator';
 import type { WorkingRecordSubject } from './working-record.port';
 
@@ -49,19 +50,24 @@ class CountingUuid {
   }
 }
 
-function setup(session = new MemoryStorage(), channel = new FakeChannel()) {
-  const storage = new MemoryStorage();
+function setup(
+  session = new MemoryStorage(),
+  channel = new FakeChannel(),
+  storage = new MemoryStorage(),
+  uuid = new CountingUuid(),
+) {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       ...provideMemoryStorage(storage, session),
       { provide: BroadcastChannelAdapter, useValue: channel },
-      { provide: UuidAdapter, useValue: new CountingUuid() },
+      { provide: UuidAdapter, useValue: uuid },
     ],
   });
   return {
     coordinator: TestBed.inject(TabOwnershipCoordinator),
     active: TestBed.inject(ActiveBuildStore),
+    autosave: TestBed.inject(AutosaveService),
     channel,
     session,
     storage,
@@ -80,6 +86,17 @@ function hold(active: ActiveBuildStore, autosaveRecordId: string | null): void {
   });
 }
 
+/**
+ * Makes one modelled decision on the build a page holds.
+ *
+ * The priority tells two pages' builds apart, so a record taken for one is
+ * never a match for the other's.
+ */
+function decide(active: ActiveBuildStore, priority: number): void {
+  active.loadout()!.setModulePriority('FrameShiftDrive', priority);
+  active.touch();
+}
+
 /** A second tool tracking here, as the port describes one. */
 function otherTool(recordId: string | null): WorkingRecordSubject {
   const held = signal<string | null>(recordId);
@@ -88,6 +105,7 @@ function otherTool(recordId: string | null): WorkingRecordSubject {
     revision: signal(0),
     fingerprint: signal<string | null>('a-loadout'),
     dirty: signal(true),
+    atDefault: signal(false),
     autosaveRecordId: held.asReadonly(),
     sourceNamed: signal(null),
     payload: () => null,
@@ -242,6 +260,101 @@ describe('TabOwnershipCoordinator', () => {
 
     expect(channel.sent).toEqual([]);
     stop();
+  });
+
+  it('claims nothing for a tool holding no record, and leaves the other tool’s claim alone', () => {
+    // A build still at the package default takes no record, so this tool holds
+    // none. There is nothing to write down and nothing to announce — and the
+    // loadout open beside it is unaffected, because one tool holding nothing
+    // says nothing about the other (024/FR-001, 024/FR-002).
+    const { coordinator, active, channel } = setup();
+    hold(active, null);
+    coordinator.track(active);
+    coordinator.track(otherTool('the-loadout'));
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
+    expect(coordinator.claim('equipment')).toBe('the-loadout');
+    expect(channel.sent).toEqual([
+      {
+        kind: 'working-claim',
+        tool: 'equipment',
+        workingRecordId: 'the-loadout',
+        pageNonce: coordinator.pageNonce,
+      },
+    ]);
+  });
+
+  it('forks nothing for a tool holding no record when the tab is duplicated', () => {
+    // The duplicate carries a copy of the session, so it claims the same
+    // loadout and that tool forks. The build is in no record in either page:
+    // there is no identity to collide on and nothing to copy anywhere
+    // (024/FR-001, 017/FR-010).
+    const { coordinator, active, channel } = setup();
+    hold(active, null);
+    const loadout = otherTool('the-loadout');
+    coordinator.track(active);
+    coordinator.track(loadout);
+    coordinator.listen();
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    channel.deliver({
+      kind: 'working-claim',
+      tool: 'equipment',
+      workingRecordId: 'the-loadout',
+      pageNonce: 'duplicate',
+    });
+
+    expect(loadout.autosaveRecordId()).not.toBe('the-loadout');
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(coordinator.claim('ship')).toBeNull();
+    // And nothing was said about the build, because there is nothing to say.
+    expect(
+      channel.sent.filter((message) => message.kind === 'working-claim' && message.tool === 'ship'),
+    ).toEqual([]);
+  });
+
+  it('gives two pages holding the same default build a record each at their first edit', () => {
+    // The collision this coordinator exists for never arises while both pages
+    // are at the default: neither claims anything, so neither forks. Each takes
+    // a record of its own at its own first edit, and the two stand side by side
+    // (024/FR-001).
+    const storage = new MemoryStorage();
+    const uuid = new CountingUuid();
+    const channel = new FakeChannel();
+
+    const first = setup(new MemoryStorage(), channel, storage, uuid);
+    hold(first.active, null);
+    first.coordinator.track(first.active);
+    first.coordinator.listen();
+    first.autosave.flush();
+    TestBed.tick();
+    expect(first.active.autosaveRecordId()).toBeNull();
+    expect(channel.sent).toEqual([]);
+
+    decide(first.active, 2);
+    first.autosave.flush();
+    TestBed.tick();
+    const firstRecord = first.active.autosaveRecordId();
+    expect(firstRecord).not.toBeNull();
+
+    const second = setup(new MemoryStorage(), channel, storage, uuid);
+    hold(second.active, null);
+    second.coordinator.track(second.active);
+    second.coordinator.listen();
+    second.autosave.flush();
+    TestBed.tick();
+    expect(second.active.autosaveRecordId()).toBeNull();
+
+    decide(second.active, 3);
+    second.autosave.flush();
+    TestBed.tick();
+    const secondRecord = second.active.autosaveRecordId();
+
+    expect(secondRecord).not.toBe(firstRecord);
+    expect(storage.entries.has(recordKey(firstRecord!))).toBe(true);
+    expect(storage.entries.has(recordKey(secondRecord!))).toBe(true);
   });
 
   it('forks when another live page claims the record it writes to', () => {

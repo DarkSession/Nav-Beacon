@@ -6,6 +6,7 @@ import {
   buildStockHull,
   holdEveryChunk,
   openLibrary,
+  regroupCoreMount,
   savedToBrowser,
   waitForTakeover,
   waitingStatement,
@@ -559,6 +560,9 @@ test.describe('the statement and a surface that is already open', () => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
     await expect(page).toHaveURL(/\/outfitting(#|$)/);
+    // One decision on the build, so autosave has a record to write. A build
+    // still at its hull's package default is stored nowhere (024/FR-001).
+    await regroupCoreMount(page);
     await savedToBrowser(page);
 
     // A fresh session, so the workspace's code is a fetch rather than something

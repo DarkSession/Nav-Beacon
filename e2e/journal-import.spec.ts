@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow } from './accessibility/assertions';
-import { buildStockHull, reachShellAction } from './shell';
+import { buildStockHull, reachShellAction, recordCount, setShipIdent } from './shell';
 
 /**
  * Builds arriving from a Commander's own game journal.
@@ -159,12 +159,25 @@ test.describe('what a Commander chooses', () => {
     // The build the newest event describes: the ship a Commander named, on the
     // hull that event named. The bar carries both.
     await expect(page.getByRole('banner')).toContainText(/night watch/i);
+
+    // It is the active build and nothing more. It is kept the way any active
+    // build is kept: in the address, and in the record autosave holds it in
+    // because this event carries a ship name. No record is named for it — a
+    // name is a Commander's, and none was given here (016/FR-009, 024/FR-001).
+    await expect.poll(() => page.evaluate(() => location.hash)).toMatch(/^#b\./);
+    await expect.poll(() => recordCount(page)).toBe(1);
+    await expect(page.getByRole('dialog', { name: /saved builds/i })).toHaveCount(0);
   });
 
   test('saves every chosen build, opens none, and shows the saved builds', async ({ page }) => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
     await expect(page).toHaveURL(/\/outfitting/);
+    // The build on screen carries a decision, so it holds a record of its own.
+    // The count below is then the batch's three beside it, rather than three
+    // that might be missing one (024/FR-001).
+    await setShipIdent(page, 'NB-01');
+    await expect.poll(() => recordCount(page)).toBe(1);
 
     await openImport(page);
     await chooseFiles(page, ['Journal.ship-multiple.log']);
@@ -190,6 +203,9 @@ test.describe('what a Commander chooses', () => {
     // hull's name, from the package's own catalogue (016/FR-012). Read off the
     // row's title, because the hull is also named in the row's own facts.
     await expect(library.locator('.record__title', { hasText: 'Sidewinder' })).toHaveCount(1);
+    // One named record per event selected, and the build on screen still in the
+    // one it already had (016/FR-010, 024/FR-001).
+    await expect.poll(() => recordCount(page)).toBe(4);
   });
 
   test('keeps both when an imported name is already taken', async ({ page }) => {

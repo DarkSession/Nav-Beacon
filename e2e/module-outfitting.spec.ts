@@ -20,7 +20,7 @@ import {
   surfacesAreLayers,
 } from './outfitting-surfaces';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
-import { buildStockHull, savedToBrowser } from './shell';
+import { buildStockHull, regroupCoreMount, savedToBrowser } from './shell';
 
 /**
  * Fitting modules, end to end (US1).
@@ -856,6 +856,9 @@ test.describe('package-populated fixed mounts', () => {
     page,
   }) => {
     await openStockBuild(page);
+    // One decision on the build, so autosave has a record to write. A build
+    // still at its hull's package default is stored nowhere (024/FR-001).
+    await regroupCoreMount(page);
     await savedToBrowser(page);
 
     const stored = await page.evaluate(() =>

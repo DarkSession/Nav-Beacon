@@ -9,7 +9,7 @@ import {
 } from './accessibility/assertions';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
 import { openChooser, revealMount } from './outfitting-surfaces';
-import { buildStockHull } from './shell';
+import { buildStockHull, regroupCoreMount } from './shell';
 
 /**
  * Hull anatomy, end to end.
@@ -274,6 +274,9 @@ test.describe('moving between geometry and the ledger', () => {
     // what is compared below is what selection did and not a race with two
     // publishers this feature does not own.
     await expect(page).toHaveURL(/#b\./);
+    // One decision on the build, so autosave has a record to write. A build
+    // still at its hull's package default is stored nowhere (024/FR-001).
+    await regroupCoreMount(page);
     await expect
       .poll(() => page.evaluate(() => Object.keys(localStorage).length))
       .toBeGreaterThan(0);

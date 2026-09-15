@@ -13,13 +13,26 @@ import { provideIsolatedLocaleEnvironment } from '../../i18n/testing/localizatio
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinator';
 import type { BuildCandidate } from '../active-build/active-build.models';
+import { AutosaveService } from '../build-library/autosave.service';
 import { BuildLibraryStore } from '../build-library/build-library.store';
+import { generateSlefExportArtifact } from '../../domain/ships/slef/slef-export';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import type { JournalFile } from '../../domain/journal/journal-scan';
 import { SlefImportCoordinator } from './slef-import.coordinator';
 import { SlefStore } from './slef.store';
 
 const VALID = JSON.stringify({ event: 'Loadout', Ship: FIXTURE_HULL, Modules: [] });
+
+/**
+ * A paste holding the build the package publishes for its hull.
+ *
+ * Written by the application's own export, so it is the payload a Commander
+ * pastes back after sharing a hull's default build, module for module.
+ */
+const DEFAULT_PASTE = generateSlefExportArtifact(
+  { loadout: ShipLoadout.default(FIXTURE_HULL), revision: 1, canonicalLink: { kind: 'absent' } },
+  { appName: 'nav-beacon', appVersion: '0.0.0' },
+).payload;
 
 function seedActive(active: ActiveBuildStore): void {
   active.commit({
@@ -38,8 +51,11 @@ describe('the one path from a draft to an active build', () => {
   let replacement: BuildIngressCoordinator;
   let coordinator: SlefImportCoordinator;
   let committed: BuildCandidate[];
+  let autosave: AutosaveService;
+  let storage: MemoryStorage;
 
   beforeEach(() => {
+    storage = new MemoryStorage();
     TestBed.configureTestingModule({
       providers: [
         // A stub `/outfitting`, so the coordinator's move to the workspace resolves
@@ -49,13 +65,14 @@ describe('the one path from a draft to an active build', () => {
         ...provideIsolatedLocaleEnvironment(),
         // Storing a batch of imported builds is a write, so the coordinator
         // reaches the record repository. Nothing on this path writes one.
-        ...provideMemoryStorage(new MemoryStorage()),
+        ...provideMemoryStorage(storage),
       ],
     });
     active = TestBed.inject(ActiveBuildStore);
     store = TestBed.inject(SlefStore);
     replacement = TestBed.inject(BuildIngressCoordinator);
     coordinator = TestBed.inject(SlefImportCoordinator);
+    autosave = TestBed.inject(AutosaveService);
     committed = [];
     replacement.addSink({
       onCommitted: (candidate) => {
@@ -98,6 +115,35 @@ describe('the one path from a draft to an active build', () => {
       // be the second replacement path the coordinator exists to prevent.
       expect(active.link()).toEqual({ kind: 'absent' });
       expect(active.autosaveRecordId()).toBeNull();
+    });
+  });
+
+  describe('a paste holding a build at the package default', () => {
+    it('takes no record for it', async () => {
+      // The route the build arrived by is not the question. What is on screen
+      // is the build the package publishes for the hull, which a Commander
+      // reaches again by selecting the hull (024/FR-001).
+      store.setDraft(DEFAULT_PASTE);
+
+      expect(await coordinator.submit()).toEqual({ kind: 'committed' });
+      autosave.flush();
+
+      expect(active.atDefault()).toBe(true);
+      expect(active.autosaveRecordId()).toBeNull();
+      expect(storage.entries.size).toBe(0);
+    });
+
+    it('takes a record at the first modelled edit of it', async () => {
+      store.setDraft(DEFAULT_PASTE);
+      await coordinator.submit();
+      autosave.flush();
+
+      active.loadout()!.setModulePriority('FrameShiftDrive', 2);
+      active.touch();
+      autosave.flush();
+
+      expect(active.autosaveRecordId()).not.toBeNull();
+      expect(storage.entries.size).toBe(1);
     });
   });
 

@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow } from './accessibility/assertions';
-import { buildStockHull, openFirstHullFromManifest, openLibrary, reachShellAction } from './shell';
+import {
+  buildStockHull,
+  openFirstHullFromManifest,
+  openLibrary,
+  reachShellAction,
+  recordCount,
+  setShipIdent,
+} from './shell';
 
 /**
  * A build, passed to someone else.
@@ -39,6 +46,20 @@ async function buildWithLink(page: Page, hull = 'Anaconda'): Promise<string> {
   await page.goto(`/ships/${hull}`);
   await buildStockHull(page, 'Build');
   await expect(page).toHaveURL(/\/outfitting#b\./);
+  return new URL(page.url()).hash.slice(1);
+}
+
+/**
+ * The same, with an ident on the ship, so the build holds a decision.
+ *
+ * A build still at its hull's package default is stored nowhere, which is its
+ * own journey below. Every journey that reads a record makes a choice on the
+ * build first, and the address is published again for it (024/FR-001).
+ */
+async function decidedBuildWithLink(page: Page, hull = 'Anaconda'): Promise<string> {
+  const stock = await buildWithLink(page, hull);
+  await setShipIdent(page, 'NB-01');
+  await expect.poll(() => page.evaluate(() => window.location.hash.slice(1))).not.toBe(stock);
   return new URL(page.url()).hash.slice(1);
 }
 
@@ -173,11 +194,9 @@ test.describe('publishing a build link', () => {
     await expect(page).toHaveURL(/\/outfitting#b\./);
     const fragment = new URL(page.url()).hash.slice(1);
 
-    // Read where nothing else could have supplied the build. A fresh context
-    // holds no stored record, so what opens there came from the address and from
-    // nowhere else. A reload in this context would not discriminate: this build
-    // holds a record, and autosave restores it under 001/FR-008 whether the
-    // fragment came back or not.
+    // Read where nothing else could have supplied the build: a fresh context
+    // shares neither the store nor the tab, so what opens there came from the
+    // address and from nowhere else.
     const elsewhere = await browser.newContext();
     const incoming = await elsewhere.newPage();
     await incoming.goto(`/outfitting#${fragment}`);
@@ -197,8 +216,26 @@ test.describe('publishing a build link', () => {
 });
 
 test.describe('restoring a build from a link', () => {
-  test('opens as a working build from a link, with nothing saved by name', async ({ page }) => {
+  test('publishes a build nobody changed, and restores it from the address', async ({ page }) => {
+    // The address carries the build from the moment it becomes active, before
+    // any choice is made on it. That is the whole of what holds it: a build at
+    // its hull's package default is stored nowhere, so a reload that brings it
+    // back read it from the address and from nothing else (024/FR-001,
+    // 024/FR-003).
     const fragment = await buildWithLink(page);
+    await buildIsOpen(page);
+    expect(await recordCount(page)).toBe(0);
+
+    await page.reload();
+
+    await expect(page.getByRole('heading', { level: 1, name: /anaconda/i })).toBeVisible();
+    await buildIsOpen(page);
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(`#${fragment}`);
+    expect(await recordCount(page)).toBe(0);
+  });
+
+  test('opens as a working build from a link, with nothing saved by name', async ({ page }) => {
+    const fragment = await decidedBuildWithLink(page);
 
     const incoming = await page.context().newPage();
     await incoming.goto(`/outfitting#${fragment}`);

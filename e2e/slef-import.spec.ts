@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow } from './accessibility/assertions';
-import { buildStockHull, openLibrary, reachShellAction } from './shell';
+import { buildStockHull, openLibrary, reachShellAction, recordCount } from './shell';
 
 /**
  * A build arriving from somewhere else.
@@ -94,6 +94,49 @@ test.describe('importing a build', () => {
 
     await expect(page).toHaveURL(/\/outfitting($|[#?])/);
     await expect(page.locator('[data-slot-key]').first()).toBeVisible();
+
+    // It is the active build and nothing more. It is kept the way any active
+    // build is kept: in the address, and in the record autosave holds it in
+    // because this event carries choices. No record is named for it — a name is
+    // a Commander's, and none was given here (024/FR-001).
+    await expect.poll(() => page.evaluate(() => location.hash)).toMatch(/^#b\./);
+    await openLibrary(page);
+    await expect(
+      page.locator('ednb-saved-build-card .record__title:not(.record__title--derived)'),
+    ).toHaveCount(0);
+  });
+
+  test('takes no record for an entry holding a build at the package default', async ({
+    page,
+    browser,
+  }) => {
+    // The payload is the application's own export of a build nobody changed, so
+    // what arrives is the hull's package default exactly. It becomes the active
+    // build and it is in the address, and that is the whole of what holds it:
+    // there is no decision in it worth a record (024/FR-001).
+    await withStockBuild(page);
+    expect(await recordCount(page)).toBe(0);
+
+    await reachShellAction(page, /^export$/i);
+    const exported = page.getByRole('dialog', { name: /export build/i });
+    await exported.getByRole('radio', { name: /slef json/i }).check();
+    const payload = await exported.getByLabel(/slef payload/i).inputValue();
+    expect(payload).not.toBe('');
+
+    // Pasted where nothing else could have supplied the build: a fresh context
+    // shares neither the store nor the address this one published.
+    const elsewhere = await browser.newContext();
+    const incoming = await elsewhere.newPage();
+    await incoming.goto('/ships');
+    await openImport(incoming);
+    await paste(incoming, payload);
+    await submit(incoming);
+
+    await expect(incoming).toHaveURL(/\/outfitting($|[#?])/);
+    await expect(incoming.locator('[data-slot-key]').first()).toBeVisible();
+    await expect.poll(() => incoming.evaluate(() => location.hash)).toMatch(/^#b\./);
+    expect(await recordCount(incoming)).toBe(0);
+    await elsewhere.close();
   });
 
   test('accepts a one-entry SLEF envelope the same way', async ({ page }) => {
@@ -244,10 +287,12 @@ test.describe('what the layer refuses, and what it leaves alone', () => {
   });
 
   test('replaces unsaved work without asking, and spends the draft doing it', async ({ page }) => {
-    // Withdrawn on 2026-08-25: the stock build being replaced is in a record of
-    // its own, so there is nothing to warn about (feature 001, FR-008). What is
-    // asserted instead is that no question stands between the draft and the
-    // build, and that the draft is spent only by the commit.
+    // Withdrawn on 2026-08-25: no question stands between the draft and the
+    // build. The stock build being replaced holds nothing a Commander decided,
+    // so it is stored nowhere and there is nothing to warn about — and a build
+    // that does carry decisions is in a record of its own, which is the same
+    // answer by the other route (feature 001, FR-008; 024/FR-001). What is
+    // asserted here is that, and that the draft is spent only by the commit.
     await withStockBuild(page);
     const before = await page.evaluate(() => location.hash);
 

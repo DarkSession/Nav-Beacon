@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow, expectRelationship } from './accessibility/assertions';
 import { commandBarActionState } from './outfitting-surfaces';
-import { buildStockHull, reachShellAction, savedToBrowser } from './shell';
+import { buildStockHull, reachShellAction, savedToBrowser, setShipIdent } from './shell';
 
 /**
  * A build, handed over as a file rather than as a link.
@@ -732,6 +732,10 @@ test.describe('what is never trusted', () => {
       });
       Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true });
     });
+    // The ship carries an ident, so the build holds a decision and autosave has
+    // a record to write. A build still at its hull's package default is stored
+    // nowhere, and nothing here would wait for (024/FR-001).
+    await setShipIdent(page, 'NB-01');
     // The reload has to come after the build is in its record, not merely on
     // screen: autosave coalesces its writes, so a page reloaded in the window
     // before the first one lands restores nothing and comes back empty.

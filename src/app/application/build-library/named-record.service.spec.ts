@@ -112,6 +112,23 @@ describe('NamedRecordService', () => {
     expect(result.record.id).not.toBe(result.record.revisionId);
   });
 
+  it('saves work that holds no record as one named record, with nothing consumed', async () => {
+    // The manual save of a build or a loadout still at its package default.
+    // Such work takes no unnamed record, so there is nothing to promote and
+    // nothing to leave behind: the save is a creation, and the saved list holds
+    // exactly the one record a Commander asked for (024/FR-001, 024/FR-002).
+    const { named, records } = setup();
+
+    const result = await named.createNamed(request());
+
+    expect(result.kind).toBe('saved');
+    const listed = records.list();
+    expect(
+      listed.ok &&
+        listed.value.map((entry) => (entry.available ? entry.record.kind : 'unreadable')),
+    ).toEqual(['named']);
+  });
+
   it('replaces a record when the revision is still the one this tab saw', async () => {
     const { named } = setup();
     const created = await named.createNamed(request());

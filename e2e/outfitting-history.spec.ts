@@ -9,7 +9,7 @@ import {
   revealMount,
   surfacesAreLayers,
 } from './outfitting-surfaces';
-import { buildStockHull, savedToBrowser } from './shell';
+import { buildStockHull, regroupCoreMount, savedToBrowser } from './shell';
 
 /**
  * Undo and redo, end to end (US4).
@@ -327,6 +327,11 @@ test.describe('boundary isolation', () => {
     await openStockBuild(page);
     await setGroup(page, 'SmallHardpoint1', '1');
     await pressCommandBarAction(page, /^undo$/i);
+    // A decision the undo did not take back, so there is a record to read. A
+    // build undone to its hull's package default is stored nowhere, and the
+    // tape this journey is about is held apart from storage either way
+    // (024/FR-001).
+    await regroupCoreMount(page);
     await savedToBrowser(page);
 
     const stored = await page.evaluate(() =>

@@ -82,6 +82,17 @@ function setup() {
   };
 }
 
+/**
+ * A bench carrying one choice, so a record is owed for the loadout on it.
+ *
+ * A loadout still at its suit's default takes no record, which is its own case
+ * below: it is the loadout that leaves nothing behind (024/FR-002).
+ */
+function chosen(store: LoadoutStore, suitFamily = 'tacticalsuit'): void {
+  store.dispatch({ kind: 'selectSuit', suitFamily });
+  store.dispatch({ kind: 'setSuitGrade', grade: 5 });
+}
+
 /** The records this browser is holding, as the saved list reads them. */
 function stored(records: LocalRecordRepository) {
   const listed = records.list();
@@ -109,7 +120,7 @@ describe('starting an empty bench', () => {
     // Which is what makes the action safe to offer without asking: there is
     // nothing to lose (017/FR-006).
     const { bench, store, records } = setup();
-    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    chosen(store);
 
     bench.start();
 
@@ -188,7 +199,7 @@ describe('starting an empty bench', () => {
     // that write cannot happen, clearing the bench would lose it, so the bench
     // stays as it is and the notice on it says why (017/FR-006).
     const { bench, store, storage } = setup();
-    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    chosen(store);
     storage.writeError = quotaError();
 
     bench.start();
@@ -250,6 +261,36 @@ describe('starting an empty bench', () => {
     expect(links.link()).toEqual({ kind: 'absent' });
   });
 
+  it('clears a bench holding a loadout at its suit’s default, leaving nothing behind', () => {
+    // Such a loadout takes no record, and none is owed on the way out either: a
+    // Commander reaches it again by choosing the suit. The bench empties all
+    // the same, because there is nothing to lose (024/FR-002, 017/FR-006).
+    const { bench, store, records, ownership, location } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    expect(store.atDefault()).toBe(true);
+
+    bench.start();
+
+    expect(store.hasLoadout()).toBe(false);
+    expect(stored(records)).toEqual([]);
+    expect(ownership.claim('equipment')).toBeNull();
+    expect(location.fragmentValue).toBe('');
+  });
+
+  it('leaves a loadout carrying a choice on the bench while the store is blocked', () => {
+    // The store refused the write outright, so the loadout is in nothing.
+    // Clearing the bench would be the loss the action promises to avoid
+    // (017/FR-006, 017/FR-008).
+    const { bench, store, storage } = setup();
+    chosen(store);
+    storage.accessError = new DOMException('denied', 'SecurityError');
+
+    bench.start();
+
+    expect(store.hasLoadout()).toBe(true);
+    expect(store.persistence()).toBe('unavailable');
+  });
+
   it('changes nothing at all on a bench that is already empty', () => {
     const { bench, store, location, records } = setup();
     const revision = store.revision();
@@ -272,7 +313,7 @@ describe('a record deleted on this page', () => {
     // What the bench does on the way in, so that the claim this asks about is
     // one something actually wrote.
     const stopTracking = ownership.track(store);
-    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    chosen(store);
     autosave.flush();
     TestBed.tick();
     const mine = store.autosaveRecordId()!;
@@ -290,7 +331,7 @@ describe('a record deleted on this page', () => {
 
   it('takes the loadout out of the address, so the link does not read it back', () => {
     const { bench, store, autosave, links, location } = setup();
-    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    chosen(store);
     autosave.flush();
     links.publish();
     expect(location.fragmentValue.startsWith('e.')).toBe(true);
@@ -303,9 +344,10 @@ describe('a record deleted on this page', () => {
 
   it('leaves a bench holding another record entirely alone', () => {
     const { bench, store, autosave, location } = setup();
-    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    chosen(store);
     autosave.flush();
     const mine = store.autosaveRecordId();
+    expect(mine).not.toBeNull();
     const replacements = location.replacements;
 
     expect(bench.clearHolding('someone-elses')).toBe(false);

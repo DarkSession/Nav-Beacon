@@ -63,6 +63,19 @@ export interface WorkingRecordSubject {
   /** Whether what is open differs from the state it was last stored at. */
   readonly dirty: Signal<boolean>;
 
+  /**
+   * Whether the work is still the default the package publishes for it — the
+   * hull's default loadout, or the loadout the bench starts for a suit.
+   *
+   * A fact about the work, answered by the store that holds it. What it means
+   * for a record is autosave's to decide: nothing is owed on work a Commander
+   * reaches again by selecting the hull or the suit (024/FR-001, 024/FR-002).
+   *
+   * `false` while the tool holds nothing, because there is no work to be at a
+   * default.
+   */
+  readonly atDefault: Signal<boolean>;
+
   /** The unnamed record this page writes into, or `null` while it has none. */
   readonly autosaveRecordId: Signal<string | null>;
 

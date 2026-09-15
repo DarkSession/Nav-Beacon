@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { revealMount } from './outfitting-surfaces';
 
 /**
  * Driving the shell the way a Commander does.
@@ -210,6 +211,76 @@ export async function savedToBrowser(page: Page | Locator): Promise<void> {
     'data-persistence',
     'saved',
   );
+}
+
+/**
+ * Sets the ship's ID plate, which is one decision made on the build.
+ *
+ * A build still at the package default holds nothing a Commander decided and is
+ * stored nowhere, so a journey about a record makes a decision on the build
+ * first. The plate rather than the ship's name, because the heading reads the
+ * name where a build carries one and several journeys read the heading for the
+ * hull (024/FR-001).
+ */
+export async function setShipIdent(page: Page, plate: string): Promise<void> {
+  await page.getByRole('button', { name: /change the ship id/i }).click();
+  const field = page.locator('.identity-fields__input--ident');
+  await field.fill(plate);
+  await field.press('Enter');
+  await expect(page.getByText(plate, { exact: true }).first()).toBeVisible();
+}
+
+/**
+ * Puts one core mount in another power group, which is one decision made on the
+ * build.
+ *
+ * The other half of `setShipIdent`, for the journeys that read a record's own
+ * title: a record is titled by the build's ship name, else its ident, else its
+ * hull, so a plate renames every row those journeys look for. A power group is
+ * modelled state the snapshot carries and the title never reads, so it moves a
+ * build off its hull's package default and leaves the listing alone
+ * (024/FR-001).
+ *
+ * The group is read before it is set, so this asks for one the mount is not
+ * already in rather than assuming which the package hands out.
+ */
+export async function regroupCoreMount(page: Page, slotKey = 'Radar'): Promise<void> {
+  const mount = await revealMount(page, slotKey);
+  const chip = mount.locator('.power__priority');
+  await expect(chip).toBeVisible();
+  const groups = await chip
+    .locator('option')
+    .evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value));
+  const held = await chip.inputValue();
+  const next = groups.find((group) => group !== held);
+  if (next === undefined) {
+    throw new Error(`The mount ${slotKey} offers only one power group.`);
+  }
+  await chip.selectOption({ value: next });
+  await expect(chip).toHaveValue(next);
+}
+
+/**
+ * Raises the worn suit to the highest grade the package publishes for it, which
+ * is one decision made on the loadout.
+ *
+ * The bench's half of `setShipIdent`, and for the same reason: a loadout still
+ * the one the bench starts for its suit is stored nowhere (024/FR-002). The
+ * ledger is reached the way the bench draws it — one region at a time where the
+ * screen is compact, all of them where it is not.
+ */
+export async function raiseSuitGrade(page: Page): Promise<void> {
+  await expect(page.locator('ednb-equipment-bench-page')).toBeAttached();
+  const tab = page.getByRole('tab', { name: 'Loadout' });
+  if ((await tab.count()) > 0) {
+    await tab.click();
+  }
+  if ((await page.locator('.bench__region--loadout').count()) === 0) {
+    await page.locator('.item__back').click();
+  }
+  await page.locator('.ledger__row[data-target="suit"]').click();
+  await expect(page.locator('.item[data-target="suit"]')).toBeVisible();
+  await page.locator('.grade').last().click();
 }
 
 /** How many records this browser is holding, whatever tool wrote them. */

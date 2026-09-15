@@ -1,4 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { SUITS } from '@elite-dangerous-almanac/core/equipment/suits';
+import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
+import { NamedRecordService } from '../build-library/named-record.service';
+import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
+import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { LoadoutStore } from './loadout.store';
 import { loadoutFingerprint } from '../../domain/equipment/loadout/loadout-fingerprint';
 import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equipment-loadout';
@@ -169,6 +174,90 @@ describe('what autosave reads from the bench', () => {
     expect(store().dirty()).toBe(true);
     expect(store().fingerprint()).toBe(loadoutFingerprint(store().loadout()!));
     expect(store().payload()).toEqual({ tool: 'equipment', loadout: store().loadout() });
+  });
+
+  it('reports a loadout it starts at its suit’s default, for every published suit', () => {
+    // What keeps the answer tied to what the bench actually starts. A store
+    // that started something else, or a comparison built against some other
+    // loadout, would have every new loadout take a record again and nothing
+    // would say so (024/FR-002).
+    for (const suit of SUITS) {
+      store().open(null);
+      expect(store().dispatch({ kind: 'selectSuit', suitFamily: suit.family })).toBe(true);
+      expect(store().atDefault()).toBe(true);
+    }
+  });
+
+  it('reports the first choice on a started loadout as away from the default', () => {
+    store().dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    store().dispatch({ kind: 'setSuitGrade', grade: 5 });
+
+    expect(store().atDefault()).toBe(false);
+  });
+
+  it('saves a loadout holding no record as one named record', async () => {
+    // A loadout still at its suit's default takes no working record, so there
+    // is nothing for the manual save to promote. It mints a named record
+    // instead, and the saved list holds the one record a Commander asked for
+    // (024/FR-002).
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [...provideMemoryStorage(new MemoryStorage())] });
+    store().dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    expect(store().atDefault()).toBe(true);
+    expect(store().autosaveRecordId()).toBeNull();
+
+    const result = await TestBed.inject(NamedRecordService).createNamed({
+      name: 'Ground team',
+      note: null,
+      payload: store().payload()!,
+      now: '2026-01-02T03:04:05.000Z',
+    });
+
+    expect(result.kind).toBe('saved');
+    if (result.kind !== 'saved') {
+      return;
+    }
+    const listed = TestBed.inject(LocalRecordRepository).list();
+    expect(
+      listed.ok &&
+        listed.value.map((entry) => (entry.available ? entry.record.kind : 'unreadable')),
+    ).toEqual(['named']);
+
+    // And the bench takes the save it was given, still holding no working
+    // record: nothing was consumed to make the named one.
+    store().markSaved({ recordId: result.record.id, baseRevisionId: result.record.revisionId });
+    expect(store().dirty()).toBe(false);
+    expect(store().autosaveRecordId()).toBeNull();
+  });
+
+  it('takes a loadout restored from the address, holding no record', () => {
+    // A loadout at its suit's default takes no record, so a record is not what
+    // brings it back after a reload. The address is, and the bench opens what
+    // it hands over holding nothing — as it does any loadout arriving in no
+    // record (024/FR-002, 024/FR-003).
+    store().open(newLoadout('tacticalsuit'), null, { autosaveRecordId: null });
+
+    expect(store().hasLoadout()).toBe(true);
+    expect(store().atDefault()).toBe(true);
+    expect(store().autosaveRecordId()).toBeNull();
+    expect(store().sourceNamed()).toBeNull();
+    // Nothing written anywhere yet, which is what sends autosave to take a
+    // record at the first choice.
+    expect(store().dirty()).toBe(true);
+  });
+
+  it('opens on the empty bench where the address carries nothing', () => {
+    store().open(null);
+
+    expect(store().hasLoadout()).toBe(false);
+    expect(store().selected()).toBe('suit');
+    expect(store().autosaveRecordId()).toBeNull();
+    expect(store().payload()).toBeNull();
+  });
+
+  it('is at no default while the bench is empty', () => {
+    expect(store().atDefault()).toBe(false);
   });
 
   it('holds a loadout opened from its own record as written already', () => {
