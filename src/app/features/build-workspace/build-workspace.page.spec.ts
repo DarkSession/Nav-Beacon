@@ -49,8 +49,9 @@ describe('BuildWorkspacePage persistence actions', () => {
         { provide: WebLocksAdapter, useValue: new FakeLocks() },
         // The saved-records layer pushes and pops through `Location`, and the
         // build link is published onto `window.location`. The test environment
-        // gives `Location` a history of its own, and a race between the two is
-        // no race at all while they are two histories.
+        // gives `Location` a history of its own, which writes nothing to
+        // `window.location`. This case needs the layer and the publisher on one
+        // address, so it provides the browser's.
         { provide: PlatformLocation, useClass: BrowserPlatformLocation },
       ],
     }).compileComponents();

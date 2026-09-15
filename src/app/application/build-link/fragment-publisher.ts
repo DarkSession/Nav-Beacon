@@ -98,9 +98,9 @@ export class FragmentPublisher {
           return;
         }
 
-        // Marked first, as publication marks it: read back as an arrival the
-        // restored fragment would be decoded and offered for the build it
-        // already describes.
+        // Marked first, as publication marks it. Without the mark the
+        // coordinator reads the restored fragment as an arrival, and decodes a
+        // build that is already open.
         this.#ingress.markPublished(link.fragment);
         this.#location.replaceFragment(link.fragment);
       },

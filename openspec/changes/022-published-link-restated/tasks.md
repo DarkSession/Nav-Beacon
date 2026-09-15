@@ -21,14 +21,13 @@
 ## 2. Restoring a lost link
 
 - [x] 2.1 Add the watcher to `FragmentPublisher`, inside `start()` so it lives exactly as long as
-      the publication effect does. Publication records the document a fragment was written onto in
-      a private field beside `#token`, and not on `link()`: that model is what the application says
+      the publication effect does. Publication records the document a fragment was written onto in a
+      private field beside `#token`, and not on `link()`: that model is what the application says
       about the build, and where the fragment was written is bookkeeping. The watcher reads that
       record and states the published link again when the address comes back empty at the same
-      document. `markPublished` comes
-      before `replaceFragment`, as publication does. Verify tasks 1.2 and 1.3 pass, that a
-      refusal leaves nothing to restore, and that the restoration adds no history entry
-      (022/FR-001).
+      document. `markPublished` comes before `replaceFragment`, as publication does. Verify tasks
+      1.2 and 1.3 pass, that a refusal leaves nothing to restore, and that the restoration adds no
+      history entry (022/FR-001).
 - [x] 2.2 Verify a restoration leaves the open build untouched: the build is not replaced, and no
       replacement is offered for it. This is what `markPublished` is for, and it is the one part
       of task 2.1 the address does not show (022/FR-001).
@@ -54,10 +53,9 @@
 ## 3. Leaving alone what is not ours to state
 
 - [x] 3.1 Verify in the publisher suite named in task 1.2 that an address carrying a build link
-      other than the published one is left alone: assert the fragment is not written back, and
-      that the coordinator's ingest still reaches the incoming link. This is the case that would
-      make navigation by link impossible if the trigger were widened, so it is stated as its own
-      test
+      other than the published one is left alone: assert the fragment is not written back, and that
+      the coordinator's ingest still reaches the incoming link. This is the case that would make
+      navigation by link impossible if the trigger were widened, so it is stated as its own test
       rather than folded into 2.1 (022/FR-001).
 - [x] 3.2 Verify the publication's own bound still holds: a Commander who leaves the workspace
       while a publication is in flight arrives at an address with no build link on it. Drive it by
@@ -83,16 +81,15 @@
 ## 4. Reading it end to end
 
 - [x] 4.1 Add a journey to `e2e/build-link.spec.ts`, beside the other journeys the
-      `build/share-link` ledger entry covers: open a build, open the saved builds before the
-      address carries the link, close the layer, and read that the address carries the build link.
-      Then open that address in a fresh browser context, which holds no stored build, and read
-      that it opens the same build. A reload in the same context would not discriminate for a
-      build that holds a record: it is autosaved and restored under 001/FR-008 whether the fragment
-      came back or not. Hold the window open by delaying the lazily
-      imported codec chunk, as design.md sets out under "The journey holds the window open by
-      delaying the codec chunk". The two existing library journeys stay as they are: they read the
-      two ways out of the layer rather than this race, and they wait for the address deliberately
-      (022/FR-001).
+      `build/share-link` ledger entry covers: open a build, open the saved builds before the address
+      carries the link, close the layer, and read that the address carries the build link. Then open
+      that address in a fresh browser context, which holds no stored build, and read that it opens
+      the same build. A reload in the same context would not discriminate for a build that holds a
+      record: it is autosaved and restored under 001/FR-008 whether the fragment came back or not.
+      Hold the window open by delaying the lazily imported codec chunk, as design.md sets out under
+      "The journey holds the window open by delaying the codec chunk". The two existing library
+      journeys stay as they are: they read the two ways out of the layer rather than this race, and
+      they wait for the address deliberately (022/FR-001).
 - [x] 4.2 Register the change in `e2e/coverage-ledger.ts`: add `022-published-link-restated` to
       `COVERED_FEATURES`, add `022/FR-001` to the `requirements` array of the `build/share-link`
       entry, and add the journey's assertion to that entry's `assertions` array. The ledger keys

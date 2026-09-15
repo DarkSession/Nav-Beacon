@@ -130,10 +130,11 @@ reads the restored fragment as an arrival and offers to replace the build with i
 
 ### A restoration adds no history entry
 
-`022/FR-001` carries this rule. `001/FR-020` does not: it governs publishing a link, and a
-restoration is not a publication — it puts back what the address already claimed to hold. Both write with
-`replaceState`, and the mechanism is all they share. The evidence for the restoration is
-registered under `022/FR-001`, so the standing requirement's assertions cannot stand in for it.
+`022/FR-001` carries this rule. `001/FR-020` does not: it governs the fragment a build edit
+writes, and a restoration follows no edit — it puts back what the address already claimed to
+hold. Both write with `replaceState`, and the mechanism is all they share. The evidence for the
+restoration is registered under `022/FR-001`, so the standing requirement's assertions cannot
+stand in for it.
 
 ### The adapter reads the address back when the router writes it
 
@@ -192,8 +193,7 @@ coverage depends on the timing of a browser.
 - **The window stays open; this closes its consequence.** → A publication landing on a layer's
   entry is still a publication on the wrong entry, and a Commander who copies the address _while_
   the layer is up gets a link to the build, which is the address that entry was pushed to carry
-  anyway. What this closes is the workspace's own entry staying wrong after the layer comes
-  down.
+  anyway. What this closes is the workspace's own entry staying wrong after the layer comes down.
 - **Back to an earlier workspace entry that had no link puts the link straight back.** → A
   Commander who walks back past the point where their build was published arrives at an empty
   address and the watcher states the link again. This is the rule the requirement asks for: while
@@ -203,10 +203,12 @@ coverage depends on the timing of a browser.
   and returns without writing in every case but the defect's. `link()` moves twice per
   publication, so it runs as often as the publication effect beside it, and on all but one of
   those runs it reads the two signals and stops.
-- **No journey in the suite holds this race open.** → The two library journeys wait for the
-  address to carry the build before opening the layer, which is right for what they read. This
-  change brings its own reproducing unit coverage, driven through the publisher's injectable
-  `encode` so the window is held open deliberately rather than raced against.
+- **The journey rests on the codec arriving as a chunk of its own.** → It holds the one chunk
+  whose body carries the codec table's content hash, so a build that folded the table into a
+  chunk already loaded would leave it nothing to hold. The journey reads the empty address while
+  the layer stands, so that build fails it there rather than passing on the post-condition alone.
+  The same window is held in the publisher's own suite through its injectable `encode`, so no
+  coverage rests on a browser's timing.
 
 ## Migration Plan
 

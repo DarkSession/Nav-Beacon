@@ -12,10 +12,10 @@ function adapter(): HistoryLocationAdapter {
  * An adapter over the window's own history, as the browser gives it.
  *
  * The test environment hands `Location` a history of its own, which writes
- * nothing to `window.location`. That is enough for every case above, and it is
- * not enough for the one below: the question there is what the address carries
- * after the router has written to it, so the router has to be writing to the
- * same address the adapter reads.
+ * nothing to `window.location`. That is enough for every other case in this
+ * file. It is not enough for the router case, where the question is what the
+ * address carries after the router has written to it, so the router has to
+ * write to the address the adapter reads.
  */
 function adapterOverTheWindowsHistory(): HistoryLocationAdapter {
   TestBed.resetTestingModule();

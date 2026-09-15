@@ -281,7 +281,6 @@ describe('the bounds on stating a link into the address', () => {
 
   it('states nothing while no build has been opened', async () => {
     const { publisher, location } = setup();
-    encodes(publisher, 'b.published');
     const stop = publisher.start();
 
     await settle();
