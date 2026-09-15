@@ -138,11 +138,15 @@ no name and no power state, so a loadout from a journal and one assembled here r
 fingerprint in the same shape.
 
 **Letter case.** The ship comparison reads the hull symbol, every slot key and every module symbol
-in one case. The package spells one identity in more than one
-case: the default loadout it publishes for the Anaconda names `Int_SuperCruiseAssist`, and the same
-module decoded from a build link comes back as `Int_SupercruiseAssist`. Each of those identities is
-unique case-insensitively, so folding the case compares the same set of parts. Letter case is not a
-decision a Commander made, and a hull's default reached through a link is the hull's default.
+by identity rather than by spelling. One identity reaches it in more than one case: the supplied fit
+the package publishes for the Anaconda names `Int_SuperCruiseAssist` beside
+`int_planetapproachsuite_advanced`, and the same modules in a build name them differently again.
+Each identity is unique case-insensitively, and the package says so itself — `getModuleBySymbol`
+answers every spelling of a symbol it knows with one module, which
+`almanac-identity-contract.spec.ts` holds it to over every hull it supplies a fit for. So the
+comparison agrees with the package rather than correcting it: nothing is altered and nothing is
+handed back. Letter case is not a decision a Commander made, and a hull's default reached through a
+link is the hull's default.
 
 Only this comparison folds the case. `baselineFingerprint` stays as it is, because it answers
 whether the stored state moved, and a build whose stored spelling changed did move. The bench
@@ -163,14 +167,14 @@ stored state, so nothing the package recomputes moves it.
 
 A tab writes down which record each tool is autosaving into, so a reload restores what the page was
 working from and a duplicated tab can see that two pages are writing to one record.
-`TabOwnershipCoordinator.track` announces that record; nothing announced the end of it, because a
-tool that stopped writing to one always took up another within the coalescing window, and the new
-record overwrote the claim.
+`TabOwnershipCoordinator.track` announces the record a tool holds, and releases its claim where that
+record becomes null and this page announced one. A claim that only ever changed to another record
+needs no release, because the new record overwrites it within the coalescing window.
 
-Work that is in no record breaks that. A Commander autosaving into a record who creates a build from
-the hull catalogue is now holding a build that is stored nowhere, and the claim on the record before
-it would stand for as long as the page runs: a reload would restore the record the Commander stepped
-off, and a duplicated tab would fork it. So a tool whose record becomes nothing lets go of its claim
+Work that is in no record needs one. A Commander autosaving into a record who creates a build from
+the hull catalogue holds a build that is stored nowhere, and without the release the claim on the
+record before it stands for as long as the page runs: a reload restores the record the Commander stepped
+off, and a duplicated tab forks it. So a tool whose record becomes nothing lets go of its claim
 where it announced one, which is what "a tool that holds no record claims none" asks for.
 
 **Where it announced one** is the whole of the guard. The claim in the tab outlives the page that

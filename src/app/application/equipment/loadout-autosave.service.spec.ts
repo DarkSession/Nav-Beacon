@@ -450,10 +450,11 @@ describe('LoadoutAutosaveService', () => {
     expect([...storage.entries.keys()]).toEqual([recordKey('older')]);
   });
 
-  it('writes on an explicit resume even where the loadout is at its suit’s default', () => {
-    // Resuming is a Commander asking for the loadout to be kept, and it takes a
-    // record as a manual save does. The record it already holds is the one it
-    // is written back into (017/FR-008, 024/FR-002).
+  it('writes a resumed loadout at its suit’s default back into the record it holds', () => {
+    // Resuming is a Commander asking for the loadout to be kept, and the record
+    // this page already holds is the one it is written back into. The default
+    // gate reaches work that holds no record, so it does not reach this
+    // (017/FR-008, 024/FR-002).
     const { autosave, store, storage } = setup();
     chosenLoadout(store);
     autosave.flush();

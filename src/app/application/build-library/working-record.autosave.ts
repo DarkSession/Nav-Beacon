@@ -200,15 +200,15 @@ export class WorkingRecordAutosave {
     // left by work since edited back, stays where it is and runs out its own
     // seven days.
     //
-    // Governs autosave's own writes alone. A resume writes past it, exactly as
-    // it writes past the clean-subject return above, because a Commander who
-    // resumes has asked for the work to be kept. `true` is the honest answer:
-    // `flush()` asks whether letting go of the work loses anything, and it does
-    // not.
+    // `true` is the honest answer: `flush()` asks whether letting go of the
+    // work loses anything, and it does not.
     //
     // A record this tool already holds is not reached by it at all, so editing
-    // back to the default keeps that record and keeps writing to it.
-    if (!force && this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
+    // back to the default keeps that record and keeps writing to it. A forced
+    // write always holds one: a resume is offered only while the record another
+    // page discarded is still this tool's, and a fork names the fresh record
+    // before it copies the work into it.
+    if (this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
       return true;
     }
 

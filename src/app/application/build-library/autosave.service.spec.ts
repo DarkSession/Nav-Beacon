@@ -278,10 +278,11 @@ describe('AutosaveService', () => {
     expect([...storage.entries.keys()]).toEqual([recordKey('older')]);
   });
 
-  it('writes on an explicit resume even where the build is at the package default', () => {
-    // Resuming is a Commander asking for the build to be kept, and it takes a
-    // record as a manual save does. The record it already holds is the one it
-    // is written back into (001/FR-012, 024/FR-001).
+  it('writes a resumed build at the package default back into the record it holds', () => {
+    // Resuming is a Commander asking for the build to be kept, and the record
+    // this page already holds is the one it is written back into. The default
+    // gate reaches work that holds no record, so it does not reach this
+    // (001/FR-012, 024/FR-001).
     const { autosave, active, storage } = setup();
     const loadout = commitBuild(active);
     const original = swapDrive(active, loadout);

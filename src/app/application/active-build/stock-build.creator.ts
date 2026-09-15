@@ -3,13 +3,13 @@ import { getDefaultLoadout } from '@elite-dangerous-almanac/core/ships/default-l
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { getShipBySymbol } from '@elite-dangerous-almanac/core/ships/ships';
 import { emptyFixedMounts } from '../../domain/ships/build/fixed-mounts';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 import { GameTextPresenter } from '../../i18n/game-text.presenter';
 import {
   BuildIngressCoordinator,
   type CandidateOutcome,
   type CommitResult,
 } from './build-ingress.coordinator';
-import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * Creating a stock build, as one transaction.
@@ -80,8 +80,9 @@ export class StockBuildCreator {
         // ingress gate has nothing to complete and nothing to report.
         sourceNamed: null,
         autosaveRecordId: null,
-        // A build that exists only in this tab, with no copy anywhere: unsaved
-        // by definition, so autosave mints it a record at its first write.
+        // A build that exists only in this tab, with no copy anywhere. It is
+        // the hull's supplied fit and nothing else, so autosave keeps it out of
+        // storage until it differs from that fit (024/FR-001).
         baseline: null,
       },
     };

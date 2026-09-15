@@ -78,10 +78,15 @@ function named(value: string | null): boolean {
  * One letter case, because two spellings of one identity are one identity.
  *
  * A hull symbol, a slot key and a module symbol are each unique
- * case-insensitively, and the package hands the same one back in more than one
- * spelling: the default loadout it publishes for the Anaconda names
- * `Int_SuperCruiseAssist`, and the same module decoded from a build link comes
- * back as `Int_SupercruiseAssist`. A Commander who opens a hull's default
+ * case-insensitively, and the package says so itself: `getModuleBySymbol`
+ * answers every spelling of a symbol it knows with one module. The Anaconda's
+ * supplied fit reaches this comparison as `Int_SuperCruiseAssist` and the same
+ * module in a build as `Int_SupercruiseAssist`, and both are that one module.
+ * `almanac-identity-contract.spec.ts` holds the package to it over every hull.
+ *
+ * So this compares the identity rather than the spelling, as the rest of the
+ * application does wherever it matches identities. Nothing is corrected and
+ * nothing is handed back altered: a Commander who opens a hull's default
  * loadout from a link is looking at the build a Commander who created it from
  * the catalogue is looking at, and letter case is not a decision either of them
  * made (024/FR-001).

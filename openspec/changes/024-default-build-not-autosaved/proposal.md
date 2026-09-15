@@ -113,8 +113,8 @@ None.
   shell and must reach no catalogue. None of them marks its own output: the comparison is made on
   state alone, so the catalogue, a link, a paste and a journal event get one answer for one build.
 - `src/app/application/build-library/tab-ownership.coordinator.ts` lets go of the record a tool
-  held once that tool takes up work that is in none, which is new: before this change autosave
-  always minted a record to claim instead.
+  held once that tool takes up work that is in none. A claim stands for whatever record its tool
+  holds, and work that is in no record leaves nothing to claim.
 - `src/app/application/equipment/empty-bench.service.ts` clears a bench holding an unrecorded
   default. Its flush already answers "nothing owed" rather than "write failed", which is the
   difference the requirement turns on.

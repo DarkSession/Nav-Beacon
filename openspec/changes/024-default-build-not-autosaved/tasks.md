@@ -7,9 +7,8 @@
       therefore have nothing new to check, and are verified by the accessibility and responsive
       journeys passing unchanged in `pnpm run check`; the reworded sentence is verified by the
       journeys that read that screen. Verify against proposal.md — Impact: every changed path is
-      under `src/app/application/`, `src/app/domain/`, `src/app/features/`, `src/app/i18n/`, `e2e/`
-      or `openspec/`. The one file under `src/app/features/` is a test, which is why no screen
-      changes.
+      under `src/app/`, `e2e/` or `openspec/`, and every changed file under `src/app/features/` is a
+      test, which is why no screen changes.
 - [x] 1.2 Add to `src/app/domain/ships/build/` a failing unit test that the snapshot of
       `ShipLoadout.default(<hull symbol>)` is reported at the hull's package default, that the same
       build with one module replaced is not, and that the same build with a ship name or an ident is
@@ -58,9 +57,9 @@
       is at its default, nothing is owed and it returns `true`, as the clean-subject branch does.
       Place it before `#allocate`, so no record is minted and none taken over. Verify tasks 1.4 and
       1.5 pass, and that an unnamed record already holding the default state is left alone rather
-      than taken over. Verify too that resuming after another page's deletion writes a record even
-      where the work is at its default, which the restated concurrency rules state
-      (024/FR-001, 024/FR-002).
+      than taken over. Verify too that a resume after another page's deletion writes the work back
+      into the record this tool still holds, at its default or not: the branch reads work that holds
+      no record, and a resume is offered only while a record is held (024/FR-001, 024/FR-002).
 - [x] 3.3 Skip the coalescing timer in `#schedule` under the same condition, so an untouched build
       wakes no timeout while it is open. Verify with a fake timer that no write is attempted across
       repeated revisions of an untouched build, and that the first edit schedules one.
@@ -72,11 +71,9 @@
 ## 4. What follows from holding no record
 
 - [x] 4.1 Make `TabOwnershipCoordinator.track` claim nothing for a tool holding no record, and
-      leave the other tool's claim untouched. Announcing a record is already there; letting go of
-      one is not, because a tool whose record becomes null was previously read as having nothing to
-      announce. `track` now releases that tool's claim on that transition, and only where this page
-      announced one — on a page that has announced nothing, the claim in the tab is the one a reload
-      is about to read. Verify in `tab-ownership.coordinator.spec.ts`: a page holding a record that
+      leave the other tool's claim untouched. `track` announces the record a tool holds, and
+      releases that tool's claim where the record becomes null and this page announced one — on a
+      page that has announced nothing, the claim in the tab is the one a reload is about to read. Verify in `tab-ownership.coordinator.spec.ts`: a page holding a record that
       commits a default build claims nothing afterwards and says so on the channel; a page that has
       announced nothing leaves the claim a reload reads where it is; a duplicated tab forks nothing
       for a tool holding no record; and two pages holding the same default work each take a record
