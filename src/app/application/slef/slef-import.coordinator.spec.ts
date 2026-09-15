@@ -297,12 +297,19 @@ function storedNames(library: BuildLibraryStore): readonly (string | null)[] {
  * names every module the hull carries rather than the empty list `loadoutLine`
  * writes. The package accepts `event` on the way in and never writes it, so the
  * line names itself.
+ *
+ * Shaped the way a game journal writes one: the power of every module stated,
+ * and the ship named blank because this one carries no name. A build assembled
+ * in the application states none of that, and the two are the same build
+ * (024/FR-001).
  */
 function defaultLoadoutLine(timestamp: string): string {
   return JSON.stringify({
     timestamp,
     event: 'Loadout',
-    ...ShipLoadout.default(FIXTURE_HULL).toLoadoutEvent(),
+    ...ShipLoadout.default(FIXTURE_HULL).toLoadoutEvent({ explicitPower: true }),
+    ShipName: '',
+    ShipIdent: '',
   });
 }
 
@@ -452,6 +459,21 @@ describe('builds a journal offers', () => {
       expect(active.loadout()?.shipSymbol.toLowerCase()).toBe(FIXTURE_HULL.toLowerCase());
       library.refresh();
       expect(library.total()).toBe(0);
+    });
+  });
+
+  describe('one build at the package default chosen', () => {
+    it('becomes the active build, and the build is read as at its hull’s default', async () => {
+      // The journal states the power of every module and names the ship blank,
+      // none of which a Commander decided. Read otherwise, this build would be
+      // the one default build that takes a record (024/FR-001).
+      await coordinator.scanFiles([
+        journalFile('Journal.01.log', [defaultLoadoutLine('2026-09-01T09:00:00Z')]),
+      ]);
+
+      expect(await coordinator.submit()).toEqual({ kind: 'committed' });
+
+      expect(active.atDefault()).toBe(true);
     });
   });
 

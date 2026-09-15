@@ -37,9 +37,18 @@ state MUST be taken over rather than a second copy of it stored. Autosave MUST N
 record. Creating, opening or loading another build MUST NOT overwrite or discard the record of the
 build before it. Records MUST use local identities independent of their display names.
 
-A build carries no decision while its modelled state is the package default loadout for its hull —
-`ShipLoadout.default(<hull symbol>)` in `@elite-dangerous-almanac/core/ships/ship-loadout` — with no
-ship name and no ident. Such a build MUST take no record: none minted, and none taken over.
+A build carries no decision while every module it holds is the one the package publishes for that
+slot — `getDefaultLoadout(<hull symbol>)` in
+`@elite-dangerous-almanac/core/ships/default-loadouts` — with no engineering on any of them, with
+every module powered and in the first power group, and with no ship name and no ident. Such a build
+MUST take no record: none minted, and none taken over.
+
+Power and naming MUST be read by what the state says, not by whether it was written. A journal
+states the power of every module and names the ship on every event, writing both blank for a ship
+that carries neither, while a build assembled in the application states none of it; a module that is
+on and in the first power group carries no decision in either shape, and a blank name and a blank
+ident are an absent name and an absent ident. A module switched off, a module in another power
+group, and a name or an ident a Commander gave MUST each be read as a decision.
 
 The test MUST be the modelled state alone and MUST NOT depend on where the build came from. A default
 build reaches the workspace by creation from the hull catalogue, by a build link, by a SLEF paste and

@@ -208,12 +208,14 @@ describe('starting an empty bench', () => {
     expect(store.persistence()).toBe('quota-full');
   });
 
-  it('leaves the loadout on the bench while saving is paused', () => {
+  it('leaves a loadout carrying a choice on the bench while saving is paused', () => {
     // Paused because the record was discarded in another tab. Nothing is
     // written until a Commander asks for it, so there is nothing to leave the
-    // loadout in.
+    // loadout in. The grade is the choice that makes clearing a loss: a loadout
+    // still at its suit's default would be cleared here (024/FR-002).
     const { bench, store, autosave } = setup();
     store.open(newLoadout('tacticalsuit')!, null, { autosaveRecordId: 'discarded' });
+    store.dispatch({ kind: 'setSuitGrade', grade: 5 });
     autosave.pauseAfterExternalDelete();
 
     bench.start();
@@ -222,7 +224,7 @@ describe('starting an empty bench', () => {
     expect(store.persistence()).toBe('record-deleted-externally');
   });
 
-  it('leaves the loadout on the bench when its record was named in another tab', () => {
+  it('leaves a loadout carrying a choice on the bench when its record was named elsewhere', () => {
     // Autosave refuses a named target, so the change on this bench is in
     // nothing. Clearing it would be the loss the action promises to avoid.
     const { bench, store, records } = setup();
@@ -238,6 +240,7 @@ describe('starting an empty bench', () => {
       payload: { tool: 'equipment', loadout: newLoadout('utilitysuit')! },
     });
     store.open(newLoadout('tacticalsuit')!, null, { autosaveRecordId: 'their-save' });
+    store.dispatch({ kind: 'setSuitGrade', grade: 5 });
 
     bench.start();
 

@@ -11,8 +11,8 @@ removed, so the address names no build the workspace does not hold. Removing tha
 nothing, so it is not a link stated into the address.
 
 This is what makes a build that is in no record recoverable. A build still at the package default
-for its hull — `ShipLoadout.default(<hull symbol>)` in
-`@elite-dangerous-almanac/core/ships/ship-loadout` — is stored nowhere, so a published link is the
+for its hull — `getDefaultLoadout(<hull symbol>)` in
+`@elite-dangerous-almanac/core/ships/default-loadouts` — is stored nowhere, so a published link is the
 only thing holding it, and a Commander who reloads the tab gets the build back from the address that
 carries it.
 

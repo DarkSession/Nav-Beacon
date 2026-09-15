@@ -89,11 +89,11 @@ timeout every 400 ms for as long as it is open.
 Both stores gain one computed signal, and `WorkingRecordSubject` gains it as a member beside
 `dirty` and `fingerprint`:
 
-- `ActiveBuildStore`: the snapshot carries no ship name and no ident, every module carries no
-  choice — not switched off, in no power group, no pre-engineered article and no engineering — and
-  the fitted slots and modules are the ones `getDefaultLoadout(<hull symbol>)` publishes. The name
-  and the ident are in the snapshot, so a named ship is not at the default without a branch of its
-  own. The case is still unit tested, as task 1.2 asks.
+- `ActiveBuildStore`: the snapshot names no ship and carries no ident, every module carries no
+  choice — on, in the first power group, no pre-engineered article and no engineering — and the
+  fitted slots and modules are the ones `getDefaultLoadout(<hull symbol>)` publishes. The name and
+  the ident are in the snapshot, so a named ship is not at the default without a branch of its own.
+  The case is still unit tested, as task 1.2 asks.
 - `LoadoutStore`: the loadout's fingerprint equals the fingerprint of the bench's starting loadout
   for its suit family — that suit at the lowest grade `getSuitByFamily` publishes, no weapon on any
   mount, no modification fitted.
@@ -121,6 +121,21 @@ revision, so a build edited back to the default reads as at the default again. W
 stated field by field rather than as one fingerprint: the fit, and that no module carries a choice.
 Task 2.3 is what holds the two together — it asserts that the build `StockBuildCreator` actually
 produces reads as at its default.
+
+**What a journal states and a build assembled here leaves out.** One build reaches the ship
+comparison in two shapes. A journal writes `On` and `Priority` on every module and `ShipName` and
+`ShipIdent` on every ship, blank for a ship that carries neither; a build assembled in the
+application writes none of that, and the snapshot records each absent field as nothing. So the
+comparison reads what the state says rather than whether it was written: a module on and in the
+first power group carries no choice, and a blank name and a blank ident are an absent name and an
+absent ident, which is how a build's title already reads them. A module switched off, a module in
+another power group, and a name a Commander gave are each a decision in either shape.
+
+Read the other way, a build imported from a game journal would be the one default build that takes
+a record, and the rule "the test is the state, not the route" would hold for every route but the
+one a Commander is most likely to use. The bench needs none of this: an `EquipmentLoadout` carries
+no name and no power state, so a loadout from a journal and one assembled here reach the
+fingerprint in the same shape.
 
 **Letter case.** The ship comparison reads the hull symbol, every slot key and every module symbol
 in one case. The package spells one identity in more than one

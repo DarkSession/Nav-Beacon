@@ -27,7 +27,7 @@ export type SuppliedFit = ReadonlyMap<string, string>;
  * Commander downloads.
  */
 export function atPackageDefault(snapshot: BuildSnapshotV1, fit: SuppliedFit | null): boolean {
-  if (fit === null || snapshot.shipName !== null || snapshot.shipIdent !== null) {
+  if (fit === null || named(snapshot.shipName) || named(snapshot.shipIdent)) {
     return false;
   }
   if (fit.size !== snapshot.modules.length) {
@@ -41,12 +41,37 @@ export function atPackageDefault(snapshot: BuildSnapshotV1, fit: SuppliedFit | n
 
 /** Whether a module carries nothing beyond the article the hull was supplied with. */
 function undecided(module: SnapshotModuleV1): boolean {
+  return atStartingPower(module) && module.preEngineered === null && module.engineering === null;
+}
+
+/** The journal's zero-based first power group, which every module starts in. */
+const FIRST_POWER_GROUP = 0;
+
+/**
+ * Whether a module is powered the way every module starts.
+ *
+ * Read by what the state says, not by whether it was written. A journal states
+ * `On` and `Priority` on every module and a build assembled here states
+ * neither, so one build reaches this comparison in two shapes; both say the
+ * module is on and in the first group. A module switched off, or moved to
+ * another group, is a decision in either shape (024/FR-001).
+ */
+function atStartingPower(module: SnapshotModuleV1): boolean {
   return (
-    module.enabled === null &&
-    module.priority === null &&
-    module.preEngineered === null &&
-    module.engineering === null
+    (module.enabled === null || module.enabled) &&
+    (module.priority === null || module.priority === FIRST_POWER_GROUP)
   );
+}
+
+/**
+ * Whether a ship carries a name or an ident a Commander gave it.
+ *
+ * A journal states both on every ship and writes them blank for a ship that has
+ * neither, so a blank is an absent name rather than a chosen one — which is how
+ * a build's title already reads them.
+ */
+function named(value: string | null): boolean {
+  return value !== null && value.trim() !== '';
 }
 
 /**

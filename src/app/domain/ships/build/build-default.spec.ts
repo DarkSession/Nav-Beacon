@@ -13,7 +13,7 @@ import { toBuildSnapshotV1 } from './build-snapshot.serializer';
  * for the same build (024/FR-001).
  */
 
-function replacedModule(): BuildSnapshotV1 {
+function withReplacedModule(): ShipLoadout {
   const build = ShipLoadout.default(FIXTURE_HULL);
   const fitted = build.fittedModuleAt(FIXTURE_SLOTS.fittedHardpoint);
   const other = build
@@ -27,7 +27,27 @@ function replacedModule(): BuildSnapshotV1 {
     );
   }
   build.setModule(FIXTURE_SLOTS.fittedHardpoint, other);
-  return toBuildSnapshotV1(build);
+  return build;
+}
+
+/**
+ * The same build as a game journal writes it.
+ *
+ * A journal states `On` and `Priority` on every module and names the ship on
+ * every event, writing both blank for a ship that carries neither. None of that
+ * is a decision, and a build that arrives this way is the same build as one
+ * created from the catalogue (024/FR-001).
+ */
+function asJournalWritesIt(build: ShipLoadout): BuildSnapshotV1 {
+  return toBuildSnapshotV1(
+    ShipLoadout.fromLoadout({
+      event: 'Loadout',
+      timestamp: '3311-01-01T00:00:00Z',
+      ...build.toLoadoutEvent({ explicitPower: true }),
+      ShipName: '',
+      ShipIdent: '',
+    } as Parameters<typeof ShipLoadout.fromLoadout>[0]),
+  );
 }
 
 /** The question as the store asks it: the build, and the fit its hull ships with. */
@@ -41,7 +61,7 @@ describe('package default build', () => {
   });
 
   it('reports a replaced module as not at the default', () => {
-    expect(atDefault(replacedModule())).toBe(false);
+    expect(atDefault(toBuildSnapshotV1(withReplacedModule()))).toBe(false);
   });
 
   it('reports a module put in another power group as not at the default', () => {
@@ -58,6 +78,15 @@ describe('package default build', () => {
     build.setModuleEnabled(FIXTURE_SLOTS.core, false);
 
     expect(atDefault(toBuildSnapshotV1(build))).toBe(false);
+  });
+
+  it('reports the hull’s default loadout as at its default when a journal wrote it', () => {
+    expect(atDefault(asJournalWritesIt(ShipLoadout.default(FIXTURE_HULL)))).toBe(true);
+  });
+
+  it('reports a journal-written build carrying a replaced module as not at the default', () => {
+    // The stated power on every module must not be able to hide a real choice.
+    expect(atDefault(asJournalWritesIt(withReplacedModule()))).toBe(false);
   });
 
   it('reports a named ship as not at the default', () => {
@@ -97,8 +126,8 @@ describe('package default build', () => {
   });
 
   it('reports a hull the package publishes no default for as not at a default', () => {
-    // Answered rather than thrown: there is no default to be at, and asking the
-    // package for one raises. A record is owed for such a build like any other.
+    // Answered rather than thrown: there is no default to be at, so the package
+    // publishes none. A record is owed for such a build like any other.
     const unknown: BuildSnapshotV1 = {
       format: 'ednb.build',
       version: 1,
