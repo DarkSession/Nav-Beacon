@@ -50,8 +50,9 @@ describe('BuildWorkspacePage persistence actions', () => {
         // The saved-records layer pushes and pops through `Location`, and the
         // build link is published onto `window.location`. The test environment
         // gives `Location` a history of its own, which writes nothing to
-        // `window.location`. The last case in this file needs the layer and the
-        // publisher on one address, so the whole suite runs over the browser's.
+        // `window.location`. The case that gives the address back its build link
+        // needs the layer and the publisher on one address, so the whole suite
+        // runs over the browser's history.
         { provide: PlatformLocation, useClass: BrowserPlatformLocation },
       ],
     }).compileComponents();

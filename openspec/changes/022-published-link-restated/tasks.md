@@ -43,12 +43,13 @@
 - [x] 2.4 Make the fragment signal the address. Add to
       `src/app/platform/browser/history-location.adapter.spec.ts` the case where the router rewrites
       the address through Angular's `Location` and drops a fragment written with
-      `history.replaceState`, driven over the window's own history so both write the address the
+      `history.replaceState`, driven over the browser's own history so both write the address the
       adapter reads. Verify it fails, then have the adapter read the address back on
-      `Location.onUrlChange` as well as on `hashchange`. Without this the watcher of task 2.1 states
-      the link again, the router writes the address without it a moment later, and no event tells
-      the adapter — so the signal reads `b.…` at an address carrying nothing and the watcher never
-      runs again (022/FR-001).
+      `Location.onUrlChange` as well as on `hashchange`. Without this the router's write can land
+      after the watcher of task 2.1 has stated the link again, and no event tells the adapter — so
+      the signal reads `b.…` at an address carrying nothing and the watcher never runs again. Which
+      of the two writes lands second is the browser's to decide, so the journey of task 4.1 reads
+      this only sometimes and the case here reads it every time (022/FR-001).
 
 ## 3. Leaving alone what is not ours to state
 

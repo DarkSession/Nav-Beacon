@@ -3,12 +3,13 @@
 See proposal.md — Why, for the defect and the window it lives in. What matters here is the shape
 of the three moving parts.
 
-`HistoryLocationAdapter` holds the fragment as a signal, set from `hashchange` and from its own
-`replaceFragment`. `FragmentPublisher.publish` captures `currentDocument()` before its `await` and
-discards a publication whose document changed, which is what stops a finished encode from landing
-on a screen the Commander walked to. `BuildLinkCoordinator.listen` watches the same fragment
-signal and turns an incoming build link into a build, with `markPublished` telling it which
-fragment is the application's own output rather than something to ingest.
+`HistoryLocationAdapter` holds the fragment as a signal, set from `hashchange`, from Angular's
+`Location.onUrlChange` and from its own `replaceFragment`. `FragmentPublisher.publish` captures
+`currentDocument()` before its `await` and discards a publication whose document changed, which is
+what stops a finished encode from landing on a screen the Commander walked to.
+`BuildLinkCoordinator.listen` watches the same fragment signal and turns an incoming build link
+into a build, with `markPublished` telling it which fragment is the application's own output rather
+than something to ingest.
 
 The defect appears because `LibraryPresence.raise` pushes a history entry at the same document.
 The publication's document guard sees no change, because path and query are identical, so the
@@ -144,11 +145,12 @@ stand in for it.
 **Why.** The watcher acts on the fragment signal, and that signal has to be the address. The router
 writes the whole address — path, query and fragment together — from the URL it recorded for a
 history entry, and a fragment written with `history.replaceState` is in no record of its. So going
-back out of the layer, the router writes `/outfitting` with no fragment, just after the watcher has
-stated the link again. The router writes through `Location`, which fires no `hashchange`, so the
-signal would go on reading `b.…` while the address carried nothing, and no later event would
-correct it: the watcher would never run again and the address would stay wrong, which is the defect
-this change exists to close.
+back out of the layer, the router writes `/outfitting` with no fragment, and that write can land
+after the watcher has stated the link again. The router writes through `Location`, which fires no
+`hashchange`, so where it lands second the signal goes on reading `b.…` while the address carries
+nothing, and no later event corrects it: the watcher never runs again and the address stays wrong.
+Which of the two writes lands second is the browser's to decide, and subscribing takes the question
+away.
 
 Reading the address back on the router's own write settles it in one more pass. The watcher states
 the link, the router drops it, the adapter reports the drop, the watcher states it again, and the
@@ -164,8 +166,10 @@ fragment out of the adapter that the build-link contract makes its only writer.
 
 The race needs the layer raised between the lazy import and the fragment write, and a journey that
 waits for neither reproduces it only by luck. The codec arrives as a lazily imported chunk, so a
-`page.route` installed once the workspace has loaded catches that request and holds it while the
-layer goes up. The suite already delays JavaScript this way in `e2e/first-frame.ts`.
+`page.route` catches that request and holds it while the layer goes up. The route stands before the
+page is opened, because the encode starts with the first edit and a route installed after the
+workspace has loaded would miss the chunk it is there to hold. The suite already delays JavaScript
+this way in `e2e/first-frame.ts`.
 
 That chunk is told from every other lazy request by its own content: the codec table carries a
 content hash, and the journey reads that hash out of the table in the source tree and holds the one

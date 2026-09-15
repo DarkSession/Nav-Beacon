@@ -127,8 +127,8 @@ test.describe('publishing a build link', () => {
 
     // Only the bundle's own chunk files are read, and only their bodies tell one
     // from another. Everything else the page asks for is left alone: pulling
-    // every module through the test process to look at it costs the workspace
-    // more time to arrive than the route budget allows.
+    // every module through the test process to look at it makes the workspace
+    // take longer to arrive than this test's own timeout allows.
     await page.route(/\/chunk-[^/?]+\.js(\?.*)?$/, async (route) => {
       const response = await route.fetch();
       const body = await response.text();
