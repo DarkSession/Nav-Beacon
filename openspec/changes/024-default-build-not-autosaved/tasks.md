@@ -73,10 +73,10 @@
       `src/app/application/build-library/named-record.service.spec.ts` and to
       `src/app/application/equipment/loadout.store.spec.ts`, and verify the saved list holds one
       record afterwards (024/FR-001, 024/FR-002).
-- [ ] 4.3 Verify `EmptyBenchService.start()` clears a bench holding a loadout at its suit's default,
-      and still refuses to clear where the store refused a write, the store is full, a write failed
-      or autosave is paused. Add both to `src/app/application/equipment/empty-bench.spec.ts`
-      (024/FR-002).
+- [ ] 4.3 Verify `EmptyBenchService.start()` clears a bench holding a loadout at its suit's default
+      and in no record, and still refuses to clear a loadout that carries a choice where the store
+      refused a write, the store is full, a write failed or autosave is paused. Add both to
+      `src/app/application/equipment/empty-bench.spec.ts` (024/FR-002).
 - [ ] 4.4 Verify restoring after a reload: a tab holding a build or a loadout at its default restores
       it from the address, and a page built at an address carrying no fragment opens on the no-build
       state or the empty bench. Drive it in

@@ -14,11 +14,12 @@ MUST stay where it is, so a page built in this tab afterwards MUST open on an em
 MUST NOT restore the loadout that was cleared. Starting an empty bench while the bench is
 already empty MUST change nothing.
 
-A loadout still at its suit's default — the state `equipment-builder/loadout-persistence`,
-"Autosave of the open loadout" defines — is in no record and MUST be cleared on the same terms,
-without being confirmed and without being kept. It carries no choice a Commander made, and the same
-suit at the same grade is reached again by choosing that suit, so there is nothing to lose
-here either. The saved list MUST then hold no entry for it.
+A loadout still at its suit's default and in no record — the state
+`equipment-builder/loadout-persistence`, "Autosave of the open loadout" defines — MUST be cleared on
+the same terms, without being confirmed and without being kept. It carries no choice a Commander
+made, and the same suit at the same grade is reached again by choosing that suit, so there is
+nothing to lose here either. The saved list MUST then hold no entry for it. A loadout changed back
+to its suit's default holds the record it took, and that record MUST stay listed.
 
 Where the loadout on the bench carries a choice and is in no record — the store refuses
 writes, the store is full, a write failed, or autosave is paused because the record was
@@ -43,7 +44,7 @@ Source: 017/FR-006, 024/FR-002.
 #### Scenario: A loadout at its suit's default is cleared
 
 - **WHEN** a Commander starts an empty bench while the loadout on it is still at its suit's
-  default
+  default and in no record
 - **THEN** the bench holds no loadout and the Commander is asked nothing
 - **AND** the saved list holds no entry for the loadout that was cleared
 
