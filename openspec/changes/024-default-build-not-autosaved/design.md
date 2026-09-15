@@ -148,6 +148,12 @@ comparison agrees with the package rather than correcting it: nothing is altered
 handed back. Letter case is not a decision a Commander made, and a hull's default reached through a
 link is the hull's default.
 
+Where the bench can drift is the store rather than the comparison: `atSuitDefault` is the
+fingerprint of `newLoadout`'s own output, so it agrees with that function by construction, and what
+is worth asserting is that the bench hands a Commander that loadout and not another one.
+`loadout.store.spec.ts` walks every published suit for it, as `stock-build.creator.spec.ts` walks
+every hull.
+
 Only this comparison folds the case. `baselineFingerprint` stays as it is, because it answers
 whether the stored state moved, and a build whose stored spelling changed did move. The bench
 comparison folds nothing either: the loadout codec carries one spelling for every suit, weapon and
@@ -187,6 +193,10 @@ up.
 Released rather than merely written down, so a sibling page stops protecting a record nobody is
 writing to. The record itself is untouched: what is released is the claim, and the record runs out
 its own seven days.
+
+`EmptyBenchService` releases the bench's claim without that guard, because emptying the bench is a
+Commander asking for it rather than a watcher reading a signal. There is no first moment to be
+confused by: the request cannot arrive before the page has drawn a loadout to empty.
 
 ### Restoring an untouched default
 
@@ -241,11 +251,12 @@ differs is which entries the two lists hold. Responsiveness, touch and accessibi
 unchanged, and are verified by the journeys already scanned across the ten-project matrix rather
 than by new surfaces.
 
-One sentence changes. The empty saved-builds screen stated the rule this change replaces — that a
-build is kept from the moment it is created — and it is the screen a Commander reaches right after
-creating one, which the journeys here drive on purpose. `library.empty.description` now states the
-rule that holds: a build is kept from its first change. The key is the same one, in every locale
-catalogue, so nothing is added and nothing is left untranslated.
+One sentence changes. The empty saved screen states when work starts being kept, and it is the
+screen a Commander reaches right after creating a build or choosing a suit, which the journeys here
+drive on purpose. `library.empty.description` states the rule that holds: work is kept from the
+first change to it. It speaks of work rather than of a build, because the screen lists what both
+tools saved and 024/FR-002 makes the same rule true on the bench. The key is the same one, in every
+locale catalogue, so nothing is added and nothing is left untranslated.
 
 ## Risks / Trade-offs
 

@@ -529,11 +529,12 @@ describe('LoadoutAutosaveService', () => {
       const stop = autosave.start();
       benchLoadout(store, 'tacticalsuit', null);
 
-      // Choices that spend a revision and leave the loadout where it is: the
-      // suit it already wears, chosen again. A selection alone would spend
-      // none, and the watcher this is about would never re-run.
+      // Revisions that leave the loadout where it is: the same starting loadout
+      // opened again. Every one wakes the watcher this is about, which a choice
+      // the store refuses would not — `selectSuit` on the suit already worn
+      // returns the loadout unchanged and spends no revision at all.
       for (let index = 0; index < 5; index += 1) {
-        store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+        benchLoadout(store, 'tacticalsuit', null);
       }
       TestBed.tick();
 

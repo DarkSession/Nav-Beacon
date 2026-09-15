@@ -2,8 +2,8 @@
 
 - [x] 1.1 Hold the change to what it is: no template, style sheet or component is touched, and no
       string is added (design.md, Screens). One string changes value — `library.empty.description`,
-      in every locale catalogue — because the empty saved-builds screen states a rule this change
-      replaces. Responsiveness, touch targets, screen-reader semantics and design-system composition
+      in every locale catalogue — because the empty saved screen states a rule this change replaces,
+      for the work both tools keep there rather than for a build alone. Responsiveness, touch targets, screen-reader semantics and design-system composition
       therefore have nothing new to check, and are verified by the accessibility and responsive
       journeys passing unchanged in `pnpm run check`; the reworded sentence is verified by the
       journeys that read that screen. Verify against proposal.md — Impact: every changed path is
@@ -41,10 +41,14 @@
       equals the loadout the bench starts for that suit family — the suit at the lowest grade
       `getSuitByFamily` publishes, no weapon on any mount, no modification fitted — compared by
       `loadoutFingerprint`, memoised per suit family. Verify task 1.3 passes (024/FR-002).
-- [x] 2.3 Verify the two comparisons stay tied to what the application actually starts: add a unit
-      test asserting that the loadout `newLoadout` produces is at its default by 2.2's own answer,
-      and that the build `StockBuildCreator` produces is at its default by 2.1's. This is the drift
-      design.md names as a risk (024/FR-001, 024/FR-002).
+- [x] 2.3 Verify the two comparisons stay tied to what the application actually starts, which is the
+      drift design.md names as a risk. Assert in `stock-build.creator.spec.ts` that the build
+      `StockBuildCreator` produces is at its default by 2.1's answer, for every installed hull, and
+      in `loadout.store.spec.ts` that the loadout the bench starts is at its default by 2.2's, for
+      every published suit. The bench comparison is defined as the fingerprint of `newLoadout`'s own
+      output, so a domain test of it alone compares that function with itself; state there instead
+      what a default loadout holds — the suit at the lowest grade the package publishes, no weapon
+      and no modification (024/FR-001, 024/FR-002).
 
 ## 3. The gate, in autosave
 

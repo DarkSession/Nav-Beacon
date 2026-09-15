@@ -31,20 +31,21 @@ describe('the installed Almanac, on what a module symbol identifies', () => {
     expect(supplied.length).toBeGreaterThan(0);
   });
 
-  it('publishes a supplied symbol in a case its module catalogue does not use', () => {
-    // Without this the comparison could match on spelling alone and nobody
-    // would notice. The Anaconda supplies `Int_SuperCruiseAssist`, which the
-    // catalogue calls `Int_SupercruiseAssist`.
-    const differing = supplied.flatMap(([hull, fit]) =>
+  it('folds a supplied symbol onto the spelling its module catalogue uses', () => {
+    // A supplied fit is not published in the catalogue's own spelling: the
+    // Anaconda supplies `Int_SuperCruiseAssist`, which the catalogue calls
+    // `Int_SupercruiseAssist`. Folding the case is what carries one onto the
+    // other, and it has to reach every hull rather than that one.
+    const unfolded = supplied.flatMap(([hull, fit]) =>
       fit.modules
         .filter((module) => {
           const known = getModuleBySymbol(module.symbol);
-          return known !== null && known.symbol !== module.symbol;
+          return known !== null && fold(known.symbol) !== fold(module.symbol);
         })
         .map((module) => `${hull} ${module.slot}=${module.symbol}`),
     );
 
-    expect(differing.length).toBeGreaterThan(0);
+    expect(unfolded).toEqual([]);
   });
 
   it('answers each case of a symbol it knows with the same module', () => {
