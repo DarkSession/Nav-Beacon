@@ -41,7 +41,7 @@
 
 - [ ] 3.1 Add the fact to `WorkingRecordSubject` in
       `src/app/application/build-library/working-record.port.ts` — a signal saying whether the work
-      carries a decision beyond its default — and answer it in `ActiveBuildStore` and `LoadoutStore`
+      is at its default — and answer it in `ActiveBuildStore` and `LoadoutStore`
       from the comparisons of task 2. Verify by typecheck and by each store's own suite, which
       already stands a subject up for both tools.
 - [ ] 3.2 Add the branch to `WorkingRecordAutosave.#writeNow`: while the subject holds no record and
@@ -54,7 +54,8 @@
       repeated revisions of an untouched build, and that the first edit schedules one.
 - [ ] 3.4 Verify the record a tool already holds is unaffected: a build edited back to the package
       default keeps its record, and that record is written with the default state. Add the case to
-      `autosave.service.spec.ts` and its bench twin (024/FR-001, 024/FR-002).
+      `src/app/application/build-library/autosave.service.spec.ts` and to
+      `src/app/application/equipment/loadout-autosave.service.spec.ts` (024/FR-001, 024/FR-002).
 
 ## 4. What follows from holding no record
 
@@ -65,16 +66,18 @@
       (024/FR-001, 024/FR-002).
 - [ ] 4.2 Verify a manual save from a build or a loadout holding no record writes a named record.
       `NamedRecordService` already mints where there is nothing to consume; add the case to
-      `named-record.service.spec.ts` and to the bench's save suite, and verify the saved list holds
-      one record afterwards (024/FR-001, 024/FR-002).
+      `src/app/application/build-library/named-record.service.spec.ts` and to
+      `src/app/application/equipment/loadout.store.spec.ts`, and verify the saved list holds one
+      record afterwards (024/FR-001, 024/FR-002).
 - [ ] 4.3 Verify `EmptyBenchService.start()` clears a bench holding a loadout at its suit's default,
       and still refuses to clear where the store refused a write, the store is full, a write failed
       or autosave is paused. Add both to `src/app/application/equipment/empty-bench.spec.ts`
       (024/FR-002).
 - [ ] 4.4 Verify restoring after a reload: a tab holding a build or a loadout at its default restores
       it from the address, and a page built at an address carrying no fragment opens on the no-build
-      state or the empty bench. Drive it in `build-workspace.page.spec.ts` and the bench page suite
-      (024/FR-001, 024/FR-002).
+      state or the empty bench. Drive it in
+      `src/app/features/build-workspace/build-workspace.page.spec.ts` and
+      `src/app/application/equipment/loadout.store.spec.ts` (024/FR-001, 024/FR-002).
 - [ ] 4.5 Verify the work is published from the moment it opens, which is what 4.4 restores from.
       `FragmentPublisher` publishes for a build that becomes active and is not edited, and
       `LoadoutLinkCoordinator` for a suit chosen and nothing else done. Both start effects already
@@ -96,10 +99,18 @@
       its suit's default arriving from a link or a single journal event takes no record, and a batch
       still stores one named record for every loadout selected. Add both to
       `src/app/application/equipment/loadout-import.coordinator.spec.ts` (024/FR-002).
-- [ ] 4.10 Verify the help topic on browser storage still agrees with the requirement it cites. Read
+- [ ] 4.10 Verify the ship tool's ingress routes against the scenario that declares them: a build at
+      the package default takes no record when it arrives by a build link and when it arrives by a
+      SLEF paste. Add the cases to `src/app/application/build-link/build-link.spec.ts` and the SLEF
+      import suite (024/FR-001).
+- [ ] 4.11 Verify a replacement is not confirmed where a store failure leaves the build on screen in
+      no record, which the restated requirement adds. Add the case to
+      `src/app/application/build-library/autosave.service.spec.ts` (024/FR-001).
+- [ ] 4.12 Verify the help topic on browser storage still agrees with the requirement it cites. Read
       `help.topic.browserPersistence.answer` in `src/app/i18n/locales/en.json` against the restated
-      "Autosave of the active build", and record that it answers where work is kept rather than when
-      a record is taken. Verify `pnpm run help:artifacts:check` and `pnpm run policy:specs` pass.
+      "Autosave of the active build". Where the answer claims work is saved whatever its state,
+      restate it to say where work is kept; otherwise record that it needs no edit. Verify
+      `pnpm run help:artifacts:check` and `pnpm run policy:specs` pass.
 
 ## 5. Journeys and the coverage record
 
@@ -108,9 +119,9 @@
 - [ ] 5.2 Add a journey to the same file: create a build and change nothing. Verify the library
       holds no entry for it (024/FR-001).
 - [ ] 5.3 Extend that journey with the first modelled edit. Verify one entry appears (024/FR-001).
-- [ ] 5.4 Update `e2e/hull-detail.spec.ts` so its second-creation journey drops the assertion that
-      the first build is stored, and verify it asserts what is true: the second creation replaces the
-      first on screen without asking (024/FR-001).
+- [ ] 5.4 Update the second-creation journey of `e2e/hull-detail.spec.ts` to assert what is true:
+      no record is stored for either creation, and the second replaces the first on screen without
+      asking (024/FR-001).
 - [ ] 5.5 Update the bench persistence journey in `e2e/tool-bar-navigation.spec.ts`, which carries
       the `equipment/bench-persistence` surface: choosing a suit and doing nothing else leaves the
       saved list with no entry, the first change makes one appear, and starting an empty bench on an
@@ -134,9 +145,9 @@
 ## 6. The gate
 
 - [ ] 6.1 Run the targeted checks the README defines for every capability touched — the ship
-      workspace, the build library, the bench and the saved loadouts — across the matrix, storing
-      full output under `dist/verification/`. Verify no journey outside this change's scope changed
-      its result.
+      workspace, the build library, the build link, the SLEF exchange, the bench, the equipment link
+      and the saved loadouts — across the matrix, storing full output under `dist/verification/`.
+      Verify no journey outside this change's scope changed its result.
 - [ ] 6.2 Run `pnpm run check` and verify it passes: format, help artifacts, sitemap, typecheck,
       build, preview build, policy, codec capacity, script tests, unit tests at or above the 80%
       coverage threshold, and the Playwright matrix including the timing and offline projects.

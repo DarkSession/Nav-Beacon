@@ -168,8 +168,8 @@ another name MUST create a further record and leave the original where it is. Re
 build MUST NOT be confirmed: a build that carries a decision is in the record autosave keeps it in
 where the store can hold it, and a build at the package default is reached again by selecting the
 hull. A store failure leaves the earlier build in no record, and replacing MUST still not be
-confirmed. The bench refuses to clear in that state because clearing leaves nothing; replacing puts
-the build the Commander asked for in front of them, and the bench already states what the store did.
+confirmed: replacing gives the Commander the build they asked for, and what the store did is already
+stated on the screen.
 
 A save from a build that holds no record has no unnamed record to consume and MUST write a named
 record of its own. A Commander who names a build has asked for it to be kept, whatever its modelled
@@ -236,6 +236,13 @@ Source: 001/FR-009, 016/FR-012, 024/FR-001.
 - **WHEN** a save or an answer to a save conflict fails to write
 - **THEN** the application says the save wrote nothing
 - **AND** what the Commander typed stays on screen to try again with
+
+#### Scenario: A build is replaced while the store holds nothing
+
+- **WHEN** a Commander opens another build while a store failure leaves the build on screen in no
+  record
+- **THEN** the replacement is not confirmed
+- **AND** the screen still states what the store did
 
 #### Scenario: A batch of imported builds is stored
 

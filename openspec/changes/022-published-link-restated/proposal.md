@@ -49,7 +49,7 @@ The change declares requirement `022/FR-001`:
 
 A restoration adds no history entry, and `022/FR-001` is what states that. The standing
 requirement `ship-builder/build-link`, "Link validation and history" (001/FR-020) does not carry
-it: that requirement speaks about build edits, and a restoration is not an edit. The two rules
+it: that requirement speaks about publishing a link, and a restoration is not a publication. The two rules
 have the same mechanism, `replaceState`, and different occasions.
 
 ## Capabilities

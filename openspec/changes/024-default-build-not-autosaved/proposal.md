@@ -2,7 +2,7 @@
 
 Creating a build writes a record before the Commander has changed anything. A Commander who opens
 four hulls to compare them leaves four records, each holding the package default loadout and nothing
-else, each counting down seven days in the library. The same holds on the bench: choosing a suit
+else, each stating seven days of life left in the library. The same holds on the bench: choosing a suit
 writes a record of that suit at its lowest grade, with no weapon and no modification.
 
 None of those records holds a decision. Every one of them is the state
@@ -31,9 +31,10 @@ then there is nothing to keep.
   nothing to fork for that tool, and the other tool's claim is untouched.
 - An untouched default is restored from the fragment. A build's link is published from the moment
   the build becomes active, and the bench's fragment carries the loadout from the moment it reaches
-  the bench. The ship tool's requirement states this for edits alone, and the bench states it
-  nowhere, so both are stated. At an address whose fragment carries nothing, the workspace opens on
-  the no-build state and the bench on the suit gate, because nothing was stored.
+  the bench. The ship tool's requirement states this for edits alone, and the bench states when its
+  address is read but never when it is written, so both are stated. At an address whose fragment
+  carries nothing, the workspace opens on the no-build state and the bench on the suit gate, because
+  nothing was stored.
 - Starting an empty bench on an untouched default clears it and leaves nothing in the saved list.
   The bench still refuses to clear a loadout that carries a choice and is in no record, which is the
   store refusing writes rather than a state with nothing to keep.
@@ -53,7 +54,10 @@ The change declares three requirements:
   record is taken at the first state that differs, and a record already held is kept.
 - **FR-003** (Both tools) A build's link is published from the moment the build becomes active, and
   the fragment carries the loadout from the moment it reaches the bench. Neither waits for the first
-  edit. This is what an untouched default is recovered from.
+  edit. Each change replaces the fragment without adding a history entry. Where there is nothing to
+  publish, because the bench holds no loadout or the codec refused the build, nothing is published
+  and a fragment carrying an earlier build's link is removed. The path and the query never carry any
+  part of either. This is what an untouched default is recovered from.
 
 ## Capabilities
 
@@ -106,11 +110,16 @@ None.
   default. Its flush already answers "nothing owed" rather than "write failed", which is the
   difference the requirement turns on.
 - `e2e/build-working-state.spec.ts` carries the ship tool's journey, `e2e/tool-bar-navigation.spec.ts`
-  the bench's, `e2e/hull-detail.spec.ts` the second creation, and `e2e/build-link.spec.ts` and
-  `e2e/equipment-link.spec.ts` the address each tool publishes. `e2e/coverage-ledger.ts` registers
-  the three requirement ids and this change's directory.
-- `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md` is not edited.
-  It records what feature 001 built; the capability specification is the standing record.
+  the bench's, `e2e/hull-detail.spec.ts` the second creation, `e2e/slef-import.spec.ts` the journal
+  routes, and `e2e/build-link.spec.ts` and `e2e/equipment-link.spec.ts` the address each tool
+  publishes. `e2e/coverage-ledger.ts` registers the three requirement ids and this change's
+  directory.
+- `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md` and
+  `contracts/build-link.md` are not edited. They record what feature 001 built; the capability
+  specification is the standing record. This change cites the link contract's rule that a refusal
+  removes a stale fragment, and departs from its step 6, which mints a record for every decoded
+  link. It also departs from the contract's reason for not confirming a replacement, which the
+  restated requirement states afresh.
 - This change is archived after `022-published-link-restated`. The restated link requirement defers
   to 022/FR-001 for what the address holds, and an untouched default is the build 022's restoration
   keeps recoverable. Two sentences in 022 give autosave as the reason a lost fragment costs nothing;

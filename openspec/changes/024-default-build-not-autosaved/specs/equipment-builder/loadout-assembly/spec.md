@@ -14,9 +14,9 @@ MUST stay where it is, so a page built in this tab afterwards MUST open on an em
 MUST NOT restore the loadout that was cleared. Starting an empty bench while the bench is
 already empty MUST change nothing.
 
-A loadout still at its suit's default — the loadout the bench holds when that suit is chosen
-and nothing else is done — is in no record and MUST be cleared on the same terms, without
-being confirmed and without being kept. It carries no choice a Commander made, and the same
+A loadout still at its suit's default — the state `equipment-builder/loadout-persistence`,
+"Autosave of the open loadout" defines — is in no record and MUST be cleared on the same terms,
+without being confirmed and without being kept. It carries no choice a Commander made, and the same
 suit at the same grade is reached again by choosing that suit, so there is nothing to lose
 here either. The saved list MUST then hold no entry for it.
 

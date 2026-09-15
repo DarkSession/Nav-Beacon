@@ -17,8 +17,9 @@ Three facts shape the approach:
 - **The address already carries the work.** `FragmentPublisher` and `LoadoutLinkCoordinator`
   publish from the moment a build is active or a loadout is on the bench, and replace the fragment
   on every revision after that. The fragment outranks a restored record on arrival, so a reload of
-  the address restores a build that is in no record. The specifications say less than the code
-  does, which is why this change states the address requirement.
+  the address restores a build that is in no record. The ship tool's requirement ties publication to
+  edits, and the bench states when its address is read but never when it is written, which is why
+  this change states the address requirement.
 
 ## Goals / Non-Goals
 
@@ -114,8 +115,9 @@ long as a build is active. Two consequences are accepted rather than worked arou
 **Alternative rejected: keep a record and hide the entry.** The record could be written and left
 out of the library listing. It would restore a closed tab, and it would cost a write on every
 default build, a stored entry that the storage quota counts and the Commander cannot see, and an
-expiry sweep running over entries nobody was shown. A record the Commander cannot see or delete is
-storage they did not agree to, which principle I refuses.
+expiry sweep running over entries nobody was shown. `ship-builder/build-lifecycle`, "Stored entry
+facts and listing", requires every stored entry to state its facts and to be one the Commander can
+choose to discard, which a hidden record is not.
 
 ### The address requirement is stated here
 
@@ -161,8 +163,8 @@ matrix rather than by new surfaces.
   it. The proposal states this as the point rather than the cost.
 - **The equality test drifts from what the bench actually starts.** A change to the starting loadout
   that does not change the comparison would make every new loadout take a record again, silently.
-  → Both are built from the same domain function, and a unit test asserts that the loadout the bench
-  starts is at its default by the comparison's own answer.
+  → A unit test asserts that the loadout the bench starts is at its default by the comparison's own
+  answer, and the same for the build the creator produces.
 - **A serialisation change moves the fingerprint on one side only.** → The comparison is between
   two fingerprints taken by the same function over the same shape, so a change to the serialiser
   moves both. The unit test that pins "a freshly created build is at its default" is what catches a

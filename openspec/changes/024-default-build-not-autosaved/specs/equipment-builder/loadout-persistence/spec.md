@@ -77,8 +77,9 @@ Commander who reaches the bench at an address carrying no loadout meets the empt
 the same default again by choosing the suit.
 
 Wherever a record is taken for a loadout — at either of those two moments — an unnamed record already
-holding identical stored state MUST be taken over rather than a second copy of it stored. A record holding a ship build MUST NOT
-be taken over for a loadout, because the two hold different content and are never the same state.
+holding identical stored state MUST be taken over rather than a second copy of it stored. A record
+holding a ship build MUST NOT be taken over for a loadout, because the two hold different content
+and are never the same state.
 Autosave MUST NEVER write to a named record: a Commander who names a loadout has said which version
 they want kept, so editing a named loadout forks an unnamed record and the named record moves only
 when the Commander saves.
