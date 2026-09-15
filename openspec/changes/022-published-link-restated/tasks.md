@@ -101,6 +101,6 @@
       `pnpm run policy:specs`, which fails naming any declared id that is not registered. It reads
       `openspec/specs/` alone, so it accepts the registration now and starts requiring it when the
       delta is archived into the capability specification.
-- [ ] 4.3 Run `pnpm run check`. Verify unit coverage stays at or above 80% on all four counters,
+- [x] 4.3 Run `pnpm run check`. Verify unit coverage stays at or above 80% on all four counters,
       and report what passed, including which Playwright projects this container could run and
       which it could not.
