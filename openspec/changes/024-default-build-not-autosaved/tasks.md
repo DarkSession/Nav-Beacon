@@ -32,8 +32,9 @@
       because there is none to be at. The comparison itself reaches no package: the fit travels on
       the `BuildCandidate`, read once by whoever constructed it through `getDefaultLoadout`, because
       `ActiveBuildStore` is started with the shell and what it reaches is in the first bundle.
-      Verify task 1.2 passes, that the initial bundle stays inside its budget, and that the memo is
-      not consulted for an unknown hull (024/FR-001).
+      Verify task 1.2 passes, that the initial bundle stays inside its budget, and that a hull the
+      package publishes no default for is answered as not at a default rather than raising
+      (024/FR-001).
 - [x] 2.2 Add the bench comparison beside `loadout-fingerprint.ts`: it answers whether a loadout
       equals the loadout the bench starts for that suit family — the suit at the lowest grade
       `getSuitByFamily` publishes, no weapon on any mount, no modification fitted — compared by
@@ -67,12 +68,16 @@
 
 ## 4. What follows from holding no record
 
-- [x] 4.1 Verify `TabOwnershipCoordinator.track` claims nothing for a tool holding no record, and
-      leaves the other tool's claim untouched. `track` already skips a null identity, so this is a
-      case added to `tab-ownership.coordinator.spec.ts` rather than a change — verify it passes
-      against the code as it stands, that a duplicated tab forks nothing for that tool, and that two
-      pages holding the same default work each take a record of their own at their own first edit
-      (024/FR-001, 024/FR-002).
+- [x] 4.1 Make `TabOwnershipCoordinator.track` claim nothing for a tool holding no record, and
+      leave the other tool's claim untouched. Announcing a record is already there; letting go of
+      one is not, because a tool whose record becomes null was previously read as having nothing to
+      announce. `track` now releases that tool's claim on that transition, and only where this page
+      announced one — on a page that has announced nothing, the claim in the tab is the one a reload
+      is about to read. Verify in `tab-ownership.coordinator.spec.ts`: a page holding a record that
+      commits a default build claims nothing afterwards and says so on the channel; a page that has
+      announced nothing leaves the claim a reload reads where it is; a duplicated tab forks nothing
+      for a tool holding no record; and two pages holding the same default work each take a record
+      of their own at their own first edit (024/FR-001, 024/FR-002).
 - [x] 4.2 Verify a manual save from a build or a loadout holding no record writes a named record.
       `NamedRecordService` already mints where there is nothing to consume; add the case to
       `src/app/application/build-library/named-record.service.spec.ts` and to

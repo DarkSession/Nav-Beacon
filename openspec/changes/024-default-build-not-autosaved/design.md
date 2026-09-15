@@ -159,6 +159,31 @@ hull's default loadout takes effect on the next load, which is when the upgraded
 build open across that upgrade keeps whatever record it already holds; the comparison is over
 stored state, so nothing the package recomputes moves it.
 
+### Letting go of a claim
+
+A tab writes down which record each tool is autosaving into, so a reload restores what the page was
+working from and a duplicated tab can see that two pages are writing to one record.
+`TabOwnershipCoordinator.track` announces that record; nothing announced the end of it, because a
+tool that stopped writing to one always took up another within the coalescing window, and the new
+record overwrote the claim.
+
+Work that is in no record breaks that. A Commander autosaving into a record who creates a build from
+the hull catalogue is now holding a build that is stored nowhere, and the claim on the record before
+it would stand for as long as the page runs: a reload would restore the record the Commander stepped
+off, and a duplicated tab would fork it. So a tool whose record becomes nothing lets go of its claim
+where it announced one, which is what "a tool that holds no record claims none" asks for.
+
+**Where it announced one** is the whole of the guard. The claim in the tab outlives the page that
+wrote it — that is what makes it readable after a reload — and every page registers its tools before
+it has restored anything, holding no record at that moment. A release read off that first moment
+would be the page erasing its own way back. What the page has announced in this run is the honest
+difference between a tool that has let go of something and a tool that has not yet picked anything
+up.
+
+Released rather than merely written down, so a sibling page stops protecting a record nobody is
+writing to. The record itself is untouched: what is released is the claim, and the record runs out
+its own seven days.
+
 ### Restoring an untouched default
 
 Nothing is stored, so a reload restores it from the address, which carries the build link for as
