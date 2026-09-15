@@ -53,10 +53,10 @@ describe('HistoryLocationAdapter', () => {
 
   it('preserves the path and query when replacing', () => {
     // A path and a query of the case's own, read back as the literals they were
-    // set to. Read back as `location.pathname` the assertion would compare the
-    // address with itself: an earlier case in this file has already moved the
-    // document, so a write that moved it again would be read as the path that
-    // was preserved.
+    // set to. Captured from `location.pathname` instead, the baseline would
+    // already be spoilt: an earlier case calls the same writer, so a writer that
+    // moves the document has moved it before this case can read a path to
+    // compare against.
     const address = `${location.pathname}${location.search}`;
     history.replaceState(null, '', '/outfitting?keep=1');
     const port = adapter();
