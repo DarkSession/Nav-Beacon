@@ -2,7 +2,8 @@ import { Location } from '@angular/common';
 import { DOCUMENT, Injectable, effect, inject, signal } from '@angular/core';
 
 /**
- * The application's only reader and writer of the URL fragment.
+ * The application's only writer of the URL fragment, and the only place it
+ * reads the fragment as a value.
  *
  * The fragment is where a build link lives, and it is the one part of the URL
  * this application ever writes. Path and query belong to the router and carry

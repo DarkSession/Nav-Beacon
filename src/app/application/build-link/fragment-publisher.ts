@@ -54,10 +54,11 @@ export class FragmentPublisher {
   encode: (loadout: ShipLoadout) => Promise<string> = encodeBuildLinkFragment;
 
   /**
-   * Publishes after every modelled edit, for as long as the workspace is open.
+   * Publishes after every modelled edit, and keeps the address carrying what is
+   * published, for as long as the workspace is open.
    *
-   * Returns an unsubscribe: the watcher outlives no screen, and a second
-   * registration would encode the same build twice per keystroke.
+   * Returns an unsubscribe that ends both: neither watcher outlives a screen,
+   * and a second registration would encode the same build twice per keystroke.
    */
   start(): () => void {
     const watcher = effect(

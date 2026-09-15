@@ -52,13 +52,23 @@ describe('HistoryLocationAdapter', () => {
   });
 
   it('preserves the path and query when replacing', () => {
-    history.replaceState(null, '', `${location.pathname}?keep=1`);
+    // A path and a query of the case's own, read back as the literals they were
+    // set to. Read back as `location.pathname` the assertion would compare the
+    // address with itself: an earlier case in this file has already moved the
+    // document, so a write that moved it again would be read as the path that
+    // was preserved.
+    const address = `${location.pathname}${location.search}`;
+    history.replaceState(null, '', '/outfitting?keep=1');
     const port = adapter();
 
-    port.replaceFragment('b.xyz');
+    try {
+      port.replaceFragment('b.xyz');
 
-    expect(location.search).toBe('?keep=1');
-    expect(location.pathname).toBe(location.pathname);
+      expect(location.pathname).toBe('/outfitting');
+      expect(location.search).toBe('?keep=1');
+    } finally {
+      history.replaceState(null, '', address);
+    }
   });
 
   it('removes the fragment entirely when given null', () => {
