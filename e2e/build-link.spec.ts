@@ -144,17 +144,20 @@ test.describe('publishing a build link', () => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
 
-    // Where the chunk cannot be told from another lazy request — a build that
-    // folds it into one already loaded, or a worker serving it where a route
-    // never sees it — the window does not open and this journey reads its
-    // post-condition alone. That is the bound design.md states for it: the race
-    // is held open deterministically in the publisher's own suite, through its
-    // injectable `encode`, so no coverage rests on a browser's timing.
+    // Capped rather than open-ended: where the chunk never arrives as a request
+    // of its own, this journey fails on the assertion below, which names what
+    // went wrong, rather than on a timeout waiting for a request that is not
+    // coming.
     await Promise.race([codecReached, new Promise((resolve) => setTimeout(resolve, 3_000))]);
 
     await openLibrary(page);
     const layer = page.getByRole('dialog', { name: 'Saved builds' });
     await expect(layer).toBeVisible();
+
+    // The window is open: the layer stands over an address carrying nothing, so
+    // the publication released below lands on the layer's entry. Read here, this
+    // is what stops the journey passing without ever having held the chunk.
+    expect(new URL(page.url()).hash).toBe('');
 
     releaseCodec();
 
