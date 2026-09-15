@@ -71,7 +71,8 @@ then nothing is owed. It returns `true`, exactly as the clean-subject branch doe
 The branch governs autosave's own writes alone. An explicit resume writes past it, exactly as it
 already writes past the `dirty()` early return, because a Commander who resumes has asked for the
 work to be kept. That is what the restated concurrency rules mean by resuming taking a record as a
-manual save does, and it is the one case where a tool at its default takes one. `true` is the
+manual save does, and it is the one case in autosave's own path where a tool at its default takes
+one. A manual save is the other, and it does not come through this branch. `true` is the
 honest answer: `flush()` asks whether letting go of the work loses anything, and it does not.
 `EmptyBenchService` reads that answer before clearing the bench, which is how a default loadout is
 cleared while a loadout the store refused to write still holds the bench.

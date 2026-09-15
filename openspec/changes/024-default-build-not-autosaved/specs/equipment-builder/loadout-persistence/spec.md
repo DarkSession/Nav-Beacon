@@ -161,7 +161,7 @@ Source: 017/FR-007, 017/SC-003, 024/FR-002.
 
 - **WHEN** a Commander starts an empty bench or opens another loadout
 - **THEN** the loadout before it remains as the record it was autosaved to, where it holds one
-- **AND** the saved list still holds it
+- **AND** the saved list still holds that record, where there is one
 
 ### Requirement: What the bench says about storing
 

@@ -153,7 +153,7 @@ Source: 001/FR-008, 024/FR-001.
 
 - **WHEN** a Commander replaces the build in the workspace
 - **THEN** the earlier build remains as the record it was autosaved to, where it holds one
-- **AND** the library still lists it
+- **AND** the library still lists that record, where there is one
 
 ### Requirement: Naming, saving and removing a record
 

@@ -120,7 +120,9 @@ None.
   removes a stale fragment. It departs from three of their rules: the persistence contract's, that
   stock creation, a decoded link and a SLEF import each mint a record before the Commander changes
   anything; the link contract's step 6, which mints one for every decoded link; and the reason
-  neither gives for not confirming a replacement, which the restated requirement states afresh.
+  neither gives for not confirming a replacement, which the restated requirement states afresh. The
+  link contract also encodes after a modelled edit, where 024/FR-003 publishes from activation. The
+  code already publishes there, so that one is a restatement rather than a change of behaviour.
 - This change is archived after `022-published-link-restated`. The restated link requirement defers
   to 022/FR-001 for what the address holds, and an untouched default is the build 022's restoration
   keeps recoverable. A lost fragment costs a build that holds a record nothing, and costs an
