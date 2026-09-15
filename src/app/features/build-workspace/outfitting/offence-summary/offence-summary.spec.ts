@@ -15,6 +15,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { OffenceSummary } from './offence-summary';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * Whether a drawn figure is a zero, rather than merely containing one.
@@ -44,6 +45,7 @@ describe('OffenceSummary', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: OFFENCE_FIXTURE_HULL,
       provenance: 'stock',
       sourceNamed: null,

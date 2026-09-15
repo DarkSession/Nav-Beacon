@@ -12,6 +12,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { PowerSummary } from './power-summary';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * This feature's own rail block, from the outside.
@@ -32,6 +33,7 @@ describe('PowerSummary', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'stock',
       sourceNamed: null,

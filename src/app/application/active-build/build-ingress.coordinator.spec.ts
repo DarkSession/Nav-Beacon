@@ -5,6 +5,7 @@ import { baselineFingerprint } from '../../domain/ships/build/build-fingerprint'
 import { ActiveBuildStore } from './active-build.store';
 import type { BuildCandidate } from './active-build.models';
 import { BuildIngressCoordinator, type CandidateOutcome } from './build-ingress.coordinator';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 function setup(): { store: ActiveBuildStore; coordinator: BuildIngressCoordinator } {
   TestBed.resetTestingModule();
@@ -19,6 +20,7 @@ function candidateFor(symbol: string, saved = false): BuildCandidate {
   const loadout = ShipLoadout.default(symbol);
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: symbol,
     provenance: 'stock',
     sourceNamed: null,

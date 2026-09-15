@@ -15,6 +15,7 @@ import { recordKey } from '../../platform/storage/storage-keys';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
 import { AutosaveService } from './autosave.service';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A lifecycle adapter a test can fire on demand. */
 class FakeLifecycle {
@@ -71,6 +72,7 @@ function commitBuild(
   const loadout = ShipLoadout.default(symbol);
   active.commit({
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: symbol,
     provenance: 'stock',
     sourceNamed: null,
@@ -441,6 +443,7 @@ describe('AutosaveService', () => {
     const loadout = ShipLoadout.default('Anaconda');
     active.commit({
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'named',
       sourceNamed: { recordId: 'their-save', baseRevisionId: 'r' },

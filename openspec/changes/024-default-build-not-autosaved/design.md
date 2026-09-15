@@ -89,9 +89,11 @@ timeout every 400 ms for as long as it is open.
 Both stores gain one computed signal, and `WorkingRecordSubject` gains it as a member beside
 `dirty` and `fingerprint`:
 
-- `ActiveBuildStore`: the snapshot's fingerprint equals the fingerprint of the snapshot of
-  `ShipLoadout.default(<hull symbol>)`. Ship name and ident are in the snapshot, so a named ship is
-  not at the default without a branch of its own. The case is still unit tested, as task 1.2 asks.
+- `ActiveBuildStore`: the snapshot carries no ship name and no ident, every module carries no
+  choice — not switched off, in no power group, no pre-engineered article and no engineering — and
+  the fitted slots and modules are the ones `getDefaultLoadout(<hull symbol>)` publishes. The name
+  and the ident are in the snapshot, so a named ship is not at the default without a branch of its
+  own. The case is still unit tested, as task 1.2 asks.
 - `LoadoutStore`: the loadout's fingerprint equals the fingerprint of the bench's starting loadout
   for its suit family — that suit at the lowest grade `getSuitByFamily` publishes, no weapon on any
   mount, no modification fitted.
@@ -99,8 +101,29 @@ Both stores gain one computed signal, and `WorkingRecordSubject` gains it as a m
 Each comparison lives in the domain beside the fingerprint it is made of, is pure, and is unit
 tested without rendering.
 
-**Letter case.** The ship comparison reads a projection of the snapshot with the hull symbol, every
-slot key and every module symbol in one case. The package spells one identity in more than one
+**Where the hull's supplied fit is read.** `ActiveBuildStore` is started with the shell, so
+whatever its comparison reaches is in the first bundle a Commander downloads. Reaching
+`ShipLoadout.default` from there puts the whole outfitting catalogue in that bundle — 744 kB,
+measured — and `getDefaultLoadout` alone still puts 50 kB of default loadouts there, over the
+project's 1 MB initial-bundle budget.
+
+So the store reads no package. The fit the hull is supplied with travels on the `BuildCandidate`,
+resolved by whoever constructed it, exactly as the hull's name already does and for the same
+reason. All four routes into a build — stock creation, opening a record, a link, a SLEF or journal
+import — have asked the package for the build already, so the fit costs them nothing, and the field
+is required, so a fifth route cannot be written without one. `getDefaultLoadout` is what they ask:
+it publishes the supplied identities alone, which is the division the package states in its own
+documentation.
+
+This is not the rejected flag. The fit is a fact about the hull, not about the build: it is never
+cleared, no edit path touches it, and the comparison still runs over the whole state on every
+revision, so a build edited back to the default reads as at the default again. What is compared is
+stated field by field rather than as one fingerprint: the fit, and that no module carries a choice.
+Task 2.3 is what holds the two together — it asserts that the build `StockBuildCreator` actually
+produces reads as at its default.
+
+**Letter case.** The ship comparison reads the hull symbol, every slot key and every module symbol
+in one case. The package spells one identity in more than one
 case: the default loadout it publishes for the Anaconda names `Int_SuperCruiseAssist`, and the same
 module decoded from a build link comes back as `Int_SupercruiseAssist`. Each of those identities is
 unique case-insensitively, so folding the case compares the same set of parts. Letter case is not a
@@ -109,15 +132,16 @@ decision a Commander made, and a hull's default reached through a link is the hu
 Only this comparison folds the case. `baselineFingerprint` stays as it is, because it answers
 whether the stored state moved, and a build whose stored spelling changed did move. The bench
 comparison folds nothing either: the loadout codec carries one spelling for every suit, weapon and
-modification, so there is no drift to fold.
+modification, so there is no drift to fold. The bench comparison is a fingerprint comparison, and
+stays one: `newLoadout` is the store's own starting loadout and reaches no catalogue.
 
-**Cost.** Building `ShipLoadout.default(symbol)` on every tick would be work repeated for no
-reason, so the default fingerprint is memoised per hull symbol, and per suit family on the bench.
-The comparison runs only while the tool holds no record, which lasts until the first edit.
+**Cost.** Looking the hull's supplied fit up on every tick would be work repeated for no reason, so
+it is memoised per hull symbol, and the default fingerprint per suit family on the bench. The
+comparison runs only while the tool holds no record, which lasts until the first edit.
 
 **A package release that changes a default.** The memo is per process, so an upgrade that changes a
 hull's default loadout takes effect on the next load, which is when the upgraded package arrives. A
-build open across that upgrade keeps whatever record it already holds; the fingerprint is over
+build open across that upgrade keeps whatever record it already holds; the comparison is over
 stored state, so nothing the package recomputes moves it.
 
 ### Restoring an untouched default

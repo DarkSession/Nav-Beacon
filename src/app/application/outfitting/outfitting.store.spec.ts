@@ -8,6 +8,7 @@ import { ActiveBuildStore } from '../active-build/active-build.store';
 import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinator';
 import type { BuildCandidate } from '../active-build/active-build.models';
 import { OutfittingStore } from './outfitting.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * The store's two promises, checked from the outside.
@@ -23,6 +24,7 @@ import { OutfittingStore } from './outfitting.store';
 function candidateFor(loadout = defaultBuild()): BuildCandidate {
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

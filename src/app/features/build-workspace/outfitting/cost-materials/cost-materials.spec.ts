@@ -14,6 +14,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { CostMaterials } from './cost-materials';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The two rail blocks, from the outside.
@@ -29,6 +30,7 @@ describe('cost and materials surface', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'stock',
       sourceNamed: null,

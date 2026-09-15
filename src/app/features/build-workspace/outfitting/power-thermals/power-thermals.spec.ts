@@ -15,6 +15,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { PowerThermals } from './power-thermals';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The dashboard, from the outside.
@@ -36,6 +37,7 @@ describe('PowerThermals', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'stock',
       sourceNamed: null,

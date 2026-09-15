@@ -1,6 +1,7 @@
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { FIXTURE_HULL, FIXTURE_SLOTS, UNKNOWN_HULL } from '../outfitting/outfitting.fixtures';
 import { atPackageDefault } from './build-default';
+import { suppliedFit } from './supplied-fit';
 import type { BuildSnapshotV1 } from './build-snapshot';
 import { toBuildSnapshotV1 } from './build-snapshot.serializer';
 
@@ -29,19 +30,40 @@ function replacedModule(): BuildSnapshotV1 {
   return toBuildSnapshotV1(build);
 }
 
+/** The question as the store asks it: the build, and the fit its hull ships with. */
+function atDefault(snapshot: BuildSnapshotV1): boolean {
+  return atPackageDefault(snapshot, suppliedFit(snapshot.shipSymbol));
+}
+
 describe('package default build', () => {
   it('reports the hull’s default loadout at its default', () => {
-    expect(atPackageDefault(toBuildSnapshotV1(ShipLoadout.default(FIXTURE_HULL)))).toBe(true);
+    expect(atDefault(toBuildSnapshotV1(ShipLoadout.default(FIXTURE_HULL)))).toBe(true);
   });
 
   it('reports a replaced module as not at the default', () => {
-    expect(atPackageDefault(replacedModule())).toBe(false);
+    expect(atDefault(replacedModule())).toBe(false);
+  });
+
+  it('reports a module put in another power group as not at the default', () => {
+    // A power group is modelled state the snapshot carries and no name reads,
+    // so it is a decision on the build although the build looks the same.
+    const build = ShipLoadout.default(FIXTURE_HULL);
+    build.setModulePriority(FIXTURE_SLOTS.core, 2);
+
+    expect(atDefault(toBuildSnapshotV1(build))).toBe(false);
+  });
+
+  it('reports a module switched off as not at the default', () => {
+    const build = ShipLoadout.default(FIXTURE_HULL);
+    build.setModuleEnabled(FIXTURE_SLOTS.core, false);
+
+    expect(atDefault(toBuildSnapshotV1(build))).toBe(false);
   });
 
   it('reports a named ship as not at the default', () => {
     const named = { ...toBuildSnapshotV1(ShipLoadout.default(FIXTURE_HULL)), shipName: 'Gimel' };
 
-    expect(atPackageDefault(named)).toBe(false);
+    expect(atDefault(named)).toBe(false);
   });
 
   it('reports a ship carrying an ident as not at the default', () => {
@@ -50,7 +72,7 @@ describe('package default build', () => {
       shipIdent: 'FD-11X',
     };
 
-    expect(atPackageDefault(identified)).toBe(false);
+    expect(atDefault(identified)).toBe(false);
   });
 
   it('reads one package identity spelled two ways as one identity', () => {
@@ -71,7 +93,7 @@ describe('package default build', () => {
       })),
     };
 
-    expect(atPackageDefault(recased)).toBe(true);
+    expect(atDefault(recased)).toBe(true);
   });
 
   it('reports a hull the package publishes no default for as not at a default', () => {
@@ -86,7 +108,7 @@ describe('package default build', () => {
       modules: [],
     };
 
-    expect(() => atPackageDefault(unknown)).not.toThrow();
-    expect(atPackageDefault(unknown)).toBe(false);
+    expect(() => atDefault(unknown)).not.toThrow();
+    expect(atDefault(unknown)).toBe(false);
   });
 });

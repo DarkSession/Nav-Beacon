@@ -8,6 +8,7 @@ import { Formatters } from '../../../../i18n/formatters/formatters';
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { DrivesSummary } from './drives-summary';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The rail's `JUMP`, `SPEED` and `MASS` cells.
@@ -34,6 +35,7 @@ describe('DrivesSummary', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: HULL,
       provenance: 'stock',
       sourceNamed: null,

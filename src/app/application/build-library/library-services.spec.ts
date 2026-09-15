@@ -22,6 +22,7 @@ import { BuildLibraryStore } from './build-library.store';
 import { RecordOpenService } from './record-open.service';
 import { RetentionService, UNNAMED_RECORD_LIFETIME_MS } from './retention.service';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 class SilentChannel {
   readonly available = false;
@@ -297,6 +298,7 @@ describe('RetentionService', () => {
     const { retention, storage, clock, active } = setup(seedOne);
     active.commit({
       loadout: ShipLoadout.default('Anaconda'),
+      suppliedFit: suppliedFit(ShipLoadout.default('Anaconda').shipSymbol),
       hullName: 'Anaconda',
       provenance: 'working',
       sourceNamed: null,

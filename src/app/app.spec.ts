@@ -24,6 +24,7 @@ import { HelpPresenter } from './application/help/help.presenter';
 import { HELP_MANIFEST } from './platform/build/help-manifest.generated';
 import { EDNB_UPDATE_APPLIED_KEY } from './platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from './platform/storage/storage.spec-helpers';
+import { suppliedFit } from './domain/ships/build/supplied-fit';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -349,6 +350,7 @@ describe('App', () => {
 
     active.commit({
       loadout: ShipLoadout.default(FIXTURE_HULL),
+      suppliedFit: suppliedFit(ShipLoadout.default(FIXTURE_HULL).shipSymbol),
       hullName: 'Anaconda',
       provenance: 'working',
       sourceNamed: null,

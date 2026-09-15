@@ -10,6 +10,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { PowerBadge } from './power-badge';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The compact strip's badge, from the outside (005/FR-014).
@@ -31,6 +32,7 @@ describe('PowerBadge', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'stock',
       sourceNamed: null,

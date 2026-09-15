@@ -9,6 +9,7 @@ import {
   type CandidateOutcome,
   type CommitResult,
 } from './build-ingress.coordinator';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * Creating a stock build, as one transaction.
@@ -72,6 +73,7 @@ export class StockBuildCreator {
       candidate: {
         loadout,
         hullName: this.#gameText.shipName(ship.symbol).text ?? ship.symbol,
+        suppliedFit: suppliedFit(ship.symbol),
         provenance: 'stock',
         // A hull's own default build is the package's, at the package's own
         // quality. There is no source to have stated a partial roll, so the

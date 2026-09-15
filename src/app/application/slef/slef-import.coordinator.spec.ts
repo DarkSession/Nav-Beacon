@@ -20,6 +20,7 @@ import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/stor
 import type { JournalFile } from '../../domain/journal/journal-scan';
 import { SlefImportCoordinator } from './slef-import.coordinator';
 import { SlefStore } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 const VALID = JSON.stringify({ event: 'Loadout', Ship: FIXTURE_HULL, Modules: [] });
 
@@ -37,6 +38,7 @@ const DEFAULT_PASTE = generateSlefExportArtifact(
 function seedActive(active: ActiveBuildStore): void {
   active.commit({
     loadout: ShipLoadout.default('Sidewinder'),
+    suppliedFit: suppliedFit(ShipLoadout.default('Sidewinder').shipSymbol),
     hullName: 'Sidewinder',
     provenance: 'working',
     sourceNamed: null,
@@ -242,6 +244,7 @@ describe('the one path from a draft to an active build', () => {
       const inFlight = coordinator.submit();
       const other = {
         loadout: ShipLoadout.default('Eagle'),
+        suppliedFit: suppliedFit(ShipLoadout.default('Eagle').shipSymbol),
         hullName: 'Eagle',
         provenance: 'stock' as const,
         sourceNamed: null,

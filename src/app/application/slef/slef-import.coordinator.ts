@@ -26,6 +26,7 @@ import { BuildLibraryStore } from '../build-library/build-library.store';
 import { NamedRecordService } from '../build-library/named-record.service';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { SlefStore, type SlefBatchRefusal } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * How one submitted draft ended, from the layer's point of view.
@@ -331,6 +332,7 @@ export class SlefImportCoordinator {
     return {
       loadout: candidate.loadout,
       hullName: this.#gameText.shipName(symbol).text ?? symbol,
+      suppliedFit: suppliedFit(symbol),
       provenance: 'working' as const,
       sourceNamed: null,
       autosaveRecordId: null,

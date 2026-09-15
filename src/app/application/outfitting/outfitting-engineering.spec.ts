@@ -11,6 +11,7 @@ import { ActiveBuildStore } from '../active-build/active-build.store';
 import type { BuildCandidate } from '../active-build/active-build.models';
 import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { OutfittingStore } from './outfitting.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * Engineering and power, dispatched through the one edit path.
@@ -24,6 +25,7 @@ import { OutfittingStore } from './outfitting.store';
 function candidateFor(loadout: ShipLoadout): BuildCandidate {
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

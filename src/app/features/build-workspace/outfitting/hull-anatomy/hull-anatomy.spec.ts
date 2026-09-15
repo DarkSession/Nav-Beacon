@@ -17,6 +17,7 @@ import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/local
 import { AlmanacSchematicLoader } from '../../../../platform/assets/almanac-schematic-loader';
 import { AnnouncementService } from '../../../../ui/announcements/announcement.service';
 import { HullAnatomy } from './hull-anatomy';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The panel, as the canvases draw it.
@@ -63,6 +64,7 @@ function documentFor(side: SchematicSide, journalSlot: string): SchematicDocumen
 function candidate(symbol = 'Anaconda'): BuildCandidate {
   return {
     loadout: defaultBuild(symbol),
+    suppliedFit: suppliedFit(defaultBuild(symbol).shipSymbol),
     hullName: symbol,
     provenance: 'stock',
     sourceNamed: null,

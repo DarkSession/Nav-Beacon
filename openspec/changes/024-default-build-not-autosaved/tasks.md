@@ -25,12 +25,15 @@
 ## 2. The comparison, in the domain
 
 - [x] 2.1 Add the ship comparison beside `build-fingerprint.ts`: it answers whether a build snapshot
-      equals the snapshot of `ShipLoadout.default(<hull symbol>)`, compared by `baselineFingerprint`
-      over a projection that lowers the hull symbol, every slot key and every module symbol, because
-      the package spells one identity in more than one letter case. It memoises the default
-      fingerprint per hull symbol. A hull the package publishes no default for is not at a default,
-      because there is none to be at. Verify task 1.2 passes and the memo is not consulted for an
-      unknown hull (024/FR-001).
+      carries no ship name, no ident and no choice on any module, and is fitted with exactly what
+      `getDefaultLoadout(<hull symbol>)` publishes. Slot keys and module symbols are compared in one
+      letter case, because the package spells one identity in more than one. It memoises the
+      supplied fit per hull symbol. A hull the package publishes no default for is not at a default,
+      because there is none to be at. The comparison itself reaches no package: the fit travels on
+      the `BuildCandidate`, read once by whoever constructed it through `getDefaultLoadout`, because
+      `ActiveBuildStore` is started with the shell and what it reaches is in the first bundle.
+      Verify task 1.2 passes, that the initial bundle stays inside its budget, and that the memo is
+      not consulted for an unknown hull (024/FR-001).
 - [x] 2.2 Add the bench comparison beside `loadout-fingerprint.ts`: it answers whether a loadout
       equals the loadout the bench starts for that suit family — the suit at the lowest grade
       `getSuitByFamily` publishes, no weapon on any mount, no modification fitted — compared by

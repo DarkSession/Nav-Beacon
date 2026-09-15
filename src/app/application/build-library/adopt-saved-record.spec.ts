@@ -7,6 +7,7 @@ import { LoadoutStore } from '../equipment/loadout.store';
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
 import { adoptSavedRecord } from './adopt-saved-record';
 import { RecordInvalidationService } from './record-invalidation.service';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 class SilentChannel {
   readonly available = false;
@@ -39,6 +40,7 @@ function shipHolding(autosaveRecordId: string | null): ActiveBuildStore {
   const active = TestBed.inject(ActiveBuildStore);
   active.commit({
     loadout: ShipLoadout.default('Anaconda'),
+    suppliedFit: suppliedFit(ShipLoadout.default('Anaconda').shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

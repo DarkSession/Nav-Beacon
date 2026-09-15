@@ -16,6 +16,7 @@ import { FragmentPublisher } from './fragment-publisher';
 import { MAX_BUILD_LINK_LENGTH } from './fragment-recognizer';
 import { LinkErrorMapper, type LinkFailureCode } from './link-error.mapper';
 import { FIELDS_EXCLUDED_FROM_LINKS, linkPayloadSource } from './link-payload.allowlist';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 function setup() {
   const storage = new MemoryStorage();
@@ -47,6 +48,7 @@ async function anacondaFragment(): Promise<string> {
 function commitAnaconda(active: ActiveBuildStore, hull = 'Anaconda'): void {
   active.commit({
     loadout: ShipLoadout.default(hull),
+    suppliedFit: suppliedFit(ShipLoadout.default(hull).shipSymbol),
     hullName: hull,
     provenance: 'stock',
     sourceNamed: null,
@@ -174,6 +176,7 @@ describe('BuildLinkCoordinator', () => {
     }
     active.commit({
       loadout: imported.candidate,
+      suppliedFit: suppliedFit(imported.candidate.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'working',
       sourceNamed: null,

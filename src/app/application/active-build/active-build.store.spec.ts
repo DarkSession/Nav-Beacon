@@ -5,6 +5,7 @@ import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.seria
 import type { PartialEngineeringFailure } from '../../domain/ships/build/build-ingress-result';
 import { ActiveBuildStore } from './active-build.store';
 import type { BuildCandidate } from './active-build.models';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 function store(): ActiveBuildStore {
   TestBed.resetTestingModule();
@@ -16,6 +17,7 @@ function candidate(overrides: Partial<BuildCandidate> = {}): BuildCandidate {
   const loadout = ShipLoadout.default('Anaconda');
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

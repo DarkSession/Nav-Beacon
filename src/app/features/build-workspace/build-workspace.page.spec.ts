@@ -11,6 +11,7 @@ import { recordKey } from '../../platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { LibraryPresence } from '../build-library/library-presence';
 import { BuildWorkspacePage } from './build-workspace.page';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A lock that serializes without a browser: what is under test is the save. */
 class FakeLocks {
@@ -80,6 +81,7 @@ describe('BuildWorkspacePage persistence actions', () => {
     const loadout = ShipLoadout.default(symbol);
     active.commit({
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: symbol,
       provenance: 'stock',
       sourceNamed: null,

@@ -24,6 +24,7 @@ import englishMessages from '../../../../i18n/locales/en.json';
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { OffenceAnalysis } from './offence-analysis';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The offence panel, from the outside.
@@ -52,6 +53,7 @@ describe('OffenceAnalysis', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: OFFENCE_FIXTURE_HULL,
       provenance: 'stock',
       sourceNamed: null,

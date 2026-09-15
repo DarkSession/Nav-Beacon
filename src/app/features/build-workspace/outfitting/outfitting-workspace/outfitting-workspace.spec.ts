@@ -16,6 +16,7 @@ import { provideRouter } from '@angular/router';
 import type { PartialEngineeringFailure } from '../../../../domain/ships/build/build-ingress-result';
 import { LibraryPresence } from '../../../build-library/library-presence';
 import { AnnouncementService } from '../../../../ui/announcements/announcement.service';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * What the workspace publishes to the command bar.
@@ -30,6 +31,7 @@ import { AnnouncementService } from '../../../../ui/announcements/announcement.s
 function candidateFor(loadout: ShipLoadout): BuildCandidate {
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

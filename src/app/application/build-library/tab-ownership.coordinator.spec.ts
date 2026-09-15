@@ -15,6 +15,7 @@ import { LoadoutStore } from '../equipment/loadout.store';
 import { AutosaveService } from './autosave.service';
 import { TabOwnershipCoordinator } from './tab-ownership.coordinator';
 import type { WorkingRecordSubject } from './working-record.port';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A channel two coordinators in one test can talk over. */
 class FakeChannel {
@@ -78,6 +79,7 @@ function setup(
 function hold(active: ActiveBuildStore, autosaveRecordId: string | null): void {
   active.commit({
     loadout: ShipLoadout.default('Anaconda'),
+    suppliedFit: suppliedFit(ShipLoadout.default('Anaconda').shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

@@ -16,6 +16,7 @@ import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinat
 import { OutfittingStore } from '../outfitting/outfitting.store';
 import { SlefImportCoordinator } from './slef-import.coordinator';
 import { SlefStore } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 const VALID = JSON.stringify({ event: 'Loadout', Ship: FIXTURE_HULL, Modules: [] });
 
@@ -78,6 +79,7 @@ describe('what an import that does not happen costs', () => {
   function seed(): void {
     active.commit({
       loadout: defaultBuild(),
+      suppliedFit: suppliedFit(defaultBuild().shipSymbol),
       hullName: 'Anaconda',
       provenance: 'working',
       sourceNamed: { recordId: 'record-1', baseRevisionId: 'rev-1' },
@@ -217,6 +219,7 @@ describe('what an import that does not happen costs', () => {
       seed();
       const other: BuildCandidate = {
         loadout: ShipLoadout.default('Eagle'),
+        suppliedFit: suppliedFit(ShipLoadout.default('Eagle').shipSymbol),
         hullName: 'Eagle',
         provenance: 'stock',
         sourceNamed: null,

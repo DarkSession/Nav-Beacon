@@ -12,6 +12,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { PowerShedStatements } from './power-shed-statements';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The sentence about a shed priority group, from the outside.
@@ -28,6 +29,7 @@ describe('PowerShedStatements', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'stock',
       sourceNamed: null,

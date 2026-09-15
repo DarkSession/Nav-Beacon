@@ -8,6 +8,7 @@ import { ActiveBuildStore } from '../active-build/active-build.store';
 import { BuildLinkCoordinator } from './build-link.coordinator';
 import { FragmentPublisher } from './fragment-publisher';
 import { MAX_BUILD_LINK_LENGTH } from './fragment-recognizer';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * The codec, replaced by something whose timing this test controls.
@@ -57,6 +58,7 @@ function setup() {
 function commitAnaconda(active: ActiveBuildStore): void {
   active.commit({
     loadout: ShipLoadout.default('Anaconda'),
+    suppliedFit: suppliedFit(ShipLoadout.default('Anaconda').shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,
