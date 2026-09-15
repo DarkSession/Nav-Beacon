@@ -256,7 +256,8 @@ Source: 001/FR-009, 016/FR-012, 024/FR-001.
 A record deleted by another live page MUST NOT clear that page's active build. The build MUST remain
 usable, autosave MUST pause, and resuming MUST be an explicit Commander action, because nobody at
 this page decided anything. Resuming MUST write the build, whether or not it has changed since the
-record was discarded. The pause MUST be about the discarded record alone: a page that moves onto
+record was discarded, and whether or not it is at the package default. Resuming is a Commander asking
+for the build to be kept, so it takes a record as a manual save does. The pause MUST be about the discarded record alone: a page that moves onto
 another record MUST autosave into it unasked, and MUST NOT keep stating a discard that is not about
 the build it now holds.
 

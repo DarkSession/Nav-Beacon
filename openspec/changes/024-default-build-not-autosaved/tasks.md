@@ -5,7 +5,8 @@
       screen-reader semantics, localisation and design-system composition therefore have nothing new
       to check, and are verified by the accessibility and responsive journeys passing unchanged in
       `pnpm run check`. Verify against proposal.md — Impact: every changed path is under
-      `src/app/application/`, `src/app/domain/`, `e2e/` or `openspec/`.
+      `src/app/application/`, `src/app/domain/`, `src/app/features/`, `e2e/` or `openspec/`. The one
+      file under `src/app/features/` is a test, which is why no screen changes.
 - [ ] 1.2 Add to `src/app/domain/ships/build/` a failing unit test that the snapshot of
       `ShipLoadout.default(<hull symbol>)` is reported at the hull's package default, that the same
       build with one module replaced is not, and that the same build with a ship name or an ident is
@@ -48,7 +49,9 @@
       is at its default, nothing is owed and it returns `true`, as the clean-subject branch does.
       Place it before `#allocate`, so no record is minted and none taken over. Verify tasks 1.4 and
       1.5 pass, and that an unnamed record already holding the default state is left alone rather
-      than taken over (024/FR-001, 024/FR-002).
+      than taken over. Verify too that resuming after another page's deletion writes a record even
+      where the work is at its default, which the restated concurrency rules state
+      (024/FR-001, 024/FR-002).
 - [ ] 3.3 Skip the coalescing timer in `#schedule` under the same condition, so an untouched build
       wakes no timeout while it is open. Verify with a fake timer that no write is attempted across
       repeated revisions of an untouched build, and that the first edit schedules one.
@@ -62,7 +65,8 @@
 - [ ] 4.1 Verify `TabOwnershipCoordinator.track` claims nothing for a tool holding no record, and
       leaves the other tool's claim untouched. `track` already skips a null identity, so this is a
       case added to `tab-ownership.coordinator.spec.ts` rather than a change — verify it passes
-      against the code as it stands, and that a duplicated tab forks nothing for that tool
+      against the code as it stands, that a duplicated tab forks nothing for that tool, and that two
+      pages holding the same default work each take a record of their own at their own first edit
       (024/FR-001, 024/FR-002).
 - [ ] 4.2 Verify a manual save from a build or a loadout holding no record writes a named record.
       `NamedRecordService` already mints where there is nothing to consume; add the case to
@@ -101,15 +105,16 @@
       `src/app/application/equipment/loadout-import.coordinator.spec.ts` (024/FR-002).
 - [ ] 4.10 Verify the ship tool's ingress routes against the scenario that declares them: a build at
       the package default takes no record when it arrives by a build link and when it arrives by a
-      SLEF paste. Add the cases to `src/app/application/build-link/build-link.spec.ts` and the SLEF
-      import suite (024/FR-001).
+      SLEF paste. Add the cases to `src/app/application/build-link/build-link.spec.ts` and
+      `src/app/application/slef/slef-import.coordinator.spec.ts` (024/FR-001).
 - [ ] 4.11 Verify a replacement is not confirmed where a store failure leaves the build on screen in
       no record, which the restated requirement adds. Add the case to
       `src/app/application/build-library/autosave.service.spec.ts` (024/FR-001).
 - [ ] 4.12 Verify the help topic on browser storage still agrees with the requirement it cites. Read
       `help.topic.browserPersistence.answer` in `src/app/i18n/locales/en.json` against the restated
-      "Autosave of the active build". Where the answer claims work is saved whatever its state,
-      restate it to say where work is kept; otherwise record that it needs no edit. Verify
+      "Autosave of the active build". Verify the answer still agrees, because it says where work is
+      kept rather than when a record is taken, and record that it needs no edit. Where it turns out
+      to claim otherwise, stop and raise it: a catalogue edit is outside this change. Verify
       `pnpm run help:artifacts:check` and `pnpm run policy:specs` pass.
 
 ## 5. Journeys and the coverage record

@@ -143,10 +143,9 @@ or the foreign fragment differently.
 
 **022 lands first.** The requirement here says a link is published; 022 is what keeps that link in
 the address when something else moves it. An untouched default has nothing else holding it, so the
-defect 022 fixes costs a Commander the build rather than only the link. Change 022 also argues that
-losing the fragment is harmless because the active build is autosaved and restored under 001/FR-008.
-That is true only of a build that holds a record, and this change makes it untrue of an untouched
-default, so 022's proposal and its task 4.1 are corrected to say so.
+defect 022 fixes costs a Commander the build rather than only the link. Losing the fragment is
+harmless for a build that holds a record, which autosave restores under 001/FR-008. It costs an
+untouched default the build, because nothing else holds one.
 
 ### Screens
 

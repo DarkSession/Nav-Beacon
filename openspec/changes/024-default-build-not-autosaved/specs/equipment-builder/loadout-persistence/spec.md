@@ -61,6 +61,10 @@ that suit — the grades of `getSuitByFamily(<suit family>)` in
 fitted. That is the loadout the bench starts when a suit is chosen and nothing else is done to it.
 Such a loadout MUST take no record: none minted, and none taken over.
 
+A loadout carries no name of its own. The name a Commander gave belongs to the record the loadout
+was saved into, so a loadout in no record has no name to lose. This is why the test names none,
+where the ship tool's names the ship name and the ident.
+
 The test MUST be the stored state alone and MUST NOT depend on where the loadout came from. A default
 loadout reaches the bench by a suit chosen at the gate, by a link and by a journal event, and each is
 recovered the same way: by choosing the suit again. The rule holds over the loadout that reaches the
@@ -169,7 +173,8 @@ be stated in words rather than by an unchanged control.
 A record deleted by another live page MUST NOT clear the bench. The loadout MUST stay usable,
 autosave MUST pause, and resuming MUST be an explicit Commander action, because nobody at this
 page decided anything. Resuming MUST write the loadout, whether or not it has changed since
-the record was discarded.
+the record was discarded, and whether or not it is at its suit's default. Resuming is a Commander
+asking for the loadout to be kept, so it takes a record as a manual save does.
 
 The pause MUST be about the discarded record alone. A bench that takes up another record —
 by opening a saved loadout, by reading one from an address, or by saving the loadout under a

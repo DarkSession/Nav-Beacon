@@ -117,10 +117,11 @@ None.
 - `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md` and
   `contracts/build-link.md` are not edited. They record what feature 001 built; the capability
   specification is the standing record. This change cites the link contract's rule that a refusal
-  removes a stale fragment, and departs from its step 6, which mints a record for every decoded
-  link. It also departs from the contract's reason for not confirming a replacement, which the
-  restated requirement states afresh.
+  removes a stale fragment. It departs from three of their rules: the persistence contract's, that
+  stock creation, a decoded link and a SLEF import each mint a record before the Commander changes
+  anything; the link contract's step 6, which mints one for every decoded link; and the reason
+  neither gives for not confirming a replacement, which the restated requirement states afresh.
 - This change is archived after `022-published-link-restated`. The restated link requirement defers
   to 022/FR-001 for what the address holds, and an untouched default is the build 022's restoration
-  keeps recoverable. Two sentences in 022 give autosave as the reason a lost fragment costs nothing;
-  they are corrected here, because that is true only of a build that holds a record.
+  keeps recoverable. A lost fragment costs a build that holds a record nothing, and costs an
+  untouched default the build.
