@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow } from './accessibility/assertions';
-import { buildStockHull, openLibrary, reachShellAction, recordCount } from './shell';
+import { buildStockHull, openLibrary, reachShellAction, recordCountAfterFlush } from './shell';
 
 /**
  * A build arriving from somewhere else.
@@ -115,7 +115,7 @@ test.describe('importing a build', () => {
     // build and it is in the address, and that is the whole of what holds it:
     // there is no decision in it worth a record (024/FR-001).
     await withStockBuild(page);
-    expect(await recordCount(page)).toBe(0);
+    expect(await recordCountAfterFlush(page)).toBe(0);
 
     await reachShellAction(page, /^export$/i);
     const exported = page.getByRole('dialog', { name: /export build/i });
@@ -136,17 +136,16 @@ test.describe('importing a build', () => {
     await expect(incoming.locator('[data-slot-key]').first()).toBeVisible();
     await expect.poll(() => incoming.evaluate(() => location.hash)).toMatch(/^#b\./);
 
-    // Reloaded before the count, which is what makes the count an answer. The
-    // page writes what it owes on the way out, so a record owed for the
-    // imported build is in the store by the time it is read; counted on the
-    // page that took the import, the read lands inside the coalescing window
-    // and says nothing is stored whether or not one is owed.
+    // Reloaded to ask the build where it came back from. The count is asked of
+    // the page through the flush, because autosave coalesces its writes and a
+    // count read on a page that is still open reads zero whether a record is
+    // owed or not.
     await incoming.reload();
 
     // And the build comes back, from the address alone. That is the other half
     // of the same claim: nothing was stored, and nothing needed to be.
     await expect(incoming.locator('[data-slot-key]').first()).toBeVisible();
-    expect(await recordCount(incoming)).toBe(0);
+    expect(await recordCountAfterFlush(incoming)).toBe(0);
     await elsewhere.close();
   });
 

@@ -208,21 +208,25 @@
       five projects at once; each passes in 5 to 12 s when it is the only run
       (`024-gate18-e2e-rerun.log`, 25 passed). The five Firefox projects were not run: the engine
       is absent from this container and `playwright install firefox` cannot reach its download
-      host. One journey this change adds passed here and failed on the integration run, in four of
-      the five profiles and on the first attempt in each: the save it makes was still in flight
-      when it reloaded, so the work stayed in the unnamed record autosave held and the library
-      listed no name. The journey now waits for the save layer to close, which is what the
-      workspace does once the write has resolved (`024-fix-bws.log`).
+      host. The integration run covers them, and passes the whole matrix over its sixteen shards.
+      Two journeys this change adds read the store at a moment it cannot answer for. The first
+      saves and reloads, and failed on the integration run in four of the five profiles, on the
+      first attempt in each: the save was still in flight, so the work stayed in the unnamed
+      record autosave held and the library listed no name. It waits for the save layer to close,
+      which is what the workspace does once the write has resolved (`024-fix-bws.log`, 119 of
+      120). The second gives two pages a record each and counts them on one page, and is the
+      remaining failure in that log: two pages are two renderers over one store, and the row
+      reaches the reading one after the writing one reports it. It polls the count. Both journeys
+      pass three times over on two profiles with no retries (`024-gate19-affected.log`, 360
+      passed).
 - [x] 6.2 Run `pnpm run check` and verify it passes: format, help artifacts, sitemap, typecheck,
       build, preview build, policy, codec capacity, script tests, unit tests at or above the 80%
       coverage threshold, and the Playwright matrix including the timing and offline projects.
-      Every stage passed except the timing project (`024-gate18-check-nonbrowser.log`,
-      `024-gate18-e2e-timing-offline.log`). Unit tests: 3330 passed, statements 94.14%, branches
-      86.96%, functions 95.36%, lines 94.07%. Offline: 360 passed. The candidate search measurement
-      reads 101 to 149 ms against a 100 ms budget here, and the default branch reads 107 to 108 ms
-      in the same container on two of three runs, so the container is under the speed the budget
-      assumes and the reading is not this change's. The Firefox half of the matrix was not run, for
-      the reason given in 6.1.
+      Every stage through the unit tests passes (`024-gate19-check-nonbrowser.log`): 3330 tests,
+      statements 94.15%, branches 86.98%, functions 95.36%, lines 94.09%. The timing project
+      passes, with both measurements inside the 100 ms budget, and the offline project passes over
+      its five Chromium profiles, 360 of 720 (`024-gate19-e2e-timing-offline.log`). The Firefox
+      half of both the offline project and the matrix was not run, for the reason given in 6.1.
 - [x] 6.3 Run the implementation gate the project context defines — a code reviewer reading the diff
       against the default branch, this change directory, `CONSTITUTION.md` and `AGENTS.md`. Fix every
       actionable finding, re-run the affected checks and repeat the review until it reports none.

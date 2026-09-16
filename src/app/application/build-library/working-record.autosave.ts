@@ -352,15 +352,17 @@ export class WorkingRecordAutosave {
     if (this.paused() || this.#subject.fingerprint() === null) {
       return;
     }
+    this.#clearTimer();
     // Nothing a timer could write. Work holding no record at its own default
     // owes nothing, so a timer armed here would wake only for `#writeNow` to
     // ask the same question and turn the write away. None is armed instead,
     // and the first edit that moves the work off its default schedules the
-    // write as usual.
+    // write as usual. Cleared before the question is asked, because an undo
+    // that returns the work to its default must also take back the timer the
+    // edit armed.
     if (this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
       return;
     }
-    this.#clearTimer();
     this.#timer = setTimeout(() => this.flush(), COALESCE_MS);
   }
 

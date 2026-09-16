@@ -120,10 +120,13 @@ None.
   default. Its flush already answers "nothing owed" rather than "write failed", which is the
   difference the requirement turns on.
 - `e2e/build-working-state.spec.ts` carries the ship tool's journey, `e2e/tool-bar-navigation.spec.ts`
-  the bench's, `e2e/hull-detail.spec.ts` the second creation, `e2e/slef-import.spec.ts` the journal
-  routes, and `e2e/build-link.spec.ts` and `e2e/equipment-link.spec.ts` the address each tool
-  publishes. `e2e/coverage-ledger.ts` registers the three requirement ids and this change's
-  directory.
+  the bench's, `e2e/hull-detail.spec.ts` the second creation, `e2e/journal-import.spec.ts` and
+  `e2e/slef-import.spec.ts` the routes an entry and a paste take, and `e2e/build-link.spec.ts` and
+  `e2e/equipment-link.spec.ts` the address each tool publishes. `e2e/shell.ts` gains the one decision
+  a journey makes on a build or a loadout before it expects a record of it, and every journey that
+  expected one from a stock build makes that decision first — among them `e2e/build-library.spec.ts`
+  and `e2e/navigation-waiting.spec.ts`. `e2e/coverage-ledger.ts` registers the three requirement ids
+  and this change's directory.
 - `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md` and
   `contracts/build-link.md` are not edited. They record what feature 001 built; the capability
   specification is the standing record. This change cites the link contract's rule that a refusal

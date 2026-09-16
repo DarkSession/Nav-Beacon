@@ -79,6 +79,11 @@ async function saveActiveBuild(
   // why, when the write did nothing — so waiting for it to go is waiting for
   // the save itself.
   await expect(dialog).toBeHidden();
+  // And nothing took its place. The layer also closes on a conflict, which
+  // replaces it with the question of what to do about the revision that landed
+  // first — a save that wrote nothing, and one that would pass a wait for the
+  // layer alone.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 }
 
 /**
@@ -221,12 +226,11 @@ test.describe('the tab’s working build', () => {
     await createDecidedBuild(second, 'SideWinder', 'NB-02');
     await savedToBrowser(second);
 
-    const records = await first.evaluate(() =>
-      Object.keys(localStorage).filter((key) => key.startsWith('ednb:record:')),
-    );
-
-    // Neither page has overwritten the other's autosave.
-    expect(records).toHaveLength(2);
+    // Neither page has overwritten the other's autosave. Polled, because the
+    // count is read on one page and was written by the other: a status line
+    // answers for the renderer that wrote, and the renderer that reads holds
+    // its own copy of the store, which the write reaches a moment later.
+    await expectRecords(first, 2);
     await expect(first.getByRole('banner').getByText('Anaconda').first()).toBeVisible();
     await expect(second.getByRole('banner').getByText('Sidewinder').first()).toBeVisible();
 

@@ -7,7 +7,7 @@ import {
   openFirstHullFromManifest,
   openLibrary,
   reachShellAction,
-  recordCount,
+  recordCountAfterFlush,
   setShipIdent,
 } from './shell';
 
@@ -224,14 +224,18 @@ test.describe('restoring a build from a link', () => {
     // 024/FR-003).
     const fragment = await buildWithLink(page);
     await buildIsOpen(page);
-    expect(await recordCount(page)).toBe(0);
+    // Counted through the flush, on both sides of the reload. Autosave
+    // coalesces its writes, so a count read on a page that is still open reads
+    // zero whether a record is owed or not, and a zero that cannot be anything
+    // else proves nothing about the build it is claimed for.
+    expect(await recordCountAfterFlush(page)).toBe(0);
 
     await page.reload();
 
     await expect(page.getByRole('heading', { level: 1, name: /anaconda/i })).toBeVisible();
     await buildIsOpen(page);
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(`#${fragment}`);
-    expect(await recordCount(page)).toBe(0);
+    expect(await recordCountAfterFlush(page)).toBe(0);
   });
 
   test('opens as a working build from a link, with nothing saved by name', async ({ page }) => {
