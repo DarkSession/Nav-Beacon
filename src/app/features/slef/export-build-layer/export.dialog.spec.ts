@@ -13,6 +13,7 @@ import { NavigatorAdapter } from '../../../platform/browser/navigator.adapter';
 import { ActiveBuildStore } from '../../../application/active-build/active-build.store';
 import { SlefStore } from '../../../application/slef/slef.store';
 import { ExportDialog } from './export.dialog';
+import { suppliedFit } from '../../../domain/ships/build/supplied-fit';
 
 class SilentDocumentAdapter {
   commitRootState(): void {}
@@ -69,6 +70,7 @@ describe('the export layer’s host', () => {
   function commit(): void {
     active.commit({
       loadout: ShipLoadout.default(FIXTURE_HULL),
+      suppliedFit: suppliedFit(ShipLoadout.default(FIXTURE_HULL).shipSymbol),
       hullName: 'Anaconda',
       provenance: 'working',
       sourceNamed: null,

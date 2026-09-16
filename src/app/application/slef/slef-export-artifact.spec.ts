@@ -6,6 +6,7 @@ import { FragmentPublisher } from '../build-link/fragment-publisher';
 import { FIXTURE_HULL, FIXTURE_SLOTS } from '../../domain/ships/outfitting/outfitting.fixtures';
 import { SlefExportCoordinator } from './slef-export.coordinator';
 import { SlefStore } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 class StubPublisher {
   url: string | null = 'https://example.test/outfitting#b.abc';
@@ -17,6 +18,7 @@ class StubPublisher {
 function commit(active: ActiveBuildStore, loadout = ShipLoadout.default(FIXTURE_HULL)): void {
   active.commit({
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: 'Anaconda',
     provenance: 'working',
     sourceNamed: null,

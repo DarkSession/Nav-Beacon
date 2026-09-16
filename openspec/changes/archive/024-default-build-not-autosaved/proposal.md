@@ -40,9 +40,13 @@ then there is nothing to keep.
   store refusing writes rather than a state with nothing to keep.
 - Naming an untouched default still saves it. A save with no unnamed record to consume writes a
   named record, as a save already does where the record was deleted in another tab.
-- No wording changes. Persistence is `ready` rather than `saved` while no record is owed, and both
-  draw nothing. The help topic on browser storage answers where work is kept, not when a record is
-  minted, so it stands as written. No new words, so no catalogue keys.
+- One wording change, and no new key. The empty saved screen promised that every build a Commander
+  creates is kept in this browser, which is what this change stops being true — and it is the screen
+  a Commander lands on right after creating one. `library.empty.description` says work is kept from
+  the first change to it, worded for the work rather than for one tool, because the screen lists
+  what both tools saved. Persistence is `ready` rather than `saved` while no record is owed, and
+  both draw nothing. The help topic on browser storage answers where work is kept, not when a record
+  is minted, so it stands as written.
 
 The change declares three requirements:
 
@@ -104,16 +108,25 @@ None.
   `ActiveBuildStore` and `LoadoutStore` answer it from their own state.
 - `src/app/domain/ships/build/` and `src/app/domain/equipment/loadout/` each gain the comparison
   against the package default, beside the fingerprint the comparison is made of.
-- `src/app/application/active-build/stock-build.creator.ts` and the equipment bench are unchanged.
-  A creator that marked its own output would leave the same state arriving in a link unmarked.
+- The four routes into a build — `stock-build.creator.ts`, `record-open.service.ts`,
+  `build-link.coordinator.ts` and `slef-import.coordinator.ts` — each supply the hull's published
+  fit on the candidate they build, because the store that asks the question is started with the
+  shell and must reach no catalogue. None of them marks its own output: the comparison is made on
+  state alone, so the catalogue, a link, a paste and a journal event get one answer for one build.
+- `src/app/application/build-library/tab-ownership.coordinator.ts` lets go of the record a tool
+  held once that tool takes up work that is in none. A claim stands for whatever record its tool
+  holds, and work that is in no record leaves nothing to claim.
 - `src/app/application/equipment/empty-bench.service.ts` clears a bench holding an unrecorded
   default. Its flush already answers "nothing owed" rather than "write failed", which is the
   difference the requirement turns on.
 - `e2e/build-working-state.spec.ts` carries the ship tool's journey, `e2e/tool-bar-navigation.spec.ts`
-  the bench's, `e2e/hull-detail.spec.ts` the second creation, `e2e/slef-import.spec.ts` the journal
-  routes, and `e2e/build-link.spec.ts` and `e2e/equipment-link.spec.ts` the address each tool
-  publishes. `e2e/coverage-ledger.ts` registers the three requirement ids and this change's
-  directory.
+  the bench's, `e2e/hull-detail.spec.ts` the second creation, `e2e/journal-import.spec.ts` and
+  `e2e/slef-import.spec.ts` the routes an entry and a paste take, and `e2e/build-link.spec.ts` and
+  `e2e/equipment-link.spec.ts` the address each tool publishes. `e2e/shell.ts` gains the one decision
+  a journey makes on a build or a loadout before it expects a record of it, and every journey that
+  expected one from a stock build makes that decision first — among them `e2e/build-library.spec.ts`
+  and `e2e/navigation-waiting.spec.ts`. `e2e/coverage-ledger.ts` registers the three requirement ids
+  and this change's directory.
 - `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md` and
   `contracts/build-link.md` are not edited. They record what feature 001 built; the capability
   specification is the standing record. This change cites the link contract's rule that a refusal

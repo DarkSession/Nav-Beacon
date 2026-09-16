@@ -84,6 +84,17 @@ describe('EquipmentBenchPage', () => {
     store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
   };
 
+  /**
+   * One choice on the loadout, so there is a record to write.
+   *
+   * The loadout the bench starts for a suit holds nothing a Commander decided
+   * and is stored nowhere, so every case here about a record makes a choice
+   * first (024/FR-002).
+   */
+  const choose = (): void => {
+    store.dispatch({ kind: 'setSuitGrade', grade: 3 });
+  };
+
   it('opens an empty compact bench straight onto the chooser', () => {
     // Canvas 2b draws no ledger at all: the `LOADOUT` tab opens on `STEP 1 ·
     // CHOOSE A SUIT`. Every row a ledger would draw there says `LOCKED` about a
@@ -433,6 +444,7 @@ describe('EquipmentBenchPage', () => {
     const fixture = TestBed.createComponent(EquipmentBenchPage);
     fixture.detectChanges();
     wear();
+    choose();
 
     // Before the coalescing window closes: leaving is what makes the write due.
     fixture.destroy();
@@ -449,6 +461,7 @@ describe('EquipmentBenchPage', () => {
     const fixture = TestBed.createComponent(EquipmentBenchPage);
     fixture.detectChanges();
     wear();
+    choose();
     TestBed.inject(LoadoutAutosaveService).flush();
     const mine = store.autosaveRecordId()!;
 
@@ -467,6 +480,7 @@ describe('EquipmentBenchPage', () => {
     const fixture = TestBed.createComponent(EquipmentBenchPage);
     fixture.detectChanges();
     wear();
+    choose();
     TestBed.inject(LoadoutAutosaveService).flush();
     expect(store.autosaveRecordId()).not.toBeNull();
 
@@ -557,6 +571,7 @@ describe('EquipmentBenchPage', () => {
     const fixture = TestBed.createComponent(EquipmentBenchPage);
     fixture.detectChanges();
     wear();
+    choose();
     const autosave = TestBed.inject(LoadoutAutosaveService);
     autosave.flush();
     const mine = store.autosaveRecordId()!;
@@ -581,6 +596,7 @@ describe('EquipmentBenchPage', () => {
     const fixture = TestBed.createComponent(EquipmentBenchPage);
     fixture.detectChanges();
     wear();
+    choose();
 
     fixture.componentInstance.actOnPersistence('retry');
 

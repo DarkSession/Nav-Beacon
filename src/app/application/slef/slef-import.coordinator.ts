@@ -26,6 +26,7 @@ import { BuildLibraryStore } from '../build-library/build-library.store';
 import { NamedRecordService } from '../build-library/named-record.service';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { SlefStore, type SlefBatchRefusal } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * How one submitted draft ended, from the layer's point of view.
@@ -315,9 +316,11 @@ export class SlefImportCoordinator {
    *
    * `working` provenance and no baseline: an imported build exists nowhere a
    * Commander could get it back from, so it arrives dirty and autosave mints it
-   * a record of its own at the first write. Nothing else about where it came
-   * from — the producer the envelope named, the draft — goes with it: neither
-   * is build state.
+   * a record of its own at the first write. A build that is its hull's package
+   * default holds no decision, so autosave writes nothing and the address is
+   * what holds it (024/FR-001). Nothing else about where it came from — the
+   * producer the envelope named, the draft — goes with it: neither is build
+   * state.
    *
    * A partial roll the package completed is not reported. A completed grade is
    * what the application models, so reaching one is not a decision a Commander
@@ -329,6 +332,7 @@ export class SlefImportCoordinator {
     return {
       loadout: candidate.loadout,
       hullName: this.#gameText.shipName(symbol).text ?? symbol,
+      suppliedFit: suppliedFit(symbol),
       provenance: 'working' as const,
       sourceNamed: null,
       autosaveRecordId: null,

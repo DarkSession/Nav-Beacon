@@ -17,6 +17,7 @@ import { DownloadAdapter } from '../../platform/browser/download.adapter';
 import { NavigatorAdapter } from '../../platform/browser/navigator.adapter';
 import { SlefPresenter } from './slef.presenter';
 import { SlefStore } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A platform that can do everything, so the wording is what is under test. */
 class FakeNavigator {
@@ -65,6 +66,7 @@ function diagnostic(overrides: Partial<SlefPackageDiagnostic>): SlefPackageDiagn
 function commit(active: ActiveBuildStore): void {
   active.commit({
     loadout: ShipLoadout.default(FIXTURE_HULL),
+    suppliedFit: suppliedFit(ShipLoadout.default(FIXTURE_HULL).shipSymbol),
     hullName: 'Anaconda',
     provenance: 'working',
     sourceNamed: null,

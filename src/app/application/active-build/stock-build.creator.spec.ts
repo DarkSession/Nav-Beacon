@@ -104,6 +104,29 @@ describe('StockBuildCreator', () => {
     }
   });
 
+  it('creates a build reported at the package default, for every installed hull', async () => {
+    // What keeps the answer tied to what the application actually starts. A
+    // creator that transformed what the package handed it, or a comparison
+    // built against some other default, would have every new build take a
+    // record again and nothing would say so (024/FR-001).
+    const { creator, store } = setup();
+
+    for (const ship of SHIPS) {
+      await creator.create(ship.symbol);
+      expect(store.atDefault()).toBe(true);
+    }
+  });
+
+  it('reports the first modelled edit of a created build as away from the default', async () => {
+    const { creator, store } = setup();
+    await creator.create('Anaconda');
+
+    store.loadout()!.setModulePriority('FrameShiftDrive', 2);
+    store.touch();
+
+    expect(store.atDefault()).toBe(false);
+  });
+
   it('does not consult the illustration at any point', async () => {
     const { creator, store } = setup();
 

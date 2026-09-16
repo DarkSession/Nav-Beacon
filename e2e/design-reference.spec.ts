@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { buildStockHull, openFirstHullFromManifest, openLibrary } from './shell';
+import { buildStockHull, openFirstHullFromManifest, openLibrary, regroupCoreMount } from './shell';
 
 /**
  * The interface still looks like the reference canvas.
@@ -686,6 +686,9 @@ test.describe('the saved-build surface', () => {
   async function withOneBuild(page: Page): Promise<void> {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
+    // One decision on the build, so autosave has a record to write. A build
+    // still at its hull's package default is stored nowhere (024/FR-001).
+    await regroupCoreMount(page);
     // Waited for by the record itself rather than by the status line: autosave
     // coalesces, and a status still reading "ready" is a write that is owed
     // rather than one that failed.

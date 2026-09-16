@@ -37,9 +37,22 @@ state MUST be taken over rather than a second copy of it stored. Autosave MUST N
 record. Creating, opening or loading another build MUST NOT overwrite or discard the record of the
 build before it. Records MUST use local identities independent of their display names.
 
-A build carries no decision while its modelled state is the package default loadout for its hull —
-`ShipLoadout.default(<hull symbol>)` in `@elite-dangerous-almanac/core/ships/ship-loadout` — with no
-ship name and no ident. Such a build MUST take no record: none minted, and none taken over.
+A build carries no decision while every module it holds is the one the package publishes for that
+slot — `getDefaultLoadout(<hull symbol>)` in
+`@elite-dangerous-almanac/core/ships/default-loadouts` — with no engineering and no pre-engineered
+article on any of them, with every module powered and in the first power group, and with no ship
+name and no ident. Such a build MUST take no record: none minted, and none taken over. A
+pre-engineered article is named apart from engineering because it is a separate field: a module
+carrying one keeps the symbol the hull was supplied with and states no engineering, so a build
+holding one meets every other condition here and is still a build a Commander decided something
+about.
+
+Power and naming MUST be read by what the state says, not by whether it was written. A journal
+states the power of every module and names the ship on every event, writing both blank for a ship
+that carries neither, while a build assembled in the application states none of it; a module that is
+on and in the first power group carries no decision in either shape, and a blank name and a blank
+ident are an absent name and an absent ident. A module switched off, a module in another power
+group, and a name or an ident a Commander gave MUST each be read as a decision.
 
 The test MUST be the modelled state alone and MUST NOT depend on where the build came from. A default
 build reaches the workspace by creation from the hull catalogue, by a build link, by a SLEF paste and
@@ -97,6 +110,14 @@ Source: 001/FR-008, 024/FR-001.
 
 - **WHEN** a Commander sets a ship name or an ident on a build that is otherwise the package default
 - **THEN** the build is autosaved to an unnamed record of its own, because the name is modelled state
+
+#### Scenario: A pre-engineered article on an otherwise default build
+
+- **WHEN** a Commander fits a pre-engineered article to a module on a build that is otherwise the
+  package default, leaving the module at the symbol the hull was supplied with and stating no
+  engineering
+- **THEN** the build is autosaved to an unnamed record of its own, because the article is modelled
+  state
 
 #### Scenario: Reloading a tab holding a default build
 
@@ -273,10 +294,15 @@ that the identity its claim names is one a reload can restore from. Two pages MA
 named record open, because neither autosaves into it; concurrent manual writes to one record MUST
 offer overwrite, keep both and cancel.
 
-A tool that holds no record MUST claim none, and the tab's claim for the other tool MUST be
+A tool whose work is in no record MUST claim none, and the tab's claim for the other tool MUST be
 untouched. There is then nothing for a second page to collide with and nothing to fork: two pages
 holding the same default work are not two claims on one record, and each takes a record of its own
-at its own first change.
+at its own first change. Work in a named record is not work in no record: autosave has no path to a
+named record, so a tool holds no autosave target while its work is in one, and the tab MUST claim
+that record for as long as the work matches what it holds. This MUST hold for a record a save
+produced and for one a Commander opened from the saved list alike, because both are records a reload
+restores the work from. Once the work no longer matches, the tab MUST claim the unnamed record the
+next write mints for it instead, and nothing until there is one.
 
 A record deleted on this page MUST leave this tab claiming nothing for the tool that was
 autosaving into it. The claim is what a reload reads, so one left behind would have the tool
@@ -325,6 +351,25 @@ Source: 001/FR-012, 017/FR-010, 024/FR-001, 024/FR-002.
 
 - **WHEN** each of two pages holding the same default build makes its own first edit
 - **THEN** each takes a record of its own
+
+#### Scenario: A Commander saves the work under a name
+
+- **WHEN** a Commander saves under a name the work a tool was autosaving into an unnamed record
+- **THEN** the tool stops autosaving, because autosave has no path to a named record
+- **AND** this tab claims the record the save produced, so a reload restores the work from it
+
+#### Scenario: A Commander opens a record from the saved list
+
+- **WHEN** a Commander opens a named record from the saved list
+- **THEN** this tab claims that record, so a reload restores the work from it
+- **AND** nothing is announced to other pages, because no page autosaves into it
+
+#### Scenario: A default build takes the place of saved work
+
+- **WHEN** a Commander who has just saved under a name creates a build from the hull catalogue
+- **THEN** this tab claims nothing for that tool, because the new build is at its hull's default and
+  is in no record
+- **AND** a page built in this tab afterwards restores no build from the record that was saved
 
 #### Scenario: This page deletes the record a tool autosaves into
 

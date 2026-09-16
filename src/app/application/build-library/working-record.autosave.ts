@@ -1,4 +1,4 @@
-import { Injector, computed, effect, signal } from '@angular/core';
+import { Injector, computed, effect, signal, untracked } from '@angular/core';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { PageLifecycleAdapter } from '../../platform/browser/page-lifecycle.adapter';
 import { UuidAdapter } from '../../platform/browser/uuid.adapter';
@@ -30,6 +30,13 @@ const COALESCE_MS = 400;
  * record whose stored `kind` is `named` is refused as a target whatever this
  * page believes it is holding — a record named in another tab, or written
  * before this rule existed, cannot be reached by a coalesced edit.
+ *
+ * A third rule decides whether a record is owed at all. Work that holds no
+ * record and is still the default the package publishes for it — the hull's
+ * default loadout, or the loadout the bench starts for a suit — takes none:
+ * none minted, and none taken over. There is no decision in such work, and a
+ * Commander reaches it again by selecting the hull or the suit
+ * (024/FR-001, 024/FR-002).
  *
  * Nothing refuses a write because many records already exist. The count limit
  * that once did was replaced on 2026-08-25 by the seven-day expiry of unnamed
@@ -111,7 +118,14 @@ export class WorkingRecordAutosave {
         // object reference alone would never change.
         this.#subject.revision();
         this.#subject.fingerprint();
-        this.#schedule();
+        // And those two are the whole of it. `#schedule` asks the subject
+        // several more questions — which record it holds, whether the work is
+        // still the package default — and an answer to one of those is not an
+        // edit. Read as a subscription, minting a record would wake this
+        // watcher and arm a second timer, which stores the bytes the first one
+        // has just stored under a fresh revision and a later `modifiedAt`
+        // (024/FR-001).
+        untracked(() => this.#schedule());
       },
       { injector: this.#injector },
     );
@@ -179,6 +193,36 @@ export class WorkingRecordAutosave {
     // does not restart the expiry the entry is counting down (001/FR-013,
     // 017/SC-003).
     if (!force && !this.#subject.dirty()) {
+      return true;
+    }
+
+    // And nothing is owed on work that holds no record and is the default the
+    // package publishes for it. There is no decision in it: a Commander reaches
+    // the same build or the same loadout by selecting the hull or the suit, and
+    // a record would be an entry to sort past counting down seven days over
+    // nothing (024/FR-001, 024/FR-002).
+    //
+    // Before `#allocate`, so no record is minted and no unnamed record already
+    // holding that state is taken over. One stored by an earlier version, or
+    // left by work since edited back, stays where it is and runs out its own
+    // seven days.
+    //
+    // `true` is the honest answer: `flush()` asks whether letting go of the
+    // work loses anything, and it does not.
+    //
+    // A record this tool already holds is not reached by it at all, so editing
+    // back to the default keeps that record and keeps writing to it. A forced
+    // write always holds one: a resume is offered only while the record another
+    // page discarded is still this tool's, and a fork names the fresh record
+    // before it copies the work into it.
+    //
+    // Said on the status as well as answered, because a standing notice is read
+    // as a state of this work. A named record refused below leaves
+    // `write-failed` and offers a retry, and every retry from here would decline
+    // in the same silence — a control that does nothing, under a notice about a
+    // record this work is no longer in (001/FR-014, 017/FR-008).
+    if (this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
+      this.#subject.setPersistence('ready');
       return true;
     }
 
@@ -309,6 +353,16 @@ export class WorkingRecordAutosave {
       return;
     }
     this.#clearTimer();
+    // Nothing a timer could write. Work holding no record at its own default
+    // owes nothing, so a timer armed here would wake only for `#writeNow` to
+    // ask the same question and turn the write away. None is armed instead,
+    // and the first edit that moves the work off its default schedules the
+    // write as usual. Cleared before the question is asked, because an undo
+    // that returns the work to its default must also take back the timer the
+    // edit armed.
+    if (this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
+      return;
+    }
     this.#timer = setTimeout(() => this.flush(), COALESCE_MS);
   }
 

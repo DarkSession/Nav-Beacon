@@ -226,20 +226,27 @@ one MUST leave the bench in the state it holds before a suit is chosen, with the
 standing and every region drawn and inert.
 
 Starting an empty bench MUST clear the loadout's name, the saved record the loadout belongs
-to, the undo and redo history, the loadout the address carries, and this tab's claim on the
-record the loadout was autosaved into. It MUST NOT be confirmed: the loadout that was on the
-bench stays as the record it is autosaved to, so there is nothing to lose and nothing to ask
-about. The record itself MUST stay where it is, so a page built in this tab afterwards MUST
-open on an empty bench and MUST NOT restore the loadout that was cleared. Starting an empty
-bench while the bench is already empty MUST change nothing.
+to, the undo and redo history, the loadout the address carries, and, where the loadout holds
+a record, this tab's claim on it. It MUST NOT be confirmed: a loadout that holds a record
+stays as that record, so there is nothing to lose and nothing to ask about. The record itself
+MUST stay where it is, so a page built in this tab afterwards MUST open on an empty bench and
+MUST NOT restore the loadout that was cleared. Starting an empty bench while the bench is
+already empty MUST change nothing.
 
-Where the loadout on the bench is not in a record — the store refuses writes, the store is
-full, a write failed, or autosave is paused because the record was discarded elsewhere — the
-bench MUST stay as it is. Nothing keeps the loadout in those states, so clearing the bench
-would lose work rather than cost nothing, and what the bench already states about storing is
-the reason.
+A loadout still at its suit's default and in no record — the state
+`equipment-builder/loadout-persistence`, "Autosave of the open loadout" defines — MUST be cleared on
+the same terms, without being confirmed and without being kept. It carries no choice a Commander
+made, and the same suit at the same grade is reached again by choosing that suit, so there is
+nothing to lose here either. The saved list MUST then hold no entry for it. A loadout changed back
+to its suit's default holds the record it took, and that record MUST stay listed.
 
-Source: 017/FR-006.
+Where the loadout on the bench carries a choice and is in no record — the store refuses
+writes, the store is full, a write failed, or autosave is paused because the record was
+discarded elsewhere — the bench MUST stay as it is. Nothing keeps the loadout in those states,
+so clearing the bench would lose work rather than cost nothing, and what the bench already
+states about storing is the reason.
+
+Source: 017/FR-006, 024/FR-002.
 
 #### Scenario: A loadout is on the bench
 
@@ -249,14 +256,21 @@ Source: 017/FR-006.
 
 #### Scenario: The loadout that was on the bench
 
-- **WHEN** a Commander starts an empty bench while a loadout is on it
+- **WHEN** a Commander starts an empty bench while a loadout that carries a choice is on it
 - **THEN** the loadout that was on the bench is still listed as its record
 - **AND** a named record it was opened from is unchanged
 
+#### Scenario: A loadout at its suit's default is cleared
+
+- **WHEN** a Commander starts an empty bench while the loadout on it is still at its suit's
+  default and in no record
+- **THEN** the bench holds no loadout and the Commander is asked nothing
+- **AND** the saved list holds no entry for the loadout that was cleared
+
 #### Scenario: The store cannot hold the loadout
 
-- **WHEN** a Commander starts an empty bench while the store refuses writes, a write failed
-  or autosave is paused
+- **WHEN** a Commander starts an empty bench while a loadout that carries a choice is on it
+  and the store refuses writes, a write failed or autosave is paused
 - **THEN** the loadout stays on the bench
 - **AND** the bench still states what it says about storing
 
@@ -275,7 +289,7 @@ Source: 017/FR-006.
 
 - **WHEN** a Commander starts an empty bench and a page is built again in the same tab
 - **THEN** the bench opens empty rather than restoring the loadout that was cleared
-- **AND** the record that loadout was autosaved into is still listed
+- **AND** the record that loadout was autosaved into, where it held one, is still listed
 
 #### Scenario: The bench is already empty
 

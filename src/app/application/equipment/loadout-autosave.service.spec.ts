@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
-import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
+import { newLoadout, setSuitGrade } from '../../domain/equipment/loadout/loadout-edit';
 import { loadoutFingerprint } from '../../domain/equipment/loadout/loadout-fingerprint';
 import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
 import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equipment-loadout';
@@ -79,6 +80,23 @@ function benchLoadout(
   return loadout;
 }
 
+/**
+ * A loadout carrying one choice, so a record is owed for it.
+ *
+ * What most of these cases are about. A loadout still at its suit's default
+ * owes nothing and takes no record, which is its own pair of cases below
+ * (024/FR-002).
+ */
+function chosenLoadout(
+  store: LoadoutStore,
+  suitFamily = 'tacticalsuit',
+  autosaveRecordId: string | null = HELD,
+): EquipmentLoadout {
+  benchLoadout(store, suitFamily, autosaveRecordId);
+  store.dispatch({ kind: 'setSuitGrade', grade: 3 });
+  return store.loadout()!;
+}
+
 describe('LoadoutAutosaveService', () => {
   it('keeps the equipment tool’s work, and says so', () => {
     expect(setup().autosave.tool).toBe('equipment');
@@ -121,9 +139,36 @@ describe('LoadoutAutosaveService', () => {
     expect(storage.entries.size).toBe(0);
   });
 
-  it('mints a record for a loadout that arrived in none', () => {
+  it('writes nothing for a loadout at its suit’s default, and mints no record for it', () => {
+    // Nothing a Commander decided is on it. It is the loadout the bench starts
+    // when a suit is chosen, reached again by choosing the suit (024/FR-002).
     const { autosave, store, storage } = setup();
     benchLoadout(store, 'tacticalsuit', null);
+
+    autosave.flush();
+
+    expect(storage.entries.size).toBe(0);
+    expect(store.autosaveRecordId()).toBeNull();
+    expect(store.persistence()).toBe('ready');
+  });
+
+  it('writes a record at the first change to a default loadout', () => {
+    const { autosave, store, storage } = setup();
+    benchLoadout(store, 'tacticalsuit', null);
+    autosave.flush();
+
+    store.dispatch({ kind: 'setSuitGrade', grade: 4 });
+    autosave.flush();
+
+    const minted = store.autosaveRecordId();
+    expect(minted).not.toBeNull();
+    expect([...storage.entries.keys()]).toEqual([recordKey(minted!)]);
+    expect(store.persistence()).toBe('saved');
+  });
+
+  it('mints a record for a loadout that arrived in none', () => {
+    const { autosave, store, storage } = setup();
+    chosenLoadout(store, 'tacticalsuit', null);
 
     autosave.flush();
 
@@ -134,13 +179,13 @@ describe('LoadoutAutosaveService', () => {
 
   it('takes over an unnamed record already holding this loadout, rather than storing a second copy', () => {
     const { autosave, store, storage } = setup();
-    // One loadout, stored once. Then the same loadout arrives again in no
-    // record of its own — one suit chosen twice, or one link opened twice.
-    benchLoadout(store);
+    // One chosen loadout, stored once. Then the same loadout arrives again in
+    // no record of its own — one link to it opened twice.
+    const loadout = chosenLoadout(store);
     autosave.flush();
     const bytes = storage.entries.get(recordKey(HELD))!;
 
-    benchLoadout(store, 'tacticalsuit', null);
+    store.open(loadout, null, { autosaveRecordId: null, baseline: null });
     autosave.flush();
 
     expect(store.autosaveRecordId()).toBe(HELD);
@@ -294,7 +339,7 @@ describe('LoadoutAutosaveService', () => {
       },
     });
 
-    benchLoadout(store, 'tacticalsuit', null);
+    chosenLoadout(store, 'tacticalsuit', null);
     autosave.flush();
 
     expect(store.autosaveRecordId()).not.toBe('a-build');
@@ -306,7 +351,9 @@ describe('LoadoutAutosaveService', () => {
     // Taking over is not creating. Stamping the entry with now would have it
     // state a moment that did not happen (constitution IV).
     const { autosave, store, records, storage } = setup();
-    const loadout = newLoadout('utilitysuit')!;
+    // Carrying a choice, because a loadout at its suit's default takes no
+    // record at all and has nothing to take over (024/FR-002).
+    const loadout = setSuitGrade(newLoadout('utilitysuit')!, 3);
     records.write({
       id: 'older',
       kind: 'working',
@@ -321,14 +368,14 @@ describe('LoadoutAutosaveService', () => {
 
     // A page that has already written a record of its own, so its own instant
     // is the one it would otherwise carry over.
-    benchLoadout(store);
+    chosenLoadout(store);
     autosave.flush();
     // Then the same loadout the stored record holds, arriving in no record.
     store.open(loadout, null, {});
     autosave.flush();
     expect(store.autosaveRecordId()).toBe('older');
 
-    store.dispatch({ kind: 'setSuitGrade', grade: 2 });
+    store.dispatch({ kind: 'setSuitGrade', grade: 4 });
     autosave.flush();
 
     expect(JSON.parse(storage.entries.get(recordKey('older'))!)).toMatchObject({
@@ -375,6 +422,152 @@ describe('LoadoutAutosaveService', () => {
 
     expect(storage.entries.get(recordKey(HELD))).toBe(named);
     expect(store.loadout()).not.toBeNull();
+  });
+
+  it('leaves an unnamed record already holding the default state where it is', () => {
+    // Stored by an earlier version, or left by a loadout since changed back. It
+    // is not taken over, because a default loadout takes no record at all — it
+    // is an ordinary unnamed entry running out its own seven days (024/FR-002).
+    const { autosave, store, records, storage } = setup();
+    records.write({
+      id: 'older',
+      kind: 'working',
+      revisionId: 'r',
+      createdAt: '2025-12-01T00:00:00.000Z',
+      modifiedAt: '2025-12-01T00:00:00.000Z',
+      name: null,
+      note: null,
+      sourceNamed: null,
+      payload: { tool: 'equipment', loadout: newLoadout('tacticalsuit')! },
+    });
+    const bytes = storage.entries.get(recordKey('older'))!;
+    benchLoadout(store, 'tacticalsuit', null);
+
+    autosave.flush();
+
+    expect(store.autosaveRecordId()).toBeNull();
+    expect(storage.entries.get(recordKey('older'))).toBe(bytes);
+    expect([...storage.entries.keys()]).toEqual([recordKey('older')]);
+  });
+
+  it('writes a resumed loadout at its suit’s default back into the record it holds', () => {
+    // Resuming is a Commander asking for the loadout to be kept, and the record
+    // this page already holds is the one it is written back into. The default
+    // gate reaches work that holds no record, so it does not reach this
+    // (017/FR-008, 024/FR-002).
+    const { autosave, store, storage } = setup();
+    chosenLoadout(store);
+    autosave.flush();
+    store.markSaved(null);
+    store.dispatch({ kind: 'setSuitGrade', grade: 1 });
+    expect(store.atDefault()).toBe(true);
+
+    autosave.pauseAfterExternalDelete();
+    storage.entries.delete(recordKey(HELD));
+    autosave.resume();
+
+    expect(storage.entries.has(recordKey(HELD))).toBe(true);
+    expect(store.persistence()).toBe('saved');
+  });
+
+  it('keeps the record a loadout changed back to its suit’s default already holds', () => {
+    // A record is removed by a confirmed deletion, by the manual save that
+    // consumes it, or by expiry, and by nothing else. Changing back to the
+    // default is none of those (024/FR-002).
+    const { autosave, store, storage } = setup();
+    chosenLoadout(store);
+    autosave.flush();
+    store.markSaved(null);
+
+    store.dispatch({ kind: 'setSuitGrade', grade: 1 });
+    autosave.flush();
+
+    expect(store.atDefault()).toBe(true);
+    expect(store.autosaveRecordId()).toBe(HELD);
+    expect(JSON.parse(storage.entries.get(recordKey(HELD))!)).toMatchObject({
+      loadout: newLoadout('tacticalsuit')!,
+    });
+  });
+
+  it('opens a loadout from the address into no record, after its record was deleted here', () => {
+    // A deletion confirmed on this page clears the bench, and the address
+    // behind it still carries the loadout. It opens again from there, because
+    // what was deleted is the record and not the address — and a loadout at its
+    // suit's default opens into no record, as it does by every other route. The
+    // record stays deleted either way (017/FR-008, 024/FR-002).
+    const { autosave, store, records, storage } = setup();
+    // Chosen, stored, then changed back, so the record the Commander deletes is
+    // one holding a loadout at its suit's default.
+    chosenLoadout(store);
+    autosave.flush();
+    store.markSaved(null);
+    store.dispatch({ kind: 'setSuitGrade', grade: 1 });
+    autosave.flush();
+    expect(storage.entries.has(recordKey(HELD))).toBe(true);
+
+    records.remove(HELD);
+    expect(store.clearIfHolding(HELD)).toBe(true);
+
+    // Back at the address, which carries the loadout and no record.
+    store.open(newLoadout('tacticalsuit')!, null);
+    autosave.flush();
+
+    expect(store.hasLoadout()).toBe(true);
+    expect(store.atDefault()).toBe(true);
+    expect(store.autosaveRecordId()).toBeNull();
+    expect(storage.entries.size).toBe(0);
+    expect(store.persistence()).toBe('ready');
+  });
+
+  it('wakes no timer for an untouched default loadout, and one at its first choice', () => {
+    // A bench left open on a chosen suit stays open, and owes nothing for the
+    // whole of that. A timer armed for it would wake only to have the write
+    // turned away, so none is armed at all (024/FR-002).
+    vi.useFakeTimers();
+    try {
+      const { autosave, store, storage } = setup();
+      const stop = autosave.start();
+      benchLoadout(store, 'tacticalsuit', null);
+
+      // Revisions that leave the loadout where it is: the same starting loadout
+      // opened again. Every one wakes the watcher this is about, which a choice
+      // the store refuses would not — `selectSuit` on the suit already worn
+      // returns the loadout unchanged and spends no revision at all.
+      for (let index = 0; index < 5; index += 1) {
+        benchLoadout(store, 'tacticalsuit', null);
+      }
+      TestBed.tick();
+
+      // The timer itself, not only what it would have written. A write is
+      // turned away a second time when it lands, so storage alone cannot tell
+      // a timeout that never woke from one that woke and wrote nothing.
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(2_000);
+      expect(storage.entries.size).toBe(0);
+
+      store.dispatch({ kind: 'setSuitGrade', grade: 3 });
+      TestBed.tick();
+
+      expect(vi.getTimerCount()).toBe(1);
+      vi.advanceTimersByTime(600);
+
+      expect(storage.entries.size).toBe(1);
+
+      // And one edit leaves one write behind it. Minting the record answers a
+      // question the gate asks, not a choice a Commander made, so a watcher that
+      // read the answer would wake here and store the same bytes again under a
+      // fresh revision — restamping `modifiedAt` on work nobody touched
+      // (024/FR-002).
+      const key = [...storage.entries.keys()][0]!;
+      const written = storage.entries.get(key);
+      TestBed.tick();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(2_000);
+      expect(storage.entries.get(key)).toBe(written);
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps the loadout editable when the store is full', () => {

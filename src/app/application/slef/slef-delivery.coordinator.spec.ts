@@ -8,6 +8,7 @@ import { FIXTURE_HULL } from '../../domain/ships/outfitting/outfitting.fixtures'
 import { SlefDeliveryCoordinator, detectDeliveryCapability } from './slef-delivery.coordinator';
 import { SlefExportCoordinator } from './slef-export.coordinator';
 import { SlefStore } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A navigator whose every capability and outcome the test decides. */
 class FakeNavigator {
@@ -81,6 +82,7 @@ describe('SLEF delivery', () => {
 
     active.commit({
       loadout: ShipLoadout.default(FIXTURE_HULL),
+      suppliedFit: suppliedFit(ShipLoadout.default(FIXTURE_HULL).shipSymbol),
       hullName: 'Anaconda',
       provenance: 'working',
       sourceNamed: null,

@@ -5,6 +5,7 @@ import { provideLocalization } from '../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../i18n/testing/localization-harness';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { BuildLibraryStore } from '../build-library/build-library.store';
+import { LoadoutAutosaveService } from './loadout-autosave.service';
 import { LoadoutImportCoordinator } from './loadout-import.coordinator';
 import { LoadoutImportStore } from './loadout-import.store';
 import { LoadoutStore } from './loadout.store';
@@ -31,25 +32,34 @@ function storedNames(library: BuildLibraryStore): readonly (string | null)[] {
   return library.records().map((entry) => (entry.available ? entry.record.name : null));
 }
 
+/** An event holding the loadout the bench starts for its suit, and nothing more. */
+function defaultEvent(overrides: Record<string, unknown> = {}): string {
+  return event({ SuitName: 'tacticalsuit_class1', SuitMods: [], Modules: [], ...overrides });
+}
+
 describe('a suit loadout coming in from a journal', () => {
   let store: LoadoutImportStore;
   let bench: LoadoutStore;
   let library: BuildLibraryStore;
   let coordinator: LoadoutImportCoordinator;
+  let autosave: LoadoutAutosaveService;
+  let storage: MemoryStorage;
 
   beforeEach(() => {
+    storage = new MemoryStorage();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         provideLocalization(),
         ...provideIsolatedLocaleEnvironment(),
-        ...provideMemoryStorage(new MemoryStorage()),
+        ...provideMemoryStorage(storage),
       ],
     });
     store = TestBed.inject(LoadoutImportStore);
     bench = TestBed.inject(LoadoutStore);
     library = TestBed.inject(BuildLibraryStore);
     coordinator = TestBed.inject(LoadoutImportCoordinator);
+    autosave = TestBed.inject(LoadoutAutosaveService);
   });
 
   describe('one loadout chosen', () => {
@@ -70,6 +80,48 @@ describe('a suit loadout coming in from a journal', () => {
 
       library.refresh();
       expect(library.total()).toBe(0);
+    });
+
+    it('takes no record where the event holds a loadout at its suit’s default', async () => {
+      // The route it arrived by is not the question. The loadout on the bench
+      // is the one a Commander reaches again by choosing the suit, so it is
+      // worth no record (024/FR-002).
+      store.setDraft(defaultEvent());
+
+      await coordinator.submit();
+      autosave.flush();
+
+      expect(bench.atDefault()).toBe(true);
+      expect(bench.autosaveRecordId()).toBeNull();
+      expect(storage.entries.size).toBe(0);
+      library.refresh();
+      expect(library.total()).toBe(0);
+    });
+
+    it('takes a record at the first change to a default loadout read from an event', async () => {
+      store.setDraft(defaultEvent());
+      await coordinator.submit();
+      autosave.flush();
+
+      bench.dispatch({ kind: 'setSuitGrade', grade: 3 });
+      autosave.flush();
+
+      expect(bench.autosaveRecordId()).not.toBeNull();
+      expect(storage.entries.size).toBe(1);
+    });
+
+    it('takes a record where the event holds a loadout carrying choices', async () => {
+      store.setDraft(event());
+
+      await coordinator.submit();
+      autosave.flush();
+
+      expect(bench.atDefault()).toBe(false);
+      expect(bench.autosaveRecordId()).not.toBeNull();
+      // Unnamed: a loadout read from one event is work in progress, not a save
+      // a Commander asked for by name (017/FR-007).
+      library.refresh();
+      expect(storedNames(library)).toEqual([null]);
     });
 
     it('opens the loadout and keeps what the package left out on screen', async () => {
@@ -224,6 +276,29 @@ describe('a suit loadout coming in from a journal', () => {
       expect(bench.loadout()).toBeNull();
       library.refresh();
       expect([...storedNames(library)].sort()).toEqual(['One', 'Two']);
+    });
+
+    it('stores a named record for every loadout selected, a default one included', async () => {
+      // A batch is a Commander asking for these loadouts by name. That is a
+      // deliberate save, which the rule about default loadouts does not touch
+      // (024/FR-002).
+      await coordinator.scanFiles([
+        journalFile('Journal.01.log', [
+          event({ LoadoutName: 'Chosen', timestamp: '2026-09-02T10:00:00Z' }),
+          defaultEvent({ LoadoutName: 'Untouched', timestamp: '2026-09-01T10:00:00Z' }),
+        ]),
+      ]);
+      store.setSelection(store.entries().map((entry) => entry.key));
+
+      expect(await coordinator.submit()).toEqual({
+        kind: 'stored',
+        stored: 2,
+        refused: [],
+        left: 0,
+      });
+
+      library.refresh();
+      expect([...storedNames(library)].sort()).toEqual(['Chosen', 'Untouched']);
     });
 
     it('names one the event did not name by its suit', async () => {

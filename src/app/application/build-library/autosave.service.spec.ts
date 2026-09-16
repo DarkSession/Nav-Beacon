@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
+import type { OutfittingModule } from '@elite-dangerous-almanac/core/ships/modules';
 import { ClockAdapter } from '../../platform/browser/clock.adapter';
 import { PageLifecycleAdapter } from '../../platform/browser/page-lifecycle.adapter';
 import { BroadcastChannelAdapter } from '../../platform/browser/broadcast-channel.adapter';
@@ -13,6 +15,8 @@ import { recordKey } from '../../platform/storage/storage-keys';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
 import { AutosaveService } from './autosave.service';
+import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinator';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A lifecycle adapter a test can fire on demand. */
 class FakeLifecycle {
@@ -69,6 +73,7 @@ function commitBuild(
   const loadout = ShipLoadout.default(symbol);
   active.commit({
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: symbol,
     provenance: 'stock',
     sourceNamed: null,
@@ -76,6 +81,47 @@ function commitBuild(
     baseline: null,
   });
   return loadout;
+}
+
+/**
+ * A build carrying one decision, so a record is owed for it.
+ *
+ * What most of these cases are about. A build still at the package default owes
+ * nothing and takes no record, which is its own pair of cases above
+ * (024/FR-001).
+ */
+function editedBuild(
+  active: ActiveBuildStore,
+  symbol = 'Anaconda',
+  autosaveRecordId: string | null = HELD,
+): ShipLoadout {
+  const loadout = commitBuild(active, symbol, autosaveRecordId);
+  loadout.setModulePriority('FrameShiftDrive', 2);
+  active.touch();
+  return loadout;
+}
+
+/**
+ * Fits another drive, and hands back the one the package had fitted.
+ *
+ * A reversible edit, for the cases that put a build back at the package
+ * default. Changing a power priority is not one: the default carries none, and
+ * a priority once set is a modelled field with a value in it.
+ */
+function swapDrive(active: ActiveBuildStore, loadout: ShipLoadout): OutfittingModule {
+  const fitted = loadout.fittedModuleAt('FrameShiftDrive')!;
+  const offered = loadout.modulesForSlot('FrameShiftDrive');
+  const original = offered.find((module) => module.symbol === fitted.symbol);
+  const other = offered.find((module) => module.symbol !== fitted.symbol);
+  if (original === undefined || other === undefined) {
+    throw new Error(
+      'The installed Almanac offers one drive alone for the Anaconda. Pick a mount with a ' +
+        'choice from the package rather than writing one here.',
+    );
+  }
+  loadout.setModule('FrameShiftDrive', other);
+  active.touch();
+  return original;
 }
 
 /** One stored named record, as a Commander's own save. */
@@ -175,6 +221,155 @@ describe('AutosaveService', () => {
     expect(storage.entries.size).toBe(0);
   });
 
+  it('writes nothing for a build at the package default, and mints no record for it', () => {
+    // Nothing a Commander decided is in it. What the library would hold is an
+    // entry they have to sort past, counting down seven days over a build the
+    // hull catalogue hands back whole (024/FR-001).
+    const { autosave, active, storage } = setup();
+    commitBuild(active, 'Anaconda', null);
+
+    autosave.flush();
+
+    expect(storage.entries.size).toBe(0);
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(active.persistence()).toBe('ready');
+  });
+
+  it('writes a record at the first modelled edit of a default build', () => {
+    const { autosave, active, storage } = setup();
+    const loadout = commitBuild(active, 'Anaconda', null);
+    autosave.flush();
+
+    loadout.setModulePriority('FrameShiftDrive', 2);
+    active.touch();
+    autosave.flush();
+
+    expect(active.autosaveRecordId()).not.toBeNull();
+    expect([...storage.entries.keys()]).toEqual([recordKey(active.autosaveRecordId()!)]);
+    expect(active.persistence()).toBe('saved');
+  });
+
+  it('leaves an unnamed record already holding the default state where it is', () => {
+    // Stored by an earlier version, or left by a build since edited back. It is
+    // not taken over, because a default build takes no record at all — it is an
+    // ordinary unnamed entry running out its own seven days (024/FR-001).
+    const { autosave, active, storage } = setup();
+    TestBed.inject(LocalRecordRepository).write({
+      id: 'older',
+      kind: 'working',
+      revisionId: 'revision-1',
+      createdAt: '2025-11-01T00:00:00.000Z',
+      modifiedAt: '2025-11-01T00:00:00.000Z',
+      name: null,
+      note: null,
+      sourceNamed: null,
+      payload: {
+        tool: 'ship',
+        build: toBuildSnapshotV1(ShipLoadout.default('Anaconda')),
+        validation: { valid: true, complete: true },
+      },
+    });
+    const bytes = storage.entries.get(recordKey('older'))!;
+    commitBuild(active, 'Anaconda', null);
+
+    autosave.flush();
+
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(storage.entries.get(recordKey('older'))).toBe(bytes);
+    expect([...storage.entries.keys()]).toEqual([recordKey('older')]);
+  });
+
+  it('writes a resumed build at the package default back into the record it holds', () => {
+    // Resuming is a Commander asking for the build to be kept, and the record
+    // this page already holds is the one it is written back into. The default
+    // gate reaches work that holds no record, so it does not reach this
+    // (001/FR-012, 024/FR-001).
+    const { autosave, active, storage } = setup();
+    const loadout = commitBuild(active);
+    const original = swapDrive(active, loadout);
+    autosave.flush();
+    active.markSaved(null);
+    loadout.setModule('FrameShiftDrive', original);
+    active.touch();
+    expect(active.atDefault()).toBe(true);
+
+    autosave.pauseAfterExternalDelete();
+    storage.entries.delete(recordKey(HELD));
+    autosave.resume();
+
+    expect(storage.entries.has(recordKey(HELD))).toBe(true);
+    expect(active.persistence()).toBe('saved');
+  });
+
+  it('keeps the record a build edited back to the package default already holds', () => {
+    // A record is removed by a confirmed deletion, by the manual save that
+    // consumes it, or by expiry, and by nothing else. Editing back to the
+    // default is none of those (024/FR-001).
+    const { autosave, active, storage } = setup();
+    const loadout = commitBuild(active);
+    const original = swapDrive(active, loadout);
+    autosave.flush();
+    active.markSaved(null);
+
+    loadout.setModule('FrameShiftDrive', original);
+    active.touch();
+    autosave.flush();
+
+    expect(active.atDefault()).toBe(true);
+    expect(active.autosaveRecordId()).toBe(HELD);
+    expect(JSON.parse(storage.entries.get(recordKey(HELD))!)).toMatchObject({
+      build: toBuildSnapshotV1(ShipLoadout.default('Anaconda')),
+    });
+  });
+
+  it('wakes no timer for an untouched default build, and one at its first edit', () => {
+    // An untouched build stays open for as long as a Commander is reading it,
+    // and owes nothing for the whole of that. A timer armed for it would wake
+    // only to have the write turned away, so none is armed at all (024/FR-001).
+    vi.useFakeTimers();
+    try {
+      const { autosave, active, storage } = setup();
+      const stop = autosave.start();
+      const loadout = commitBuild(active, 'Anaconda', null);
+
+      for (let index = 0; index < 5; index += 1) {
+        active.touch();
+      }
+      TestBed.tick();
+
+      // The timer itself, not only what it would have written. A write is
+      // turned away a second time when it lands, so storage alone cannot tell
+      // a timeout that never woke from one that woke and wrote nothing.
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(2_000);
+      expect(storage.entries.size).toBe(0);
+
+      loadout.setModulePriority('FrameShiftDrive', 2);
+      active.touch();
+      TestBed.tick();
+
+      expect(vi.getTimerCount()).toBe(1);
+      vi.advanceTimersByTime(600);
+
+      expect(storage.entries.size).toBe(1);
+
+      // And one edit leaves one write behind it. Minting the record answers a
+      // question the gate asks, not an edit a Commander made, so a watcher that
+      // read the answer would wake here and store the same bytes again under a
+      // fresh revision — restamping `modifiedAt` on work nobody touched
+      // (024/FR-001).
+      const key = [...storage.entries.keys()][0]!;
+      const written = storage.entries.get(key);
+      TestBed.tick();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(2_000);
+      expect(storage.entries.get(key)).toBe(written);
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps the build editable when the store is full', () => {
     const { autosave, active, storage } = setup();
     commitBuild(active);
@@ -208,6 +403,56 @@ describe('AutosaveService', () => {
     expect(active.loadout()).not.toBeNull();
   });
 
+  it('lets another build replace one a store failure left in no record, without asking', async () => {
+    // Replacing is never confirmed. A build carrying a decision is in the
+    // record autosave keeps it in where the store can hold it, and where the
+    // store refused that write the failure is stated on the screen rather than
+    // held back to be asked at the moment a Commander asks for another build
+    // (024/FR-001).
+    //
+    // Driven through `BuildIngressCoordinator`, which is the single path by
+    // which the active build is replaced. A question would have to be an
+    // outcome of that commit, and `CommitResult` carries none: it commits, it
+    // is superseded by a newer request, or it fails.
+    const { autosave, active, storage } = setup();
+    const ingress = TestBed.inject(BuildIngressCoordinator);
+    editedBuild(active, 'Anaconda', null);
+    storage.writeError = quotaError();
+
+    expect(autosave.flush()).toBe(false);
+    // On screen and in no record: the store holds nothing, so the build is
+    // nowhere but the page, whatever identity the page picked for it.
+    expect(active.persistence()).toBe('quota-full');
+    expect(storage.entries.size).toBe(0);
+
+    // The Commander opens another build, and gets it.
+    storage.writeError = null;
+    const replacement = ShipLoadout.default('Eagle');
+    const result = await ingress.commit(() => ({
+      ok: true,
+      candidate: {
+        loadout: replacement,
+        suppliedFit: suppliedFit(replacement.shipSymbol),
+        hullName: 'Eagle',
+        provenance: 'stock',
+        sourceNamed: null,
+        autosaveRecordId: null,
+        baseline: null,
+      },
+    }));
+    replacement.setModulePriority('FrameShiftDrive', 2);
+    active.touch();
+    autosave.flush();
+
+    expect(result.kind).toBe('committed');
+    expect(active.loadout()).toBe(replacement);
+    expect(active.hullName()).toBe('Eagle');
+    // One record, for the build that is on screen. The one the store never took
+    // is gone rather than written late.
+    expect(storage.entries.size).toBe(1);
+    expect(storage.entries.values().next().value).toContain('"shipSymbol":"Eagle"');
+  });
+
   it('writes however many records already exist, refusing nothing', () => {
     // The twenty-record limit was withdrawn on 2026-08-25: nothing refuses to
     // store a build because many are stored, and no number evicts anything. The
@@ -237,14 +482,18 @@ describe('AutosaveService', () => {
     const before = storage.entries.get(recordKey('their-save'));
     // A build opened from that save and then edited: it holds no record of its
     // own yet, so this write is the fork.
+    const loadout = ShipLoadout.default('Anaconda');
     active.commit({
-      loadout: ShipLoadout.default('Anaconda'),
+      loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'named',
       sourceNamed: { recordId: 'their-save', baseRevisionId: 'r' },
       autosaveRecordId: null,
       baseline: null,
     });
+    loadout.setModulePriority('FrameShiftDrive', 2);
+    active.touch();
     storage.writeError = quotaError();
 
     autosave.flush();
@@ -373,14 +622,14 @@ describe('AutosaveService', () => {
 
   it('takes over an unnamed record already holding this build, rather than storing a second copy', () => {
     const { autosave, active, storage } = setup();
-    // One build, stored once. Then the same build arrives again with no record
-    // of its own — a stock hull built twice, or one link opened twice.
-    commitBuild(active);
+    // One edited build, stored once. Then the same modelled state arrives again
+    // with no record of its own — one link to it opened twice.
+    editedBuild(active);
     autosave.flush();
     const first = active.autosaveRecordId();
     const bytes = storage.entries.get(recordKey(HELD))!;
 
-    commitBuild(active, 'Anaconda', null);
+    editedBuild(active, 'Anaconda', null);
     autosave.flush();
 
     expect(active.autosaveRecordId()).toBe(first);
@@ -393,10 +642,10 @@ describe('AutosaveService', () => {
 
   it('mints a record when nothing stored matches, rather than taking over a different build', () => {
     const { autosave, active, storage } = setup();
-    commitBuild(active);
+    editedBuild(active);
     autosave.flush();
 
-    commitBuild(active, 'Sidewinder', null);
+    editedBuild(active, 'Sidewinder', null);
     autosave.flush();
 
     expect(active.autosaveRecordId()).not.toBe(HELD);
@@ -455,7 +704,7 @@ describe('AutosaveService', () => {
     const { autosave, active, storage } = setup((store) =>
       store.setItem(recordKey(HELD), storedNamedRecord(HELD)),
     );
-    commitBuild(active);
+    editedBuild(active);
     autosave.flush();
 
     autosave.flush();
@@ -463,6 +712,27 @@ describe('AutosaveService', () => {
     expect(active.persistence()).toBe('saved');
     const written = [...storage.entries.keys()].filter((key) => key.startsWith('ednb:record:'));
     expect(written).toHaveLength(2);
+  });
+
+  it('clears the notice a named target left once no record is owed at all', () => {
+    // The notice draws one control, and a build at its hull's default is owed
+    // no record — so every press would decline in the same silence, under a
+    // notice about a record the build is no longer held in (024/FR-001,
+    // 001/FR-008, 001/FR-014).
+    const { autosave, active, storage } = setup((store) =>
+      store.setItem(recordKey(HELD), storedNamedRecord(HELD)),
+    );
+    commitBuild(active);
+    autosave.flush();
+    expect(active.persistence()).toBe('write-failed');
+    expect(active.autosaveRecordId(), 'the named target was let go of').toBeNull();
+    expect(active.atDefault()).toBe(true);
+    const before = [...storage.entries.keys()];
+
+    autosave.flush();
+
+    expect(active.persistence()).toBe('ready');
+    expect([...storage.entries.keys()], 'and still nothing is written').toEqual(before);
   });
 
   it('coalesces a burst of edits into one write', async () => {

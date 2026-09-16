@@ -2,6 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import type { RecordSource } from '../../domain/records/local-record';
 import type { RecordPayload } from '../../domain/records/local-record.serializer';
 import { isDirty } from '../../domain/records/record-fingerprint';
+import { atSuitDefault } from '../../domain/equipment/loadout/loadout-default';
 import { loadoutFingerprint } from '../../domain/equipment/loadout/loadout-fingerprint';
 import type { PersistenceStatus, WorkingRecordSubject } from '../build-library/working-record.port';
 import type { PersonalMountKey } from '@elite-dangerous-almanac/core/equipment/suits';
@@ -106,6 +107,13 @@ export class LoadoutStore implements WorkingRecordSubject {
 
   /** Whether the bench holds anything autosave has not written yet. */
   readonly dirty = computed(() => isDirty(this.fingerprint(), this.#baseline()));
+
+  /** Whether the loadout is still the one the bench starts for its suit. */
+  readonly atDefault = computed(() => {
+    this.#revision();
+    const loadout = this.#loadout();
+    return loadout !== null && atSuitDefault(loadout);
+  });
 
   /**
    * What autosave writes for this loadout, or `null` while the bench is empty.
@@ -214,7 +222,9 @@ export class LoadoutStore implements WorkingRecordSubject {
       if (started === null) return false;
       this.#loadout.set(started);
       // Started here, so it belongs to no save and to no record until one is
-      // written. Autosave mints or takes one over on the next tick.
+      // written. A loadout the bench starts is the suit's own default, so
+      // autosave owes it nothing and takes a record at the first choice made on
+      // it (024/FR-002).
       this.#source.set(null);
       this.#autosaveRecordId.set(null);
       this.#baseline.set(null);

@@ -6,6 +6,7 @@ import { HistoryLocationAdapter } from '../../platform/browser/history-location.
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { BuildLinkCoordinator } from './build-link.coordinator';
 import { FragmentPublisher } from './fragment-publisher';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * What the address does while a build's link is published.
@@ -51,6 +52,7 @@ function setup() {
 function commitAnaconda(active: ActiveBuildStore, hull = 'Anaconda'): void {
   active.commit({
     loadout: ShipLoadout.default(hull),
+    suppliedFit: suppliedFit(ShipLoadout.default(hull).shipSymbol),
     hullName: hull,
     provenance: 'stock',
     sourceNamed: null,

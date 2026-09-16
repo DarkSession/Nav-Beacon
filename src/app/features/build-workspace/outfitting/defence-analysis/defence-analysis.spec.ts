@@ -21,6 +21,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { DefenceAnalysis } from './defence-analysis';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The two cards, from the outside.
@@ -42,6 +43,7 @@ describe('DefenceAnalysis', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: DEFENCE_FIXTURE_HULL,
       provenance: 'stock',
       sourceNamed: null,

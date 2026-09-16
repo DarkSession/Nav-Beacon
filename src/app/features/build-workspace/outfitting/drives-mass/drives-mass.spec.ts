@@ -16,6 +16,7 @@ import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import type { StandardLoad } from '../../../../domain/ships/mobility-jump/mobility-jump';
 import { DrivesMass } from './drives-mass';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The load the card reads its mass and its envelope at.
@@ -63,6 +64,7 @@ describe('DrivesMass', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: HULL,
       provenance: 'stock',
       sourceNamed: null,

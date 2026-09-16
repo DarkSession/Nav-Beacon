@@ -8,6 +8,7 @@ import {
   openRecordFromLibrary,
   reachShellAction,
   recordCount,
+  regroupCoreMount,
   savedToBrowser,
 } from './shell';
 
@@ -118,6 +119,10 @@ async function fillStorageNow(page: Page): Promise<void> {
  */
 async function createBuild(page: Page, hull = 'Anaconda'): Promise<void> {
   await openWorkspaceWithBuild(page, hull);
+  // One decision on the build, so there is a record to list. A build still at
+  // its hull's package default holds nothing a Commander decided and is stored
+  // nowhere, and a power group is state no record title reads (024/FR-001).
+  await regroupCoreMount(page);
   await savedToBrowser(page);
   // Its own budget: publishing the fragment fetches the codec and its table as
   // a lazy chunk and then encodes the build, and an encode states what it is
@@ -230,8 +235,8 @@ test.describe('the build library', () => {
     await openLibrary(page);
 
     await expect(library(page)).toBeVisible();
-    // Titled by what the build calls itself — here the hull, since a stock
-    // build has neither a ship name nor an ident yet (FR-010).
+    // Titled by what the build calls itself — here the hull, since this build
+    // has neither a ship name nor an ident (FR-010).
     await expect(library(page).getByText('Anaconda').first()).toBeVisible();
     await expect(library(page).getByText('Valid').first()).toBeVisible();
     await expect(
@@ -741,6 +746,11 @@ test.describe('the build library', () => {
     );
     await fillStorage(page);
     await openWorkspaceWithBuild(page);
+    // One decision on the build, so a write is owed and the full store has
+    // something to refuse. A build still at its hull's package default writes
+    // nothing, and a store that is never written to is never reported full
+    // (024/FR-001).
+    await regroupCoreMount(page);
 
     await expect(page.locator('ednb-build-workspace-page')).toHaveAttribute(
       'data-persistence',
@@ -774,6 +784,11 @@ test.describe('the build library', () => {
     );
     await fillStorage(page);
     await openWorkspaceWithBuild(page);
+    // One decision on the build, so a write is owed and the full store has
+    // something to refuse. A build still at its hull's package default writes
+    // nothing, and a store that is never written to is never reported full
+    // (024/FR-001).
+    await regroupCoreMount(page);
     await openLibrary(page);
 
     const manager = page.getByRole('group', { name: 'Choose builds to discard' });

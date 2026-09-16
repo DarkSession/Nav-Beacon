@@ -3,6 +3,7 @@ import { getDefaultLoadout } from '@elite-dangerous-almanac/core/ships/default-l
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { getShipBySymbol } from '@elite-dangerous-almanac/core/ships/ships';
 import { emptyFixedMounts } from '../../domain/ships/build/fixed-mounts';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 import { GameTextPresenter } from '../../i18n/game-text.presenter';
 import {
   BuildIngressCoordinator,
@@ -72,14 +73,16 @@ export class StockBuildCreator {
       candidate: {
         loadout,
         hullName: this.#gameText.shipName(ship.symbol).text ?? ship.symbol,
+        suppliedFit: suppliedFit(ship.symbol),
         provenance: 'stock',
         // A hull's own default build is the package's, at the package's own
         // quality. There is no source to have stated a partial roll, so the
         // ingress gate has nothing to complete and nothing to report.
         sourceNamed: null,
         autosaveRecordId: null,
-        // A build that exists only in this tab, with no copy anywhere: unsaved
-        // by definition, so autosave mints it a record at its first write.
+        // A build that exists only in this tab, with no copy anywhere. It is
+        // the hull's supplied fit and nothing else, so autosave keeps it out of
+        // storage until it differs from that fit (024/FR-001).
         baseline: null,
       },
     };

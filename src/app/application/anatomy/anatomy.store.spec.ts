@@ -12,6 +12,7 @@ import { ActiveBuildStore } from '../active-build/active-build.store';
 import type { BuildCandidate } from '../active-build/active-build.models';
 import { OutfittingStore } from '../outfitting/outfitting.store';
 import { AnatomyStore } from './anatomy.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * What the store publishes, and what it refuses to publish.
@@ -65,6 +66,7 @@ function documentWith(side: SchematicSide, journalSlot: string): SchematicDocume
 function candidate(hull = 'Anaconda'): BuildCandidate {
   return {
     loadout: defaultBuild(hull),
+    suppliedFit: suppliedFit(defaultBuild(hull).shipSymbol),
     hullName: hull,
     provenance: 'stock',
     sourceNamed: null,

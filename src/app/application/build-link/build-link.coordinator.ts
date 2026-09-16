@@ -16,6 +16,7 @@ import {
 import { recognizeBuildLinkFragment } from './fragment-recognizer';
 import { normalizeReconstructedBuild } from '../../domain/ships/build/build-ingress-normalizer';
 import { LinkErrorMapper, type LinkFailure } from './link-error.mapper';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** Why a decode was thrown away rather than reported. */
 const SUPERSEDED = 'A newer navigation replaced this build link.';
@@ -231,6 +232,7 @@ export class BuildLinkCoordinator {
       candidate: {
         loadout: ingress.candidate,
         hullName: this.#gameText.shipName(ship.symbol).text ?? ship.symbol,
+        suppliedFit: suppliedFit(ship.symbol),
         provenance: 'link',
         sourceNamed: null,
         autosaveRecordId: null,

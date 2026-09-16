@@ -6,7 +6,9 @@ import {
   reachShellAction,
   reachShellLink,
   recordCount,
+  recordCountAfterFlush,
   savedToBrowser,
+  setShipIdent,
 } from './shell';
 
 /**
@@ -17,12 +19,13 @@ import {
  * autosave, and a browser that refuses to store anything without taking the
  * build down with it.
  *
- * **Rewritten 2026-08-25.** Every build has a record of its own from the moment
- * it exists, so nothing is asked before one build replaces another, and the one
- * a Commander leaves behind is still on the library's list. What is asserted
- * here is that arithmetic: four builds leave four records, opening a save writes
- * nothing to it, the first edit forks, and naming or overwriting returns the
- * count to where it belongs (FR-008, FR-009).
+ * A build takes a record from the first decision made on it, so nothing is
+ * asked before one build replaces another: what is left behind is on the
+ * library's list if it carries a decision, and reachable again from its hull if
+ * it does not. What is asserted here is that arithmetic: four edited builds
+ * leave four records, opening a save writes nothing to it, the first edit forks,
+ * and naming or overwriting returns the count to where it belongs (024/FR-001,
+ * FR-008, FR-009).
  *
  * The workspace holding one of those builds is one of the four routes
  * `interface-conformance` walks and scans, so its landmarks, its heading, its
@@ -38,6 +41,12 @@ async function createBuild(page: Page, hull = 'Anaconda'): Promise<void> {
   await page.goto(`/ships/${hull}`);
   await buildStockHull(page, 'Build');
   await expect(page).toHaveURL(/\/outfitting(#|$)/);
+}
+
+/** Creates a stock build and makes one decision on it, so it takes a record. */
+async function createDecidedBuild(page: Page, hull = 'Anaconda', plate = 'NB-01'): Promise<void> {
+  await createBuild(page, hull);
+  await setShipIdent(page, plate);
 }
 
 /**
@@ -63,6 +72,19 @@ async function saveActiveBuild(
     await asNew.check();
   }
   await dialog.getByRole('button', { name: 'Save build' }).click();
+  // The press returns before the record is written. A journey that reloads
+  // straight after it takes the reload with the save still in flight: the work
+  // stays in the unnamed record autosave already holds, and the library never
+  // lists the name the save was meant to give it. The layer is what the
+  // workspace closes once the write has resolved — and keeps open, carrying
+  // why, when the write did nothing — so waiting for it to go is waiting for
+  // the save itself.
+  await expect(dialog).toBeHidden();
+  // And nothing took its place. The layer also closes on a conflict, which
+  // replaces it with the question of what to do about the revision that landed
+  // first — a save that wrote nothing, and one that would pass a wait for the
+  // layer alone.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 }
 
 /**
@@ -115,7 +137,7 @@ function storedKeys(page: Page) {
 
 test.describe('the tab’s working build', () => {
   test('is saved to one owned record and restored after a reload', async ({ page }) => {
-    await createBuild(page);
+    await createDecidedBuild(page);
     await savedToBrowser(page);
 
     const before = await storedKeys(page);
@@ -130,8 +152,38 @@ test.describe('the tab’s working build', () => {
     expect((await storedKeys(page)).records).toEqual(before.records);
   });
 
+  test('still claims the record a save produced, and restores from it', async ({ page }) => {
+    // A save clears the autosave target on purpose, because autosave has no
+    // path to a named record. The work is in the record the save produced, so
+    // the tab keeps claiming it — released, the reload would restore nothing
+    // from storage and the next change would mint a second record for a build
+    // the Commander has just saved by name (001/FR-008, 017/FR-007).
+    test.slow();
+    await createDecidedBuild(page);
+    await savedToBrowser(page);
+    await saveActiveBuild(page, 'Explorer');
+
+    const before = await storedKeys(page);
+    expect(before.records).toHaveLength(1);
+    expect(before.tab).toContain(before.records[0]!.replace('ednb:record:', ''));
+
+    await page.reload();
+
+    await expect(page.getByRole('heading', { level: 1, name: /anaconda/i })).toBeVisible();
+    // The same record, still claimed, and no second one minted for the same
+    // work. A released claim reaches here too — the address carries the build
+    // link, so the build comes back either way — and it comes back as an
+    // arrival rather than as the save, which autosave then stores again.
+    await expectRecords(page, 1);
+    const after = await storedKeys(page);
+    expect(after.records).toEqual(before.records);
+    expect(after.tab).toBe(before.tab);
+    await openLibrary(page);
+    await expect(library(page).getByText('Explorer').first()).toBeVisible();
+  });
+
   test('writes nothing outside the keys this application owns', async ({ page }) => {
-    await createBuild(page);
+    await createDecidedBuild(page);
     await savedToBrowser(page);
 
     const keys = await page.evaluate(() => ({
@@ -147,7 +199,7 @@ test.describe('the tab’s working build', () => {
   });
 
   test('stores no calculated value, price or catalogue fact', async ({ page }) => {
-    await createBuild(page);
+    await createDecidedBuild(page);
     await savedToBrowser(page);
 
     const stored = await page.evaluate(() => {
@@ -170,17 +222,16 @@ test.describe('the tab’s working build', () => {
     const first = await context.newPage();
     const second = await context.newPage();
 
-    await createBuild(first, 'Anaconda');
+    await createDecidedBuild(first, 'Anaconda', 'NB-01');
     await savedToBrowser(first);
-    await createBuild(second, 'SideWinder');
+    await createDecidedBuild(second, 'SideWinder', 'NB-02');
     await savedToBrowser(second);
 
-    const records = await first.evaluate(() =>
-      Object.keys(localStorage).filter((key) => key.startsWith('ednb:record:')),
-    );
-
-    // Neither page has overwritten the other's autosave.
-    expect(records).toHaveLength(2);
+    // Neither page has overwritten the other's autosave. Polled, because the
+    // count is read on one page and was written by the other: a status line
+    // answers for the renderer that wrote, and the renderer that reads holds
+    // its own copy of the store, which the write reaches a moment later.
+    await expectRecords(first, 2);
     await expect(first.getByRole('banner').getByText('Anaconda').first()).toBeVisible();
     await expect(second.getByRole('banner').getByText('Sidewinder').first()).toBeVisible();
 
@@ -190,7 +241,7 @@ test.describe('the tab’s working build', () => {
   test('forks a duplicated tab rather than sharing one working record', async ({ browser }) => {
     const context = await browser.newContext();
     const original = await context.newPage();
-    await createBuild(original, 'Anaconda');
+    await createDecidedBuild(original, 'Anaconda');
     await savedToBrowser(original);
 
     // A duplicated tab inherits the session, and so believes it owns the same
@@ -204,12 +255,13 @@ test.describe('the tab’s working build', () => {
     await reachShellLink(duplicate, 'Ship Builder');
     await duplicate.goto('/ships/SideWinder');
     await buildStockHull(duplicate, 'Build');
+    await setShipIdent(duplicate, 'NB-02');
     await savedToBrowser(duplicate);
 
-    const records = await original.evaluate(() =>
-      Object.keys(localStorage).filter((key) => key.startsWith('ednb:record:')),
-    );
-    expect(records.length).toBeGreaterThan(1);
+    // Polled on the page that did not write it: two pages are two renderers over
+    // one store, and the forked record reaches this one after the page that
+    // wrote it has reported it.
+    await expect.poll(() => recordCount(original)).toBeGreaterThan(1);
 
     await context.close();
   });
@@ -246,7 +298,7 @@ test.describe('the tab’s working build', () => {
       Object.defineProperty(window, 'localStorage', { get: () => blocked });
     });
 
-    await createBuild(page);
+    await createDecidedBuild(page);
 
     await expect(page.getByText(/not allowing the application to store/i)).toBeVisible();
     // The build is still there and the screen still works. The hull is on the
@@ -272,7 +324,7 @@ test.describe('the tab’s working build', () => {
       };
     });
 
-    await createBuild(page);
+    await createDecidedBuild(page);
 
     await expect(page.getByText(/storage is full/i)).toBeVisible();
     await expect(page.getByRole('banner').getByText('Anaconda').first()).toBeVisible();
@@ -283,15 +335,56 @@ test.describe('the tab’s working build', () => {
 
   test('leaves four builds in a row as four records, asking nothing', async ({ page }) => {
     // The withdrawn replacement question in one assertion: each build replaces
-    // the last on screen and none of them is lost, because each has a record
-    // (FR-008, FR-009, ruled 2026-08-25).
+    // the last on screen and none of them is lost, because each carries a
+    // decision and so has a record (FR-008, FR-009, ruled 2026-08-25;
+    // 024/FR-001).
+    test.slow();
     let expected = 0;
-    for (const hull of ['Anaconda', 'SideWinder', 'Eagle', 'Python']) {
-      await createBuild(page, hull);
+    for (const [index, hull] of ['Anaconda', 'SideWinder', 'Eagle', 'Python'].entries()) {
+      await createDecidedBuild(page, hull, `NB-0${index + 1}`);
       await expect(page.getByRole('dialog')).toHaveCount(0);
       expected += 1;
       await expectRecords(page, expected);
     }
+  });
+
+  test('keeps a build nobody changed out of the library, and lists it at its first edit', async ({
+    page,
+  }) => {
+    // A build straight from the hull catalogue holds nothing a Commander
+    // decided: it is the loadout the package publishes, reached again by
+    // selecting the hull. Nothing is stored for it, and the saved list has no
+    // entry to show. The first decision made on it is what takes a record
+    // (024/FR-001).
+    test.slow();
+    await createBuild(page);
+    await expect(page.getByRole('heading', { level: 1, name: /anaconda/i })).toBeVisible();
+
+    // Counted after the workspace has answered for what it owes, rather than
+    // polled: a poll for a count that only ever rises succeeds on its first
+    // attempt, so it reads no later than a bare read would.
+    expect(await recordCountAfterFlush(page)).toBe(0);
+    await openLibrary(page);
+    await expect(library(page).getByText('Nothing is stored yet')).toBeVisible();
+    // The sentence under that heading states the rule this change replaces. It
+    // is read on the screen a Commander reaches right after creating a build,
+    // which is where being told that nothing is kept yet has to make sense
+    // (024/FR-001).
+    await expect(
+      library(page).getByText(
+        'Work is kept here in this browser from your first change to it, until you discard it.',
+      ),
+    ).toBeVisible();
+    await page.goBack();
+    await expect(library(page)).toBeHidden();
+
+    await setShipIdent(page, 'NB-01');
+    await savedToBrowser(page);
+
+    await expectRecords(page, 1);
+    await openLibrary(page);
+    await expect(library(page).getByText('Nothing is stored yet')).toBeHidden();
+    await expect(library(page).getByText('Anaconda').first()).toBeVisible();
   });
 
   test('opens the save layer on what the build is already called', async ({ page }) => {
@@ -314,7 +407,7 @@ test.describe('the tab’s working build', () => {
     // The other half of the same report. A build that was saved, or opened from
     // a save, must be able to choose between replacing it and keeping both.
     test.slow();
-    await createBuild(page);
+    await createDecidedBuild(page);
     await savedToBrowser(page);
     await saveActiveBuild(page, 'Explorer');
     await reachShellAction(page, /^Save$/);
@@ -348,7 +441,7 @@ test.describe('the tab’s working build', () => {
     // A build, a named save, and an open — three journeys' worth of waiting on
     // one page, which runs past the default budget on a loaded machine.
     test.slow();
-    await createBuild(page);
+    await createDecidedBuild(page);
     await savedToBrowser(page);
     await saveActiveBuild(page, 'Explorer');
     await openLibrary(page);
@@ -378,7 +471,7 @@ test.describe('the tab’s working build', () => {
     page,
   }) => {
     test.slow();
-    await createBuild(page);
+    await createDecidedBuild(page);
     await savedToBrowser(page);
     await saveActiveBuild(page, 'Explorer');
     await openLibrary(page);
@@ -406,7 +499,7 @@ test.describe('the tab’s working build', () => {
 
   test('returns the count to where it was when the save is replaced', async ({ page }) => {
     test.slow();
-    await createBuild(page);
+    await createDecidedBuild(page);
     await savedToBrowser(page);
     await saveActiveBuild(page, 'Explorer');
     // Naming consumes the record the build was already in: one record, not two.

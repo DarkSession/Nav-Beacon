@@ -27,6 +27,13 @@ export interface SavedRecord {
  * because anybody deleted it: a list open on another page is still showing it,
  * and the page that had it open is this one (001/FR-009, 013/FR-016).
  *
+ * The tab's claim follows from the same two writes. It names the record the
+ * work can be opened from again, which is the one the save produced and not
+ * always the one autosave held: a save without Web Locks mints a fresh record,
+ * and an overwrite writes an existing named one. Both consume the record
+ * autosave was writing to, and a claim left on a consumed record restores
+ * nothing (017/FR-010).
+ *
  * One function for both tools, because it is one rule. Two copies in two page
  * components is the rule written twice, in the two files least likely to be
  * read together.

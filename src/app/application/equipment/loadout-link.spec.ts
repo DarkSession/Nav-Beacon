@@ -4,48 +4,82 @@ import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equip
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
 import { HistoryLocationAdapter } from '../../platform/browser/history-location.adapter';
+import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { LinkErrorMapper } from '../build-link/link-error.mapper';
 import {
   FIELDS_EXCLUDED_FROM_EQUIPMENT_LINKS,
   equipmentLinkPayloadSource,
 } from '../build-link/link-payload.allowlist';
+import { LoadoutAutosaveService } from './loadout-autosave.service';
 import { LoadoutLinkCoordinator } from './loadout-link.coordinator';
 import { LoadoutSummary } from './loadout-summary';
 import { LoadoutStore } from './loadout.store';
 
+const RIFLE = 'wpn_m_assaultrifle_plasma_fauto';
+
 /** A location that remembers what was written to it, without a browser. */
 class MemoryLocation {
   fragmentValue = '';
+  /** How many times the fragment was replaced, so a test can count entries. */
+  replacements = 0;
 
   fragment(): string {
     return this.fragmentValue;
   }
 
   currentDocument(): string {
-    return '/equipment';
+    return '/equipment?tab=suit';
   }
 
   urlWithFragment(value: string): string {
-    return `https://navbeacon.test/equipment#${value}`;
+    return `https://navbeacon.test/equipment?tab=suit#${value}`;
   }
 
   replaceFragment(value: string | null): void {
+    this.replacements += 1;
     this.fragmentValue = value ?? '';
   }
 }
 
 function setup() {
   const location = new MemoryLocation();
+  const storage = new MemoryStorage();
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [provideLocalization(), { provide: HistoryLocationAdapter, useValue: location }],
+    providers: [
+      provideLocalization(),
+      ...provideMemoryStorage(storage),
+      { provide: HistoryLocationAdapter, useValue: location },
+    ],
   });
   return {
     location,
+    storage,
     store: TestBed.inject(LoadoutStore),
     links: TestBed.inject(LoadoutLinkCoordinator),
+    autosave: TestBed.inject(LoadoutAutosaveService),
     errors: TestBed.inject(LinkErrorMapper),
     summary: TestBed.inject(LoadoutSummary),
+  };
+}
+
+/**
+ * The same bench, publishing onto the window's own address.
+ *
+ * The location adapter is left to be the real one, for the case that asks what
+ * the adapter puts in a link rather than what the bench puts in a fragment.
+ */
+function setupOnTheWindow(): {
+  store: LoadoutStore;
+  links: LoadoutLinkCoordinator;
+} {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [provideLocalization(), ...provideMemoryStorage(new MemoryStorage())],
+  });
+  return {
+    store: TestBed.inject(LoadoutStore),
+    links: TestBed.inject(LoadoutLinkCoordinator),
   };
 }
 
@@ -78,6 +112,74 @@ describe('LoadoutLinkCoordinator', () => {
     expect(links.link()).toEqual({ kind: 'absent' });
   });
 
+  it('publishes a loadout for a suit chosen and nothing else done', () => {
+    // What a reload restores such a loadout from, because a loadout at its
+    // suit's default takes no record. The watcher runs on the first revision,
+    // so the address carries the loadout from the moment the suit is chosen and
+    // no further choice is needed to put it there (024/FR-003).
+    const { links, store, location } = setup();
+    const stop = links.start();
+
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    TestBed.tick();
+
+    expect(location.fragmentValue.startsWith('e.')).toBe(true);
+    expect(links.link().kind).toBe('published');
+    expect(store.atDefault()).toBe(true);
+    stop();
+  });
+
+  it('replaces the fragment on every change, adding no history entry', () => {
+    // A published loadout is the loadout on the bench, continuously, rather
+    // than a snapshot a Commander asked for. One entry per choice would bury
+    // their real navigation under every version of one bench (024/FR-003).
+    const { links, store, location } = setup();
+    const stop = links.start();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    TestBed.tick();
+    const first = location.fragmentValue;
+    const replacements = location.replacements;
+
+    store.dispatch({ kind: 'setSuitGrade', grade: 3 });
+    TestBed.tick();
+    store.dispatch({ kind: 'fitWeapon', mount: 'PrimaryWeapon1', symbol: RIFLE });
+    TestBed.tick();
+
+    // Replaced in place, once per change, and the fragment moved with it.
+    expect(location.replacements).toBe(replacements + 2);
+    expect(location.fragmentValue).not.toBe(first);
+    expect(location.fragmentValue.startsWith('e.')).toBe(true);
+    stop();
+  });
+
+  it('carries no part of the loadout in the path or the query', () => {
+    // The loadout is in the fragment, which browsers do not send to a server.
+    // A path or a query carrying any of it would publish a Commander's loadout
+    // to whatever serves the address (024/FR-003).
+    //
+    // Read off the real location adapter rather than the double the rest of
+    // this suite uses. The double returns one fixed base, so against it the
+    // path and the query are the fixture's own literal and the rule would be
+    // asserted of the test rather than of the code that builds the link.
+    const address = '/equipment?tab=suit';
+    const before = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState(window.history.state, '', address);
+
+    try {
+      const { links, store } = setupOnTheWindow();
+      store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+      links.publish();
+
+      const published = new URL(links.publishedUrl() ?? '');
+      expect(published.hash.startsWith('#e.')).toBe(true);
+      expect(published.pathname).toBe('/equipment');
+      expect(published.search).toBe('?tab=suit');
+    } finally {
+      window.history.replaceState(window.history.state, '', before);
+    }
+  });
+
   it('restores the loadout a link describes, held content and all (FR-018a)', () => {
     const first = setup();
     const held = heldLoadout(first.store);
@@ -90,6 +192,39 @@ describe('LoadoutLinkCoordinator', () => {
     expect(second.store.loadout()).toEqual(held);
     // A link is nobody's saved record, so the loadout it opens belongs to none.
     expect(second.store.sourceNamed()).toBeNull();
+  });
+
+  it('takes no record for a loadout at its suit’s default arriving in a link', () => {
+    // The same answer the bench gives a suit chosen at the gate. What a link
+    // carries is the loadout, and the loadout is what the rule reads
+    // (024/FR-002).
+    const first = setup();
+    first.store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    first.links.publish();
+    const fragment = first.location.fragmentValue;
+
+    const second = setup();
+    expect(second.links.ingest(fragment)).toEqual({ kind: 'opened' });
+    second.autosave.flush();
+
+    expect(second.store.atDefault()).toBe(true);
+    expect(second.store.autosaveRecordId()).toBeNull();
+    expect(second.storage.entries.size).toBe(0);
+  });
+
+  it('takes a record at the first change to a loadout arrived in a link', () => {
+    const first = setup();
+    first.store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    first.links.publish();
+
+    const second = setup();
+    second.links.ingest(first.location.fragmentValue);
+    second.autosave.flush();
+    second.store.dispatch({ kind: 'setSuitGrade', grade: 3 });
+    second.autosave.flush();
+
+    expect(second.store.autosaveRecordId()).not.toBeNull();
+    expect(second.storage.entries.size).toBe(1);
   });
 
   it('leaves a fragment that belongs to something else alone', () => {

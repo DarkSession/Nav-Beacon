@@ -13,6 +13,7 @@ import {
   type CandidateOutcome,
   type CommitResult,
 } from '../active-build/build-ingress.coordinator';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * Opening a stored build.
@@ -93,6 +94,7 @@ export class RecordOpenService {
       candidate: {
         loadout: ingress.candidate,
         hullName: this.#gameText.shipName(record.hullSymbol).text ?? record.hullSymbol,
+        suppliedFit: suppliedFit(record.hullSymbol),
         provenance,
         sourceNamed:
           record.kind === 'named'

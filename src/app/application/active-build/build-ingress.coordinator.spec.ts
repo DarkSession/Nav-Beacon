@@ -5,6 +5,7 @@ import { baselineFingerprint } from '../../domain/ships/build/build-fingerprint'
 import { ActiveBuildStore } from './active-build.store';
 import type { BuildCandidate } from './active-build.models';
 import { BuildIngressCoordinator, type CandidateOutcome } from './build-ingress.coordinator';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 function setup(): { store: ActiveBuildStore; coordinator: BuildIngressCoordinator } {
   TestBed.resetTestingModule();
@@ -19,6 +20,7 @@ function candidateFor(symbol: string, saved = false): BuildCandidate {
   const loadout = ShipLoadout.default(symbol);
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: symbol,
     provenance: 'stock',
     sourceNamed: null,
@@ -45,9 +47,10 @@ describe('BuildIngressCoordinator', () => {
   });
 
   it('replaces unsaved work without asking anything', async () => {
-    // Withdrawn on 2026-08-25 with the record model that made it unnecessary:
-    // the build being replaced has a record of its own, so there is nothing to
-    // warn about and nothing to lose (FR-008, FR-009).
+    // Nothing is asked, because there is nothing to lose: a build carrying a
+    // decision is in the record autosave keeps it in, and a build still at its
+    // hull's package default is in no record because selecting the hull reaches
+    // it again (024/FR-001, FR-008, FR-009).
     const { store, coordinator } = setup();
     await coordinator.commit(succeeds('SideWinder'));
     expect(store.dirty()).toBe(true);

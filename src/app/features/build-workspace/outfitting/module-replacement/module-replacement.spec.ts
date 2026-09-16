@@ -10,6 +10,7 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { ModuleReplacement } from './module-replacement';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The chooser's states, from the outside.
@@ -24,6 +25,7 @@ import { ModuleReplacement } from './module-replacement';
 function candidateFor(): BuildCandidate {
   return {
     loadout: defaultBuild(),
+    suppliedFit: suppliedFit(defaultBuild().shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

@@ -25,9 +25,11 @@ export type CommitResult =
  *
  * **Revised 2026-08-25.** This was `BuildIngressCoordinator`, and its fourth step
  * was asking the Commander whether unsaved work could be discarded. Nothing asks
- * now, because there is nothing to lose: every build has a record of its own from
- * the moment it exists, so the build being replaced is on the library's list
- * rather than gone (FR-008, FR-009). A question whose only honest answer is
+ * now, because there is nothing to lose: a build that carries a decision is in
+ * the record autosave keeps it in, so it is on the library's list rather than
+ * gone, and a build still at its hull's package default is in no record because
+ * selecting the hull reaches it again (024/FR-001, FR-008, FR-009). A question
+ * whose only honest answer is
  * "nothing will be lost either way" is a question worth withdrawing.
  *
  * The request token is what makes concurrency safe: a decode that finishes

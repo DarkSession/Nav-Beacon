@@ -15,11 +15,13 @@ import { LoadoutStore } from './loadout.store';
  * that what the loadout leaves behind — this tab's claim on its record and the
  * loadout the address carries — goes with it either time.
  *
- * Nothing is confirmed, and nothing needs to be. The loadout that was on the
- * bench is written to the record it is autosaved into before it leaves, so it
- * stays in the saved list and can be opened again — there is nothing to lose
- * and so nothing to ask about. A named record it was opened from is not
- * touched at all: autosave never writes to one.
+ * Nothing is confirmed, and nothing needs to be. A loadout that carries a
+ * decision is written to the record it is autosaved into before it leaves, so
+ * it stays in the saved list and can be opened again. A loadout still at its
+ * suit's default is in no record, and wearing the suit reaches it again
+ * (024/FR-002). Either way there is nothing to lose and so nothing to ask
+ * about. A named record it was opened from is not touched at all: autosave
+ * never writes to one.
  *
  * The tape goes with it, as it does when a loadout is opened from a record or a
  * link: the choices before it belong to a loadout that is no longer on the
@@ -46,11 +48,12 @@ export class EmptyBenchService {
     // Before the bench lets go of it. A loadout that has just been changed has
     // a write owed on it, and this is the last moment anything holds it.
     //
-    // And only once that write has landed. What makes this action safe to offer
-    // without asking is that the loadout stays as the record it is autosaved
-    // to; where the store cannot hold it, clearing the bench would lose work
-    // instead. The bench then stays as it is, and the notice already on it says
-    // why (017/FR-006).
+    // And only once that write has landed. `flush()` answers whether letting go
+    // loses anything: it is true when the write landed, and true when nothing
+    // was owed at all, which is what a loadout still at its suit's default
+    // answers (024/FR-002). It is false where the store cannot hold the
+    // loadout, and clearing the bench would lose work instead. The bench then
+    // stays as it is, and the notice already on it says why (017/FR-006).
     if (!this.#autosave.flush()) {
       return;
     }
@@ -77,9 +80,10 @@ export class EmptyBenchService {
    *
    * What is deleted is the record, not the addresses behind this page. A
    * loadout one of those still carries opens again from there, as any loadout
-   * in an address does, and is autosaved into a record of its own — the deleted
-   * one is never written back (017/FR-008). The claim this tab held on it goes
-   * with it (017/FR-010).
+   * in an address does: into a record of its own where it carries a choice, and
+   * into no record where it is still at its suit's default. The deleted one is
+   * never written back either way (017/FR-008, 024/FR-002). The claim this tab
+   * held on it goes with it (017/FR-010).
    */
   clearHolding(recordId: string): boolean {
     if (!this.#store.clearIfHolding(recordId)) {

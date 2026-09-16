@@ -1,6 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
-import { buildStockHull, openLibrary, recordCount, savedToBrowser } from './shell';
+import {
+  buildStockHull,
+  openLibrary,
+  raiseSuitGrade,
+  recordCount,
+  recordCountAfterFlush,
+  savedToBrowser,
+  setShipIdent,
+} from './shell';
 
 /**
  * Getting back, and starting again, from the bar.
@@ -46,6 +54,37 @@ async function sheetBar(page: Page): Promise<boolean> {
 async function wearSuit(page: Page, name: string): Promise<void> {
   await page.locator('.gate__suits .choice').filter({ hasText: name }).click();
   await expect(page.locator('.gate')).toHaveCount(0);
+}
+
+/**
+ * Wears a suit and raises its grade, so the loadout carries a choice.
+ *
+ * A loadout the bench starts and nothing else is stored nowhere, which is its
+ * own journey below. Every journey about a record makes a choice on the
+ * loadout first (024/FR-002).
+ */
+async function wearAndChoose(page: Page, name: string): Promise<void> {
+  await wearSuit(page, name);
+  await raiseSuitGrade(page);
+}
+
+/**
+ * Draws the loadout ledger, however this arrangement holds it.
+ *
+ * The compact bench draws one region at a time and re-opens the row it was
+ * drilled into, so a journey that opened a row reads the item rather than the
+ * ledger when it comes back. The tab is what the wide bench answers with
+ * nothing, and the back control is what the drill-in answers with.
+ */
+async function openLedger(page: Page): Promise<void> {
+  await expect(page.locator('ednb-equipment-bench-page')).toBeAttached();
+  const tab = page.getByRole('tab', { name: 'Loadout' });
+  if ((await tab.count()) > 0) {
+    await tab.click();
+  }
+  if ((await page.locator('.bench__region--loadout').count()) === 0) {
+    await page.locator('.item__back').click();
+  }
 }
 
 /** Waits for the bench to have written what is on it, rather than for a delay. */
@@ -118,10 +157,13 @@ test.describe('a tool’s tab re-enters the tool', () => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
     await expect(page).toHaveURL(/\/outfitting#b\./);
+    await setShipIdent(page, 'NB-01');
     await tools(page).first().click();
 
     // The build is not discarded by leaving it: the record it autosaves into
-    // keeps it (017/FR-004).
+    // keeps it (017/FR-004). One decision is made on it first, because a build
+    // still at the package default is kept by the address rather than by a
+    // record (024/FR-001).
     await expect(page).toHaveURL(/\/ships$/);
     // Polled: the autosave is written as the workspace is left, which the
     // address changing does not wait for.
@@ -153,7 +195,10 @@ test.describe('a tool’s tab re-enters the tool', () => {
     await page.goto('/equipment');
     await wearSuit(page, 'Dominator Suit');
     await expect(page).toHaveURL(/\/equipment#e\./);
-    await autosaved(page);
+    // Nothing was decided on it, so nothing is stored for it: the loadout is in
+    // the address and nowhere else. Counted after the page has answered for
+    // what it owes, because the bench is still open here (024/FR-002).
+    expect(await recordCountAfterFlush(page)).toBe(0);
 
     await tools(page).nth(1).click();
 
@@ -161,6 +206,10 @@ test.describe('a tool’s tab re-enters the tool', () => {
     await expect(page.locator('.gate')).toBeVisible();
     await expect(page).toHaveURL(/\/equipment$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    // And nothing was left behind by clearing it either. Through the flush
+    // again: clearing the bench leaves the page on it, so a write owed for what
+    // the clearing did would still be inside the coalescing window.
+    expect(await recordCountAfterFlush(page)).toBe(0);
   });
 });
 
@@ -169,7 +218,7 @@ test.describe('the bench keeps the loadout on it', () => {
     page,
   }) => {
     await page.goto('/equipment');
-    await wearSuit(page, 'Dominator Suit');
+    await wearAndChoose(page, 'Dominator Suit');
     await autosaved(page);
 
     // Nothing was saved and nothing was asked for: what is restored is what
@@ -198,12 +247,49 @@ test.describe('the bench keeps the loadout on it', () => {
     await expect(page.locator('.gate')).toHaveCount(0);
     await expect(page.locator('ednb-equipment-bench-page')).toContainText('Dominator Suit');
   });
+
+  test('keeps a loadout nobody changed out of the saved list (024/FR-002)', async ({ page }) => {
+    // The loadout the bench starts for a suit holds nothing a Commander
+    // decided, and is reached again by choosing the suit. Nothing is stored for
+    // it, and the first choice made on it is what takes a record.
+    await page.goto('/equipment');
+    await wearSuit(page, 'Dominator Suit');
+    await expect(page).toHaveURL(/\/equipment#e\./);
+    const worn = page.url();
+
+    // The bench is left before anything is counted. It writes what it owes on
+    // the way out, so a record owed for this loadout is in the store by the
+    // time the count is read. Counted on the bench instead, the read lands
+    // inside the coalescing window and says nothing is stored whether or not
+    // one is owed.
+    await mark(page).click();
+    await expectEntryPoint(page);
+
+    expect(await recordCount(page)).toBe(0);
+    await openLibrary(page);
+    await expect(page.getByText('Nothing is stored yet')).toBeVisible();
+    await page.goBack();
+
+    // Back on the same loadout, from the address that carried it off the bench
+    // — which is the whole of what holds a loadout in no record (024/FR-003).
+    await page.goto(worn);
+    await expect(page.locator('ednb-equipment-bench-page')).toContainText('Dominator Suit');
+
+    await raiseSuitGrade(page);
+    await autosaved(page);
+
+    await expect.poll(() => recordCount(page)).toBe(1);
+    await openLibrary(page);
+    await expect(
+      page.getByRole('dialog', { name: 'Saved builds' }).getByText('Dominator Suit').first(),
+    ).toBeVisible();
+  });
 });
 
 test.describe('the bench and the address', () => {
   test('a loadout in the address outranks the record restored (017/FR-009)', async ({ page }) => {
     await page.goto('/equipment');
-    await wearSuit(page, 'Dominator Suit');
+    await wearAndChoose(page, 'Dominator Suit');
     await autosaved(page);
     const shared = new URL(page.url()).hash;
 
@@ -211,7 +297,7 @@ test.describe('the bench and the address', () => {
     // link describes.
     await tools(page).nth(1).click();
     await expect(page.locator('.gate')).toBeVisible();
-    await wearSuit(page, 'Maverick Suit');
+    await wearAndChoose(page, 'Maverick Suit');
     await autosaved(page);
 
     await page.goto(`/equipment${shared}`);
@@ -219,6 +305,7 @@ test.describe('the bench and the address', () => {
     // The address is a Commander's deliberate arrival and the record is only
     // what this page was doing before it. Read from the suit's own row rather
     // than from the page, which also carries the list of suits to choose from.
+    await openLedger(page);
     const suit = page.locator('.ledger__row[data-target="suit"]');
     await expect(suit).toContainText('Dominator Suit');
     await expect(suit).not.toContainText('Maverick Suit');
@@ -250,7 +337,7 @@ test.describe('the bench and the address', () => {
     });
 
     await page.goto('/equipment');
-    await wearSuit(page, 'Dominator Suit');
+    await wearAndChoose(page, 'Dominator Suit');
 
     // Named for the loadout rather than for storage, and the bench is still a
     // bench: nothing is taken away because nothing can be written.
@@ -281,7 +368,7 @@ test.describe('the bench and the address', () => {
     });
 
     await page.goto('/equipment');
-    await wearSuit(page, 'Dominator Suit');
+    await wearAndChoose(page, 'Dominator Suit');
 
     await expect(page.getByText(/storage is full/i)).toBeVisible();
     await page.getByRole('button', { name: 'Choose loadouts to discard' }).click();
@@ -299,9 +386,13 @@ test.describe('the bench and the address', () => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
     await expect(page).toHaveURL(/\/outfitting#b\./);
+    // Each tool's work carries a decision, so each is owed a record of its own
+    // (024/FR-001, 024/FR-002).
+    await setShipIdent(page, 'NB-01');
+    await savedToBrowser(page);
 
     await page.goto('/equipment');
-    await wearSuit(page, 'Dominator Suit');
+    await wearAndChoose(page, 'Dominator Suit');
     await autosaved(page);
 
     // Two records, one per tool. A loadout written into the build's record
@@ -319,7 +410,7 @@ test.describe('the bench and the address', () => {
 test.describe('deleting the record the bench is autosaving into', () => {
   test('has the bench let go of it, and it stays deleted (017/FR-008)', async ({ page }) => {
     await page.goto('/equipment');
-    await wearSuit(page, 'Dominator Suit');
+    await wearAndChoose(page, 'Dominator Suit');
     await autosaved(page);
     const deleted = await page.evaluate(() =>
       Object.keys(localStorage).find((key) => key.startsWith('ednb:record:'))!,
@@ -358,6 +449,10 @@ test.describe('deleting the record the workspace is autosaving into', () => {
   test('leaves this tab claiming nothing for the ship tool (017/FR-010)', async ({ page }) => {
     await page.goto('/ships/Anaconda');
     await buildStockHull(page, 'Build');
+    // The ship carries an ident, so the build holds a decision and is worth a
+    // record. A build at the package default is stored nowhere, so there would
+    // be nothing to claim and nothing to delete (024/FR-001).
+    await setShipIdent(page, 'NB-01');
     await savedToBrowser(page);
 
     // The claim as this tab is holding it, which is what a reload reads.
@@ -401,7 +496,7 @@ test.describe('the bar with the open tool drawn as a control', () => {
     await expectNoAccessibilityViolations(page, testInfo, { label: 'tool-bar-current' });
 
     await page.goto('/equipment');
-    await wearSuit(page, 'Dominator Suit');
+    await wearAndChoose(page, 'Dominator Suit');
     await autosaved(page);
     await tools(page).nth(1).click();
     await expect(page.locator('.gate')).toBeVisible();

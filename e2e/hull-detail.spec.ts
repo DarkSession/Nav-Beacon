@@ -10,9 +10,10 @@ import {
   buildStockHull,
   manifestBuildControl,
   openHullFromManifest,
+  openLibrary,
   reachShellLink,
+  recordCount,
   restsToRead,
-  savedToBrowser,
 } from './shell';
 
 /**
@@ -417,15 +418,21 @@ test.describe('hull detail', () => {
     await expect(page.locator('[data-slot-key]').first()).toBeVisible();
   });
 
-  test('replaces the build on screen without asking, and keeps the one it replaced', async ({
+  test('replaces the build on screen without asking, and stores no record for either', async ({
     page,
   }) => {
-    // Withdrawn on 2026-08-25: the build being replaced has a record of its own,
-    // so nothing is lost and nothing is asked. What is asserted instead is that
-    // the first build is still there afterwards (FR-008, FR-009).
+    // Withdrawn on 2026-08-25: nothing is asked before one build replaces
+    // another. What each creation leaves behind is the other half of it. A
+    // build straight from the catalogue is the loadout the package publishes
+    // for the hull, which holds nothing a Commander decided: it is worth no
+    // record, and a Commander reaches it again by selecting the hull
+    // (FR-008, FR-009, 024/FR-001).
     await buildStockHull(page, englishMessages['hullDetail.create']);
     await expect(page.locator('[data-slot-key]').first()).toBeVisible();
-    await savedToBrowser(page);
+    await expect(page.locator('ednb-build-workspace-page')).toHaveAttribute(
+      'data-persistence',
+      'ready',
+    );
 
     await openHullInApp(page, 'Sidewinder');
     await buildStockHull(page, englishMessages['hullDetail.create']);
@@ -434,16 +441,32 @@ test.describe('hull detail', () => {
     await expect(page).toHaveURL(/\/outfitting(#|$)/);
     await expect(page.getByRole('banner').getByText('Sidewinder').first()).toBeVisible();
 
-    // Two builds, two records: the Anaconda is on the library's list rather than
-    // gone. Polled rather than read once, because the second build's own write
-    // is coalesced and the status still reads "saved" from the first one.
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => Object.keys(localStorage).filter((key) => key.startsWith('ednb:record:')).length,
-        ),
-      )
-      .toBe(2);
+    // The status line names the state the workspace draws for work that is in
+    // no record. It is read for that name alone: a write lands after the
+    // coalescing window, so read here it cannot say whether one is pending.
+    await expect(page.locator('ednb-build-workspace-page')).toHaveAttribute(
+      'data-persistence',
+      'ready',
+    );
+
+    // Nothing was stored for either of them. The journey leaves the workspace
+    // before it counts, which is what makes the answer cover the second
+    // creation as well as the first: the workspace writes what it owes on the
+    // way out, so a record owed for the build on screen is in the store by the
+    // time the count is read. Reaching the saved list from the workspace would
+    // leave it standing, and the count would answer for the first creation
+    // alone.
+    await page.goBack();
+    await expect(page.locator('ednb-build-workspace-page')).toHaveCount(0);
+
+    // Read once rather than polled: a count that states nothing was written
+    // holds from the first attempt. Stated in the words a Commander reads too,
+    // on the screen that would list either build had one been kept.
+    expect(await recordCount(page)).toBe(0);
+    await openLibrary(page);
+    await expect(
+      page.getByRole('dialog', { name: 'Saved builds' }).getByText('Nothing is stored yet'),
+    ).toBeVisible();
   });
 
   test('draws the stock-hull action only where the manifest is not the build', async ({ page }) => {

@@ -13,17 +13,32 @@ import { provideIsolatedLocaleEnvironment } from '../../i18n/testing/localizatio
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinator';
 import type { BuildCandidate } from '../active-build/active-build.models';
+import { AutosaveService } from '../build-library/autosave.service';
 import { BuildLibraryStore } from '../build-library/build-library.store';
+import { generateSlefExportArtifact } from '../../domain/ships/slef/slef-export';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import type { JournalFile } from '../../domain/journal/journal-scan';
 import { SlefImportCoordinator } from './slef-import.coordinator';
 import { SlefStore } from './slef.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 const VALID = JSON.stringify({ event: 'Loadout', Ship: FIXTURE_HULL, Modules: [] });
+
+/**
+ * A paste holding the build the package publishes for its hull.
+ *
+ * Written by the application's own export, so it is the payload a Commander
+ * pastes back after sharing a hull's default build, module for module.
+ */
+const DEFAULT_PASTE = generateSlefExportArtifact(
+  { loadout: ShipLoadout.default(FIXTURE_HULL), revision: 1, canonicalLink: { kind: 'absent' } },
+  { appName: 'nav-beacon', appVersion: '0.0.0' },
+).payload;
 
 function seedActive(active: ActiveBuildStore): void {
   active.commit({
     loadout: ShipLoadout.default('Sidewinder'),
+    suppliedFit: suppliedFit(ShipLoadout.default('Sidewinder').shipSymbol),
     hullName: 'Sidewinder',
     provenance: 'working',
     sourceNamed: null,
@@ -38,8 +53,11 @@ describe('the one path from a draft to an active build', () => {
   let replacement: BuildIngressCoordinator;
   let coordinator: SlefImportCoordinator;
   let committed: BuildCandidate[];
+  let autosave: AutosaveService;
+  let storage: MemoryStorage;
 
   beforeEach(() => {
+    storage = new MemoryStorage();
     TestBed.configureTestingModule({
       providers: [
         // A stub `/outfitting`, so the coordinator's move to the workspace resolves
@@ -49,21 +67,23 @@ describe('the one path from a draft to an active build', () => {
         ...provideIsolatedLocaleEnvironment(),
         // Storing a batch of imported builds is a write, so the coordinator
         // reaches the record repository. Nothing on this path writes one.
-        ...provideMemoryStorage(new MemoryStorage()),
+        ...provideMemoryStorage(storage),
       ],
     });
     active = TestBed.inject(ActiveBuildStore);
     store = TestBed.inject(SlefStore);
     replacement = TestBed.inject(BuildIngressCoordinator);
     coordinator = TestBed.inject(SlefImportCoordinator);
+    autosave = TestBed.inject(AutosaveService);
     committed = [];
     replacement.addSink({
       onCommitted: (candidate) => {
         committed.push(candidate);
       },
     });
-    // Since 2026-08-25 nothing is asked between a valid draft and an active
-    // build: the build being replaced has a record of its own (FR-008).
+    // Nothing is asked between a valid draft and an active build: the build
+    // being replaced is either in a record of its own or still at its hull's
+    // package default, and neither is lost (024/FR-001, FR-008).
   });
 
   describe('delegation', () => {
@@ -98,6 +118,35 @@ describe('the one path from a draft to an active build', () => {
       // be the second replacement path the coordinator exists to prevent.
       expect(active.link()).toEqual({ kind: 'absent' });
       expect(active.autosaveRecordId()).toBeNull();
+    });
+  });
+
+  describe('a paste holding a build at the package default', () => {
+    it('takes no record for it', async () => {
+      // The route the build arrived by is not the question. What is on screen
+      // is the build the package publishes for the hull, which a Commander
+      // reaches again by selecting the hull (024/FR-001).
+      store.setDraft(DEFAULT_PASTE);
+
+      expect(await coordinator.submit()).toEqual({ kind: 'committed' });
+      autosave.flush();
+
+      expect(active.atDefault()).toBe(true);
+      expect(active.autosaveRecordId()).toBeNull();
+      expect(storage.entries.size).toBe(0);
+    });
+
+    it('takes a record at the first modelled edit of it', async () => {
+      store.setDraft(DEFAULT_PASTE);
+      await coordinator.submit();
+      autosave.flush();
+
+      active.loadout()!.setModulePriority('FrameShiftDrive', 2);
+      active.touch();
+      autosave.flush();
+
+      expect(active.autosaveRecordId()).not.toBeNull();
+      expect(storage.entries.size).toBe(1);
     });
   });
 
@@ -196,6 +245,7 @@ describe('the one path from a draft to an active build', () => {
       const inFlight = coordinator.submit();
       const other = {
         loadout: ShipLoadout.default('Eagle'),
+        suppliedFit: suppliedFit(ShipLoadout.default('Eagle').shipSymbol),
         hullName: 'Eagle',
         provenance: 'stock' as const,
         sourceNamed: null,
@@ -239,6 +289,29 @@ function journalFile(name: string, lines: readonly string[]): JournalFile {
 /** The names of every readable record, in the order the library lists them. */
 function storedNames(library: BuildLibraryStore): readonly (string | null)[] {
   return library.records().map((entry) => (entry.available ? entry.record.name : null));
+}
+
+/**
+ * One journal line holding the build the package publishes for the hull.
+ *
+ * Written from `ShipLoadout.default` through the package's own export, so it
+ * names every module the hull carries rather than the empty list `loadoutLine`
+ * writes. The package accepts `event` on the way in and never writes it, so the
+ * line names itself.
+ *
+ * Shaped the way a game journal writes one: the power of every module stated,
+ * and the ship named blank because this one carries no name. A build assembled
+ * in the application states none of that, and the two are the same build
+ * (024/FR-001).
+ */
+function defaultLoadoutLine(timestamp: string): string {
+  return JSON.stringify({
+    timestamp,
+    event: 'Loadout',
+    ...ShipLoadout.default(FIXTURE_HULL).toLoadoutEvent({ explicitPower: true }),
+    ShipName: '',
+    ShipIdent: '',
+  });
 }
 
 function loadoutLine(fields: Record<string, unknown>): string {
@@ -390,6 +463,21 @@ describe('builds a journal offers', () => {
     });
   });
 
+  describe('one build at the package default chosen', () => {
+    it('becomes the active build, and the build is read as at its hull’s default', async () => {
+      // The journal states the power of every module and names the ship blank,
+      // none of which a Commander decided. Read otherwise, this build would be
+      // the one default build that takes a record (024/FR-001).
+      await coordinator.scanFiles([
+        journalFile('Journal.01.log', [defaultLoadoutLine('2026-09-01T09:00:00Z')]),
+      ]);
+
+      expect(await coordinator.submit()).toEqual({ kind: 'committed' });
+
+      expect(active.atDefault()).toBe(true);
+    });
+  });
+
   describe('several builds chosen', () => {
     async function scanThree(): Promise<void> {
       await coordinator.scanFiles([
@@ -463,6 +551,30 @@ describe('builds a journal offers', () => {
       await coordinator.submit();
 
       expect(store.layer()).toBe('none');
+    });
+  });
+
+  describe('a batch holding a build at the package default', () => {
+    it('stores one named record for it, as it does for every other entry', async () => {
+      // Choosing a build in a batch is the decision. The build is not opened,
+      // so the address holds nothing, and a record is the only place it is
+      // kept — which is why the gate on an active build does not reach here
+      // (024/FR-001).
+      await coordinator.scanFiles([
+        journalFile('Journal.01.log', [
+          loadoutLine({ ShipName: 'Chosen', timestamp: '2026-09-02T09:00:00Z' }),
+          defaultLoadoutLine('2026-09-01T09:00:00Z'),
+        ]),
+      ]);
+      for (const entry of store.journalEntries().slice(1)) {
+        store.toggleSelection(entry.key);
+      }
+
+      const submission = await coordinator.submit();
+
+      expect(submission).toEqual({ kind: 'stored', stored: 2, refused: [] });
+      library.refresh();
+      expect([...storedNames(library)].sort()).toEqual(['Anaconda', 'Chosen']);
     });
   });
 

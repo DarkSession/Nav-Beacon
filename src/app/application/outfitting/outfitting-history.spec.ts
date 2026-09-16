@@ -13,6 +13,7 @@ import type { BuildCandidate } from '../active-build/active-build.models';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinator';
 import { OutfittingStore } from './outfitting.store';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * Undo and redo, from the store's side.
@@ -28,6 +29,7 @@ import { OutfittingStore } from './outfitting.store';
 function candidateFor(loadout: ShipLoadout): BuildCandidate {
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

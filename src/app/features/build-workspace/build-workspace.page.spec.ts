@@ -11,6 +11,7 @@ import { recordKey } from '../../platform/storage/storage-keys';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { LibraryPresence } from '../build-library/library-presence';
 import { BuildWorkspacePage } from './build-workspace.page';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A lock that serializes without a browser: what is under test is the save. */
 class FakeLocks {
@@ -35,17 +36,19 @@ describe('BuildWorkspacePage persistence actions', () => {
   let active: ActiveBuildStore;
   let storage: MemoryStorage;
 
-  beforeEach(async () => {
-    // The workspace publishes the build it holds into the address, and the
-    // document's address outlives one test.
-    history.replaceState(null, '', location.pathname);
-
+  /**
+   * Stands the workspace up over one browser store.
+   *
+   * Taken apart from `beforeEach` because a reload is a fresh application over
+   * the same browser: same records, same address, nothing else carried over.
+   */
+  async function configure(store: MemoryStorage): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [BuildWorkspacePage],
       providers: [
         provideLocalization(),
         provideRouter([]),
-        ...provideMemoryStorage((storage = new MemoryStorage())),
+        ...provideMemoryStorage((storage = store)),
         { provide: WebLocksAdapter, useValue: new FakeLocks() },
         // The saved-records layer pushes and pops through `Location`, and the
         // build link is published onto `window.location`. The test environment
@@ -57,6 +60,14 @@ describe('BuildWorkspacePage persistence actions', () => {
       ],
     }).compileComponents();
     active = TestBed.inject(ActiveBuildStore);
+  }
+
+  beforeEach(async () => {
+    // The workspace publishes the build it holds into the address, and the
+    // document's address outlives one test.
+    history.replaceState(null, '', location.pathname);
+
+    await configure(new MemoryStorage());
   });
 
   afterEach(() => {
@@ -66,21 +77,36 @@ describe('BuildWorkspacePage persistence actions', () => {
   });
 
   /** A build on the workspace, as opening a stock hull leaves one. */
-  function openBuild(symbol = 'Anaconda'): void {
+  function openBuild(symbol = 'Anaconda'): ShipLoadout {
+    const loadout = ShipLoadout.default(symbol);
     active.commit({
-      loadout: ShipLoadout.default(symbol),
+      loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: symbol,
       provenance: 'stock',
       sourceNamed: null,
       autosaveRecordId: null,
       baseline: null,
     });
+    return loadout;
+  }
+
+  /**
+   * A build carrying one decision, so a record is owed for it.
+   *
+   * A build still at the package default takes none, which is what every
+   * persistence action below is not about: there is no record to pause on, to
+   * retry into or to lose (024/FR-001).
+   */
+  function decidedBuild(symbol = 'Anaconda'): void {
+    openBuild(symbol).setModulePriority('FrameShiftDrive', 2);
+    active.touch();
   }
 
   it('resumes saving when the Commander asks it to', () => {
     const fixture = TestBed.createComponent(BuildWorkspacePage);
     fixture.detectChanges();
-    openBuild();
+    decidedBuild();
     const autosave = TestBed.inject(AutosaveService);
     autosave.flush();
     const mine = active.autosaveRecordId()!;
@@ -103,7 +129,7 @@ describe('BuildWorkspacePage persistence actions', () => {
   it('writes again when the Commander asks to retry', () => {
     const fixture = TestBed.createComponent(BuildWorkspacePage);
     fixture.detectChanges();
-    openBuild();
+    decidedBuild();
 
     fixture.componentInstance.actOnPersistence('retry');
 
@@ -139,6 +165,72 @@ describe('BuildWorkspacePage persistence actions', () => {
       fixture.detectChanges();
     }
   }
+
+  /**
+   * Settles until the page reaches the state asked about, or gives up.
+   *
+   * The real codec is a lazily imported chunk, so the first encode of a run
+   * takes as long as the import does. A fixed number of passes would either be
+   * too few here or wasted everywhere else.
+   */
+  async function settleUntil(
+    fixture: ComponentFixture<BuildWorkspacePage>,
+    reached: () => boolean,
+  ): Promise<void> {
+    for (let pass = 0; pass < 50 && !reached(); pass += 1) {
+      await settle(fixture);
+    }
+  }
+
+  it('restores a build at the package default from the address after a reload', async () => {
+    // Such a build takes no record, so a record is not what brings it back. The
+    // address is: it carries the build from the moment the build becomes
+    // active, and a page built at that address reads it straight back
+    // (024/FR-001, 024/FR-003).
+    const first = TestBed.createComponent(BuildWorkspacePage);
+    first.detectChanges();
+    openBuild();
+    await settleUntil(first, () => window.location.hash.startsWith('#b.'));
+
+    expect(window.location.hash.startsWith('#b.')).toBe(true);
+
+    // Flushed before the store is read, so the read is an answer. Autosave
+    // coalesces, so a store read while the page is still settling says nothing
+    // was written whether or not a write is owed; a flush asks for it now.
+    TestBed.inject(AutosaveService).flush();
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(storage.entries.size).toBe(0);
+    first.destroy();
+
+    // The reload: a fresh application over the same browser store, at the
+    // address the first page left behind. Nothing is claimed, because nothing
+    // was ever claimed.
+    const browserStore = storage;
+    TestBed.resetTestingModule();
+    await configure(browserStore);
+    const second = TestBed.createComponent(BuildWorkspacePage);
+    second.detectChanges();
+    await settleUntil(second, () => active.loadout() !== null);
+
+    expect(active.loadout()?.shipSymbol).toBe('Anaconda');
+    // Let the restored build's own publication land, so nothing is still in
+    // flight when the address is given back.
+    await settle(second);
+    second.destroy();
+  });
+
+  it('opens on the no-build state at an address carrying no fragment', async () => {
+    // The ordinary state of a fresh tab. Nothing is claimed and nothing is in
+    // the address, so there is nothing to restore and none is invented
+    // (024/FR-001).
+    const fixture = TestBed.createComponent(BuildWorkspacePage);
+    fixture.detectChanges();
+    await settle(fixture);
+
+    expect(active.loadout()).toBeNull();
+    expect(storage.entries.size).toBe(0);
+    fixture.destroy();
+  });
 
   it('gives the address back the build link the saved records were raised over', async () => {
     // The two are driven together here because `LibraryPresence` has no suite

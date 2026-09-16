@@ -1,3 +1,4 @@
+import type { SuppliedFit } from '../../domain/ships/build/build-default';
 import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import type { BuildLinkCodecErrorCode } from '../../domain/build-link/build-link-codec-error';
 import type { PersistenceStatus } from '../build-library/working-record.port';
@@ -73,6 +74,21 @@ export interface BuildCandidate {
    * are mounted on screens that never open a build.
    */
   readonly hullName: string;
+  /**
+   * The modules the hull is supplied with, resolved by whoever built the
+   * candidate, or `null` for a hull the package publishes no default for.
+   *
+   * It travels with the candidate for the reason the hull's name does: the
+   * store that reads it is started with the shell, and the package's default
+   * loadouts are fifty kilobytes that belong in the chunk a build is opened
+   * from. Whoever constructs a candidate has already asked the package for the
+   * build, so `suppliedFit` costs it nothing.
+   *
+   * What it is for is `atDefault`, which compares it with the build on every
+   * revision — the hull does not change while a build is open, so the fit is
+   * read once and the answer still follows the state (024/FR-001).
+   */
+  readonly suppliedFit: SuppliedFit | null;
   readonly provenance: BuildProvenance;
   /** The named record this candidate came from, when it came from one. */
   readonly sourceNamed: NamedSource | null;

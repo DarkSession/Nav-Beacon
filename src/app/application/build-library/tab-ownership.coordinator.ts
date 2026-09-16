@@ -34,9 +34,11 @@ import type { WorkingRecordSubject } from './working-record.port';
  * Commander's next keystroke lands in.
  *
  * One page, one record **per tool**. A Commander has a build and a loadout open
- * at the same time, each autosaved into an unnamed record of its own, so every
- * answer here is asked about a tool and a fork of one leaves the other where it
- * is (017/FR-010).
+ * at the same time, and each has a record of its own: the unnamed one the tool
+ * autosaves into, the named one the work is already in, or none at all while
+ * the work is still at its package default (017/FR-010, 024/FR-001). So every
+ * answer here is asked about a tool, and a fork of one leaves the other where
+ * it is.
  *
  * Two pages holding one *named* record open is not a collision and is not
  * announced here. Neither of them autosaves into it (001/FR-012).
@@ -91,7 +93,7 @@ export class TabOwnershipCoordinator {
     ['equipment', () => this.#benchAutosave.adoptForkedRecord()],
   ]);
 
-  /** The last id announced for each tool, so one id is not announced twice. */
+  /** The last id claimed for each tool, so one id is not announced twice. */
   readonly #announced = new Map<RecordTool, string>();
 
   /**
@@ -142,8 +144,19 @@ export class TabOwnershipCoordinator {
 
     const watcher = effect(
       () => {
-        const id = subject.autosaveRecordId();
-        if (id === null || id === this.#announced.get(subject.tool)) {
+        const id = subject.autosaveRecordId() ?? namedHome(subject);
+        if (id === null) {
+          // A tool whose work is in no record claims none. Reached where a tool
+          // that was writing to one takes up work that is stored nowhere: a
+          // build still at its hull's default (024/FR-001). A claim left behind
+          // would have a reload restore the record the Commander stepped off,
+          // and a duplicated tab fork it.
+          if (this.#claimIsSpent(subject)) {
+            this.release(subject.tool);
+          }
+          return;
+        }
+        if (id === this.#announced.get(subject.tool)) {
           return;
         }
         this.#announced.set(subject.tool, id);
@@ -154,6 +167,33 @@ export class TabOwnershipCoordinator {
     );
 
     return () => watcher.destroy();
+  }
+
+  /**
+   * Whether the claim in the tab is one this page is finished with.
+   *
+   * Asked of a tool whose work is in no record. What it has to tell apart is a
+   * claim this page has stepped off from the claim a reload is about to read:
+   * the descriptor outlives the page that wrote it — that is what makes it
+   * readable after a reload — and every page registers its tools before it has
+   * restored anything, holding nothing at that moment.
+   *
+   * A claim this page wrote in this run is its own by construction. Otherwise
+   * the claim was written before this page loaded, and it is spent once this
+   * tool holds work of its own: the restore that reads the claim runs only
+   * while the tool holds nothing, so from there the claim describes nothing on
+   * this page and nothing else will correct it. A default build mints no
+   * record, so there is no later write to correct it with (024/FR-001).
+   *
+   * A tool claiming nothing has nothing to let go of. Answered first, so a
+   * default build a Commander keeps editing does not say the same release over
+   * and over.
+   */
+  #claimIsSpent(subject: WorkingRecordSubject): boolean {
+    if (this.claim(subject.tool) === null) {
+      return false;
+    }
+    return this.#announced.has(subject.tool) || subject.fingerprint() !== null;
   }
 
   /**
@@ -329,4 +369,34 @@ export class TabOwnershipCoordinator {
 
     return next;
   }
+}
+
+/**
+ * The named record a tool's work can be opened from again, or `null`.
+ *
+ * The other half of what a tab claims. A claim is the record a reload restores
+ * from, and autosave is not the only way work gets into one: a save moves the
+ * work into a named record and clears the autosave target, because autosave has
+ * no path to a named record (001/FR-008, 017/FR-007). Opening a named record
+ * from the saved list leaves the work in the same place. Both are work that is
+ * stored, in a record that is not this tool's to write.
+ *
+ * Read from where the work is rather than from how it got there, so a saved
+ * record and an opened one are one answer. Read reactively too: the source and
+ * the dirty state are signals, so work that moves off a named record wakes the
+ * watcher that holds the claim. That matters under 024/FR-001, where a default
+ * build allocates no record — so there is no later allocation to correct a
+ * claim left standing (024/FR-001).
+ *
+ * Only while the work matches what the record holds. An edit puts the work
+ * somewhere the record cannot be opened to, and the claim is for restoring the
+ * work, not for naming where it came from. The next write mints an unnamed
+ * record and claims that instead.
+ */
+function namedHome(subject: WorkingRecordSubject): string | null {
+  const source = subject.sourceNamed();
+  if (source === null || subject.dirty()) {
+    return null;
+  }
+  return source.recordId;
 }

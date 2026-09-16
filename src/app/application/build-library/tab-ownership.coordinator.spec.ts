@@ -10,10 +10,16 @@ import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/stor
 import { recordKey } from '../../platform/storage/storage-keys';
 import { TabDescriptorRepository } from '../../platform/storage/tab-descriptor.repository';
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
+import { baselineFingerprint } from '../../domain/ships/build/build-fingerprint';
+import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { LoadoutStore } from '../equipment/loadout.store';
+import { adoptSavedRecord } from './adopt-saved-record';
+import { AutosaveService } from './autosave.service';
+import { RecordInvalidationService } from './record-invalidation.service';
 import { TabOwnershipCoordinator } from './tab-ownership.coordinator';
 import type { WorkingRecordSubject } from './working-record.port';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /** A channel two coordinators in one test can talk over. */
 class FakeChannel {
@@ -49,19 +55,24 @@ class CountingUuid {
   }
 }
 
-function setup(session = new MemoryStorage(), channel = new FakeChannel()) {
-  const storage = new MemoryStorage();
+function setup(
+  session = new MemoryStorage(),
+  channel = new FakeChannel(),
+  storage = new MemoryStorage(),
+  uuid = new CountingUuid(),
+) {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       ...provideMemoryStorage(storage, session),
       { provide: BroadcastChannelAdapter, useValue: channel },
-      { provide: UuidAdapter, useValue: new CountingUuid() },
+      { provide: UuidAdapter, useValue: uuid },
     ],
   });
   return {
     coordinator: TestBed.inject(TabOwnershipCoordinator),
     active: TestBed.inject(ActiveBuildStore),
+    autosave: TestBed.inject(AutosaveService),
     channel,
     session,
     storage,
@@ -72,12 +83,45 @@ function setup(session = new MemoryStorage(), channel = new FakeChannel()) {
 function hold(active: ActiveBuildStore, autosaveRecordId: string | null): void {
   active.commit({
     loadout: ShipLoadout.default('Anaconda'),
+    suppliedFit: suppliedFit(ShipLoadout.default('Anaconda').shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,
     autosaveRecordId,
     baseline: null,
   });
+}
+
+/**
+ * Puts a build in the store as opening a named record leaves it.
+ *
+ * In the record, unedited, and holding no autosave target: a named record is
+ * never one, so the page writes nothing to it and forks at the first modelled
+ * edit (001/FR-008). Written the way `RecordOpenService` writes it, because
+ * what the claim reads is that state rather than the route to it.
+ */
+function openNamed(active: ActiveBuildStore, recordId: string): void {
+  const loadout = ShipLoadout.default('Anaconda');
+  active.commit({
+    loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
+    hullName: 'Anaconda',
+    provenance: 'named',
+    sourceNamed: { recordId, baseRevisionId: 'revision-1' },
+    autosaveRecordId: null,
+    baseline: baselineFingerprint(toBuildSnapshotV1(loadout)),
+  });
+}
+
+/**
+ * Makes one modelled decision on the build a page holds.
+ *
+ * The priority tells two pages' builds apart, so a record taken for one is
+ * never a match for the other's.
+ */
+function decide(active: ActiveBuildStore, priority: number): void {
+  active.loadout()!.setModulePriority('FrameShiftDrive', priority);
+  active.touch();
 }
 
 /** A second tool tracking here, as the port describes one. */
@@ -88,6 +132,7 @@ function otherTool(recordId: string | null): WorkingRecordSubject {
     revision: signal(0),
     fingerprint: signal<string | null>('a-loadout'),
     dirty: signal(true),
+    atDefault: signal(false),
     autosaveRecordId: held.asReadonly(),
     sourceNamed: signal(null),
     payload: () => null,
@@ -242,6 +287,291 @@ describe('TabOwnershipCoordinator', () => {
 
     expect(channel.sent).toEqual([]);
     stop();
+  });
+
+  it('claims nothing for a tool holding no record, and leaves the other tool’s claim alone', () => {
+    // A build still at the package default takes no record, so this tool holds
+    // none. There is nothing to write down and nothing to announce — and the
+    // loadout open beside it is unaffected, because one tool holding nothing
+    // says nothing about the other (024/FR-001, 024/FR-002).
+    const { coordinator, active, channel } = setup();
+    hold(active, null);
+    coordinator.track(active);
+    coordinator.track(otherTool('the-loadout'));
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
+    expect(coordinator.claim('equipment')).toBe('the-loadout');
+    expect(channel.sent).toEqual([
+      {
+        kind: 'working-claim',
+        tool: 'equipment',
+        workingRecordId: 'the-loadout',
+        pageNonce: coordinator.pageNonce,
+      },
+    ]);
+  });
+
+  it('keeps the claim on the record a save produced, which holds the work now', () => {
+    // A save clears the autosave target on purpose: autosave has no path to a
+    // named record. The work is not in no record, though — it is in the one the
+    // save produced, and that is the record a reload restores from and holds.
+    // Released here, a reload would restore nothing, the fragment would open the
+    // build as an arrival instead, and autosave would mint a second record for
+    // work the Commander has just saved by name (001/FR-008, 017/FR-007).
+    const { coordinator, active, channel } = setup();
+    hold(active, 'the-build');
+    coordinator.track(active);
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
+      recordId: 'the-build',
+      revisionId: 'revision-2',
+      held: 'the-build',
+    });
+    TestBed.tick();
+
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(coordinator.claim('ship')).toBe('the-build');
+    expect(channel.sent).not.toContainEqual({
+      kind: 'working-release',
+      tool: 'ship',
+      pageNonce: coordinator.pageNonce,
+    });
+  });
+
+  it('claims the record a save produced when it is not the one autosave held', () => {
+    // A save without Web Locks mints a fresh record and consumes the held one,
+    // and an overwrite writes an existing named record and consumes it the same
+    // way. Left on the id autosave had, the claim would name a record the save
+    // has just deleted, and a reload would restore nothing (017/FR-010).
+    const { coordinator, active } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
+      recordId: 'the-named-record',
+      revisionId: 'revision-2',
+      held: 'the-working-record',
+    });
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBe('the-named-record');
+  });
+
+  it('lets go of the claim a save wrote once the work moves off that record', () => {
+    // The first edit after a save is work the saved record does not hold, and
+    // the fork that follows puts it in an unnamed record of its own. A claim
+    // left on the save would have a reload restore the saved version and lose
+    // every edit made since (017/FR-010).
+    const { coordinator, active } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
+      recordId: 'the-named-record',
+      revisionId: 'revision-2',
+      held: 'the-working-record',
+    });
+    TestBed.tick();
+    expect(coordinator.claim('ship')).toBe('the-named-record');
+
+    decide(active, 3);
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
+
+    active.setAutosaveRecordId('the-forked-record');
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBe('the-forked-record');
+  });
+
+  it('lets go of the claim a save wrote once a default build takes its place', () => {
+    // The build a Commander creates from the hull catalogue after saving is at
+    // its hull's default, so it takes no record and none is minted to correct
+    // the claim (024/FR-001). Left standing, the record the save produced is
+    // what a reload opens — a build the Commander has already moved on from.
+    const { coordinator, active } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
+      recordId: 'the-named-record',
+      revisionId: 'revision-2',
+      held: 'the-working-record',
+    });
+    TestBed.tick();
+    expect(coordinator.claim('ship')).toBe('the-named-record');
+
+    hold(active, null);
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
+  });
+
+  it('keeps the claim on a named record the page opened', () => {
+    // Work opened from the saved list is in that record as surely as work a
+    // save put there, and holds no autosave target either way. Released, a
+    // reload would restore nothing, and the build would come back from the
+    // fragment as a fresh arrival for autosave to mint a record for — a second
+    // copy of a record the Commander already has (001/FR-008, 024/FR-001).
+    const { coordinator, active, channel } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    openNamed(active, 'the-opened-record');
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBe('the-opened-record');
+    expect(channel.sent, 'a named record is not announced: neither page autosaves into it').toEqual(
+      [],
+    );
+  });
+
+  it('lets go of the record a tool held once it takes up work that is in none', () => {
+    // A Commander autosaving into a record creates a build from the hull
+    // catalogue. The new build is at its hull's default and takes no record, so
+    // the claim on the old one is no longer this page's to hold: left behind,
+    // a reload would restore the record the Commander stepped off and a
+    // duplicated tab would fork it (024/FR-001, FR-012).
+    const { coordinator, active, channel } = setup();
+    hold(active, 'the-build');
+    coordinator.track(active);
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    hold(active, null);
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
+    // And said out loud, so a sibling page stops protecting a record nobody is
+    // writing to any more.
+    expect(channel.sent).toEqual([
+      { kind: 'working-release', tool: 'ship', pageNonce: coordinator.pageNonce },
+    ]);
+  });
+
+  it('leaves the claim a reload is about to read where it is', () => {
+    // The store is empty while the shell registers this tool, which is every
+    // page's first moment. Reading that as a tool letting go would have the
+    // page erase its own way back to the record it was working from (FR-012).
+    const session = new MemoryStorage();
+    const first = setup(session);
+    hold(first.active, 'id-held');
+    const stop = first.coordinator.track(first.active);
+    TestBed.tick();
+    stop();
+
+    const second = setup(session);
+    second.coordinator.track(second.active);
+    TestBed.tick();
+
+    expect(second.coordinator.claim('ship')).toBe('id-held');
+  });
+
+  it('lets go of a claim from before the reload once the tool takes up work of its own', () => {
+    // Reloading on another screen leaves the claim in the tab and this page
+    // knowing nothing about it. The build created afterwards is at its hull's
+    // default, so it mints no record and there is no later write to correct
+    // the claim with — and a reload reaching the workspace with no build in
+    // the address would restore the record the Commander stepped off
+    // (024/FR-001, 017/FR-010).
+    const session = new MemoryStorage();
+    const first = setup(session);
+    hold(first.active, 'id-held');
+    const stop = first.coordinator.track(first.active);
+    TestBed.tick();
+    stop();
+
+    const second = setup(session);
+    second.coordinator.track(second.active);
+    TestBed.tick();
+    expect(
+      second.coordinator.claim('ship'),
+      'the claim a reload reads survives the first moment',
+    ).toBe('id-held');
+
+    hold(second.active, null);
+    TestBed.tick();
+
+    expect(second.coordinator.claim('ship')).toBeNull();
+  });
+
+  it('forks nothing for a tool holding no record when the tab is duplicated', () => {
+    // The duplicate carries a copy of the session, so it claims the same
+    // loadout and that tool forks. The build is in no record in either page:
+    // there is no identity to collide on and nothing to copy anywhere
+    // (024/FR-001, 017/FR-010).
+    const { coordinator, active, channel } = setup();
+    hold(active, null);
+    const loadout = otherTool('the-loadout');
+    coordinator.track(active);
+    coordinator.track(loadout);
+    coordinator.listen();
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    channel.deliver({
+      kind: 'working-claim',
+      tool: 'equipment',
+      workingRecordId: 'the-loadout',
+      pageNonce: 'duplicate',
+    });
+
+    expect(loadout.autosaveRecordId()).not.toBe('the-loadout');
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(coordinator.claim('ship')).toBeNull();
+    // And nothing was said about the build, because there is nothing to say.
+    expect(
+      channel.sent.filter((message) => message.kind === 'working-claim' && message.tool === 'ship'),
+    ).toEqual([]);
+  });
+
+  it('gives two pages holding the same default build a record each at their first edit', () => {
+    // The collision this coordinator exists for never arises while both pages
+    // are at the default: neither claims anything, so neither forks. Each takes
+    // a record of its own at its own first edit, and the two stand side by side
+    // (024/FR-001).
+    const storage = new MemoryStorage();
+    const uuid = new CountingUuid();
+    const channel = new FakeChannel();
+
+    const first = setup(new MemoryStorage(), channel, storage, uuid);
+    hold(first.active, null);
+    first.coordinator.track(first.active);
+    first.coordinator.listen();
+    first.autosave.flush();
+    TestBed.tick();
+    expect(first.active.autosaveRecordId()).toBeNull();
+    expect(channel.sent).toEqual([]);
+
+    decide(first.active, 2);
+    first.autosave.flush();
+    TestBed.tick();
+    const firstRecord = first.active.autosaveRecordId();
+    expect(firstRecord).not.toBeNull();
+
+    const second = setup(new MemoryStorage(), channel, storage, uuid);
+    hold(second.active, null);
+    second.coordinator.track(second.active);
+    second.coordinator.listen();
+    second.autosave.flush();
+    TestBed.tick();
+    expect(second.active.autosaveRecordId()).toBeNull();
+
+    decide(second.active, 3);
+    second.autosave.flush();
+    TestBed.tick();
+    const secondRecord = second.active.autosaveRecordId();
+
+    expect(secondRecord).not.toBe(firstRecord);
+    expect(storage.entries.has(recordKey(firstRecord!))).toBe(true);
+    expect(storage.entries.has(recordKey(secondRecord!))).toBe(true);
   });
 
   it('forks when another live page claims the record it writes to', () => {

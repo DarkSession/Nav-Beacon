@@ -8,6 +8,7 @@ import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
 import { NavigatorAdapter } from '../../platform/browser/navigator.adapter';
 import { FragmentPublisher } from './fragment-publisher';
 import { LinkSharePresenter } from './link-share.presenter';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 /**
  * Passing a build on as a link, and every way that can fail.
@@ -64,6 +65,7 @@ function setup(configure: (navigator: StubNavigator) => void = () => {}) {
 function commitAnaconda(active: ActiveBuildStore): void {
   active.commit({
     loadout: ShipLoadout.default('Anaconda'),
+    suppliedFit: suppliedFit(ShipLoadout.default('Anaconda').shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,

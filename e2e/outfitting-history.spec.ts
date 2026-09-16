@@ -9,7 +9,7 @@ import {
   revealMount,
   surfacesAreLayers,
 } from './outfitting-surfaces';
-import { buildStockHull, savedToBrowser } from './shell';
+import { buildStockHull, regroupCoreMount, savedToBrowser } from './shell';
 
 /**
  * Undo and redo, end to end (US4).
@@ -284,7 +284,8 @@ test.describe('what resets the tape', () => {
     await expect(undo(page)).toBeEnabled();
 
     // Nothing is asked before the link replaces what is on screen: the build it
-    // replaces has a record of its own (feature 001, FR-008).
+    // replaces is either in a record of its own or still at its hull's package
+    // default, and neither is lost (feature 001, FR-008; 024/FR-001).
     await page.goto(`/outfitting${incoming}`);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('[data-slot-key]').first()).toBeVisible();
@@ -327,6 +328,11 @@ test.describe('boundary isolation', () => {
     await openStockBuild(page);
     await setGroup(page, 'SmallHardpoint1', '1');
     await pressCommandBarAction(page, /^undo$/i);
+    // A decision the undo did not take back, so there is a record to read. A
+    // build undone to its hull's package default is stored nowhere, and the
+    // tape this journey is about is held apart from storage either way
+    // (024/FR-001).
+    await regroupCoreMount(page);
     await savedToBrowser(page);
 
     const stored = await page.evaluate(() =>

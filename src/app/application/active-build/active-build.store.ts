@@ -3,6 +3,7 @@ import type { PartialEngineeringFailure } from '../../domain/ships/build/build-i
 import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import type { BuildSnapshotV1 } from '../../domain/ships/build/build-snapshot';
 import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
+import { atPackageDefault, type SuppliedFit } from '../../domain/ships/build/build-default';
 import { baselineFingerprint } from '../../domain/ships/build/build-fingerprint';
 import { isDirty } from '../../domain/records/record-fingerprint';
 import type {
@@ -33,6 +34,8 @@ import type { RecordPayload } from '../../domain/records/local-record.serializer
 export class ActiveBuildStore implements WorkingRecordSubject {
   readonly #loadout = signal<ShipLoadout | null>(null);
   readonly #hullName = signal<string | null>(null);
+  /** The hull's supplied fit, as the candidate carried it. */
+  readonly #suppliedFit = signal<SuppliedFit | null>(null);
   readonly #revision = signal(0);
   readonly #provenance = signal<BuildProvenance>('none');
   readonly #autosaveRecordId = signal<string | null>(null);
@@ -101,6 +104,12 @@ export class ActiveBuildStore implements WorkingRecordSubject {
   /** Whether replacing this build would lose work. */
   readonly dirty = computed(() => isDirty(this.fingerprint(), this.#baseline()));
 
+  /** Whether the build is still the package's own default for its hull. */
+  readonly atDefault = computed(() => {
+    const snapshot = this.snapshot();
+    return snapshot !== null && atPackageDefault(snapshot, this.#suppliedFit());
+  });
+
   /**
    * What autosave writes for this build, or `null` while there is none.
    *
@@ -152,6 +161,7 @@ export class ActiveBuildStore implements WorkingRecordSubject {
     this.#loadout.set(candidate.loadout);
     this.#autosaveRecordId.set(candidate.autosaveRecordId);
     this.#hullName.set(candidate.hullName);
+    this.#suppliedFit.set(candidate.suppliedFit);
     this.#provenance.set(candidate.provenance);
     this.#sourceNamed.set(candidate.sourceNamed);
     this.#baseline.set(candidate.baseline);
@@ -258,6 +268,7 @@ export class ActiveBuildStore implements WorkingRecordSubject {
   clear(): void {
     this.#loadout.set(null);
     this.#hullName.set(null);
+    this.#suppliedFit.set(null);
     this.#provenance.set('none');
     this.#autosaveRecordId.set(null);
     this.#sourceNamed.set(null);

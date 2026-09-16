@@ -5,6 +5,7 @@ import { ActiveBuildStore } from '../../../../application/active-build/active-bu
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { CapacitySummary } from './capacity-summary';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The rail's two capacity cells.
@@ -19,6 +20,7 @@ describe('CapacitySummary', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: loadout.shipSymbol,
       provenance: 'stock',
       sourceNamed: null,

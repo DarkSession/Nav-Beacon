@@ -7,26 +7,36 @@ import { provideLocalization } from '../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../i18n/testing/localization-harness';
 import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
 import { HistoryLocationAdapter } from '../../platform/browser/history-location.adapter';
+import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { ActiveBuildStore } from '../active-build/active-build.store';
+import { AutosaveService } from '../build-library/autosave.service';
 import { BuildIngressCoordinator } from '../active-build/build-ingress.coordinator';
 import { BuildLinkCoordinator } from './build-link.coordinator';
 import { FragmentPublisher } from './fragment-publisher';
 import { MAX_BUILD_LINK_LENGTH } from './fragment-recognizer';
 import { LinkErrorMapper, type LinkFailureCode } from './link-error.mapper';
 import { FIELDS_EXCLUDED_FROM_LINKS, linkPayloadSource } from './link-payload.allowlist';
+import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 function setup() {
+  const storage = new MemoryStorage();
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [provideLocalization(), ...provideIsolatedLocaleEnvironment()],
+    providers: [
+      provideLocalization(),
+      ...provideIsolatedLocaleEnvironment(),
+      ...provideMemoryStorage(storage),
+    ],
   });
   return {
     ingress: TestBed.inject(BuildLinkCoordinator),
     publisher: TestBed.inject(FragmentPublisher),
     active: TestBed.inject(ActiveBuildStore),
+    autosave: TestBed.inject(AutosaveService),
     replacement: TestBed.inject(BuildIngressCoordinator),
     errors: TestBed.inject(LinkErrorMapper),
     location: TestBed.inject(HistoryLocationAdapter),
+    storage,
   };
 }
 
@@ -38,6 +48,7 @@ async function anacondaFragment(): Promise<string> {
 function commitAnaconda(active: ActiveBuildStore, hull = 'Anaconda'): void {
   active.commit({
     loadout: ShipLoadout.default(hull),
+    suppliedFit: suppliedFit(ShipLoadout.default(hull).shipSymbol),
     hullName: hull,
     provenance: 'stock',
     sourceNamed: null,
@@ -82,6 +93,32 @@ describe('BuildLinkCoordinator', () => {
     expect(active.dirty()).toBe(true);
   });
 
+  it('takes no record for a build at the package default arriving in a link', async () => {
+    // A link carrying the hull's own default loadout is the same build a
+    // Commander reaches by selecting the hull. It takes no record, and the
+    // address it arrived on is what it is reached from again (024/FR-001).
+    const { ingress, active, autosave, storage } = setup();
+
+    await ingress.ingest(await anacondaFragment());
+
+    expect(active.atDefault()).toBe(true);
+    expect(autosave.flush()).toBe(true);
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(storage.entries.size).toBe(0);
+  });
+
+  it('takes a record at the first modelled edit of a build arrived in a link', async () => {
+    const { ingress, active, autosave, storage } = setup();
+    await ingress.ingest(await anacondaFragment());
+
+    active.loadout()!.setModulePriority('FrameShiftDrive', 2);
+    active.touch();
+
+    expect(autosave.flush()).toBe(true);
+    expect(active.autosaveRecordId()).not.toBeNull();
+    expect(storage.entries.size).toBe(1);
+  });
+
   it('accepts a link whose fixed mounts the package populated, without repairing them', async () => {
     const { ingress, active } = setup();
 
@@ -96,8 +133,10 @@ describe('BuildLinkCoordinator', () => {
   });
 
   it('replaces unsaved work without asking about it', async () => {
-    // A pasted link commits over whatever was on screen, because whatever was
-    // on screen has a record of its own to be reopened from (FR-008).
+    // A pasted link commits over whatever was on screen, because what it
+    // replaces is either in a record to be reopened from or still at its hull's
+    // package default and reachable again by selecting the hull (024/FR-001,
+    // FR-008).
     const { ingress, active } = setup();
     commitAnaconda(active, 'Adder');
 
@@ -139,6 +178,7 @@ describe('BuildLinkCoordinator', () => {
     }
     active.commit({
       loadout: imported.candidate,
+      suppliedFit: suppliedFit(imported.candidate.shipSymbol),
       hullName: 'Anaconda',
       provenance: 'working',
       sourceNamed: null,
@@ -168,7 +208,49 @@ describe('BuildLinkCoordinator', () => {
   });
 });
 
+/** Waits for an encode the publisher started on its own to land. */
+async function settlePublication(location: HistoryLocationAdapter): Promise<void> {
+  for (let pass = 0; pass < 50 && !location.fragment().startsWith('b.'); pass += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
 describe('FragmentPublisher', () => {
+  it('publishes a build that becomes active and is never edited', async () => {
+    // What a reload restores such a build from, because a build at the package
+    // default takes no record. The watcher runs on the first revision, so the
+    // address carries the build from the moment it opens and no edit is needed
+    // to put it there (024/FR-003).
+    const { publisher, active, location } = setup();
+    const stop = publisher.start();
+
+    commitAnaconda(active);
+    TestBed.tick();
+    await settlePublication(location);
+
+    expect(location.fragment().startsWith('b.')).toBe(true);
+    expect(active.link().kind).toBe('published');
+    stop();
+  });
+
+  it('publishes no link for a build the codec refuses, and takes down a stale one', async () => {
+    // The address is what such a build is restored from, so a fragment left
+    // standing over a build that could not be encoded would read an earlier
+    // build back onto the page (024/FR-003, 001 link contract).
+    const { publisher, active, location } = setup();
+    commitAnaconda(active);
+    await publisher.publish();
+    expect(location.fragment().startsWith('b.')).toBe(true);
+
+    publisher.encode = () =>
+      Promise.reject(new BuildLinkCodecError('invalidPayload', 'the codec refuses this build'));
+    active.touch();
+    await publisher.publish();
+
+    expect(location.fragment()).toBe('');
+    expect(active.link().kind).not.toBe('published');
+  });
+
   it('publishes the active build within the published bound, preserving path and query', async () => {
     const { publisher, active, location } = setup();
     commitAnaconda(active);

@@ -11,6 +11,7 @@ import type { MessageCatalogue } from '../../../../i18n/locale-registry';
 import { LocaleStore } from '../../../../i18n/locale.store';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { BuildStatus } from './build-status';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The `BUILD STATUS` block, from the outside.
@@ -72,6 +73,7 @@ describe('the build status block', () => {
   function candidateFor(loadout: ShipLoadout): BuildCandidate {
     return {
       loadout,
+      suppliedFit: suppliedFit(loadout.shipSymbol),
       hullName: FIXTURE_HULL,
       provenance: 'stock',
       sourceNamed: null,

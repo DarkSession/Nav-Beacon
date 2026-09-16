@@ -19,6 +19,7 @@ import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { NO_BLUEPRINT_CHOICE } from '../../../../ui/outfitting/blueprint-choice-list';
 import { EngineeringEditor } from './engineering-editor';
+import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
 
 /**
  * The editor's states, from the outside.
@@ -33,6 +34,7 @@ import { EngineeringEditor } from './engineering-editor';
 function candidateFor(loadout: ShipLoadout): BuildCandidate {
   return {
     loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
     hullName: 'Anaconda',
     provenance: 'stock',
     sourceNamed: null,
