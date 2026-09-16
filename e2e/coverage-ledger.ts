@@ -852,8 +852,9 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
     manualRecord: 'screen-reader',
   },
   {
-    // 001/FR-009 moved off this surface on 2026-08-25: it carries no dialog any
-    // more, because a build being replaced has a record of its own.
+    // 001/FR-009 is not on this surface: it carries no dialog, because a build
+    // being replaced is either in a record of its own or still at its hull's
+    // package default, and neither is lost.
     surfaceId: 'ships/:hull/create-stock-build',
     requirements: ['001/FR-007', '024/FR-001'],
     journey: 'product/hull-detail',

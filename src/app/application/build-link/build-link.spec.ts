@@ -133,8 +133,10 @@ describe('BuildLinkCoordinator', () => {
   });
 
   it('replaces unsaved work without asking about it', async () => {
-    // A pasted link commits over whatever was on screen, because whatever was
-    // on screen has a record of its own to be reopened from (FR-008).
+    // A pasted link commits over whatever was on screen, because what it
+    // replaces is either in a record to be reopened from or still at its hull's
+    // package default and reachable again by selecting the hull (024/FR-001,
+    // FR-008).
     const { ingress, active } = setup();
     commitAnaconda(active, 'Adder');
 

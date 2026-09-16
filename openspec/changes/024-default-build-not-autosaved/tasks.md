@@ -211,12 +211,14 @@
       for fifteen seconds. It is not this change's. The failure is inside `buildStockHull`, which
       this change does not touch, and is reached before anything this change adds runs. Six
       repeats of that file on that profile fail once here and three times on the default branch:
-      three of the file's journeys there, this one among them, each inside `buildStockHull`, at the
-      same statement, on the same locator, with the same message
+      two of the file's journeys there, one of them twice, this one among them, each inside
+      `buildStockHull`, at the same statement, on the same locator, with the same message
       (`024-gate20-flaky-probe.log`, `024-gate20-flaky-probe-main.log`). The five Firefox projects
       were not run: the engine is absent from this container and `playwright install firefox`
-      cannot reach its download host. The integration run covers them, and passes the whole matrix
-      over its sixteen shards, this journey included.
+      cannot reach its download host. CI covers them, and passes the whole matrix over its sixteen
+      shards, this journey included, on both
+      https://github.com/DarkSession/Nav-Beacon/actions/runs/35087950759 (head `4b486c63`) and
+      https://github.com/DarkSession/Nav-Beacon/actions/runs/35096001678 (head `db96983e`).
       Two journeys this change adds read the store at a moment it cannot answer for. The first
       saves and reloads, and failed on its first attempt on the desktop, the landscape tablet and
       the portrait phone in the integration run over head `2022a1ca`
@@ -236,9 +238,10 @@
       coverage threshold, and the Playwright matrix including the timing and offline projects.
       Every stage through the unit tests passes (`024-gate21-check-nonbrowser.log`): 3330 tests
       over 230 files, statements 93.66%, branches 86.60%, functions 94.84%, lines 93.53%. The
-      figures move by about half a point between runs of the same tree, because V8 attributes
-      coverage across parallel workers; the threshold gate reads whichever run it is given and
-      passes. The timing project passes, with both measurements inside the 100 ms budget, and the
+      figures move by about half a point between runs, because V8 attributes coverage across
+      parallel workers: the run at `024-gate19-check-nonbrowser.log` reads 94.15%, 86.98%, 95.36%
+      and 94.09% over the same 3330 tests and the same denominators. The threshold gate reads
+      whichever run it is given and passes. The timing project passes, with both measurements inside the 100 ms budget, and the
       offline project passes over its five Chromium profiles, 360 of 720
       (`024-gate19-e2e-timing-offline.log`). The matrix itself is 6.1's run. The Firefox half of
       both the offline project and the matrix was not run, for the reason given there, and so was

@@ -115,9 +115,11 @@ tested without rendering.
 
 **Where the hull's supplied fit is read.** `ActiveBuildStore` is started with the shell, so
 whatever its comparison reaches is in the first bundle a Commander downloads. Reaching
-`ShipLoadout.default` from there puts the whole outfitting catalogue in that bundle — 744 kB,
-measured — and `getDefaultLoadout` alone still puts 50 kB of default loadouts there, over the
-project's 1 MB initial-bundle budget.
+`ShipLoadout.default` from there puts the whole outfitting catalogue in that bundle: the initial
+total measures 1.71 MB (`dist/verification/024-check-static.log`) against a 967.68 kB baseline
+(`024-baseline-build.log`). `getDefaultLoadout` alone still measures 1.02 MB
+(`024-build-refix.log`). Both are over the project's 1 MB initial-bundle maximum, which
+`angular.json` sets as `maximumError` on the initial budget.
 
 So the store reads no package. The fit the hull is supplied with travels on the `BuildCandidate`,
 resolved by whoever constructed it, exactly as the hull's name already does and for the same

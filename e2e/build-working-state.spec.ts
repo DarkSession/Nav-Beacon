@@ -19,12 +19,13 @@ import {
  * autosave, and a browser that refuses to store anything without taking the
  * build down with it.
  *
- * **Rewritten 2026-08-25.** Every build has a record of its own from the moment
- * it exists, so nothing is asked before one build replaces another, and the one
- * a Commander leaves behind is still on the library's list. What is asserted
- * here is that arithmetic: four builds leave four records, opening a save writes
- * nothing to it, the first edit forks, and naming or overwriting returns the
- * count to where it belongs (FR-008, FR-009).
+ * A build takes a record from the first decision made on it, so nothing is
+ * asked before one build replaces another: what is left behind is on the
+ * library's list if it carries a decision, and reachable again from its hull if
+ * it does not. What is asserted here is that arithmetic: four edited builds
+ * leave four records, opening a save writes nothing to it, the first edit forks,
+ * and naming or overwriting returns the count to where it belongs (024/FR-001,
+ * FR-008, FR-009).
  *
  * The workspace holding one of those builds is one of the four routes
  * `interface-conformance` walks and scans, so its landmarks, its heading, its

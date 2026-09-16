@@ -81,8 +81,9 @@ describe('the one path from a draft to an active build', () => {
         committed.push(candidate);
       },
     });
-    // Since 2026-08-25 nothing is asked between a valid draft and an active
-    // build: the build being replaced has a record of its own (FR-008).
+    // Nothing is asked between a valid draft and an active build: the build
+    // being replaced is either in a record of its own or still at its hull's
+    // package default, and neither is lost (024/FR-001, FR-008).
   });
 
   describe('delegation', () => {

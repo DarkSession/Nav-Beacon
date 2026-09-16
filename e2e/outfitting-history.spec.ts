@@ -284,7 +284,8 @@ test.describe('what resets the tape', () => {
     await expect(undo(page)).toBeEnabled();
 
     // Nothing is asked before the link replaces what is on screen: the build it
-    // replaces has a record of its own (feature 001, FR-008).
+    // replaces is either in a record of its own or still at its hull's package
+    // default, and neither is lost (feature 001, FR-008; 024/FR-001).
     await page.goto(`/outfitting${incoming}`);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('[data-slot-key]').first()).toBeVisible();
