@@ -734,7 +734,8 @@ test.describe('what is never trusted', () => {
     });
     // The ship carries an ident, so the build holds a decision and autosave has
     // a record to write. A build still at its hull's package default is stored
-    // nowhere, and nothing here would wait for (024/FR-001).
+    // nowhere, so `savedToBrowser` below would wait for a record that is never
+    // written (024/FR-001).
     await setShipIdent(page, 'NB-01');
     // The reload has to come after the build is in its record, not merely on
     // screen: autosave coalesces its writes, so a page reloaded in the window

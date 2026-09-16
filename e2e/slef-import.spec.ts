@@ -135,6 +135,17 @@ test.describe('importing a build', () => {
     await expect(incoming).toHaveURL(/\/outfitting($|[#?])/);
     await expect(incoming.locator('[data-slot-key]').first()).toBeVisible();
     await expect.poll(() => incoming.evaluate(() => location.hash)).toMatch(/^#b\./);
+
+    // Reloaded before the count, which is what makes the count an answer. The
+    // page writes what it owes on the way out, so a record owed for the
+    // imported build is in the store by the time it is read; counted on the
+    // page that took the import, the read lands inside the coalescing window
+    // and says nothing is stored whether or not one is owed.
+    await incoming.reload();
+
+    // And the build comes back, from the address alone. That is the other half
+    // of the same claim: nothing was stored, and nothing needed to be.
+    await expect(incoming.locator('[data-slot-key]').first()).toBeVisible();
     expect(await recordCount(incoming)).toBe(0);
     await elsewhere.close();
   });

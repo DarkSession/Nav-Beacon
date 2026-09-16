@@ -193,6 +193,11 @@ describe('BuildWorkspacePage persistence actions', () => {
     await settleUntil(first, () => window.location.hash.startsWith('#b.'));
 
     expect(window.location.hash.startsWith('#b.')).toBe(true);
+
+    // Flushed before the store is read, so the read is an answer. Autosave
+    // coalesces, so a store read while the page is still settling says nothing
+    // was written whether or not a write is owed; a flush asks for it now.
+    TestBed.inject(AutosaveService).flush();
     expect(active.autosaveRecordId()).toBeNull();
     expect(storage.entries.size).toBe(0);
     first.destroy();
