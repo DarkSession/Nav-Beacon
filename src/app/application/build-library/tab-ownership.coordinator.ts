@@ -144,17 +144,22 @@ export class TabOwnershipCoordinator {
       () => {
         const id = subject.autosaveRecordId();
         if (id === null) {
-          // A tool that holds no record claims none. Reached where a tool that
-          // was writing to one takes up work that is in no record instead: a
-          // build still at its hull's default, which is stored nowhere
-          // (024/FR-001). A claim left behind would have a reload restore the
-          // record the Commander stepped off, and a duplicated tab fork it.
+          // A tool whose work is in no record claims none. Reached where a tool
+          // that was writing to one takes up work that is stored nowhere: a
+          // build still at its hull's default (024/FR-001). A claim left behind
+          // would have a reload restore the record the Commander stepped off,
+          // and a duplicated tab fork it.
+          //
+          // Work in a named record is not that. A save clears the autosave
+          // target on purpose — autosave has no path to a named record — and
+          // the work is in the record the save produced, which is the record a
+          // reload restores from and holds (001/FR-008, 017/FR-007).
           //
           // Only where this page announced something for this tool. On a page
           // that has announced nothing the claim in the tab is the one a reload
           // is about to read, and releasing it here would be this page erasing
           // its own way back.
-          if (this.#announced.has(subject.tool)) {
+          if (subject.sourceNamed() === null && this.#announced.has(subject.tool)) {
             this.release(subject.tool);
           }
           return;

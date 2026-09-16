@@ -12,7 +12,9 @@ import { TabDescriptorRepository } from '../../platform/storage/tab-descriptor.r
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { LoadoutStore } from '../equipment/loadout.store';
+import { adoptSavedRecord } from './adopt-saved-record';
 import { AutosaveService } from './autosave.service';
+import { RecordInvalidationService } from './record-invalidation.service';
 import { TabOwnershipCoordinator } from './tab-ownership.coordinator';
 import type { WorkingRecordSubject } from './working-record.port';
 import { suppliedFit } from '../../domain/ships/build/supplied-fit';
@@ -285,6 +287,35 @@ describe('TabOwnershipCoordinator', () => {
         pageNonce: coordinator.pageNonce,
       },
     ]);
+  });
+
+  it('keeps the claim on the record a save produced, which holds the work now', () => {
+    // A save clears the autosave target on purpose: autosave has no path to a
+    // named record. The work is not in no record, though — it is in the one the
+    // save produced, and that is the record a reload restores from and holds.
+    // Released here, a reload would restore nothing, the fragment would open the
+    // build as an arrival instead, and autosave would mint a second record for
+    // work the Commander has just saved by name (001/FR-008, 017/FR-007).
+    const { coordinator, active, channel } = setup();
+    hold(active, 'the-build');
+    coordinator.track(active);
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
+      recordId: 'the-build',
+      revisionId: 'revision-2',
+      held: 'the-build',
+    });
+    TestBed.tick();
+
+    expect(active.autosaveRecordId()).toBeNull();
+    expect(coordinator.claim('ship')).toBe('the-build');
+    expect(channel.sent).not.toContainEqual({
+      kind: 'working-release',
+      tool: 'ship',
+      pageNonce: coordinator.pageNonce,
+    });
   });
 
   it('lets go of the record a tool held once it takes up work that is in none', () => {

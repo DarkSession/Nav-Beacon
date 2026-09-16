@@ -81,14 +81,20 @@
 
 ## 4. What follows from holding no record
 
-- [x] 4.1 Make `TabOwnershipCoordinator.track` claim nothing for a tool holding no record, and
-      leave the other tool's claim untouched. `track` announces the record a tool holds, and
+- [x] 4.1 Make `TabOwnershipCoordinator.track` claim nothing for a tool whose work is in no record,
+      and leave the other tool's claim untouched. `track` announces the record a tool holds, and
       releases that tool's claim where the record becomes null and this page announced one — on a
-      page that has announced nothing, the claim in the tab is the one a reload is about to read. Verify in `tab-ownership.coordinator.spec.ts`: a page holding a record that
-      commits a default build claims nothing afterwards and says so on the channel; a page that has
-      announced nothing leaves the claim a reload reads where it is; a duplicated tab forks nothing
-      for a tool holding no record; and two pages holding the same default work each take a record
-      of their own at their own first edit (024/FR-001, 024/FR-002).
+      page that has announced nothing, the claim in the tab is the one a reload is about to read.
+      Release only work that is in no record at all: a save clears the autosave target too, because
+      autosave has no path to a named record, and that work is in the record the save produced,
+      which is the record a reload restores from and holds. Verify in
+      `tab-ownership.coordinator.spec.ts`: a page holding a record that commits a default build
+      claims nothing afterwards and says so on the channel; a page that has announced nothing leaves
+      the claim a reload reads where it is; a page that saves under a name keeps claiming the record
+      the save produced; a duplicated tab forks nothing for a tool holding no record; and two pages
+      holding the same default work each take a record of their own at their own first edit. Verify
+      the save journey end to end in `e2e/build-working-state.spec.ts`: after a save and a reload,
+      one record, still claimed (001/FR-008, 017/FR-007, 024/FR-001, 024/FR-002).
 - [x] 4.2 Verify a manual save from a build or a loadout holding no record writes a named record.
       `NamedRecordService` already mints where there is nothing to consume; add the case to
       `src/app/application/build-library/named-record.service.spec.ts` and to

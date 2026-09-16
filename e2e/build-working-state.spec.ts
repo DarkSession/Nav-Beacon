@@ -137,6 +137,36 @@ test.describe('the tab’s working build', () => {
     expect((await storedKeys(page)).records).toEqual(before.records);
   });
 
+  test('still claims the record a save produced, and restores from it', async ({ page }) => {
+    // A save clears the autosave target on purpose, because autosave has no
+    // path to a named record. The work is in the record the save produced, so
+    // the tab keeps claiming it — released, the reload would restore nothing
+    // from storage and the next change would mint a second record for a build
+    // the Commander has just saved by name (001/FR-008, 017/FR-007).
+    test.slow();
+    await createDecidedBuild(page);
+    await savedToBrowser(page);
+    await saveActiveBuild(page, 'Explorer');
+
+    const before = await storedKeys(page);
+    expect(before.records).toHaveLength(1);
+    expect(before.tab).toContain(before.records[0]!.replace('ednb:record:', ''));
+
+    await page.reload();
+
+    await expect(page.getByRole('heading', { level: 1, name: /anaconda/i })).toBeVisible();
+    // The same record, still claimed, and no second one minted for the same
+    // work. A released claim reaches here too — the address carries the build
+    // link, so the build comes back either way — and it comes back as an
+    // arrival rather than as the save, which autosave then stores again.
+    await expectRecords(page, 1);
+    const after = await storedKeys(page);
+    expect(after.records).toEqual(before.records);
+    expect(after.tab).toBe(before.tab);
+    await openLibrary(page);
+    await expect(library(page).getByText('Explorer').first()).toBeVisible();
+  });
+
   test('writes nothing outside the keys this application owns', async ({ page }) => {
     await createDecidedBuild(page);
     await savedToBrowser(page);
