@@ -302,7 +302,7 @@ describe('TabOwnershipCoordinator', () => {
     TestBed.tick();
     channel.sent.length = 0;
 
-    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), coordinator, {
       recordId: 'the-build',
       revisionId: 'revision-2',
       held: 'the-build',
@@ -316,6 +316,51 @@ describe('TabOwnershipCoordinator', () => {
       tool: 'ship',
       pageNonce: coordinator.pageNonce,
     });
+  });
+
+  it('claims the record a save produced when it is not the one autosave held', () => {
+    // A save without Web Locks mints a fresh record and consumes the held one,
+    // and an overwrite writes an existing named record and consumes it the same
+    // way. Left on the id autosave had, the claim would name a record the save
+    // has just deleted, and a reload would restore nothing (017/FR-010).
+    const { coordinator, active } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), coordinator, {
+      recordId: 'the-named-record',
+      revisionId: 'revision-2',
+      held: 'the-working-record',
+    });
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBe('the-named-record');
+  });
+
+  it('lets go of the claim a save wrote once the work moves off that record', () => {
+    // The first edit after a save forks a fresh unnamed record, and the work is
+    // in that one. A claim left on the save would have a reload restore the
+    // saved version and lose the edits made since (017/FR-010).
+    const { coordinator, active } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), coordinator, {
+      recordId: 'the-named-record',
+      revisionId: 'revision-2',
+      held: 'the-working-record',
+    });
+    TestBed.tick();
+
+    active.setAutosaveRecordId('the-forked-record');
+    TestBed.tick();
+    expect(coordinator.claim('ship')).toBe('the-forked-record');
+
+    active.setAutosaveRecordId(null);
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
   });
 
   it('lets go of the record a tool held once it takes up work that is in none', () => {

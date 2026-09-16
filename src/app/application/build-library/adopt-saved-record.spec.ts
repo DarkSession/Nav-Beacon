@@ -7,6 +7,7 @@ import { LoadoutStore } from '../equipment/loadout.store';
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
 import { adoptSavedRecord } from './adopt-saved-record';
 import { RecordInvalidationService } from './record-invalidation.service';
+import { TabOwnershipCoordinator } from './tab-ownership.coordinator';
 import { suppliedFit } from '../../domain/ships/build/supplied-fit';
 
 class SilentChannel {
@@ -64,7 +65,7 @@ describe('adoptSavedRecord', () => {
     for (const subject of [shipSubject(), benchSubject()]) {
       const { invalidation } = subject.context;
 
-      adoptSavedRecord(subject.store, invalidation, {
+      adoptSavedRecord(subject.store, invalidation, TestBed.inject(TabOwnershipCoordinator), {
         recordId: 'named-1',
         revisionId: 'r1',
         held: 'working-1',
@@ -82,11 +83,16 @@ describe('adoptSavedRecord', () => {
     for (const subject of [shipSubject(), benchSubject()]) {
       subject.store.setPersistence('record-deleted-externally');
 
-      adoptSavedRecord(subject.store, subject.context.invalidation, {
-        recordId: 'named-1',
-        revisionId: 'r1',
-        held: 'working-1',
-      });
+      adoptSavedRecord(
+        subject.store,
+        subject.context.invalidation,
+        TestBed.inject(TabOwnershipCoordinator),
+        {
+          recordId: 'named-1',
+          revisionId: 'r1',
+          held: 'working-1',
+        },
+      );
 
       expect(subject.store.persistence(), subject.store.tool).toBe('saved');
     }
@@ -94,11 +100,16 @@ describe('adoptSavedRecord', () => {
 
   it('says the record the save consumed is gone', () => {
     for (const subject of [shipSubject(), benchSubject()]) {
-      adoptSavedRecord(subject.store, subject.context.invalidation, {
-        recordId: 'named-1',
-        revisionId: 'r1',
-        held: 'working-1',
-      });
+      adoptSavedRecord(
+        subject.store,
+        subject.context.invalidation,
+        TestBed.inject(TabOwnershipCoordinator),
+        {
+          recordId: 'named-1',
+          revisionId: 'r1',
+          held: 'working-1',
+        },
+      );
 
       expect(subject.context.deleted, subject.store.tool).toEqual(['working-1']);
     }
@@ -108,11 +119,16 @@ describe('adoptSavedRecord', () => {
     // Naming an unnamed record keeps the same local identity. Announcing it as
     // deleted would take a record that is still there out of every open list.
     for (const subject of [shipSubject(), benchSubject()]) {
-      adoptSavedRecord(subject.store, subject.context.invalidation, {
-        recordId: 'working-1',
-        revisionId: 'r1',
-        held: 'working-1',
-      });
+      adoptSavedRecord(
+        subject.store,
+        subject.context.invalidation,
+        TestBed.inject(TabOwnershipCoordinator),
+        {
+          recordId: 'working-1',
+          revisionId: 'r1',
+          held: 'working-1',
+        },
+      );
 
       expect(subject.context.deleted, subject.store.tool).toEqual([]);
     }
@@ -120,11 +136,16 @@ describe('adoptSavedRecord', () => {
 
   it('says nothing is gone where the work was in no record at all', () => {
     for (const subject of [shipSubject(), benchSubject()]) {
-      adoptSavedRecord(subject.store, subject.context.invalidation, {
-        recordId: 'named-1',
-        revisionId: 'r1',
-        held: null,
-      });
+      adoptSavedRecord(
+        subject.store,
+        subject.context.invalidation,
+        TestBed.inject(TabOwnershipCoordinator),
+        {
+          recordId: 'named-1',
+          revisionId: 'r1',
+          held: null,
+        },
+      );
 
       expect(subject.context.deleted, subject.store.tool).toEqual([]);
     }

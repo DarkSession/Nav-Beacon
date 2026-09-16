@@ -1,4 +1,5 @@
 import type { RecordInvalidationService } from './record-invalidation.service';
+import type { TabOwnershipCoordinator } from './tab-ownership.coordinator';
 import type { WorkingRecordSubject } from './working-record.port';
 
 /** What a save produced, and what it was made from. */
@@ -27,6 +28,11 @@ export interface SavedRecord {
  * because anybody deleted it: a list open on another page is still showing it,
  * and the page that had it open is this one (001/FR-009, 013/FR-016).
  *
+ * And the tab is told which record the work is in now. It is not always the one
+ * autosave held — a save without Web Locks mints a fresh record, and an
+ * overwrite writes an existing named one — and the claim is what a reload reads,
+ * so one left on the consumed record would restore nothing (017/FR-010).
+ *
  * One function for both tools, because it is one rule. Two copies in two page
  * components is the rule written twice, in the two files least likely to be
  * read together.
@@ -34,11 +40,13 @@ export interface SavedRecord {
 export function adoptSavedRecord(
   subject: WorkingRecordSubject,
   invalidation: RecordInvalidationService,
+  ownership: TabOwnershipCoordinator,
   saved: SavedRecord,
 ): void {
   subject.markSaved({ recordId: saved.recordId, baseRevisionId: saved.revisionId });
   subject.setAutosaveRecordId(null);
   subject.setPersistence('saved');
+  ownership.claimSaved(subject.tool, saved.recordId);
   invalidation.announceWrite(saved.recordId, saved.revisionId);
 
   if (saved.held !== null && saved.held !== saved.recordId) {

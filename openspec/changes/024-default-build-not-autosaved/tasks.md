@@ -85,14 +85,18 @@
       and leave the other tool's claim untouched. `track` announces the record a tool holds, and
       releases that tool's claim where the record becomes null and this page announced one — on a
       page that has announced nothing, the claim in the tab is the one a reload is about to read.
-      Release only work that is in no record at all: a save clears the autosave target too, because
-      autosave has no path to a named record, and that work is in the record the save produced,
-      which is the record a reload restores from and holds. Verify in
+      Release only work that is in no record at all. A save clears the autosave target too, because
+      autosave has no path to a named record, so have the save write the claim on the record it
+      produced and release every other claim. The save's own record is the right one to name: a save
+      without Web Locks mints a fresh record and consumes the held one, and an overwrite writes an
+      existing named record, so the id autosave held is by then a record that was deleted. Verify in
       `tab-ownership.coordinator.spec.ts`: a page holding a record that commits a default build
       claims nothing afterwards and says so on the channel; a page that has announced nothing leaves
       the claim a reload reads where it is; a page that saves under a name keeps claiming the record
-      the save produced; a duplicated tab forks nothing for a tool holding no record; and two pages
-      holding the same default work each take a record of their own at their own first edit. Verify
+      the save produced, including where the save minted a record of its own; a page whose work
+      moves off a saved record claims the record it moves onto, and nothing once it holds none; a
+      duplicated tab forks nothing for a tool holding no record; and two pages holding the same
+      default work each take a record of their own at their own first edit. Verify
       the save journey end to end in `e2e/build-working-state.spec.ts`: after a save and a reload,
       one record, still claimed (001/FR-008, 017/FR-007, 024/FR-001, 024/FR-002).
 - [x] 4.2 Verify a manual save from a build or a loadout holding no record writes a named record.
@@ -163,14 +167,14 @@
       is not edited has its link in the address, and a reload of that address restores it; in
       `e2e/equipment-link.spec.ts`, the same for a suit chosen and nothing else done. Verify both in
       the matrix (024/FR-003).
-- [x] 5.7 Verify the SLEF journey against its restated requirement: one selected event replaces the
-      active build, writes no named record, and is in the address where it takes no record. Check
-      `e2e/slef-import.spec.ts` asserts this, and that the batch still stores one named record per
-      event selected (024/FR-001). `e2e/slef-import.spec.ts` asserts the address an entry at the
-      package default takes no record in; the selection halves — one event opened, and the batch —
-      are asserted in `e2e/journal-import.spec.ts`, which is where the journey that selects events
-      lives. Assert "no named record" by opening the saved list and counting the named cards in it,
-      because the list is also where the derived rows are drawn and a closed list asserts nothing.
+- [x] 5.7 Verify the import journeys against the restated requirement. `e2e/slef-import.spec.ts`
+      asserts that an entry holding a build at the package default stores no record, and that the
+      address still shows the build. `e2e/journal-import.spec.ts` holds the two selection halves,
+      because that is where the journey that selects events lives: one selected event replaces the
+      active build and writes no named record, and a batch still stores one named record per event
+      selected. Assert that no named record was written by opening the saved list and counting the
+      named cards in it. Count the named cards rather than every card, because the list draws the
+      derived rows too, and a list that is closed asserts nothing at all (024/FR-001).
 - [x] 5.8 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts`, on every
       surface a task writes an assertion on: `build` and `equipment/bench-persistence` for the first
       two, `ships/:hull/create-stock-build` for task 5.4, `shell/journal-selection` for task 5.7, and

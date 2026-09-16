@@ -91,8 +91,19 @@ export class TabOwnershipCoordinator {
     ['equipment', () => this.#benchAutosave.adoptForkedRecord()],
   ]);
 
-  /** The last id announced for each tool, so one id is not announced twice. */
+  /** The last id claimed for each tool, so one id is not announced twice. */
   readonly #announced = new Map<RecordTool, string>();
+
+  /**
+   * The tools whose current claim was written by a save rather than by autosave.
+   *
+   * What tells the two apart where the tool holds no record. A save moves the
+   * work into a record autosave may not write, so the tool holds none and the
+   * claim is still the record the work is in; every other way of holding none
+   * leaves the work in no record at all. Dropped wherever the claim changes,
+   * because from there it describes a claim that is gone.
+   */
+  readonly #claimedBySave = new Set<RecordTool>();
 
   /**
    * What every other live page says it is autosaving into, by page and tool.
@@ -126,6 +137,27 @@ export class TabOwnershipCoordinator {
   }
 
   /**
+   * Claims the named record a save has just moved a tool's work into.
+   *
+   * A save is the one way a tool's work moves into a record it does not
+   * autosave into, and the record it produces is not always the one autosave
+   * held: a save without Web Locks mints a fresh record and consumes the held
+   * one, and an overwrite writes an existing named record and consumes it the
+   * same way. So the claim is written from the id the save produced rather than
+   * left standing on the id autosave had, which is by then a record that was
+   * deleted (001/FR-008, 017/FR-007, 017/FR-010).
+   *
+   * Nothing is announced. Two pages may hold one named record open because
+   * neither autosaves into it, so this is not a claim another page can collide
+   * with (001/FR-012).
+   */
+  claimSaved(tool: RecordTool, recordId: string): void {
+    this.#claimedBySave.add(tool);
+    this.#announced.set(tool, recordId);
+    this.#tab.write(tool, recordId);
+  }
+
+  /**
    * Starts persisting and announcing whatever record this tool is holding.
    *
    * Returns an unsubscribe. Driven by the store rather than called at each
@@ -150,16 +182,21 @@ export class TabOwnershipCoordinator {
           // would have a reload restore the record the Commander stepped off,
           // and a duplicated tab fork it.
           //
-          // Work in a named record is not that. A save clears the autosave
-          // target on purpose — autosave has no path to a named record — and
-          // the work is in the record the save produced, which is the record a
-          // reload restores from and holds (001/FR-008, 017/FR-007).
+          // Work a save moved into a named record is not that. A save clears
+          // the autosave target on purpose — autosave has no path to a named
+          // record — and `claimSaved` has already written the claim on the
+          // record the save produced, which is where the work now is
+          // (001/FR-008, 017/FR-007).
           //
-          // Only where this page announced something for this tool. On a page
-          // that has announced nothing the claim in the tab is the one a reload
+          // Read as the claim rather than as where the work came from. A tool
+          // that opened a named record and has since moved off it is in no
+          // record either, however it got there.
+          //
+          // Only where this page claimed something for this tool. On a page
+          // that has claimed nothing the claim in the tab is the one a reload
           // is about to read, and releasing it here would be this page erasing
           // its own way back.
-          if (subject.sourceNamed() === null && this.#announced.has(subject.tool)) {
+          if (this.#announced.has(subject.tool) && !this.#claimedBySave.has(subject.tool)) {
             this.release(subject.tool);
           }
           return;
@@ -167,6 +204,8 @@ export class TabOwnershipCoordinator {
         if (id === this.#announced.get(subject.tool)) {
           return;
         }
+        // Autosaving again, so the claim is this record rather than a save's.
+        this.#claimedBySave.delete(subject.tool);
         this.#announced.set(subject.tool, id);
         this.#tab.write(subject.tool, id);
         this.#announce(subject.tool);
@@ -189,6 +228,7 @@ export class TabOwnershipCoordinator {
    */
   release(tool: RecordTool): void {
     this.#announced.delete(tool);
+    this.#claimedBySave.delete(tool);
     this.#tab.release(tool);
     // And said out loud, so a sibling page stops protecting a record nobody is
     // writing to any more. A claim it never hears the end of would keep the
@@ -344,6 +384,7 @@ export class TabOwnershipCoordinator {
     // running to write the new id down. Without this, a reload would restore
     // from the record the other page is writing to, which is the collision the
     // fork exists to end.
+    this.#claimedBySave.delete(tool);
     this.#announced.set(tool, next);
     this.#tab.write(tool, next);
     this.#announce(tool);

@@ -189,7 +189,18 @@ record before it stands for as long as the page runs: a reload restores the reco
 off, and a duplicated tab forks it. So a tool whose record becomes nothing lets go of its claim
 where it announced one, which is what "a tool that holds no record claims none" asks for.
 
-**Where it announced one** is the whole of the guard. The claim in the tab outlives the page that
+A save is the one case where the record becoming null does not mean the work is stored nowhere.
+Autosave has no path to a named record, so a save clears the tool's autosave target on purpose while
+the work sits in the record the save produced — and that record is what a reload should restore from
+and hold. It is not always the record autosave held, either: a save without Web Locks mints a fresh
+record and consumes the held one, and an overwrite writes an existing named record and consumes it
+the same way, so a claim left standing would name a record the save has just deleted. `adoptSavedRecord`
+therefore writes the claim on the record the save produced, and the release asks whether the claim it
+is about came from a save rather than asking where the work came from. Provenance is the wrong
+question: a bench that opened a named record and then changed suit came from that record and is no
+longer in it.
+
+**Where it announced one** is the other half of the guard. The claim in the tab outlives the page that
 wrote it — that is what makes it readable after a reload — and every page registers its tools before
 it has restored anything, holding no record at that moment. A release read off that first moment
 would be the page erasing its own way back. What the page has announced in this run is the honest
