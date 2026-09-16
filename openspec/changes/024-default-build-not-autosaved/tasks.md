@@ -203,12 +203,19 @@
       workspace, the build library, the build link, the SLEF exchange, the bench, the equipment link
       and the saved loadouts — across the matrix, storing full output under `dist/verification/`.
       Verify no journey outside this change's scope changed its result.
-      Run under `dist/verification/024-gate18-e2e-chromium.log`: 3599 passed over the five Chromium
-      layout profiles. Eleven accessibility and preview sweeps timed out at 30 s under the load of
-      five projects at once; each passes in 5 to 12 s when it is the only run
-      (`024-gate18-e2e-rerun.log`, 25 passed). The five Firefox projects were not run: the engine
-      is absent from this container and `playwright install firefox` cannot reach its download
-      host. The integration run covers them, and passes the whole matrix over its sixteen shards.
+      Run under `dist/verification/024-gate20-e2e-chromium.log`, at the budgets the integration run
+      uses: 3609 passed over the five Chromium layout profiles, with no accessibility or preview
+      sweep timing out. One journey is flaky, which this project counts as a failure: the build
+      library's "reopens the save on what was typed when answering the conflict wrote nothing" on
+      the short landscape phone, where the press that starts a stock build finds nothing to press
+      for fifteen seconds. It is not this change's. The failure is inside `buildStockHull`, which
+      this change does not touch, and is reached before anything this change adds runs. Six
+      repeats of that file on that profile fail once here and three times on the default branch, at
+      the same line, on the same locator, with the same message
+      (`024-gate20-flaky-probe.log`, `024-gate20-flaky-probe-main.log`). The five Firefox projects
+      were not run: the engine is absent from this container and `playwright install firefox`
+      cannot reach its download host. The integration run covers them, and passes the whole matrix
+      over its sixteen shards, this journey included.
       Two journeys this change adds read the store at a moment it cannot answer for. The first
       saves and reloads, and failed on the integration run in four of the five profiles, on the
       first attempt in each: the save was still in flight, so the work stayed in the unnamed
@@ -225,8 +232,9 @@
       Every stage through the unit tests passes (`024-gate19-check-nonbrowser.log`): 3330 tests,
       statements 94.15%, branches 86.98%, functions 95.36%, lines 94.09%. The timing project
       passes, with both measurements inside the 100 ms budget, and the offline project passes over
-      its five Chromium profiles, 360 of 720 (`024-gate19-e2e-timing-offline.log`). The Firefox
-      half of both the offline project and the matrix was not run, for the reason given in 6.1.
+      its five Chromium profiles, 360 of 720 (`024-gate19-e2e-timing-offline.log`). The matrix
+      itself is 6.1's run. The Firefox half of both the offline project and the matrix was not
+      run, for the reason given there, and so was the one flaky journey named there.
 - [x] 6.3 Run the implementation gate the project context defines — a code reviewer reading the diff
       against the default branch, this change directory, `CONSTITUTION.md` and `AGENTS.md`. Fix every
       actionable finding, re-run the affected checks and repeat the review until it reports none.

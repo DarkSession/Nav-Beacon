@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { sweepOutfittingState } from './accessibility';
-import { reachShellAction, recordCount, recordCountAfterFlush } from './shell';
+import { reachShellAction, recordCountAfterFlush } from './shell';
 
 /**
  * Handing a loadout to someone else (US4).
@@ -96,7 +96,10 @@ test.describe('handing a loadout to someone else', () => {
     await expect(page.locator('.gate')).toHaveCount(0);
     await openRow(page, 'suit');
     await expect(page.locator('.item__name')).toContainText('Dominator Suit');
-    expect(await recordCount(page)).toBe(0);
+    // Through the flush on this side of the load as well: the restored bench is
+    // an open page too, and the count it answers with is worth no more than the
+    // one before it.
+    expect(await recordCountAfterFlush(page)).toBe(0);
   });
 
   test('publishes the loadout as the address, and restores it from there', async ({ page }) => {
