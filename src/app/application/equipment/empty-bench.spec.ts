@@ -268,6 +268,8 @@ describe('starting an empty bench', () => {
     // Such a loadout takes no record, and none is owed on the way out either: a
     // Commander reaches it again by choosing the suit. The bench empties all
     // the same, because there is nothing to lose (024/FR-002, 017/FR-006).
+    // Nothing was claimed for it either, so the claim below is read as the end
+    // state rather than as something this action let go of.
     const { bench, store, records, ownership, location } = setup();
     store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
     expect(store.atDefault()).toBe(true);

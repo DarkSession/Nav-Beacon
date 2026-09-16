@@ -531,8 +531,13 @@ export class BuildLibraryPage {
    * The library stands over either screen, so the record a Commander deletes
    * here can be the build's or the loadout's. A tool told nothing would write
    * the record back on its next edit, which undoes a deletion they confirmed
-   * (001/FR-009, 017/FR-008) — and this tab's claim on it would outlive the
-   * record itself (017/FR-010).
+   * (001/FR-009, 017/FR-008) — and this tab's claim on the record it was
+   * autosaving into would outlive the record itself (017/FR-010).
+   *
+   * A named record a tool merely holds is not reached by this. Deleting one
+   * leaves the work on screen, in no record, and this tab claiming a record
+   * that is gone — which the next write replaces with the record it mints, and
+   * which a reload answers by restoring from the address instead (024/FR-003).
    */
   #letGoOf(recordId: string): void {
     if (this.#active.clearIfHolding(recordId)) {

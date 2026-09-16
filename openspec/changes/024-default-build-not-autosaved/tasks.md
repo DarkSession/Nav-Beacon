@@ -188,10 +188,11 @@
 - [x] 5.8 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts`, on every
       surface a task writes an assertion on: `build` and `equipment/bench-persistence` for the first
       two, `ships/:hull/create-stock-build` for task 5.4, `shell/journal-selection` for task 5.7,
-      `shell/slef-import-replacement` for task 5.6, and `build/share-link` and `equipment/link` for
-      the third. Restate the assertions those surfaces claim about records and the fragment —
-      including the replacement surface's, which says the work being replaced has a record of its
-      own and is now true by the other route as well — and add `024-default-build-not-autosaved` to
+      `build/slef-import-aftermath` for task 5.7, and `build/share-link` and `equipment/link` for
+      the third. Restate the assertions those surfaces claim about records and the fragment, to what
+      each journey checks — `shell/slef-import-replacement` said the work being replaced has a record
+      of its own, and its journey asks no question whatever the work is stored in. Add
+      `024-default-build-not-autosaved` to
       `COVERED_FEATURES`. Verify `pnpm run policy:specs` passes and names no unregistered id.
 
 ## 6. The gate

@@ -288,11 +288,12 @@ test.describe('what the layer refuses, and what it leaves alone', () => {
 
   test('replaces unsaved work without asking, and spends the draft doing it', async ({ page }) => {
     // Withdrawn on 2026-08-25: no question stands between the draft and the
-    // build. The stock build being replaced holds nothing a Commander decided,
-    // so it is stored nowhere and there is nothing to warn about — and a build
-    // that does carry decisions is in a record of its own, which is the same
-    // answer by the other route (feature 001, FR-008; 024/FR-001). What is
-    // asserted here is that, and that the draft is spent only by the commit.
+    // build. Work carrying a decision is in a record of its own, and work still
+    // at the package default is stored nowhere, so neither has anything to warn
+    // about (feature 001, FR-008; 024/FR-001). Neither is read here: what this
+    // asserts is that no question is asked, and that the draft is spent only by
+    // the commit. What a build at the package default stores is read by the
+    // import case above.
     await withStockBuild(page);
     const before = await page.evaluate(() => location.hash);
 

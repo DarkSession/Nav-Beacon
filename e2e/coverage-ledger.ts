@@ -1490,11 +1490,11 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'shell/slef-import-replacement',
-    requirements: ['004/FR-010', '024/FR-001'],
+    requirements: ['004/FR-010'],
     journey: 'product/slef-import',
     axe: true,
     assertions: [
-      'a ready candidate replaces unsaved work without asking: work carrying a decision is in a record of its own, and work at the package default is stored nowhere and has nothing to warn about',
+      'a ready candidate replaces unsaved work without asking, whatever that work is stored in',
       'a refusal leaves the active build, its revision, records, fragment and history identical',
       'a superseded candidate cannot commit after a newer submit, close or route change',
       'a successful import is exactly one replacement, one autosave and one link synchronization',
@@ -1503,7 +1503,14 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'build/slef-import-aftermath',
-    requirements: ['004/FR-006', '004/FR-010', '004/FR-012', '004/FR-013', '004/SC-002'],
+    requirements: [
+      '004/FR-006',
+      '004/FR-010',
+      '004/FR-012',
+      '004/FR-013',
+      '004/SC-002',
+      '024/FR-001',
+    ],
     journey: 'product/slef-import',
     axe: true,
     assertions: [
@@ -1514,6 +1521,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
       'an imported build carries the package’s own hull identity, so feature 010 draws its schematics',
       'a later revision retires the completion notice and changes nothing about the build',
       'a refused import leaves the workspace, the rail and the notice exactly as they were',
+      'an imported build still at its hull’s package default takes no record, and the address is the whole of what holds it',
     ],
     manualRecord: 'screen-reader',
   },
