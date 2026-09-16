@@ -22,15 +22,18 @@ export interface TabDescriptorV2 {
  * point, and does not survive the tab, which is also correct — the record it
  * names does survive, and the library is where it is found again.
  *
- * One record per tool. A page holds a build and a loadout at the same time, and
- * each has a record of its own (017/FR-010).
+ * At most one record per tool. A page holds a build and a loadout at the same
+ * time, and each is remembered apart from the other (017/FR-010).
  *
  * The record is usually an unnamed one the tool autosaves into. It is a named
  * one while the work is in a named record — after a save, and after an open
  * from the saved list — because autosave has no path to a named record and the
- * work is stored there all the same. What is remembered is where the work is,
- * so that a reload opens it again; whether the tool may write to it is decided
- * by the record itself (001/FR-008).
+ * work is stored there all the same. It is none at all while the work is still
+ * at its hull's or its suit's package default, because nothing is stored for
+ * work a Commander has decided nothing about, and selecting the hull or the
+ * suit reaches it again (024/FR-001, 024/FR-002). What is remembered is where
+ * the work is, so that a reload opens it again; whether the tool may write to
+ * it is decided by the record itself (001/FR-008).
  *
  * A duplicated tab is the exception the descriptor cannot handle alone: the
  * copy inherits the original's session storage, so both pages believe they own

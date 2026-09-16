@@ -258,10 +258,10 @@ test.describe('the tab’s working build', () => {
     await setShipIdent(duplicate, 'NB-02');
     await savedToBrowser(duplicate);
 
-    const records = await original.evaluate(() =>
-      Object.keys(localStorage).filter((key) => key.startsWith('ednb:record:')),
-    );
-    expect(records.length).toBeGreaterThan(1);
+    // Polled on the page that did not write it: two pages are two renderers over
+    // one store, and the forked record reaches this one after the page that
+    // wrote it has reported it.
+    await expect.poll(() => recordCount(original)).toBeGreaterThan(1);
 
     await context.close();
   });

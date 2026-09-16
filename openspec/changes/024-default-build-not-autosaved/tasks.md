@@ -213,7 +213,12 @@
       repeats of that file on that profile fail once here and three times on the default branch:
       two of the file's journeys there, one of them twice, this one among them, each inside
       `buildStockHull`, at the same statement, on the same locator, with the same message
-      (`024-gate20-flaky-probe.log`, `024-gate20-flaky-probe-main.log`). The five Firefox projects
+      (`024-gate20-flaky-probe.log`, `024-gate20-flaky-probe-main.log`). The helper is what is
+      unsteady, rather than any one journey or profile: the same statement, locator and message
+      also failed the setup of this change's own two-page journey on the portrait phone, where
+      that journey then passed six times over (`024-gate24-bws.log` 134 of 135,
+      `024-gate24-bws-probe.log` 6 passed). Both sightings are in the press that starts a stock
+      build, before the journey around it begins. The five Firefox projects
       were not run: the engine is absent from this container and `playwright install firefox`
       cannot reach its download host. CI covers them, and passes the whole matrix over its sixteen
       shards, this journey included, on both
@@ -236,7 +241,10 @@
       that carries choices is counted before its library is opened, for the same reason again: the
       list is read on the page that owes the write, so a title count taken inside the window reads
       zero whether a record is owed or not. The two SLEF files pass twice over on three Chromium
-      profiles with no retries (`024-gate23-slef.log`, 354 passed).
+      profiles with no retries (`024-gate23-slef.log`, 354 passed). The forked tab's count, read on
+      the page that did not write it, polls for the same reason as the two-page journey above.
+      That file passes three times over on three Chromium profiles apart from the helper's own
+      failure named above, the forking journey nine times of nine (`024-gate24-bws.log`).
 - [x] 6.2 Run `pnpm run check` and verify it passes: format, help artifacts, sitemap, typecheck,
       build, preview build, policy, codec capacity, script tests, unit tests at or above the 80%
       coverage threshold, and the Playwright matrix including the timing and offline projects.
