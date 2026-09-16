@@ -206,8 +206,10 @@ test.describe('a tool’s tab re-enters the tool', () => {
     await expect(page.locator('.gate')).toBeVisible();
     await expect(page).toHaveURL(/\/equipment$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    // And nothing was left behind by clearing it either.
-    expect(await recordCount(page)).toBe(0);
+    // And nothing was left behind by clearing it either. Through the flush
+    // again: clearing the bench leaves the page on it, so a write owed for what
+    // the clearing did would still be inside the coalescing window.
+    expect(await recordCountAfterFlush(page)).toBe(0);
   });
 });
 

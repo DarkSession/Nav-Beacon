@@ -210,31 +210,39 @@
       the short landscape phone, where the press that starts a stock build finds nothing to press
       for fifteen seconds. It is not this change's. The failure is inside `buildStockHull`, which
       this change does not touch, and is reached before anything this change adds runs. Six
-      repeats of that file on that profile fail once here and three times on the default branch, at
-      the same line, on the same locator, with the same message
+      repeats of that file on that profile fail once here and three times on the default branch:
+      three of the file's journeys there, this one among them, each inside `buildStockHull`, at the
+      same statement, on the same locator, with the same message
       (`024-gate20-flaky-probe.log`, `024-gate20-flaky-probe-main.log`). The five Firefox projects
       were not run: the engine is absent from this container and `playwright install firefox`
       cannot reach its download host. The integration run covers them, and passes the whole matrix
       over its sixteen shards, this journey included.
       Two journeys this change adds read the store at a moment it cannot answer for. The first
-      saves and reloads, and failed on the integration run in four of the five profiles, on the
-      first attempt in each: the save was still in flight, so the work stayed in the unnamed
-      record autosave held and the library listed no name. It waits for the save layer to close,
-      which is what the workspace does once the write has resolved (`024-fix-bws.log`, 119 of
-      120). The second gives two pages a record each and counts them on one page, and is the
-      remaining failure in that log: two pages are two renderers over one store, and the row
-      reaches the reading one after the writing one reports it. It polls the count. Both journeys
-      pass three times over on two profiles with no retries (`024-gate19-affected.log`, 360
-      passed).
+      saves and reloads, and failed on its first attempt on the desktop, the landscape tablet and
+      the portrait phone in the integration run over head `2022a1ca`
+      (https://github.com/DarkSession/Nav-Beacon/actions/runs/35080734599): the save was still in
+      flight, so the work stayed in the unnamed record autosave held and the library listed no
+      name. It waits for the save layer to close, which is what the workspace does once the write
+      has resolved (`024-fix-bws.log`, 119 of 120). The second gives two pages a record each and
+      counts them on one page, and is the remaining failure in that log: two pages are two
+      renderers over one store, and the row reaches the reading one after the writing one reports
+      it. It polls the count. Both journeys pass three times over on two profiles with no retries
+      (`024-gate19-affected.log`, 360 passed). The bench's own count, read after the tab clears the
+      loadout, goes through the flush for the same reason: the page stays on the bench there, so a
+      write owed for the clearing would still be inside the window. That file passes over the five
+      Chromium profiles with no retries (`024-gate21-toolbar.log`, 70 passed).
 - [x] 6.2 Run `pnpm run check` and verify it passes: format, help artifacts, sitemap, typecheck,
       build, preview build, policy, codec capacity, script tests, unit tests at or above the 80%
       coverage threshold, and the Playwright matrix including the timing and offline projects.
-      Every stage through the unit tests passes (`024-gate19-check-nonbrowser.log`): 3330 tests,
-      statements 94.15%, branches 86.98%, functions 95.36%, lines 94.09%. The timing project
-      passes, with both measurements inside the 100 ms budget, and the offline project passes over
-      its five Chromium profiles, 360 of 720 (`024-gate19-e2e-timing-offline.log`). The matrix
-      itself is 6.1's run. The Firefox half of both the offline project and the matrix was not
-      run, for the reason given there, and so was the one flaky journey named there.
+      Every stage through the unit tests passes (`024-gate21-check-nonbrowser.log`): 3330 tests
+      over 230 files, statements 93.66%, branches 86.60%, functions 94.84%, lines 93.53%. The
+      figures move by about half a point between runs of the same tree, because V8 attributes
+      coverage across parallel workers; the threshold gate reads whichever run it is given and
+      passes. The timing project passes, with both measurements inside the 100 ms budget, and the
+      offline project passes over its five Chromium profiles, 360 of 720
+      (`024-gate19-e2e-timing-offline.log`). The matrix itself is 6.1's run. The Firefox half of
+      both the offline project and the matrix was not run, for the reason given there, and so was
+      the one flaky journey named there.
 - [x] 6.3 Run the implementation gate the project context defines — a code reviewer reading the diff
       against the default branch, this change directory, `CONSTITUTION.md` and `AGENTS.md`. Fix every
       actionable finding, re-run the affected checks and repeat the review until it reports none.
