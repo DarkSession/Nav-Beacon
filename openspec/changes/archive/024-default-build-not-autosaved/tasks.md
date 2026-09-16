@@ -249,16 +249,16 @@
 - [x] 6.2 Run `pnpm run check` and verify it passes: format, help artifacts, sitemap, typecheck,
       build, preview build, policy, codec capacity, script tests, unit tests at or above the 80%
       coverage threshold, and the Playwright matrix including the timing and offline projects.
-      Every stage through the unit tests passes (`024-gate21-check-nonbrowser.log`): 3330 tests
+      Every stage through the unit tests passes (`024-gate26-check-nonbrowser.log`): 3330 tests
       over 230 files, statements 93.66%, branches 86.60%, functions 94.84%, lines 93.53%. The
       figures move by about half a point between runs, because V8 attributes coverage across
       parallel workers: the run at `024-gate19-check-nonbrowser.log` reads 94.15%, 86.98%, 95.36%
       and 94.09% over the same 3330 tests and the same denominators. The threshold gate reads
-      whichever run it is given and passes. The timing project passes, with both measurements inside the 100 ms budget, and the
-      offline project passes over its five Chromium profiles, 360 of 720
-      (`024-gate19-e2e-timing-offline.log`). The matrix itself is 6.1's run. The Firefox half of
-      both the offline project and the matrix was not run, for the reason given there, and so was
-      the one flaky journey named there.
+      whichever run it is given and passes. The timing project passes, with both measurements
+      inside the 100 ms budget, and the offline project passes over its five Chromium profiles,
+      360 of 720 (`024-gate19-e2e-timing-offline.log`). The matrix itself is 6.1's run. The
+      Firefox half of both the offline project and the matrix was not run, for the reason given
+      there, and so was the one flaky journey named there.
 - [x] 6.3 Run the implementation gate the project context defines — a code reviewer reading the diff
       against the default branch, this change directory, `CONSTITUTION.md` and `AGENTS.md`. Fix every
       actionable finding, re-run the affected checks and repeat the review until it reports none.
