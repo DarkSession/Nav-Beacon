@@ -80,9 +80,10 @@ export class EmptyBenchService {
    *
    * What is deleted is the record, not the addresses behind this page. A
    * loadout one of those still carries opens again from there, as any loadout
-   * in an address does, and is autosaved into a record of its own — the deleted
-   * one is never written back (017/FR-008). The claim this tab held on it goes
-   * with it (017/FR-010).
+   * in an address does: into a record of its own where it carries a choice, and
+   * into no record where it is still at its suit's default. The deleted one is
+   * never written back either way (017/FR-008, 024/FR-002). The claim this tab
+   * held on it goes with it (017/FR-010).
    */
   clearHolding(recordId: string): boolean {
     if (!this.#store.clearIfHolding(recordId)) {

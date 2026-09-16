@@ -34,9 +34,11 @@ import type { WorkingRecordSubject } from './working-record.port';
  * Commander's next keystroke lands in.
  *
  * One page, one record **per tool**. A Commander has a build and a loadout open
- * at the same time, each autosaved into an unnamed record of its own, so every
- * answer here is asked about a tool and a fork of one leaves the other where it
- * is (017/FR-010).
+ * at the same time, and each has a record of its own: the unnamed one the tool
+ * autosaves into, the named one the work is already in, or none at all while
+ * the work is still at its package default (017/FR-010, 024/FR-001). So every
+ * answer here is asked about a tool, and a fork of one leaves the other where
+ * it is.
  *
  * Two pages holding one *named* record open is not a collision and is not
  * announced here. Neither of them autosaves into it (001/FR-012).

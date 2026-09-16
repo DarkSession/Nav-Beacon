@@ -662,8 +662,9 @@ test.describe('with no network at all', () => {
       .getByLabel(/slef payload/i)
       .fill(JSON.stringify({ event: 'Loadout', Ship: 'anaconda', Modules: [] }));
     await importLayer.getByRole('button', { name: /^load build$/i }).click();
-    // Nothing is asked: the stock build being replaced is in a record of its
-    // own, so the import lands straight in the workspace (feature 001, FR-008).
+    // Nothing is asked: the build being replaced is either in a record of its
+    // own or still at its hull's package default, and neither is lost, so the
+    // import lands straight in the workspace (feature 001, FR-008; 024/FR-001).
     await expect(page).toHaveURL(/\/outfitting($|[#?])/);
 
     // From here on, nothing but static files. The import landed in the

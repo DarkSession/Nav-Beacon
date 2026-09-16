@@ -232,7 +232,11 @@
       (`024-gate19-affected.log`, 360 passed). The bench's own count, read after the tab clears the
       loadout, goes through the flush for the same reason: the page stays on the bench there, so a
       write owed for the clearing would still be inside the window. That file passes over the five
-      Chromium profiles with no retries (`024-gate21-toolbar.log`, 70 passed).
+      Chromium profiles with no retries (`024-gate21-toolbar.log`, 70 passed). The imported build
+      that carries choices is counted before its library is opened, for the same reason again: the
+      list is read on the page that owes the write, so a title count taken inside the window reads
+      zero whether a record is owed or not. The two SLEF files pass twice over on three Chromium
+      profiles with no retries (`024-gate23-slef.log`, 354 passed).
 - [x] 6.2 Run `pnpm run check` and verify it passes: format, help artifacts, sitemap, typecheck,
       build, preview build, policy, codec capacity, script tests, unit tests at or above the 80%
       coverage threshold, and the Playwright matrix including the timing and offline projects.

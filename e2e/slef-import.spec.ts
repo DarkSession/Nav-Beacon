@@ -1,7 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectNoAccessibilityViolations } from './accessibility/axe';
 import { expectNoDocumentOverflow } from './accessibility/assertions';
-import { buildStockHull, openLibrary, reachShellAction, recordCountAfterFlush } from './shell';
+import {
+  buildStockHull,
+  openLibrary,
+  reachShellAction,
+  recordCount,
+  recordCountAfterFlush,
+} from './shell';
 
 /**
  * A build arriving from somewhere else.
@@ -100,6 +106,10 @@ test.describe('importing a build', () => {
     // because this event carries choices. No record is named for it — a name is
     // a Commander's, and none was given here (024/FR-001).
     await expect.poll(() => page.evaluate(() => location.hash)).toMatch(/^#b\./);
+    // Polled, because the list is read on the page that owes the write: a count
+    // taken inside the coalescing window reads zero whether a record is owed or
+    // not, and a title count on a list that has drawn nothing reads zero too.
+    await expect.poll(() => recordCount(page)).toBe(1);
     await openLibrary(page);
     await expect(
       page.locator('ednb-saved-build-card .record__title:not(.record__title--derived)'),
