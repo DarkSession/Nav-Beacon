@@ -353,9 +353,10 @@ export class WorkingRecordAutosave {
       return;
     }
     // Nothing a timer could write. Work holding no record at its own default
-    // owes nothing, so waking a timeout every 400 ms for as long as it is open
-    // would be work done to decide that again each time. The first edit moves
-    // it off the default and the next revision schedules the write.
+    // owes nothing, so a timer armed here would wake only for `#writeNow` to
+    // ask the same question and turn the write away. None is armed instead,
+    // and the first edit that moves the work off its default schedules the
+    // write as usual.
     if (this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
       return;
     }

@@ -323,9 +323,9 @@ describe('AutosaveService', () => {
   });
 
   it('wakes no timer for an untouched default build, and one at its first edit', () => {
-    // An untouched build stays open for as long as a Commander is reading it.
-    // A timeout every 400 ms across that would be work spent deciding the same
-    // thing again (024/FR-001).
+    // An untouched build stays open for as long as a Commander is reading it,
+    // and owes nothing for the whole of that. A timer armed for it would wake
+    // only to have the write turned away, so none is armed at all (024/FR-001).
     vi.useFakeTimers();
     try {
       const { autosave, active, storage } = setup();

@@ -251,11 +251,25 @@ test.describe('the bench keeps the loadout on it', () => {
     await page.goto('/equipment');
     await wearSuit(page, 'Dominator Suit');
     await expect(page).toHaveURL(/\/equipment#e\./);
+    const worn = page.url();
+
+    // The bench is left before anything is counted. It writes what it owes on
+    // the way out, so a record owed for this loadout is in the store by the
+    // time the count is read. Counted on the bench instead, the read lands
+    // inside the coalescing window and says nothing is stored whether or not
+    // one is owed.
+    await mark(page).click();
+    await expectEntryPoint(page);
 
     expect(await recordCount(page)).toBe(0);
     await openLibrary(page);
     await expect(page.getByText('Nothing is stored yet')).toBeVisible();
     await page.goBack();
+
+    // Back on the same loadout, from the address that carried it off the bench
+    // — which is the whole of what holds a loadout in no record (024/FR-003).
+    await page.goto(worn);
+    await expect(page.locator('ednb-equipment-bench-page')).toContainText('Dominator Suit');
 
     await raiseSuitGrade(page);
     await autosaved(page);

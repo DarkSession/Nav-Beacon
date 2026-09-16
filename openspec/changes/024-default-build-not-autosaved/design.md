@@ -33,8 +33,9 @@ Three facts shape the approach:
 
 **Non-Goals:**
 
-- No new screen, and no change to an existing one. Persistence states `ready`, `saving` and
-  `saved` all draw nothing, so a build that is in no record and one that is saved look the same.
+- No new screen, and no change to any screen's composition or states. Persistence states `ready`,
+  `saving` and `saved` all draw nothing, so a build that is in no record and one that is saved look
+  the same.
 - No removal of a record that already exists. Editing back to the default keeps the record.
 - No change to the seven-day expiry, to the take-over rule, or to what a manual save does.
 - No edit to `openspec/changes/archive/001-ship-selection-and-loading/contracts/persistence.md`.
@@ -85,8 +86,9 @@ The branch is placed before `#allocate`, so a default build neither mints a reco
 existing one over. An unnamed record that already holds the default state — stored by an earlier
 version, or left by a build since edited back — stays where it is and runs out its seven days.
 
-`#schedule` also skips the timer in the same condition, so an untouched build does not wake a
-timeout every 400 ms for as long as it is open.
+`#schedule` also skips the timer in the same condition, so an untouched build arms no timeout at
+all. One armed for it would wake only for `#writeNow` to ask the same question and turn the write
+away.
 
 The condition is read outside the watcher's subscription. The watcher subscribes to the revision and
 the fingerprint, which is what an edit changes; the gate asks two more questions of the subject, and

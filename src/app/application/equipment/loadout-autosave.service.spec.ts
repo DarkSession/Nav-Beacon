@@ -520,9 +520,9 @@ describe('LoadoutAutosaveService', () => {
   });
 
   it('wakes no timer for an untouched default loadout, and one at its first choice', () => {
-    // A bench left open on a chosen suit stays open. A timeout every 400 ms
-    // across that would be work spent deciding the same thing again
-    // (024/FR-002).
+    // A bench left open on a chosen suit stays open, and owes nothing for the
+    // whole of that. A timer armed for it would wake only to have the write
+    // turned away, so none is armed at all (024/FR-002).
     vi.useFakeTimers();
     try {
       const { autosave, store, storage } = setup();
