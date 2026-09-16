@@ -291,6 +291,24 @@ export async function recordCount(page: Page): Promise<number> {
 }
 
 /**
+ * How many records this browser holds, once the page has answered for them.
+ *
+ * Autosave coalesces its writes, so a count read on a page that is still open
+ * says nothing is stored whether or not a write is owed — the same answer
+ * either way, which is no answer at all. A page writes what it owes when it is
+ * put away, and `pagehide` is the event a browser sends a page it is
+ * discarding: autosave listens for it already, so asking for it here is asking
+ * the page the question early rather than staging an answer.
+ *
+ * Use this wherever a journey wants to count without leaving the screen. A
+ * journey that leaves anyway needs nothing: going takes the same write with it.
+ */
+export async function recordCountAfterFlush(page: Page): Promise<number> {
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  return recordCount(page);
+}
+
+/**
  * Waits until this browser holds exactly this many records.
  *
  * Polled rather than read once wherever the count answers something the journey

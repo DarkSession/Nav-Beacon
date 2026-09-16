@@ -6,6 +6,7 @@ import {
   reachShellAction,
   reachShellLink,
   recordCount,
+  recordCountAfterFlush,
   savedToBrowser,
   setShipIdent,
 } from './shell';
@@ -346,7 +347,10 @@ test.describe('the tab’s working build', () => {
     await createBuild(page);
     await expect(page.getByRole('heading', { level: 1, name: /anaconda/i })).toBeVisible();
 
-    await expectRecords(page, 0);
+    // Counted after the workspace has answered for what it owes, rather than
+    // polled: a poll for a count that only ever rises succeeds on its first
+    // attempt, so it reads no later than a bare read would.
+    expect(await recordCountAfterFlush(page)).toBe(0);
     await openLibrary(page);
     await expect(library(page).getByText('Nothing is stored yet')).toBeVisible();
     // The sentence under that heading states the rule this change replaces. It

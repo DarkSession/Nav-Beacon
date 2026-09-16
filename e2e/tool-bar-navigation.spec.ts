@@ -5,6 +5,7 @@ import {
   openLibrary,
   raiseSuitGrade,
   recordCount,
+  recordCountAfterFlush,
   savedToBrowser,
   setShipIdent,
 } from './shell';
@@ -195,8 +196,9 @@ test.describe('a tool’s tab re-enters the tool', () => {
     await wearSuit(page, 'Dominator Suit');
     await expect(page).toHaveURL(/\/equipment#e\./);
     // Nothing was decided on it, so nothing is stored for it: the loadout is in
-    // the address and nowhere else (024/FR-002).
-    expect(await recordCount(page)).toBe(0);
+    // the address and nowhere else. Counted after the page has answered for
+    // what it owes, because the bench is still open here (024/FR-002).
+    expect(await recordCountAfterFlush(page)).toBe(0);
 
     await tools(page).nth(1).click();
 

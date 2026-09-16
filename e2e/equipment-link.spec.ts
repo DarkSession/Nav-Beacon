@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { sweepOutfittingState } from './accessibility';
-import { reachShellAction, recordCount } from './shell';
+import { reachShellAction, recordCount, recordCountAfterFlush } from './shell';
 
 /**
  * Handing a loadout to someone else (US4).
@@ -84,7 +84,11 @@ test.describe('handing a loadout to someone else', () => {
       expect(await page.evaluate(() => location.hash)).toMatch(/^#e\./);
     }).toPass({ timeout: 5_000 });
     const link = await page.evaluate(() => location.href);
-    expect(await recordCount(page)).toBe(0);
+
+    // Counted after the page has answered for what it owes. The bench is still
+    // open, and a count taken on an open page is the same answer whether or not
+    // a write is owed.
+    expect(await recordCountAfterFlush(page)).toBe(0);
 
     await page.goto('about:blank');
     await page.goto(link);
