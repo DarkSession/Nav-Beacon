@@ -589,11 +589,7 @@ export class EquipmentBenchPage {
 
   /** The loadout on the bench now belongs to the save that was just written. */
   #adoptSavedRecord(recordId: string, revisionId: string, held: string | null): void {
-    adoptSavedRecord(this.store, this.#invalidation, {
-      recordId,
-      revisionId,
-      held,
-    });
+    adoptSavedRecord(this.store, this.#invalidation, { recordId, revisionId, held });
   }
 
   showTab(tab: string): void {

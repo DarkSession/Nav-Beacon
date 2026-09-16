@@ -1490,11 +1490,11 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
   },
   {
     surfaceId: 'shell/slef-import-replacement',
-    requirements: ['004/FR-010'],
+    requirements: ['004/FR-010', '024/FR-001'],
     journey: 'product/slef-import',
     axe: true,
     assertions: [
-      'a ready candidate replaces dirty work without asking, because that work has a record of its own',
+      'a ready candidate replaces unsaved work without asking: work carrying a decision is in a record of its own, and work at the package default is stored nowhere and has nothing to warn about',
       'a refusal leaves the active build, its revision, records, fragment and history identical',
       'a superseded candidate cannot commit after a newer submit, close or route change',
       'a successful import is exactly one replacement, one autosave and one link synchronization',

@@ -207,12 +207,18 @@ Asking instead whether a _save_ wrote the claim would answer the save and miss t
 would have to be remembered rather than derived — a second copy of where the work is, in the one
 place it must not disagree.
 
-**Where it announced one** is the other half of the guard. The claim in the tab outlives the page that
-wrote it — that is what makes it readable after a reload — and every page registers its tools before
-it has restored anything, holding no record at that moment. A release read off that first moment
-would be the page erasing its own way back. What the page has announced in this run is the honest
-difference between a tool that has let go of something and a tool that has not yet picked anything
-up.
+**Whether the claim is spent** is the other half of the guard. The claim in the tab outlives the page
+that wrote it — that is what makes it readable after a reload — and every page registers its tools
+before it has restored anything, holding nothing at that moment. A release read off that first
+moment would be the page erasing its own way back.
+
+A claim this page wrote in this run is its own, and releasing it is what the rule asks for. A claim
+it did not write is the one a reload reads, but only until the tool takes up work: the restore runs
+while the tool holds nothing, so once it holds something the claim describes nothing on this page.
+Reloading on another screen and then creating a build from the hull catalogue is that case, and this
+change is what makes it reachable — the new build mints no record, so no later write corrects the
+claim. A tool claiming nothing is answered before either question, so a default build a Commander
+keeps editing does not say the same release over and over.
 
 Released rather than merely written down, so a sibling page stops protecting a record nobody is
 writing to. The record itself is untouched: what is released is the claim, and the record runs out

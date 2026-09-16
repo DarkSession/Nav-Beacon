@@ -149,12 +149,7 @@ export class TabOwnershipCoordinator {
           // build still at its hull's default (024/FR-001). A claim left behind
           // would have a reload restore the record the Commander stepped off,
           // and a duplicated tab fork it.
-          //
-          // Only where this page claimed something for this tool. On a page
-          // that has claimed nothing the claim in the tab is the one a reload
-          // is about to read, and releasing it here would be this page erasing
-          // its own way back.
-          if (this.#announced.has(subject.tool)) {
+          if (this.#claimIsSpent(subject)) {
             this.release(subject.tool);
           }
           return;
@@ -170,6 +165,33 @@ export class TabOwnershipCoordinator {
     );
 
     return () => watcher.destroy();
+  }
+
+  /**
+   * Whether the claim in the tab is one this page is finished with.
+   *
+   * Asked of a tool whose work is in no record. What it has to tell apart is a
+   * claim this page has stepped off from the claim a reload is about to read:
+   * the descriptor outlives the page that wrote it — that is what makes it
+   * readable after a reload — and every page registers its tools before it has
+   * restored anything, holding nothing at that moment.
+   *
+   * A claim this page wrote in this run is its own by construction. Otherwise
+   * the claim was written before this page loaded, and it is spent once this
+   * tool holds work of its own: the restore that reads the claim runs only
+   * while the tool holds nothing, so from there the claim describes nothing on
+   * this page and nothing else will correct it. A default build mints no
+   * record, so there is no later write to correct it with (024/FR-001).
+   *
+   * A tool claiming nothing has nothing to let go of. Answered first, so a
+   * default build a Commander keeps editing does not say the same release over
+   * and over.
+   */
+  #claimIsSpent(subject: WorkingRecordSubject): boolean {
+    if (this.claim(subject.tool) === null) {
+      return false;
+    }
+    return this.#announced.has(subject.tool) || subject.fingerprint() !== null;
   }
 
   /**

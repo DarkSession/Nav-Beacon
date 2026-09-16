@@ -96,9 +96,12 @@
       record autosave holds, or failing that the record `sourceNamed` names while `dirty` is false.
       Reading both as signals is what wakes the watcher when the work moves, which this change makes
       necessary: a default build mints no record, so no later allocation corrects a claim left
-      standing. Verify in `tab-ownership.coordinator.spec.ts`: a page holding a record that commits a
+      standing. Release a claim this page did not write once the tool holds work, for the same
+      reason: the restore that reads such a claim runs only while the tool holds nothing, so from
+      there it describes nothing on this page. Verify in `tab-ownership.coordinator.spec.ts`: a page holding a record that commits a
       default build claims nothing afterwards and says so on the channel; a page that has announced
-      nothing leaves the claim a reload reads where it is; a page that saves under a name claims the
+      nothing leaves the claim a reload reads where it is until it takes up work of its own; a page
+      that saves under a name claims the
       record the save produced, including where the save minted a record of its own; a page that
       opens a named record claims it and announces nothing; a page that edits after a save claims
       nothing until it holds the forked record; a page that creates a default build after a save
@@ -184,9 +187,11 @@
       derived rows too, and a list that is closed asserts nothing at all (024/FR-001).
 - [x] 5.8 Register `024/FR-001`, `024/FR-002` and `024/FR-003` in `e2e/coverage-ledger.ts`, on every
       surface a task writes an assertion on: `build` and `equipment/bench-persistence` for the first
-      two, `ships/:hull/create-stock-build` for task 5.4, `shell/journal-selection` for task 5.7, and
-      `build/share-link` and `equipment/link` for the third. Restate the assertions those surfaces
-      claim about records and the fragment, and add `024-default-build-not-autosaved` to
+      two, `ships/:hull/create-stock-build` for task 5.4, `shell/journal-selection` for task 5.7,
+      `shell/slef-import-replacement` for task 5.6, and `build/share-link` and `equipment/link` for
+      the third. Restate the assertions those surfaces claim about records and the fragment —
+      including the replacement surface's, which says the work being replaced has a record of its
+      own and is now true by the other route as well — and add `024-default-build-not-autosaved` to
       `COVERED_FEATURES`. Verify `pnpm run policy:specs` passes and names no unregistered id.
 
 ## 6. The gate

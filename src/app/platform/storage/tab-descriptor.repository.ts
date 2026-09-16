@@ -9,7 +9,7 @@ export const TAB_DESCRIPTOR_VERSION = 2;
 /** What this top-level browsing context remembers about itself. */
 export interface TabDescriptorV2 {
   readonly version: typeof TAB_DESCRIPTOR_VERSION;
-  /** The working record this tab autosaves to, per tool, across reloads. */
+  /** The record each tool's work is in, across reloads. */
   readonly workingRecords: Readonly<Partial<Record<RecordTool, string>>>;
 }
 
@@ -23,7 +23,14 @@ export interface TabDescriptorV2 {
  * names does survive, and the library is where it is found again.
  *
  * One record per tool. A page holds a build and a loadout at the same time, and
- * each is autosaved into an unnamed record of its own (017/FR-010).
+ * each has a record of its own (017/FR-010).
+ *
+ * The record is usually an unnamed one the tool autosaves into. It is a named
+ * one while the work is in a named record — after a save, and after an open
+ * from the saved list — because autosave has no path to a named record and the
+ * work is stored there all the same. What is remembered is where the work is,
+ * so that a reload opens it again; whether the tool may write to it is decided
+ * by the record itself (001/FR-008).
  *
  * A duplicated tab is the exception the descriptor cannot handle alone: the
  * copy inherits the original's session storage, so both pages believe they own
@@ -86,7 +93,7 @@ export class TabDescriptorRepository {
     return { version: TAB_DESCRIPTOR_VERSION, workingRecords };
   }
 
-  /** Claims a working record for one tool. Best effort, like every session write. */
+  /** Claims a record for one tool. Best effort, like every session write. */
   write(tool: RecordTool, workingRecordId: string): void {
     const held = this.read()?.workingRecords ?? {};
     this.#session.write(

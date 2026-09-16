@@ -11,7 +11,7 @@ import { fold } from './build-default';
  * loadout for. `atPackageDefault` compares a build's module symbols against the
  * supplied fit's by identity rather than by spelling, and the reason it may is
  * the package's own: a symbol names one module whatever its letter case. That
- * promise is characterized here, so a release that made letter case meaningful
+ * promise is characterised here, so a release that made letter case meaningful
  * fails this suite rather than quietly changing which builds take a record
  * (024/FR-001).
  *

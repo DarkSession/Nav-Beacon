@@ -474,6 +474,34 @@ describe('TabOwnershipCoordinator', () => {
     expect(second.coordinator.claim('ship')).toBe('id-held');
   });
 
+  it('lets go of a claim from before the reload once the tool takes up work of its own', () => {
+    // Reloading on another screen leaves the claim in the tab and this page
+    // knowing nothing about it. The build created afterwards is at its hull's
+    // default, so it mints no record and there is no later write to correct
+    // the claim with — and a reload reaching the workspace with no build in
+    // the address would restore the record the Commander stepped off
+    // (024/FR-001, 017/FR-010).
+    const session = new MemoryStorage();
+    const first = setup(session);
+    hold(first.active, 'id-held');
+    const stop = first.coordinator.track(first.active);
+    TestBed.tick();
+    stop();
+
+    const second = setup(session);
+    second.coordinator.track(second.active);
+    TestBed.tick();
+    expect(
+      second.coordinator.claim('ship'),
+      'the claim a reload reads survives the first moment',
+    ).toBe('id-held');
+
+    hold(second.active, null);
+    TestBed.tick();
+
+    expect(second.coordinator.claim('ship')).toBeNull();
+  });
+
   it('forks nothing for a tool holding no record when the tab is duplicated', () => {
     // The duplicate carries a copy of the session, so it claims the same
     // loadout and that tool forks. The build is in no record in either page:
