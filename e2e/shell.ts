@@ -108,20 +108,6 @@ export async function reachShellAction(page: Page, name: RegExp): Promise<void> 
 }
 
 /**
- * How long a cold open of the saved builds is given.
- *
- * The library is a chunk the application fetches when it is first asked for,
- * so a journey that reloads and then opens it pays for the fetch as well as
- * the render. Measured on a throttled processor with the cache turned off, the
- * layer took 6.0, 8.3 and 13.6 seconds over three runs, and the rows followed
- * it by about 200 ms each time. The default of ten seconds sits inside that
- * spread, which is what made a journey of this shape fail on a loaded runner
- * and pass everywhere else. The wait is longer; what is waited for is the
- * same.
- */
-export const COLD_LAYER_MS = 30_000;
-
-/**
  * Opens the saved builds, at whichever width.
  *
  * They have no address of their own: the library is a layer over whatever
@@ -142,7 +128,7 @@ export async function openLibrary(page: Page): Promise<void> {
   if (!(await layer.isVisible())) {
     await reachShellAction(page, /^(Open saved build|Gespeicherten Aufbau öffnen)$/);
   }
-  await expect(layer).toBeVisible({ timeout: COLD_LAYER_MS });
+  await expect(layer).toBeVisible();
 }
 
 /**
