@@ -215,7 +215,7 @@
       `buildStockHull`, at the same statement, on the same locator, with the same message
       (`024-gate20-flaky-probe.log`, `024-gate20-flaky-probe-main.log`). The helper is what is
       unsteady, rather than any one journey or profile: the same statement, locator and message
-      also failed the setup of this change's own two-page journey on the portrait phone, where
+      also failed the setup of the two-page journey this change edits, on the portrait phone, where
       that journey then passed six times over (`024-gate24-bws.log` 134 of 135,
       `024-gate24-bws-probe.log` 6 passed). Both sightings are in the press that starts a stock
       build, before the journey around it begins. The five Firefox projects
@@ -224,16 +224,17 @@
       shards, this journey included, on both
       https://github.com/DarkSession/Nav-Beacon/actions/runs/35087950759 (head `4b486c63`) and
       https://github.com/DarkSession/Nav-Beacon/actions/runs/35096001678 (head `db96983e`).
-      Two journeys this change adds read the store at a moment it cannot answer for. The first
-      saves and reloads, and failed on its first attempt on the desktop, the landscape tablet and
-      the portrait phone in the integration run over head `2022a1ca`
+      Two of this change's journeys read the store at a moment it cannot answer for. The first is
+      added here. It saves and reloads, and failed on its first attempt on the desktop, the
+      landscape tablet and the portrait phone in the integration run over head `2022a1ca`
       (https://github.com/DarkSession/Nav-Beacon/actions/runs/35080734599): the save was still in
       flight, so the work stayed in the unnamed record autosave held and the library listed no
       name. It waits for the save layer to close, which is what the workspace does once the write
-      has resolved (`024-fix-bws.log`, 119 of 120). The second gives two pages a record each and
-      counts them on one page, and is the remaining failure in that log: two pages are two
-      renderers over one store, and the row reaches the reading one after the writing one reports
-      it. It polls the count. Both journeys pass three times over on two profiles with no retries
+      has resolved (`024-fix-bws.log`, 119 of 120). The second stands on the default branch
+      already, where it counts on one page what the other wrote. It gives two pages a record each,
+      and is the remaining failure in that log: two pages are two renderers over one store, and the
+      row reaches the reading one after the writing one reports it. It polls the count. Both
+      journeys pass three times over on two profiles with no retries
       (`024-gate19-affected.log`, 360 passed). The bench's own count, read after the tab clears the
       loadout, goes through the flush for the same reason: the page stays on the bench there, so a
       write owed for the clearing would still be inside the window. That file passes over the five
