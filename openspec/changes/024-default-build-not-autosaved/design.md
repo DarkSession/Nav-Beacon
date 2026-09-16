@@ -189,16 +189,23 @@ record before it stands for as long as the page runs: a reload restores the reco
 off, and a duplicated tab forks it. So a tool whose record becomes nothing lets go of its claim
 where it announced one, which is what "a tool that holds no record claims none" asks for.
 
-A save is the one case where the record becoming null does not mean the work is stored nowhere.
-Autosave has no path to a named record, so a save clears the tool's autosave target on purpose while
-the work sits in the record the save produced — and that record is what a reload should restore from
-and hold. It is not always the record autosave held, either: a save without Web Locks mints a fresh
-record and consumes the held one, and an overwrite writes an existing named record and consumes it
-the same way, so a claim left standing would name a record the save has just deleted. `adoptSavedRecord`
-therefore writes the claim on the record the save produced, and the release asks whether the claim it
-is about came from a save rather than asking where the work came from. Provenance is the wrong
-question: a bench that opened a named record and then changed suit came from that record and is no
-longer in it.
+Holding no autosave target is not the same as being in no record. Autosave has no path to a named
+record, so a tool whose work is in one holds no target while the work is stored all the same — after
+a save, and after opening a record from the saved list. Both are records a reload should restore
+from. So the claim is read from where the work is rather than from how it got there: the record
+autosave holds, or failing that the named record the work is in and matches. `sourceNamed` says
+which record, and `dirty` says whether the work is still the one that record holds; an edit puts the
+work somewhere the record cannot be opened to, and the unnamed record minted for it is claimed
+instead.
+
+Read as signals, so the watcher wakes when either moves. That is what this change makes necessary:
+before it, a claim left standing was corrected by the next allocation, and a default build allocates
+nothing. Without it, saving and then creating a build from the hull catalogue leaves the saved
+record claimed for as long as the page runs, and a reload opens a build the Commander moved on from.
+
+Asking instead whether a _save_ wrote the claim would answer the save and miss the open, and it
+would have to be remembered rather than derived — a second copy of where the work is, in the one
+place it must not disagree.
 
 **Where it announced one** is the other half of the guard. The claim in the tab outlives the page that
 wrote it — that is what makes it readable after a reload — and every page registers its tools before

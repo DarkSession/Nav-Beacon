@@ -297,9 +297,12 @@ offer overwrite, keep both and cancel.
 A tool whose work is in no record MUST claim none, and the tab's claim for the other tool MUST be
 untouched. There is then nothing for a second page to collide with and nothing to fork: two pages
 holding the same default work are not two claims on one record, and each takes a record of its own
-at its own first change. Work in a named record is not work in no record: a save clears the autosave
-target, because autosave has no path to a named record, and the tab MUST keep claiming the record
-the save produced, which is the one a reload restores from and holds.
+at its own first change. Work in a named record is not work in no record: autosave has no path to a
+named record, so a tool holds no autosave target while its work is in one, and the tab MUST claim
+that record for as long as the work matches what it holds. This MUST hold for a record a save
+produced and for one a Commander opened from the saved list alike, because both are records a reload
+restores the work from. Once the work no longer matches, the tab MUST claim the unnamed record the
+next write mints for it instead, and nothing until there is one.
 
 A record deleted on this page MUST leave this tab claiming nothing for the tool that was
 autosaving into it. The claim is what a reload reads, so one left behind would have the tool
@@ -354,6 +357,19 @@ Source: 001/FR-012, 017/FR-010, 024/FR-001, 024/FR-002.
 - **WHEN** a Commander saves under a name the work a tool was autosaving into an unnamed record
 - **THEN** the tool stops autosaving, because autosave has no path to a named record
 - **AND** this tab claims the record the save produced, so a reload restores the work from it
+
+#### Scenario: A Commander opens a record from the saved list
+
+- **WHEN** a Commander opens a named record from the saved list
+- **THEN** this tab claims that record, so a reload restores the work from it
+- **AND** nothing is announced to other pages, because no page autosaves into it
+
+#### Scenario: A default build takes the place of saved work
+
+- **WHEN** a Commander who has just saved under a name creates a build from the hull catalogue
+- **THEN** this tab claims nothing for that tool, because the new build is at its hull's default and
+  is in no record
+- **AND** a page built in this tab afterwards restores no build from the record that was saved
 
 #### Scenario: This page deletes the record a tool autosaves into
 

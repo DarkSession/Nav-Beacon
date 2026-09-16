@@ -66,7 +66,12 @@
       1.5 pass, and that an unnamed record already holding the default state is left alone rather
       than taken over. Verify too that a resume after another page's deletion writes the work back
       into the record this tool still holds, at its default or not: the branch reads work that holds
-      no record, and a resume is offered only while a record is held (024/FR-001, 024/FR-002).
+      no record, and a resume is offered only while a record is held. Have the branch say `ready` on
+      the status as well as answer `true`: a named record refused as a target leaves `write-failed`
+      standing and draws a retry control, and every retry from here would decline in the same
+      silence — a control that does nothing, under a notice about a record the work is no longer in.
+      Verify in `autosave.service.spec.ts` that a build left in no record by a named target clears
+      that notice at the next write and still stores nothing (024/FR-001, 024/FR-002, 001/FR-014).
 - [x] 3.3 Skip the coalescing timer in `#schedule` under the same condition, so an untouched build
       wakes no timeout while it is open. Read the condition outside the watcher's subscription: the
       watcher is woken by an edit, and which record the tool holds is an answer to the gate rather
@@ -85,18 +90,20 @@
       and leave the other tool's claim untouched. `track` announces the record a tool holds, and
       releases that tool's claim where the record becomes null and this page announced one — on a
       page that has announced nothing, the claim in the tab is the one a reload is about to read.
-      Release only work that is in no record at all. A save clears the autosave target too, because
-      autosave has no path to a named record, so have the save write the claim on the record it
-      produced and release every other claim. The save's own record is the right one to name: a save
-      without Web Locks mints a fresh record and consumes the held one, and an overwrite writes an
-      existing named record, so the id autosave held is by then a record that was deleted. Verify in
-      `tab-ownership.coordinator.spec.ts`: a page holding a record that commits a default build
-      claims nothing afterwards and says so on the channel; a page that has announced nothing leaves
-      the claim a reload reads where it is; a page that saves under a name keeps claiming the record
-      the save produced, including where the save minted a record of its own; a page whose work
-      moves off a saved record claims the record it moves onto, and nothing once it holds none; a
-      duplicated tab forks nothing for a tool holding no record; and two pages holding the same
-      default work each take a record of their own at their own first edit. Verify
+      Release only work that is in no record at all. Autosave has no path to a named record, so a
+      tool holds no autosave target while its work is in one — after a save, and after an open from
+      the saved list. Read the claim from where the work is rather than from how it got there: the
+      record autosave holds, or failing that the record `sourceNamed` names while `dirty` is false.
+      Reading both as signals is what wakes the watcher when the work moves, which this change makes
+      necessary: a default build mints no record, so no later allocation corrects a claim left
+      standing. Verify in `tab-ownership.coordinator.spec.ts`: a page holding a record that commits a
+      default build claims nothing afterwards and says so on the channel; a page that has announced
+      nothing leaves the claim a reload reads where it is; a page that saves under a name claims the
+      record the save produced, including where the save minted a record of its own; a page that
+      opens a named record claims it and announces nothing; a page that edits after a save claims
+      nothing until it holds the forked record; a page that creates a default build after a save
+      claims nothing; a duplicated tab forks nothing for a tool holding no record; and two pages
+      holding the same default work each take a record of their own at their own first edit. Verify
       the save journey end to end in `e2e/build-working-state.spec.ts`: after a save and a reload,
       one record, still claimed (001/FR-008, 017/FR-007, 024/FR-001, 024/FR-002).
 - [x] 4.2 Verify a manual save from a build or a loadout holding no record writes a named record.

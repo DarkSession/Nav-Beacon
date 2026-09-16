@@ -587,7 +587,7 @@ export class BuildWorkspacePage {
 
   /** The build now belongs to the save that was just written. */
   #adoptSavedRecord(recordId: string, revisionId: string, held: string | null): void {
-    adoptSavedRecord(this.#active, this.#invalidation, this.#ownership, {
+    adoptSavedRecord(this.#active, this.#invalidation, {
       recordId,
       revisionId,
       held,

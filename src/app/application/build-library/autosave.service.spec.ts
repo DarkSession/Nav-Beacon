@@ -714,6 +714,27 @@ describe('AutosaveService', () => {
     expect(written).toHaveLength(2);
   });
 
+  it('clears the notice a named target left once no record is owed at all', () => {
+    // The notice draws one control, and a build at its hull's default is owed
+    // no record — so every press would decline in the same silence, under a
+    // notice about a record the build is no longer held in (024/FR-001,
+    // 001/FR-008, 001/FR-014).
+    const { autosave, active, storage } = setup((store) =>
+      store.setItem(recordKey(HELD), storedNamedRecord(HELD)),
+    );
+    commitBuild(active);
+    autosave.flush();
+    expect(active.persistence()).toBe('write-failed');
+    expect(active.autosaveRecordId(), 'the named target was let go of').toBeNull();
+    expect(active.atDefault()).toBe(true);
+    const before = [...storage.entries.keys()];
+
+    autosave.flush();
+
+    expect(active.persistence()).toBe('ready');
+    expect([...storage.entries.keys()], 'and still nothing is written').toEqual(before);
+  });
+
   it('coalesces a burst of edits into one write', async () => {
     const { autosave, active, storage } = setup();
     const id = HELD;

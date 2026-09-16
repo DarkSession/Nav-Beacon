@@ -95,17 +95,6 @@ export class TabOwnershipCoordinator {
   readonly #announced = new Map<RecordTool, string>();
 
   /**
-   * The tools whose current claim was written by a save rather than by autosave.
-   *
-   * What tells the two apart where the tool holds no record. A save moves the
-   * work into a record autosave may not write, so the tool holds none and the
-   * claim is still the record the work is in; every other way of holding none
-   * leaves the work in no record at all. Dropped wherever the claim changes,
-   * because from there it describes a claim that is gone.
-   */
-  readonly #claimedBySave = new Set<RecordTool>();
-
-  /**
    * What every other live page says it is autosaving into, by page and tool.
    *
    * Kept so the expiry sweep can leave those records alone: a page that has had
@@ -137,27 +126,6 @@ export class TabOwnershipCoordinator {
   }
 
   /**
-   * Claims the named record a save has just moved a tool's work into.
-   *
-   * A save is the one way a tool's work moves into a record it does not
-   * autosave into, and the record it produces is not always the one autosave
-   * held: a save without Web Locks mints a fresh record and consumes the held
-   * one, and an overwrite writes an existing named record and consumes it the
-   * same way. So the claim is written from the id the save produced rather than
-   * left standing on the id autosave had, which is by then a record that was
-   * deleted (001/FR-008, 017/FR-007, 017/FR-010).
-   *
-   * Nothing is announced. Two pages may hold one named record open because
-   * neither autosaves into it, so this is not a claim another page can collide
-   * with (001/FR-012).
-   */
-  claimSaved(tool: RecordTool, recordId: string): void {
-    this.#claimedBySave.add(tool);
-    this.#announced.set(tool, recordId);
-    this.#tab.write(tool, recordId);
-  }
-
-  /**
    * Starts persisting and announcing whatever record this tool is holding.
    *
    * Returns an unsubscribe. Driven by the store rather than called at each
@@ -174,7 +142,7 @@ export class TabOwnershipCoordinator {
 
     const watcher = effect(
       () => {
-        const id = subject.autosaveRecordId();
+        const id = subject.autosaveRecordId() ?? namedHome(subject);
         if (id === null) {
           // A tool whose work is in no record claims none. Reached where a tool
           // that was writing to one takes up work that is stored nowhere: a
@@ -182,21 +150,11 @@ export class TabOwnershipCoordinator {
           // would have a reload restore the record the Commander stepped off,
           // and a duplicated tab fork it.
           //
-          // Work a save moved into a named record is not that. A save clears
-          // the autosave target on purpose — autosave has no path to a named
-          // record — and `claimSaved` has already written the claim on the
-          // record the save produced, which is where the work now is
-          // (001/FR-008, 017/FR-007).
-          //
-          // Read as the claim rather than as where the work came from. A tool
-          // that opened a named record and has since moved off it is in no
-          // record either, however it got there.
-          //
           // Only where this page claimed something for this tool. On a page
           // that has claimed nothing the claim in the tab is the one a reload
           // is about to read, and releasing it here would be this page erasing
           // its own way back.
-          if (this.#announced.has(subject.tool) && !this.#claimedBySave.has(subject.tool)) {
+          if (this.#announced.has(subject.tool)) {
             this.release(subject.tool);
           }
           return;
@@ -204,8 +162,6 @@ export class TabOwnershipCoordinator {
         if (id === this.#announced.get(subject.tool)) {
           return;
         }
-        // Autosaving again, so the claim is this record rather than a save's.
-        this.#claimedBySave.delete(subject.tool);
         this.#announced.set(subject.tool, id);
         this.#tab.write(subject.tool, id);
         this.#announce(subject.tool);
@@ -228,7 +184,6 @@ export class TabOwnershipCoordinator {
    */
   release(tool: RecordTool): void {
     this.#announced.delete(tool);
-    this.#claimedBySave.delete(tool);
     this.#tab.release(tool);
     // And said out loud, so a sibling page stops protecting a record nobody is
     // writing to any more. A claim it never hears the end of would keep the
@@ -384,11 +339,40 @@ export class TabOwnershipCoordinator {
     // running to write the new id down. Without this, a reload would restore
     // from the record the other page is writing to, which is the collision the
     // fork exists to end.
-    this.#claimedBySave.delete(tool);
     this.#announced.set(tool, next);
     this.#tab.write(tool, next);
     this.#announce(tool);
 
     return next;
   }
+}
+
+/**
+ * The named record a tool's work can be opened from again, or `null`.
+ *
+ * The other half of what a tab claims. A claim is the record a reload restores
+ * from, and autosave is not the only way work gets into one: a save moves the
+ * work into a named record and clears the autosave target, because autosave has
+ * no path to a named record (001/FR-008, 017/FR-007). Opening a named record
+ * from the saved list leaves the work in the same place. Both are work that is
+ * stored, in a record that is not this tool's to write.
+ *
+ * Read from where the work is rather than from how it got there, so a saved
+ * record and an opened one are one answer. Read reactively too: the source and
+ * the dirty state are signals, so work that moves off a named record wakes the
+ * watcher that holds the claim. That matters under 024/FR-001, where a default
+ * build allocates no record — so there is no later allocation to correct a
+ * claim left standing (024/FR-001).
+ *
+ * Only while the work matches what the record holds. An edit puts the work
+ * somewhere the record cannot be opened to, and the claim is for restoring the
+ * work, not for naming where it came from. The next write mints an unnamed
+ * record and claims that instead.
+ */
+function namedHome(subject: WorkingRecordSubject): string | null {
+  const source = subject.sourceNamed();
+  if (source === null || subject.dirty()) {
+    return null;
+  }
+  return source.recordId;
 }

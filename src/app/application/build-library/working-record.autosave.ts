@@ -215,7 +215,14 @@ export class WorkingRecordAutosave {
     // write always holds one: a resume is offered only while the record another
     // page discarded is still this tool's, and a fork names the fresh record
     // before it copies the work into it.
+    //
+    // Said on the status as well as answered, because a standing notice is read
+    // as a state of this work. A named record refused below leaves
+    // `write-failed` and offers a retry, and every retry from here would decline
+    // in the same silence — a control that does nothing, under a notice about a
+    // record this work is no longer in (001/FR-014, 017/FR-008).
     if (this.#subject.autosaveRecordId() === null && this.#subject.atDefault()) {
+      this.#subject.setPersistence('ready');
       return true;
     }
 

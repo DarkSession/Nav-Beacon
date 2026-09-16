@@ -10,6 +10,8 @@ import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/stor
 import { recordKey } from '../../platform/storage/storage-keys';
 import { TabDescriptorRepository } from '../../platform/storage/tab-descriptor.repository';
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
+import { baselineFingerprint } from '../../domain/ships/build/build-fingerprint';
+import { toBuildSnapshotV1 } from '../../domain/ships/build/build-snapshot.serializer';
 import { ActiveBuildStore } from '../active-build/active-build.store';
 import { LoadoutStore } from '../equipment/loadout.store';
 import { adoptSavedRecord } from './adopt-saved-record';
@@ -87,6 +89,27 @@ function hold(active: ActiveBuildStore, autosaveRecordId: string | null): void {
     sourceNamed: null,
     autosaveRecordId,
     baseline: null,
+  });
+}
+
+/**
+ * Puts a build in the store as opening a named record leaves it.
+ *
+ * In the record, unedited, and holding no autosave target: a named record is
+ * never one, so the page writes nothing to it and forks at the first modelled
+ * edit (001/FR-008). Written the way `RecordOpenService` writes it, because
+ * what the claim reads is that state rather than the route to it.
+ */
+function openNamed(active: ActiveBuildStore, recordId: string): void {
+  const loadout = ShipLoadout.default('Anaconda');
+  active.commit({
+    loadout,
+    suppliedFit: suppliedFit(loadout.shipSymbol),
+    hullName: 'Anaconda',
+    provenance: 'named',
+    sourceNamed: { recordId, baseRevisionId: 'revision-1' },
+    autosaveRecordId: null,
+    baseline: baselineFingerprint(toBuildSnapshotV1(loadout)),
   });
 }
 
@@ -302,7 +325,7 @@ describe('TabOwnershipCoordinator', () => {
     TestBed.tick();
     channel.sent.length = 0;
 
-    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), coordinator, {
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
       recordId: 'the-build',
       revisionId: 'revision-2',
       held: 'the-build',
@@ -328,7 +351,7 @@ describe('TabOwnershipCoordinator', () => {
     coordinator.track(active);
     TestBed.tick();
 
-    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), coordinator, {
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
       recordId: 'the-named-record',
       revisionId: 'revision-2',
       held: 'the-working-record',
@@ -339,28 +362,75 @@ describe('TabOwnershipCoordinator', () => {
   });
 
   it('lets go of the claim a save wrote once the work moves off that record', () => {
-    // The first edit after a save forks a fresh unnamed record, and the work is
-    // in that one. A claim left on the save would have a reload restore the
-    // saved version and lose the edits made since (017/FR-010).
+    // The first edit after a save is work the saved record does not hold, and
+    // the fork that follows puts it in an unnamed record of its own. A claim
+    // left on the save would have a reload restore the saved version and lose
+    // every edit made since (017/FR-010).
     const { coordinator, active } = setup();
     hold(active, 'the-working-record');
     coordinator.track(active);
     TestBed.tick();
-    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), coordinator, {
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
       recordId: 'the-named-record',
       revisionId: 'revision-2',
       held: 'the-working-record',
     });
     TestBed.tick();
+    expect(coordinator.claim('ship')).toBe('the-named-record');
 
-    active.setAutosaveRecordId('the-forked-record');
-    TestBed.tick();
-    expect(coordinator.claim('ship')).toBe('the-forked-record');
-
-    active.setAutosaveRecordId(null);
+    decide(active, 3);
     TestBed.tick();
 
     expect(coordinator.claim('ship')).toBeNull();
+
+    active.setAutosaveRecordId('the-forked-record');
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBe('the-forked-record');
+  });
+
+  it('lets go of the claim a save wrote once a default build takes its place', () => {
+    // The build a Commander creates from the hull catalogue after saving is at
+    // its hull's default, so it takes no record and none is minted to correct
+    // the claim (024/FR-001). Left standing, the record the save produced is
+    // what a reload opens — a build the Commander has already moved on from.
+    const { coordinator, active } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+    adoptSavedRecord(active, TestBed.inject(RecordInvalidationService), {
+      recordId: 'the-named-record',
+      revisionId: 'revision-2',
+      held: 'the-working-record',
+    });
+    TestBed.tick();
+    expect(coordinator.claim('ship')).toBe('the-named-record');
+
+    hold(active, null);
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBeNull();
+  });
+
+  it('keeps the claim on a named record the page opened', () => {
+    // Work opened from the saved list is in that record as surely as work a
+    // save put there, and holds no autosave target either way. Released, a
+    // reload would restore nothing, and the build would come back from the
+    // fragment as a fresh arrival for autosave to mint a record for — a second
+    // copy of a record the Commander already has (001/FR-008, 024/FR-001).
+    const { coordinator, active, channel } = setup();
+    hold(active, 'the-working-record');
+    coordinator.track(active);
+    TestBed.tick();
+    channel.sent.length = 0;
+
+    openNamed(active, 'the-opened-record');
+    TestBed.tick();
+
+    expect(coordinator.claim('ship')).toBe('the-opened-record');
+    expect(channel.sent, 'a named record is not announced: neither page autosaves into it').toEqual(
+      [],
+    );
   });
 
   it('lets go of the record a tool held once it takes up work that is in none', () => {
