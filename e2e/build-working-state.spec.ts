@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   buildStockHull,
+  COLD_LAYER_MS,
   expectRecords,
   openLibrary,
   reachShellAction,
@@ -165,7 +166,11 @@ test.describe('the tab’s working build', () => {
     expect(after.records).toEqual(before.records);
     expect(after.tab).toBe(before.tab);
     await openLibrary(page);
-    await expect(library(page).getByText('Explorer').first()).toBeVisible();
+    // Given the cold budget: this is the one journey that reloads and then asks
+    // for the library, so the layer and its rows are both fetched again here.
+    await expect(library(page).getByText('Explorer').first()).toBeVisible({
+      timeout: COLD_LAYER_MS,
+    });
   });
 
   test('writes nothing outside the keys this application owns', async ({ page }) => {
