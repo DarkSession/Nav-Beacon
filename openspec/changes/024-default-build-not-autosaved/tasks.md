@@ -206,9 +206,13 @@
       Run under `dist/verification/024-gate18-e2e-chromium.log`: 3599 passed over the five Chromium
       layout profiles. Eleven accessibility and preview sweeps timed out at 30 s under the load of
       five projects at once; each passes in 5 to 12 s when it is the only run
-      (`024-gate18-e2e-rerun.log`, 25 passed). Every journey this change touches passed in all five
-      profiles. The five Firefox projects were not run: the engine is absent from this container
-      and `playwright install firefox` cannot reach its download host.
+      (`024-gate18-e2e-rerun.log`, 25 passed). The five Firefox projects were not run: the engine
+      is absent from this container and `playwright install firefox` cannot reach its download
+      host. One journey this change adds passed here and failed on the integration run, in four of
+      the five profiles and on the first attempt in each: the save it makes was still in flight
+      when it reloaded, so the work stayed in the unnamed record autosave held and the library
+      listed no name. The journey now waits for the save layer to close, which is what the
+      workspace does once the write has resolved (`024-fix-bws.log`).
 - [x] 6.2 Run `pnpm run check` and verify it passes: format, help artifacts, sitemap, typecheck,
       build, preview build, policy, codec capacity, script tests, unit tests at or above the 80%
       coverage threshold, and the Playwright matrix including the timing and offline projects.
