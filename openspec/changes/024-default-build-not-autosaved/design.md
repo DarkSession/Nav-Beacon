@@ -28,7 +28,8 @@ Three facts shape the approach:
 - One gate, in one place, that both tools reach by every route into a build or a loadout.
 - The comparison is against the package, so a release that changes a hull's default loadout moves
   what counts as default with it.
-- No change to what a Commander reads, and no new catalogue keys.
+- No new catalogue key. One sentence changes value, under the key it already has, in every
+  locale catalogue.
 
 **Non-Goals:**
 

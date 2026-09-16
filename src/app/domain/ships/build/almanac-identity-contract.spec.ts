@@ -97,7 +97,7 @@ describe('the installed Almanac, on what a module symbol identifies', () => {
     expect(disagreeing).toEqual([]);
   });
 
-  it('names one module per supplied slot once letter case is set aside', () => {
+  it('names one module per supplied symbol once letter case is set aside', () => {
     // The package does not publish its supplied fits in one case — the
     // Anaconda's names `Int_SuperCruiseAssist` beside
     // `int_planetapproachsuite_advanced` — so a build and a supplied fit can

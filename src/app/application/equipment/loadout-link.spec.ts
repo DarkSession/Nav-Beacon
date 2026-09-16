@@ -63,6 +63,26 @@ function setup() {
   };
 }
 
+/**
+ * The same bench, publishing onto the window's own address.
+ *
+ * The location adapter is left to be the real one, for the case that asks what
+ * the adapter puts in a link rather than what the bench puts in a fragment.
+ */
+function setupOnTheWindow(): {
+  store: LoadoutStore;
+  links: LoadoutLinkCoordinator;
+} {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [provideLocalization(), ...provideMemoryStorage(new MemoryStorage())],
+  });
+  return {
+    store: TestBed.inject(LoadoutStore),
+    links: TestBed.inject(LoadoutLinkCoordinator),
+  };
+}
+
 /** A loadout with held content: a sniper on a mount the Maverick does not offer. */
 function heldLoadout(store: LoadoutStore): EquipmentLoadout {
   store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
@@ -136,18 +156,28 @@ describe('LoadoutLinkCoordinator', () => {
     // The loadout is in the fragment, which browsers do not send to a server.
     // A path or a query carrying any of it would publish a Commander's loadout
     // to whatever serves the address (024/FR-003).
-    const { links, store, location } = setup();
-    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    //
+    // Read off the real location adapter rather than the double the rest of
+    // this suite uses. The double returns one fixed base, so against it the
+    // path and the query are the fixture's own literal and the rule would be
+    // asserted of the test rather than of the code that builds the link.
+    const address = '/equipment?tab=suit';
+    const before = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState(window.history.state, '', address);
 
-    links.publish();
+    try {
+      const { links, store } = setupOnTheWindow();
+      store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
 
-    const published = links.publishedUrl() ?? '';
-    const fragment = location.fragmentValue;
-    expect(published).toContain(`#${fragment}`);
-    expect(published.slice(0, published.indexOf('#'))).toBe(
-      'https://navbeacon.test/equipment?tab=suit',
-    );
-    expect(published.slice(0, published.indexOf('#'))).not.toContain(fragment);
+      links.publish();
+
+      const published = new URL(links.publishedUrl() ?? '');
+      expect(published.hash.startsWith('#e.')).toBe(true);
+      expect(published.pathname).toBe('/equipment');
+      expect(published.search).toBe('?tab=suit');
+    } finally {
+      window.history.replaceState(window.history.state, '', before);
+    }
   });
 
   it('restores the loadout a link describes, held content and all (FR-018a)', () => {

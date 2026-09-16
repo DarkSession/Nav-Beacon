@@ -10,6 +10,7 @@ import {
   buildStockHull,
   manifestBuildControl,
   openHullFromManifest,
+  openLibrary,
   reachShellLink,
   recordCount,
   restsToRead,
@@ -440,17 +441,32 @@ test.describe('hull detail', () => {
     await expect(page).toHaveURL(/\/outfitting(#|$)/);
     await expect(page.getByRole('banner').getByText('Sidewinder').first()).toBeVisible();
 
-    // Nothing was stored for either of them. The count is what says so: read
-    // once rather than polled, because a count that states nothing was written
-    // holds from the first attempt. The status line beside it names the state
-    // the workspace draws for work that is in no record — it is read for that
-    // name, not as a second reading of the count, which it cannot be: a write
-    // for the first build lands after the journey has left the workspace.
+    // The status line names the state the workspace draws for work that is in
+    // no record. It is read for that name alone: a write lands after the
+    // coalescing window, so read here it cannot say whether one is pending.
     await expect(page.locator('ednb-build-workspace-page')).toHaveAttribute(
       'data-persistence',
       'ready',
     );
+
+    // Nothing was stored for either of them. The journey leaves the workspace
+    // before it counts, which is what makes the answer cover the second
+    // creation as well as the first: the workspace writes what it owes on the
+    // way out, so a record owed for the build on screen is in the store by the
+    // time the count is read. Reaching the saved list from the workspace would
+    // leave it standing, and the count would answer for the first creation
+    // alone.
+    await page.goBack();
+    await expect(page.locator('ednb-build-workspace-page')).toHaveCount(0);
+
+    // Read once rather than polled: a count that states nothing was written
+    // holds from the first attempt. Stated in the words a Commander reads too,
+    // on the screen that would list either build had one been kept.
     expect(await recordCount(page)).toBe(0);
+    await openLibrary(page);
+    await expect(
+      page.getByRole('dialog', { name: 'Saved builds' }).getByText('Nothing is stored yet'),
+    ).toBeVisible();
   });
 
   test('draws the stock-hull action only where the manifest is not the build', async ({ page }) => {

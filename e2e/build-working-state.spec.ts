@@ -349,6 +349,15 @@ test.describe('the tab’s working build', () => {
     await expectRecords(page, 0);
     await openLibrary(page);
     await expect(library(page).getByText('Nothing is stored yet')).toBeVisible();
+    // The sentence under that heading states the rule this change replaces. It
+    // is read on the screen a Commander reaches right after creating a build,
+    // which is where being told that nothing is kept yet has to make sense
+    // (024/FR-001).
+    await expect(
+      library(page).getByText(
+        'Work is kept here in this browser from your first change to it, until you discard it.',
+      ),
+    ).toBeVisible();
     await page.goBack();
     await expect(library(page)).toBeHidden();
 

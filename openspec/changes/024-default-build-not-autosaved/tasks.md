@@ -1,14 +1,16 @@
 ## 1. Scope and the failing tests
 
-- [x] 1.1 Hold the change to what it is: no template, style sheet or component is touched, and no
-      string is added (design.md, Screens). One string changes value — `library.empty.description`,
+- [x] 1.1 Hold the change to what it is: no template, style sheet or component body is touched, and
+      no string is added (design.md, Screens). One string changes value — `library.empty.description`,
       in every locale catalogue — because the empty saved screen states a rule this change replaces,
-      for the work both tools keep there rather than for a build alone. Responsiveness, touch targets, screen-reader semantics and design-system composition
-      therefore have nothing new to check, and are verified by the accessibility and responsive
-      journeys passing unchanged in `pnpm run check`; the reworded sentence is verified by the
-      journeys that read that screen. Verify against proposal.md — Impact: every changed path is
-      under `src/app/`, `e2e/` or `openspec/`, and every changed file under `src/app/features/` is a
-      test, which is why no screen changes.
+      for the work both tools keep there rather than for a build alone. Responsiveness, touch
+      targets, screen-reader semantics and design-system composition therefore have nothing new to
+      check, and are verified by the accessibility and responsive journeys passing unchanged in
+      `pnpm run check`. Assert the reworded sentence where a journey already stands on that screen,
+      in `e2e/build-working-state.spec.ts`, so the one string a Commander reads differently is read
+      by a test. Verify against proposal.md — Impact: every changed path is under `src/app/`, `e2e/`
+      or `openspec/`, and the only change under `src/app/features/` outside a test is a doc comment
+      in `build-library.page.ts`, which is why no screen changes.
 - [x] 1.2 Add to `src/app/domain/ships/build/` a failing unit test that the snapshot of
       `ShipLoadout.default(<hull symbol>)` is reported at the hull's package default, that the same
       build with one module replaced is not, that the same build with one mount emptied is not, and
