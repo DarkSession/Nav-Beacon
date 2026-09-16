@@ -440,9 +440,12 @@ test.describe('hull detail', () => {
     await expect(page).toHaveURL(/\/outfitting(#|$)/);
     await expect(page.getByRole('banner').getByText('Sidewinder').first()).toBeVisible();
 
-    // Nothing was stored for either of them. Read once rather than polled: a
-    // count that states nothing was written holds from the first attempt, and
-    // the status line beside it says the workspace never reached the store.
+    // Nothing was stored for either of them. The count is what says so: read
+    // once rather than polled, because a count that states nothing was written
+    // holds from the first attempt. The status line beside it names the state
+    // the workspace draws for work that is in no record — it is read for that
+    // name, not as a second reading of the count, which it cannot be: a write
+    // for the first build lands after the journey has left the workspace.
     await expect(page.locator('ednb-build-workspace-page')).toHaveAttribute(
       'data-persistence',
       'ready',

@@ -68,14 +68,17 @@ record. Putting the "write nothing" branch in two stores would be two places for
 
 then nothing is owed. It returns `true`, exactly as the clean-subject branch does.
 
-The branch governs autosave's own writes alone. An explicit resume writes past it, exactly as it
-already writes past the `dirty()` early return, because a Commander who resumes has asked for the
-work to be kept. That is what the restated concurrency rules mean by resuming taking a record as a
-manual save does, and it is the one case in autosave's own path where a tool at its default takes
-one. A manual save is the other, and it does not come through this branch. `true` is the
-honest answer: `flush()` asks whether letting go of the work loses anything, and it does not.
-`EmptyBenchService` reads that answer before clearing the bench, which is how a default loadout is
-cleared while a loadout the store refused to write still holds the bench.
+The branch governs work that holds no record, so a forced write never meets it. A resume is offered
+only while `paused()` stands, and `paused()` is true only while the record the pause is about is
+still the one this tool holds — a non-null id. A fork names the fresh record on the subject before
+it copies the work into it, and copies nothing when there was no record to move off. So both forced
+writes hold a record when they reach this point, and neither needs a `force` test of its own: the
+restated concurrency rule that resuming takes a record as a manual save does is met by the record
+the tool already holds. A manual save is the other way a tool at its default takes a record, and it
+does not come through this branch at all. `true` is the honest answer: `flush()` asks whether
+letting go of the work loses anything, and it does not. `EmptyBenchService` reads that answer before
+clearing the bench, which is how a default loadout is cleared while a loadout the store refused to
+write still holds the bench.
 
 The branch is placed before `#allocate`, so a default build neither mints a record nor takes an
 existing one over. An unnamed record that already holds the default state — stored by an earlier

@@ -1494,7 +1494,7 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
     journey: 'product/slef-import',
     axe: true,
     assertions: [
-      'a ready candidate replaces unsaved work without asking, whatever that work is stored in',
+      'a ready candidate replaces unsaved work without asking',
       'a refusal leaves the active build, its revision, records, fragment and history identical',
       'a superseded candidate cannot commit after a newer submit, close or route change',
       'a successful import is exactly one replacement, one autosave and one link synchronization',
