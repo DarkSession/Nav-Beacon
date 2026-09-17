@@ -56,6 +56,9 @@ unclassified — MUST be stated with its exact returned amount and its share of 
 beside the bar that draws those shares. A type the build does not deal MUST NOT be given a line, a
 zero or a segment. No amount MAY be folded into another type.
 
+Each amount MUST come from `damageByType` on `BuildMetrics.weaponMetrics()` for the fitted build, and
+the conventional types MUST be that split's members less `antiXeno`.
+
 This is the whole damage-by-type reading. `antiXeno` and `sustainedDamageByType` are fields no canvas
 draws, and this capability does not read them.
 

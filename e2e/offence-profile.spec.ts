@@ -261,8 +261,9 @@ test.describe('reading the build', () => {
       // label, which uppercases in CSS, and `innerText` reports what is rendered.
       const entries = page.locator('ednb-offence-analysis .split__entry');
       const legend = (await entries.allInnerTexts()).join(' ').toLowerCase();
-      const named = (['kinetic', 'thermal', 'explosive', 'absolute'] as const).filter((type) =>
-        legend.includes(englishMessages[`offence.damage.type.${type}` as const].toLowerCase()),
+      const named = (['kinetic', 'thermal', 'explosive', 'caustic', 'absolute'] as const).filter(
+        (type) =>
+          legend.includes(englishMessages[`offence.damage.type.${type}` as const].toLowerCase()),
       );
 
       expect(named.length).toBeGreaterThan(0);
