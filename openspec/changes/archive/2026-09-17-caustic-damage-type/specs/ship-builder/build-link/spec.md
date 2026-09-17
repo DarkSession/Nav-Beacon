@@ -31,6 +31,13 @@ Source: 001/FR-018, 001/SC-003.
 - **THEN** the table is generated from the installed package
 - **AND** it supplies no game fact and no calculation
 
+#### Scenario: A published link records a fit the package no longer permits
+
+- **WHEN** a payload decodes against the table it names but records a fit the installed package refuses
+- **THEN** the link is refused and the failure is explained
+- **AND** the current build is unchanged
+- **AND** no neighbouring article is substituted for the one the payload records
+
 #### Scenario: A package upgrade changes what the table holds
 
 - **WHEN** the installed package makes the generator produce content a published table does not hold

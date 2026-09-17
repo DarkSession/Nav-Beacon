@@ -123,6 +123,42 @@ test('refuses to run at all once a published table has been edited', async (t) =
   );
 });
 
+test('refuses to run at all once a published table is missing', async (t) => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ednb-codec-absent-'));
+  t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+  // A deleted table is a refusal here rather than a version that quietly leaves the guarded set:
+  // the generator derives the published versions from the current number, so table 1 is looked for
+  // whether or not the file is there.
+  const tableDirectory = join(temporaryDirectory, 'src/app/domain/ships/build-link');
+  await mkdir(tableDirectory, { recursive: true });
+  await cp(join(repositoryRoot, 'scripts'), join(temporaryDirectory, 'scripts'), {
+    recursive: true,
+  });
+  for (const name of ['node_modules', 'package.json']) {
+    await symlink(join(repositoryRoot, name), join(temporaryDirectory, name));
+  }
+  for (const name of ['build-link-codec.ts', 'build-link-payload.ts']) {
+    await symlink(
+      join(repositoryRoot, 'src/app/domain/ships/build-link', name),
+      join(tableDirectory, name),
+    );
+  }
+
+  const result = spawnSync(
+    process.execPath,
+    [join(temporaryDirectory, 'scripts/generate-build-link-codec-tables.mjs')],
+    { cwd: temporaryDirectory, encoding: 'utf8', env: process.env },
+  );
+
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Codec table 1 is missing/);
+  assert.equal(
+    await readFile(join(tableDirectory, 'codec-table-2.json'), 'utf8').catch(() => null),
+    null,
+  );
+});
+
 test('the committed table pins a symbol-model block the generator validates', async () => {
   const { MODELS: models } = JSON.parse(await readFile(committedTablePath, 'utf8'));
 

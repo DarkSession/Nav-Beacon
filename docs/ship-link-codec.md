@@ -103,7 +103,8 @@ tag also selects the body representation. For a table with `h` hulls, its width 
   unused tag values; the arithmetic stream begins with the corresponding quotient when needed.
 
 For both defined tables, `h = 48`, so their six-bit values `0..47` are packed hulls and `48..63`
-are arithmetic markers. This uses capacity the hull tag already needed and preserves small packed bodies exactly.
+are arithmetic markers. This uses capacity the hull tag already needed and preserves small packed
+bodies exactly.
 That no-penalty reuse applies when `h` is not a power of two; a future power-of-two hull count makes
 the combined tag one bit wider than a packed hull index alone. The writer finalises both
 representations and uses arithmetic coding only when its padded body is strictly shorter; a tie uses
@@ -634,8 +635,8 @@ Two tables are defined. `codec-table-1.json` is published: links name it, so its
 and `pnpm run codec:tables` refuses to run at all if it has moved. `codec-table-2.json` is current,
 reproduced by `@elite-dangerous-almanac/core@0.2.13`, and a new link names it. A catalogue change
 publishes the next numbered JSON table while retaining every earlier table unchanged; it does not
-duplicate or version the codec logic. Minting a table is two edits in the codec, plus the pins the suites carry. The two are: raise
-`TABLE_VERSION` in
+duplicate or version the codec logic. Minting a table is two edits in the codec, plus the pins the
+suites carry. The two are: raise `TABLE_VERSION` in
 [`scripts/generate-build-link-codec-tables.mjs`](../scripts/generate-build-link-codec-tables.mjs),
 and give
 [`build-link-codec-loader.ts`](../src/app/domain/ships/build-link/build-link-codec-loader.ts) the
@@ -672,9 +673,11 @@ The current application dependency is exactly pinned to Almanac `0.2.13`.
 
 Table 1 holds the catalogue at content hash
 `c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370`, which is the content it was
-published with. It is never regenerated, and the build refuses to write it: links name it, and a
-table whose content moved is a new encoding under the next number. Git holds how table 1 came to
-hold what it holds.
+published with, and which `@elite-dangerous-almanac/core@0.2.12` reproduces. That release is
+recorded because table 1 cannot be regenerated under the current one, so it is the only way to
+check the file against the package it came from. Table 1 is never regenerated in place, and the
+build refuses to write it: links name it, and a table whose content moved is a new encoding under
+the next number.
 
 Table 2 holds the same catalogue under Almanac 0.2.13, where it differs in the frame shift drive
 mounts. Outfitting sells a Supercruise Overcharge drive only at the size of the mount being
@@ -687,9 +690,11 @@ repository. Running `pnpm run codec:tables` reproduces table 2 at content hash
 `12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90`, at the same capacity — 272 of
 the 377 bytes a 500-character value carries.
 
-A build that a moved catalogue can no longer fit is refused rather than approximated: a link naming
-table 1 with a size-6 SCO drive decodes to `reconstructionFailed`, because the package now declines
-the fit and nothing here substitutes a neighbouring article for it (constitution IV).
+A build the catalogue does not fit is refused rather than approximated. Outfitting sells a
+Supercruise Overcharge drive only at the mount's own size, so a link naming table 1 that fits one to
+a larger frame shift drive mount decodes to `reconstructionFailed`: the package declines the fit,
+and nothing here substitutes a neighbouring article for it (constitution IV). A drive at the mount's
+own size fits as it always did.
 
 Every future Almanac upgrade must reproduce the current committed table and pass the frozen
 literal-link reconstruction corpus. A protocol fixture is never regenerated to make an upgrade
