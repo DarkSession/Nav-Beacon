@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -261,29 +261,42 @@ const isMain =
   process.argv[1] && resolve(process.argv[1]) === fileURLToPath(new URL(import.meta.url));
 
 /**
- * Check the committed table against the budget, without regenerating it.
+ * Check every committed table against the budget, without regenerating one.
  *
  * The generator makes the same assertions when it writes a table; this runs
  * them against what is actually in the repository, so a table that was hand
  * edited, or a codec bound that moved underneath one, fails the build rather
  * than waiting for the next regeneration.
+ *
+ * Every table is read, not only the current one. A published table still
+ * decodes the links shared against it, so it has to stay inside the budget its
+ * links were measured against for as long as it is readable.
  */
 if (isMain) {
-  const table = JSON.parse(
-    await readFile(
-      new URL('../src/app/domain/ships/build-link/codec-table-1.json', import.meta.url),
-    ),
-  );
+  const directory = new URL('../src/app/domain/ships/build-link/', import.meta.url);
+  const tableFiles = (await readdir(directory))
+    .filter((name) => /^codec-table-\d+\.json$/.test(name))
+    .sort((left, right) => tableVersionOf(left) - tableVersionOf(right));
+  if (tableFiles.length === 0) throw new Error('No build-link codec table is committed.');
   const constants = await readCodecConstants();
 
   assertCapacityWithinCodecLimits();
-  assertTableWithinCapacity(table);
   const budgeted = assertCapacityFitsEnvelope(constants);
-  const envelope = assertTableFitsEnvelope(table, constants);
 
-  process.stdout.write(
-    `Codec capacity: the largest build the committed table can express needs up to ` +
-      `${envelope.bytes} of the ${envelope.limit} bytes a ${constants.maxLinkCharacters}-character ` +
-      `value carries (${budgeted.bytes} once grown to the budgeted capacity).\n`,
-  );
+  for (const name of tableFiles) {
+    const table = JSON.parse(await readFile(new URL(name, directory)));
+
+    assertTableWithinCapacity(table);
+    const envelope = assertTableFitsEnvelope(table, constants);
+
+    process.stdout.write(
+      `Codec capacity: the largest build table ${tableVersionOf(name)} can express needs up to ` +
+        `${envelope.bytes} of the ${envelope.limit} bytes a ${constants.maxLinkCharacters}-character ` +
+        `value carries (${budgeted.bytes} once grown to the budgeted capacity).\n`,
+    );
+  }
+}
+
+function tableVersionOf(name) {
+  return Number(/\d+/.exec(name)?.[0]);
 }

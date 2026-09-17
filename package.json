@@ -28,7 +28,7 @@
     "e2e:offline": "pnpm run help:artifacts && E2E_PRODUCTION=1 playwright test offline.spec.ts offline-privacy.spec.ts schematic-offline.spec.ts application-update.spec.ts help-offline.spec.ts search-published.spec.ts prerendered-first-frame.spec.ts",
     "policy:specs": "node scripts/check-specification-record.mjs",
     "policy": "node scripts/check-interface-foundations.mjs && node scripts/check-specification-record.mjs && node scripts/policy/outfitting-ownership.mjs && node scripts/policy/anatomy-ownership.mjs && node scripts/policy/slef-ownership.mjs && node scripts/policy/power-heat-ownership.mjs && node scripts/policy/defence-ownership.mjs && node scripts/policy/offence-ownership.mjs && node scripts/policy/mobility-jump-ownership.mjs && node scripts/policy/equipment-ownership.mjs",
-    "codec:tables": "node scripts/generate-build-link-codec-tables.mjs && prettier --write src/app/domain/ships/build-link/codec-table-1.json",
+    "codec:tables": "node scripts/generate-build-link-codec-tables.mjs && prettier --write \"src/app/domain/ships/build-link/codec-table-*.json\"",
     "codec:tables:equipment": "node scripts/generate-equipment-link-codec-tables.mjs && prettier --write src/app/domain/equipment/loadout-link/equipment-link-table-1.json",
     "codec:capacity": "node scripts/build-link-codec-capacity.mjs",
     "slef:corpus": "node scripts/generate-slef-reference-corpus.mjs",

@@ -19,18 +19,27 @@ import {
   readCodecConstants,
 } from './build-link-codec-capacity.mjs';
 
-const TABLE_VERSION = 1;
-const defaultOutputPath = fileURLToPath(
-  new URL('../src/app/domain/ships/build-link/codec-table-1.json', import.meta.url),
-);
-const outputPath = process.env.CODEC_TABLE_OUTPUT_PATH ?? defaultOutputPath;
+const TABLE_VERSION = 2;
+/**
+ * The table versions a decoder still answers for, oldest first.
+ *
+ * The application is published, so every one of these files is a promise to the links already
+ * shared against it: a Commander's link names the table that decodes it, and that table has to
+ * hold the content it held when the link was made. This script therefore writes the current
+ * table only, and refuses to touch an earlier one at all.
+ */
+const PUBLISHED_TABLE_VERSIONS = [1];
+const tablePathFor = (version) =>
+  fileURLToPath(
+    new URL(`../src/app/domain/ships/build-link/codec-table-${version}.json`, import.meta.url),
+  );
+const outputPath = process.env.CODEC_TABLE_OUTPUT_PATH ?? tablePathFor(TABLE_VERSION);
 const almanacPackageUrl = new URL(
   '../../package.json',
   import.meta.resolve('@elite-dangerous-almanac/core/ships/ships'),
 );
 const almanacPackage = JSON.parse(await readFile(almanacPackageUrl, 'utf8'));
 const almanacVersion = almanacPackage.version;
-const overwrite = process.argv.includes('--overwrite');
 
 /**
  * A table's identity is its content, not the Almanac release it came from. Upgrading the
@@ -681,9 +690,9 @@ const assertSymbolModels = (models) => {
 assertSymbolModels(PINNED_SYMBOL_MODELS);
 
 /**
- * The models ride in the same pre-release table as the catalogue: the format has not shipped,
- * so table 1 is regenerated in place under the repository's `--overwrite` exception rather
- * than minting a second table number for the same catalogue.
+ * The models ride in the same table as the catalogue they price, and are frozen with it. A
+ * better-measured weight is a different encoding of the same build, so it belongs to the next
+ * table version beside the catalogue move that mints it.
  */
 const tablePayload = { ...payload, MODELS: PINNED_SYMBOL_MODELS };
 
@@ -694,40 +703,60 @@ assertTableWithinCapacity(tablePayload);
 const envelope = assertTableFitsEnvelope(tablePayload, codecConstants);
 
 const contentHash = contentHashOf(tablePayload);
-const previous = JSON.parse(await readFile(outputPath, 'utf8').catch(() => 'null'));
-// A table committed before this script recorded a hash is still comparable: re-hash its own
-// payload the same way, so the first run after the hash landed proves the content held.
-const previousHash = previous
-  ? contentHashOf(
-      Object.fromEntries(Object.entries(previous).filter(([key]) => key !== '$generated')),
-    )
-  : null;
+const payloadOf = (table) =>
+  Object.fromEntries(Object.entries(table).filter(([key]) => key !== '$generated'));
+const readTable = async (path) => JSON.parse(await readFile(path, 'utf8').catch(() => 'null'));
+
+/**
+ * Every earlier table still holds the content its declared hash names.
+ *
+ * A link shared before today decodes with the table it names, so an edit to one of those files
+ * silently changes what an already-shared link means. Reading them back on every run is what
+ * turns that from a thing to remember into a thing the build refuses.
+ */
+for (const version of PUBLISHED_TABLE_VERSIONS) {
+  const path = tablePathFor(version);
+  const table = await readTable(path);
+  if (table === null) {
+    throw new Error(
+      `Codec table ${version} is missing.\nA link naming table ${version} has no other table ` +
+        'that decodes it, so the file stays in the repository for as long as the link does.',
+    );
+  }
+  const actual = contentHashOf(payloadOf(table));
+  if (table.$generated?.contentHash !== actual) {
+    throw new Error(
+      `Codec table ${version} content does not match its declared hash\n` +
+        `  declared: ${table.$generated?.contentHash ?? '(none recorded)'}\n` +
+        `  actual:   ${actual}\n` +
+        `Table ${version} is published. Restore it, and mint a new table version for the ` +
+        'content you meant to change.',
+    );
+  }
+}
+
+const previous = await readTable(outputPath);
+const previousHash = previous ? contentHashOf(payloadOf(previous)) : null;
 const declaredPreviousHash = previous?.$generated?.contentHash;
 
-if (declaredPreviousHash && declaredPreviousHash !== previousHash) {
-  const detail =
+if (previous && declaredPreviousHash !== previousHash) {
+  throw new Error(
     `Codec table ${TABLE_VERSION} content does not match its declared hash\n` +
-    `  declared: ${declaredPreviousHash}\n` +
-    `  actual:   ${previousHash}`;
-  if (!overwrite) {
-    throw new Error(`${detail}\nRefusing to replace a table whose integrity check failed.`);
-  }
-  console.warn(`${detail}\nOverwriting table ${TABLE_VERSION} in place (--overwrite).`);
+      `  declared: ${declaredPreviousHash ?? '(none recorded)'}\n` +
+      `  actual:   ${previousHash}\n` +
+      'Refusing to replace a table whose integrity check failed.',
+  );
 }
 
 if (previous && previousHash !== contentHash) {
-  const detail =
+  throw new Error(
     `Codec table ${TABLE_VERSION} content changed under Almanac ${almanacVersion}\n` +
-    `  committed: ${previousHash ?? '(none recorded)'}\n` +
-    `  generated: ${contentHash}\n` +
-    `Every published link names the table version that decodes it, so a changed table is a\n` +
-    `new encoding: mint the next table version and keep this one for the links already out.`;
-  if (!overwrite) {
-    throw new Error(
-      `${detail}\nRe-run with --overwrite only while no link has been published against table ${TABLE_VERSION}.`,
-    );
-  }
-  console.warn(`${detail}\nOverwriting table ${TABLE_VERSION} in place (--overwrite).`);
+      `  committed: ${previousHash}\n` +
+      `  generated: ${contentHash}\n` +
+      'Every published link names the table version that decodes it, so a changed table is a\n' +
+      `new encoding. Raise TABLE_VERSION, add ${TABLE_VERSION} to PUBLISHED_TABLE_VERSIONS, and\n` +
+      'teach the codec loader to read the new file. A published table is never written again.',
+  );
 }
 
 await writeFile(

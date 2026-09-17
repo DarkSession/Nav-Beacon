@@ -36,24 +36,33 @@
 
 ## 3. Build-link codec table
 
-- [x] 3.1 Regenerate build-link codec table 1 under 0.2.13 with `--overwrite`, and verify the change
-      is confined to frame-shift-drive module sets.
-- [x] 3.2 Verify no symbol leaves `MODULES` and no index into `MODULES` moves, so the overwrite moves
+- [x] 3.1 Mint build-link codec table 2 for the catalogue under 0.2.13, restore table 1 to the
+      content it was published with, and verify the difference between the two tables is confined to
+      frame-shift-drive module sets.
+- [x] 3.2 Verify no symbol leaves `MODULES` and no index into `MODULES` moves, so the new table moves
       only positions within candidate sets, and verify `pnpm run codec:capacity` reports 272 of 377
-      bytes.
-- [x] 3.3 Re-pin the reference corpus value whose candidate-set position moved and the reviewed
-      table 1 content hash, and verify the codec suites pass and the re-pinned value keeps its
-      length.
-- [x] 3.4 Record the tenth overwrite, its cause and its content hash in `docs/ship-link-codec.md`,
-      and verify the document's corpus table states the re-pinned value.
-- [x] 3.5 Verify `pnpm run codec:tables` reproduces the committed table without `--overwrite`, and
-      leaves the working tree clean.
+      bytes for every committed table.
+- [x] 3.3 Raise the loader's current table version to 2 and add the case that imports table 2, and
+      verify a link written against table 1 still decodes through the loader while a codec pinned to
+      table 2 refuses it.
+- [x] 3.4 Remove the `--overwrite` escape from the generator, re-hash every published table before
+      the current table is written, and verify the generator exits non-zero and writes nothing when
+      a published table has been edited.
+- [x] 3.5 Pin the content hash of both tables in the codec suite, re-pin the reference corpus
+      against table 2, and verify the corpus states the length each value now carries.
+- [x] 3.6 Record the two tables, the cause of the second and the spent overwrite exception in
+      `docs/ship-link-codec.md` and `docs/equipment-link-codec.md`, and verify each document's
+      corpus table states the re-pinned values.
+- [x] 3.7 Verify `pnpm run codec:tables` reproduces the committed table 2 and leaves the working tree
+      clean.
 
 ## 4. The record
 
 - [x] 4.1 State in the offence-profile requirement that each amount comes from `damageByType` on
       `BuildMetrics.weaponMetrics()`, and the conventional types from that split less `antiXeno`.
-- [x] 4.2 Fold the delta into the accepted capability specification and archive this change in the
+- [x] 4.2 State in the build-link requirement that a published identifier table is immutable, that a
+      package upgrade mints the next version, and that the build refuses to write a published table.
+- [x] 4.3 Fold both deltas into the accepted capability specifications and archive this change in the
       same commit, and verify `pnpm run policy:specs` reports no violation.
 
 ## 5. Verification

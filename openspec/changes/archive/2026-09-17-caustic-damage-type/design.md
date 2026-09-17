@@ -49,9 +49,29 @@ already answers a refusal during reconstruction: the codec raises `reconstructio
 carries the package diagnostic. The Commander is told the loadout could not be reconstructed rather
 than shown a build with the drive dropped. No new outcome is needed.
 
+## A new codec table rather than an edited one
+
+The catalogue move narrows the module sets a frame shift drive mount offers, so the generator no
+longer produces the content build-link codec table 1 holds. The application is published, and a
+payload names the table that decodes it, so table 1 is the promise made to every link already
+shared against it. Editing it would change what those links mean.
+
+The new content is therefore minted as table 2, and table 1 stays exactly as it was published. The
+codec architecture already carries this: the payload's first field is the table version, and
+`build-link-codec-loader.ts` imports the table that field names. Minting a version costs three
+edits and one new file, and touches no earlier table.
+
+The alternative considered was keeping one table and editing it, which the project did nine times
+while it was pre-release and no link could exist. That exception depended on there being no
+published links, and it is spent. The `--overwrite` flag that carried it is removed rather than left
+in place, because a flag that is never sound to use is an invitation to use it. The generator now
+re-hashes every published table before it writes, and the capacity check prices every committed
+table, so the rule is something the build holds rather than something to remember.
+
 ## Migration Plan
 
-The exact dependency and the lockfile move together. Table 1's content hash is re-pinned in
-`docs/ship-link-codec.md` and in the codec suite. No persisted build format changes, so a stored
-build and a published link are read on the same terms as before. A rollback restores the dependency,
-the lockfile and the previous table.
+The exact dependency and the lockfile move together. Table 2 is added; table 1 keeps the content and
+the hash it was published with. No persisted build format changes, and a link written against table
+1 still decodes against table 1, so a stored build and a published link are read on the same terms
+as before. A rollback restores the dependency and the lockfile, and lowers the current table version
+to 1; table 2 stays readable, because a link may already name it.

@@ -18,11 +18,19 @@ import {
   encodeBuildLinkPayload,
 } from '../../build-link/build-link-radix';
 import codecTable1Json from './codec-table-1.json';
+import codecTable2Json from './codec-table-2.json';
 import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture.json';
 import { makeFullyEngineeredAnaconda, minimalState } from './build-link-codec.spec-helpers';
 
-const codecTable1 = codecTable1Json;
-const { decodeBuildLinkFragment, encodeBuildLinkFragment } = createBuildLinkCodec(1, codecTable1);
+/** The table a new link names, and so the one this suite encodes and measures against. */
+const CURRENT_TABLE_VERSION = 2;
+const codecTable = codecTable2Json;
+/** The table already published, kept readable for the links shared against it. */
+const publishedCodecTable1 = codecTable1Json;
+const { decodeBuildLinkFragment, encodeBuildLinkFragment } = createBuildLinkCodec(
+  CURRENT_TABLE_VERSION,
+  codecTable,
+);
 
 describe('build-link codec', () => {
   it('round-trips the minimal state imported through the Almanac', () => {
@@ -97,7 +105,7 @@ describe('build-link codec', () => {
       Modules: [],
     });
     const compactFragment = encodeBuildLinkFragment(compact);
-    const metadataOffset = 10 + testBitsRequired(codecTable1.SHIPS.length) + 2;
+    const metadataOffset = 10 + testBitsRequired(codecTable.SHIPS.length) + 2;
     const identOffset = metadataOffset + 8 + name.length * 6;
 
     // An odd header is a compact character count: 2 * 32 + 1, inside a single varuint byte.
@@ -299,7 +307,7 @@ describe('build-link codec', () => {
     expect(minimalState(decoded)).toEqual(minimalState(source, true));
     expect(encodeBuildLinkFragment(decoded)).toBe(fragment);
     expect(fragment).toBe(
-      'b.26da!i-2iAMHS,JA/pnkvFzkv/qWhnG0:VZE5Xj174k_cKfe,tswuTTtsPcQguIp!rTAKknjmMBGaE',
+      'b.3I7-5N665Yh9e/6bitRTwUjU7j67P_6EFdsgeuHEMYDI@@.!ylVeQ-TlQ21ch3tmnG,jAHbyOL.gka',
     );
     expect(`https://ships.example/#${fragment}`).toHaveLength(103);
   });
@@ -329,7 +337,7 @@ describe('build-link codec', () => {
     });
 
     const decoded = decodeBuildLinkFragment(encodeBuildLinkFragment(source));
-    expect(encodeBuildLinkFragment(source)).toBe('b.5SJLJs0jX!Cg!H@ZISp');
+    expect(encodeBuildLinkFragment(source)).toBe('b.90JHTyYGbd2q4Pzxp8E');
     const sourceModule = source.fittedModuleAt('LargeHardpoint1')!;
     const decodedModule = decoded.fittedModuleAt('LargeHardpoint1')!;
 
@@ -812,9 +820,9 @@ describe('build-link codec', () => {
       const fragment = await encodeBuildLinkFragmentOnDemand(source);
       const decoded = await decodeBuildLinkFragmentOnDemand(fragment);
 
-      expect(readPayloadBits(fragment, 0, 10)).toBe(1);
+      expect(readPayloadBits(fragment, 0, 10)).toBe(CURRENT_TABLE_VERSION);
       if (variant.blueprintSymbol === 'Decorative_Green') {
-        expect(fragment).toBe('b.5S25TzaeLjTwhwDXHrX');
+        expect(fragment).toBe('b.9021d@0BPKJ:r/5IwZe');
       }
       expect(`https://ships.example/#${fragment}`.length).toBeLessThanOrEqual(500);
       expect(minimalState(decoded)).toEqual(minimalState(source));
@@ -861,36 +869,64 @@ describe('build-link codec', () => {
   it('stores the table version as the first field inside the payload', () => {
     const encoded = encodeBuildLinkFragment(ShipLoadout.empty('SideWinder'));
 
-    expect(readPayloadBits(encoded, 0, 10)).toBe(1);
+    expect(readPayloadBits(encoded, 0, 10)).toBe(2);
     expect(readPayloadBits(withPayloadTableVersion(encoded, 1_023), 0, 10)).toBe(1_023);
   });
 
-  it('pins the reviewed pre-release table 1 content hash', async () => {
-    // Table 1 is regenerated in place while the application and link format remain unpublished.
-    // Once released, a changed hash belongs under the next table number.
-    const { contentHash, tableVersion } = codecTable1.$generated;
-    const { $generated: _omitted, ...payload } = codecTable1;
+  it('pins the content of every table a link may name', async () => {
+    // A published table is a promise to the links already shared against it, so its content is
+    // pinned here by hash rather than only by the generator that first wrote it. Table 1 shipped
+    // under Almanac 0.2.12; table 2 is the same catalogue after 0.2.13 narrowed the drive mounts.
+    const pinned = [
+      [publishedCodecTable1, 1, 'c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370'],
+      [codecTable, 2, '12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90'],
+    ] as const;
 
-    expect(contentHash).toBe('12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90');
-    expect(await canonicalHash(payload)).toBe(contentHash);
-    expect(tableVersion).toBe(1);
+    for (const [table, version, hash] of pinned) {
+      const { $generated: generated, ...payload } = table;
+
+      expect(generated.tableVersion).toBe(version);
+      expect(generated.contentHash).toBe(hash);
+      expect(await canonicalHash(payload)).toBe(hash);
+    }
+    expect(publishedCodecTable1.$generated.contentHash).not.toBe(codecTable.$generated.contentHash);
+  });
+
+  it('still decodes a link written against the published table 1', async () => {
+    // The reason table 1 stays in the repository. A Commander who saved this link before the
+    // catalogue moved opens the same build today, because the payload names the table that
+    // encoded it and that table still holds the content it held then.
+    const codec1 = createBuildLinkCodec(1, publishedCodecTable1);
+    const source = ShipLoadout.default('Krait_MkII');
+    source.applyBlueprint('FrameShiftDrive', 'FSD_LongRange', { grade: 5, quality: 1 });
+    const fragment = codec1.encodeBuildLinkFragment(source);
+
+    expect(readPayloadBits(fragment, 0, 10)).toBe(1);
+    expect(minimalState(codec1.decodeBuildLinkFragment(fragment))).toEqual(minimalState(source));
+    // The loader reads the version the payload names and reaches for that table, so the link
+    // resolves without the Commander knowing a table version exists. A codec pinned to one
+    // table refuses the other, which is what makes the loader's choice the load-bearing part.
+    expect(minimalState(await decodeBuildLinkFragmentOnDemand(fragment))).toEqual(
+      minimalState(source),
+    );
+    expectCodecError(() => decodeBuildLinkFragment(fragment), 'unsupportedTableVersion');
   });
 
   it('encodes both grades of a two-grade blueprint without a redundant bounded symbol', () => {
-    const blueprintIndex = codecTable1.BLUEPRINTS.indexOf('FSD_LongRange');
-    const table2 = {
-      ...codecTable1,
-      $generated: { ...codecTable1.$generated, tableVersion: 2 },
-      BLUEPRINT_GRADES: codecTable1.BLUEPRINT_GRADES.map((grades, index) =>
+    const blueprintIndex = codecTable.BLUEPRINTS.indexOf('FSD_LongRange');
+    const table3 = {
+      ...codecTable,
+      $generated: { ...codecTable.$generated, tableVersion: 3 },
+      BLUEPRINT_GRADES: codecTable.BLUEPRINT_GRADES.map((grades, index) =>
         index === blueprintIndex ? [1, 5] : grades,
       ),
     };
-    const codec2 = createBuildLinkCodec(2, table2);
+    const codec3 = createBuildLinkCodec(3, table3);
 
     for (const grade of [1, 5]) {
       const source = ShipLoadout.default('Krait_MkII');
       source.applyBlueprint('FrameShiftDrive', 'FSD_LongRange', { grade, quality: 1 });
-      const decoded = codec2.decodeBuildLinkFragment(codec2.encodeBuildLinkFragment(source));
+      const decoded = codec3.decodeBuildLinkFragment(codec3.encodeBuildLinkFragment(source));
 
       expect(decoded.fittedModuleAt('FrameShiftDrive')?.engineering).toMatchObject({
         BlueprintName: 'FSD_LongRange',
@@ -901,12 +937,12 @@ describe('build-link codec', () => {
   });
 
   it('shares one codec implementation across independent table versions', () => {
-    const table2 = {
-      ...codecTable1,
-      $generated: { ...codecTable1.$generated, tableVersion: 2 },
-      SHIPS: [codecTable1.SHIPS[1]!, codecTable1.SHIPS[0]!, ...codecTable1.SHIPS.slice(2)],
+    const table3 = {
+      ...codecTable,
+      $generated: { ...codecTable.$generated, tableVersion: 3 },
+      SHIPS: [codecTable.SHIPS[1]!, codecTable.SHIPS[0]!, ...codecTable.SHIPS.slice(2)],
     };
-    const codec2 = createBuildLinkCodec(2, table2);
+    const codec3 = createBuildLinkCodec(3, table3);
     const source = ShipLoadout.default('SideWinder');
     const nestedSource = ShipLoadout.empty('Eagle');
     let nestedFragment: string | undefined;
@@ -919,15 +955,15 @@ describe('build-link codec', () => {
         return typeof value === 'function' ? value.bind(loadout) : value;
       },
     });
-    const encoded = codec2.encodeBuildLinkFragment(reentrantSource);
+    const encoded = codec3.encodeBuildLinkFragment(reentrantSource);
 
-    expect(readPayloadBits(encoded, 0, 10)).toBe(2);
-    expect(readPayloadBits(encoded, 10, testBitsRequired(table2.SHIPS.length))).toBe(1);
-    expect(minimalState(codec2.decodeBuildLinkFragment(encoded))).toEqual(minimalState(source));
-    expect(readPayloadBits(nestedFragment!, 0, 10)).toBe(1);
+    expect(readPayloadBits(encoded, 0, 10)).toBe(3);
+    expect(readPayloadBits(encoded, 10, testBitsRequired(table3.SHIPS.length))).toBe(1);
+    expect(minimalState(codec3.decodeBuildLinkFragment(encoded))).toEqual(minimalState(source));
+    expect(readPayloadBits(nestedFragment!, 0, 10)).toBe(CURRENT_TABLE_VERSION);
     expect(decodeBuildLinkFragment(nestedFragment!).shipSymbol).toBe('Eagle');
     expectCodecError(() => decodeBuildLinkFragment(encoded), 'unsupportedTableVersion');
-    expect(() => createBuildLinkCodec(2, codecTable1)).toThrowError(
+    expect(() => createBuildLinkCodec(3, codecTable)).toThrowError(
       'The build-link codec table version is invalid.',
     );
   });
@@ -943,28 +979,28 @@ describe('build-link codec', () => {
       grade: 5,
       quality: 1,
     });
-    const moduleIndex = codecTable1.MODULES.indexOf(
+    const moduleIndex = codecTable.MODULES.indexOf(
       source.fittedModuleAt('FrameShiftDrive')!.symbol,
     );
-    const emptySetIndex = codecTable1.EXPERIMENTAL_SETS.length;
+    const emptySetIndex = codecTable.EXPERIMENTAL_SETS.length;
     const tableWithEffectCount = (effectCount: number) => ({
-      ...codecTable1,
-      $generated: { ...codecTable1.$generated, tableVersion: 2 },
+      ...codecTable,
+      $generated: { ...codecTable.$generated, tableVersion: 3 },
       EXPERIMENTAL_EFFECTS: [
-        ...codecTable1.EXPERIMENTAL_EFFECTS,
+        ...codecTable.EXPERIMENTAL_EFFECTS,
         ...Array.from(
-          { length: effectCount - codecTable1.EXPERIMENTAL_EFFECTS.length },
+          { length: effectCount - codecTable.EXPERIMENTAL_EFFECTS.length },
           (_value, index) => `TestEffect_${index}`,
         ),
       ],
-      EXPERIMENTAL_SETS: [...codecTable1.EXPERIMENTAL_SETS, []],
-      EXPERIMENTAL_SET_BY_MODULE: codecTable1.EXPERIMENTAL_SET_BY_MODULE.map((set, index) =>
+      EXPERIMENTAL_SETS: [...codecTable.EXPERIMENTAL_SETS, []],
+      EXPERIMENTAL_SET_BY_MODULE: codecTable.EXPERIMENTAL_SET_BY_MODULE.map((set, index) =>
         index === moduleIndex ? emptySetIndex : set,
       ),
     });
 
-    const at127 = createBuildLinkCodec(2, tableWithEffectCount(127));
-    const at128 = createBuildLinkCodec(2, tableWithEffectCount(128));
+    const at127 = createBuildLinkCodec(3, tableWithEffectCount(127));
+    const at128 = createBuildLinkCodec(3, tableWithEffectCount(128));
     const fragment = at127.encodeBuildLinkFragment(source);
 
     expect(at128.encodeBuildLinkFragment(source)).toBe(fragment);
@@ -978,7 +1014,7 @@ describe('build-link codec', () => {
     expect(minimalState(await decodeBuildLinkFragmentOnDemand(encoded))).toEqual(
       minimalState(source),
     );
-    expect(readPayloadBits(encoded, 0, 10)).toBe(1);
+    expect(readPayloadBits(encoded, 0, 10)).toBe(CURRENT_TABLE_VERSION);
     expect(
       minimalState(await decodeBuildLinkFragmentOnDemand(encodeBuildLinkFragment(source))),
     ).toEqual(minimalState(source));
@@ -993,10 +1029,11 @@ describe('build-link codec', () => {
     ).rejects.toMatchObject({ code: 'integrityCheckFailed' });
   });
 
-  it('keeps the frozen literal special-build link stable in the decode direction', () => {
-    // Freeze before release; once table 1 ships, never regenerate this fixture to make a build pass.
-    // Re-frozen 2026-09-01 with table 1 itself, when its candidate sets took a popularity order.
-    const preEngineered = decodeBuildLinkFragment('b.5SJLJs0jX!Cg!H@ZISp');
+  it('keeps the frozen literal special-build link stable in the decode direction', async () => {
+    // A link written against table 1, read the way the application reads one: the loader picks
+    // the table the payload names. Table 1 is published, so this literal is never regenerated to
+    // make a build pass — a fixture that moved here would mean a shared link had changed meaning.
+    const preEngineered = await decodeBuildLinkFragmentOnDemand('b.5SJLJs0jX!Cg!H@ZISp');
 
     expect(preEngineered.shipSymbol).toBe('Krait_MkII');
     expect(preEngineered.shipName).toBeNull();
@@ -1034,13 +1071,15 @@ describe('build-link codec', () => {
     const emptyLink = `${baseUrl}#${emptyFragment}`;
     const typicalLink = `${baseUrl}#${typicalFragment}`;
     const largeLink = `${baseUrl}#${largeFragment}`;
-    // Freeze before release; once table 1 ships, never regenerate these fixtures to make a build pass.
+    // Frozen against table 2, the table a new link names. Table 2 is published, so these
+    // fixtures are never regenerated to make a build pass: a literal that moved would mean a
+    // link already shared had changed meaning. A catalogue move mints table 3 instead.
     expect([emptyFragment, typicalFragment, largeFragment]).toEqual([
-      'b.1S..A@YX6Cjy!R',
-      'b.vz,jdQ_4',
-      'b.8oUeO4wu5ZrfCrTfzkyEp9VJ1NAj-M4u5tBFFEp3.:aLg6tfRJSrwSAe4Dz6jB',
+      'b.2vapm0exwB0@N0',
+      'b.1QXDMzG/i',
+      'b.DgYsVh0,YFsU1l1OYC_AKTIZyFMvwucN86-gU,6@zqrfHVWvZ!!6aN:LoGQ6@F',
     ]);
-    expect([emptyLink.length, typicalLink.length, largeLink.length]).toEqual([39, 33, 87]);
+    expect([emptyLink.length, typicalLink.length, largeLink.length]).toEqual([39, 34, 87]);
 
     expect(emptyLink.length).toBeLessThan(100);
     expect(typicalLink.length).toBeLessThan(300);
@@ -1092,7 +1131,7 @@ describe('build-link codec', () => {
     expect(source.importOutcomes).toHaveLength(10);
     expect(source.importOutcomes.every(({ action }) => action === 'defaulted')).toBe(true);
     expect(source.fittedModuleAt('PlanetaryApproachSuite')).not.toBeNull();
-    expect(encodeBuildLinkFragment(source)).toBe('b.1S..A@YMcJZp8M');
+    expect(encodeBuildLinkFragment(source)).toBe('b.2vapm0enKJOPtr');
   });
 
   it('keeps a removable mount empty across a link when the payload records it empty', () => {
@@ -1112,19 +1151,19 @@ describe('build-link codec', () => {
     // The table is frozen at its version while the Almanac keeps moving, so a hull that gains a
     // mount the table never recorded must be refused rather than encoded into a published link.
     const pruned = {
-      ...codecTable1,
-      $generated: { ...codecTable1.$generated, tableVersion: 2 },
+      ...codecTable,
+      $generated: { ...codecTable.$generated, tableVersion: 3 },
       SLOTS_BY_SHIP: {
-        ...codecTable1.SLOTS_BY_SHIP,
-        SideWinder: codecTable1.SLOTS_BY_SHIP.SideWinder.filter(
+        ...codecTable.SLOTS_BY_SHIP,
+        SideWinder: codecTable.SLOTS_BY_SHIP.SideWinder.filter(
           (slot) => slot !== 'SmallHardpoint1',
         ),
       },
     };
-    const codec2 = createBuildLinkCodec(2, pruned);
+    const codec3 = createBuildLinkCodec(3, pruned);
 
     const error = expectCodecError(
-      () => codec2.encodeBuildLinkFragment(ShipLoadout.default('SideWinder')),
+      () => codec3.encodeBuildLinkFragment(ShipLoadout.default('SideWinder')),
       'unknownIdentity',
     );
     expect(error.message).toContain('SmallHardpoint1');
@@ -1133,18 +1172,18 @@ describe('build-link codec', () => {
   it('refuses a module identity the pinned table cannot spell', () => {
     const source = ShipLoadout.default('SideWinder');
     const symbol = source.fittedModules().find(({ slot }) => slot === 'SmallHardpoint1')!.symbol;
-    const index = codecTable1.MODULES.findIndex(
+    const index = codecTable.MODULES.findIndex(
       (entry) => entry.toLowerCase() === symbol.toLowerCase(),
     );
     expect(index).toBeGreaterThanOrEqual(0);
     const pruned = {
-      ...codecTable1,
-      $generated: { ...codecTable1.$generated, tableVersion: 2 },
-      MODULES: codecTable1.MODULES.map((entry, at) => (at === index ? 'Absent_Module' : entry)),
+      ...codecTable,
+      $generated: { ...codecTable.$generated, tableVersion: 3 },
+      MODULES: codecTable.MODULES.map((entry, at) => (at === index ? 'Absent_Module' : entry)),
     };
-    const codec2 = createBuildLinkCodec(2, pruned);
+    const codec3 = createBuildLinkCodec(3, pruned);
 
-    const error = expectCodecError(() => codec2.encodeBuildLinkFragment(source), 'unknownIdentity');
+    const error = expectCodecError(() => codec3.encodeBuildLinkFragment(source), 'unknownIdentity');
     expect(error.message).toContain(symbol);
   });
 
@@ -1176,7 +1215,7 @@ describe('build-link codec', () => {
   });
 
   it('pins combination-rank boundaries and rejects invalid ranks and preferred-mode ties', () => {
-    const slots = codecTable1.SLOTS_BY_SHIP.SideWinder;
+    const slots = codecTable.SLOTS_BY_SHIP.SideWinder;
     const cases = [
       { removed: [slots[0]!, slots[1]!], rank: 0 },
       { removed: [slots[17]!, slots[18]!], rank: 170 },
@@ -1224,17 +1263,22 @@ describe('build-link codec', () => {
 
   it('uses arithmetic coding only when its final body is shorter', () => {
     const dense = encodeBuildLinkFragment(makeFullyEngineeredAnaconda());
-    const shipCount = codecTable1.SHIPS.length;
+    const shipCount = codecTable.SHIPS.length;
     const tagWidth = testBitsRequired(shipCount + 1);
 
     expect(readPayloadBits(dense, 10, tagWidth)).toBeGreaterThanOrEqual(shipCount);
     expect(
       readPayloadBits(encodeBuildLinkFragment(ShipLoadout.empty('SideWinder')), 10, tagWidth),
     ).toBeLessThan(shipCount);
+    // A body the codec cannot read, under a table it can. Rewriting the version field re-checksums
+    // the payload, so the refusal comes from the body rather than from the table the link names.
     expectCodecError(
       () =>
         decodeBuildLinkFragment(
-          'b.K0sHIwAq0MqZOAnrkyWdTvF5Px1CSCHkHbs9/.VvX,@2y9UOqj8YkgFciGNH9_l3LnvS.rtR3x74NVG7',
+          withPayloadTableVersion(
+            'b.K0sHIwAq0MqZOAnrkyWdTvF5Px1CSCHkHbs9/.VvX,@2y9UOqj8YkgFciGNH9_l3LnvS.rtR3x74NVG7',
+            CURRENT_TABLE_VERSION,
+          ),
         ),
       'invalidPayload',
     );
@@ -1447,18 +1491,18 @@ function makeImportedEngineeredBuild(includeCredits = true, quality = 1): ShipLo
 }
 
 function blueprintGrades(fdname: string): readonly number[] {
-  const index = codecTable1.BLUEPRINTS.indexOf(fdname);
-  const grades = codecTable1.BLUEPRINT_GRADES[index] as readonly number[] | undefined;
+  const index = codecTable.BLUEPRINTS.indexOf(fdname);
+  const grades = codecTable.BLUEPRINT_GRADES[index] as readonly number[] | undefined;
   if (!grades) throw new Error(`Blueprint ${fdname} is absent from codec table 1.`);
   return grades;
 }
 
 /** The blueprints table 1 lets a record over this module name, in table order. */
 function ordinaryBlueprints(symbol: string): readonly string[] {
-  const moduleIndex = codecTable1.MODULES.indexOf(symbol);
-  const setIndex = codecTable1.BLUEPRINT_SET_BY_MODULE[moduleIndex];
-  const set = setIndex === undefined ? [] : codecTable1.BLUEPRINT_SETS[setIndex];
-  return set.map((index) => codecTable1.BLUEPRINTS[index]);
+  const moduleIndex = codecTable.MODULES.indexOf(symbol);
+  const setIndex = codecTable.BLUEPRINT_SET_BY_MODULE[moduleIndex];
+  const set = setIndex === undefined ? [] : codecTable.BLUEPRINT_SETS[setIndex];
+  return set.map((index) => codecTable.BLUEPRINTS[index]);
 }
 
 /** Whether the package offers this module an engineering menu of its own, variants aside. */
@@ -1562,9 +1606,9 @@ function craftedShieldBoosterEngineering(
   records: readonly { readonly blueprint?: number; readonly reference?: number }[],
 ): string {
   const ship = 'Krait_MkII';
-  const slots = codecTable1.SLOTS_BY_SHIP[ship];
-  const defaults = codecTable1.DEFAULT_MODULES_BY_SHIP[ship] as readonly (number | null)[];
-  const booster = codecTable1.MODULES.findIndex(
+  const slots = codecTable.SLOTS_BY_SHIP[ship];
+  const defaults = codecTable.DEFAULT_MODULES_BY_SHIP[ship] as readonly (number | null)[];
+  const booster = codecTable.MODULES.findIndex(
     (symbol) => symbol.toLowerCase() === SHIELD_BOOSTER.toLowerCase(),
   );
   const changed = slots
@@ -1575,18 +1619,18 @@ function craftedShieldBoosterEngineering(
   const modules = defaults.map((module, index) => (changed.includes(index) ? booster : module));
   const occupied = modules.flatMap((module, index) => (module === null ? [] : [index]));
   const engineerable = (module: number): boolean =>
-    codecTable1.BLUEPRINT_SETS[codecTable1.BLUEPRINT_SET_BY_MODULE[module]!]!.length > 0 ||
-    (codecTable1.PRE_ENGINEERED_SET_BY_MODULE[module] ?? []).length > 0;
+    codecTable.BLUEPRINT_SETS[codecTable.BLUEPRINT_SET_BY_MODULE[module]!]!.length > 0 ||
+    (codecTable.PRE_ENGINEERED_SET_BY_MODULE[module] ?? []).length > 0;
   const eligible = occupied.flatMap((slotIndex, position) =>
     engineerable(modules[slotIndex]!) ? [position] : [],
   );
   const engineered = changed.map((slotIndex) => eligible.indexOf(occupied.indexOf(slotIndex)));
-  const candidates = codecTable1.MODULE_SETS[codecTable1.MODULE_SET_BY_SHIP[ship][changed[0]!]!]!;
-  const blueprintSet = codecTable1.BLUEPRINT_SETS[codecTable1.BLUEPRINT_SET_BY_MODULE[booster]!]!;
+  const candidates = codecTable.MODULE_SETS[codecTable.MODULE_SET_BY_SHIP[ship][changed[0]!]!]!;
+  const blueprintSet = codecTable.BLUEPRINT_SETS[codecTable.BLUEPRINT_SET_BY_MODULE[booster]!]!;
 
   const bits: number[] = [];
-  writeTestBits(bits, 1, 10);
-  writeTestBits(bits, codecTable1.SHIPS.indexOf(ship), testBitsRequired(codecTable1.SHIPS.length));
+  writeTestBits(bits, CURRENT_TABLE_VERSION, 10);
+  writeTestBits(bits, codecTable.SHIPS.indexOf(ship), testBitsRequired(codecTable.SHIPS.length));
   writeTestBits(bits, 0, 1); // ship name absent
   writeTestBits(bits, 0, 1); // ship ident absent
   writeTestBits(bits, 0, 1); // not the pristine stock loadout
@@ -1683,11 +1727,11 @@ function handcraftedMetadataFragment(
   includeTail = true,
 ): string {
   const bits: number[] = [];
-  writeTestBits(bits, 1, 10);
+  writeTestBits(bits, CURRENT_TABLE_VERSION, 10);
   writeTestBits(
     bits,
-    codecTable1.SHIPS.indexOf('SideWinder'),
-    testBitsRequired(codecTable1.SHIPS.length),
+    codecTable.SHIPS.indexOf('SideWinder'),
+    testBitsRequired(codecTable.SHIPS.length),
   );
   writeTestBits(bits, 1, 1); // ship name present
   writeTestBits(bits, 0, 1); // ship ident absent
@@ -1701,13 +1745,13 @@ function handcraftedMetadataFragment(
 
 function nonCanonicalArithmeticEmptySidewinder(): string {
   const bits: number[] = [];
-  const shipCount = codecTable1.SHIPS.length;
+  const shipCount = codecTable.SHIPS.length;
   const tagWidth = testBitsRequired(shipCount + 1);
   const markerCount = 2 ** tagWidth - shipCount;
-  const shipIndex = codecTable1.SHIPS.indexOf('SideWinder');
+  const shipIndex = codecTable.SHIPS.indexOf('SideWinder');
   const remainder = shipIndex % markerCount;
   const groupCount = Math.floor((shipCount - 1 - remainder) / markerCount) + 1;
-  writeTestBits(bits, 1, 10);
+  writeTestBits(bits, CURRENT_TABLE_VERSION, 10);
   writeTestBits(bits, shipCount + remainder, tagWidth);
 
   const encoder = new ArithmeticEncoder((bit) => bits.push(bit));
@@ -1718,7 +1762,7 @@ function nonCanonicalArithmeticEmptySidewinder(): string {
     { value: 0, count: 2 }, // not the pristine stock loadout
     { value: 0, count: 2 }, // absolute module layout
     { value: 3, count: 4 }, // combination-rank index set
-    { value: 0, count: codecTable1.SLOTS_BY_SHIP.SideWinder.length + 1 },
+    { value: 0, count: codecTable.SLOTS_BY_SHIP.SideWinder.length + 1 },
   ];
   symbols.push(
     { value: 0, count: 2 }, // no power overrides
@@ -1739,7 +1783,7 @@ function nonCanonicalEmptySidewinder(): string {
 
   // Mode 1 spells the changed defaults as an included sparse list; bitmap mode is cheaper.
   writeTestBits(bits, 1, 2);
-  const defaults = codecTable1.DEFAULT_MODULES_BY_SHIP.SideWinder;
+  const defaults = codecTable.DEFAULT_MODULES_BY_SHIP.SideWinder;
   const changed = defaults.flatMap((module, index) => (module === null ? [] : [index]));
   writeTestBits(bits, changed.length, 5);
   for (const index of changed) writeTestBits(bits, index, 5);

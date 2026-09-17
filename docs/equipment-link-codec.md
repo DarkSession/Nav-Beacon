@@ -138,14 +138,16 @@ the release installed, which is the thing a pinned table exists to prevent.
 
 The table is pinned by content hash, and the ship codec's rule applies unchanged: a changed hash
 is a new encoding and belongs under the next table number, with the old file kept for the links
-already published. `--overwrite` replaces table 1 in place and is sound only while no link has
-been published against it, which is true up to the equipment builder's first release. The unit
-suite pins the hash and recomputes it, so neither a regenerated table nor a hand-edited one
-passes quietly.
+already published. The application is published, so the in-place regeneration the generator still
+accepts is no longer sound here: table 1 is what the `e.` links already shared name. The unit suite
+pins the hash and recomputes it, so neither a regenerated table nor a hand-edited one passes
+quietly.
 
 Unlike the ship codec, the table is imported statically rather than lazily: it is a few kilobytes
-and there is one of them. When a second table is minted, the loader pattern in
-`build-link-codec-loader.ts` is the one to copy.
+and there is one of them, and `equipment-link-codec.ts` refuses any version but the current one.
+Minting table 2 therefore means teaching this codec to keep reading table 1 first. The loader
+pattern in `build-link-codec-loader.ts` is the one to copy, and the ship side's
+`PUBLISHED_TABLE_VERSIONS` check is the guard to copy with it.
 
 ## Refusals
 
@@ -228,5 +230,6 @@ that are hard to get right were already written and already tested.
 ## Status
 
 The codec has a consumer: the equipment builder at `/equipment` mints and reads `e.` fragments.
-Table 1's overwrite rule ends at the bench's first release — after it, a changed content hash is
-table 2 with this file kept for the links already out.
+The bench has shipped, so table 1 is published: a changed content hash is table 2, with this file
+kept for the links already out. Almanac 0.2.13 leaves the table's content unchanged, so nothing is
+owed yet; the version handling described above is what the first change to it needs.

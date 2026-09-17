@@ -24,7 +24,10 @@ sets.
 - Keep the unclassified type in the projection. The catalogue supports pinning only the absence of
   an unclassified amount.
 - Repoint the offence fixture `OFFENCE_WEAPONS.caustic` at `Hpt_CausticMissile_Fixed_Medium`.
-- Overwrite build-link codec table 1 for the withdrawn SCO candidates and record the overwrite.
+- Mint build-link codec table 2 for the withdrawn SCO candidates, and keep table 1 as it is
+  published so the links already shared against it still decode.
+- Refuse an in-place rewrite of a published table outright, in the generator and in the capacity
+  check, rather than leaving an `--overwrite` flag that is no longer sound.
 
 ## Capabilities
 
@@ -36,11 +39,12 @@ None.
 
 - `ship-builder/offence-profile`: Name caustic among the conventional damage types the reading
   states.
-
-No `ship-builder/build-link` requirement changes. "Versioned codec" requires the codec to preserve
-every _published_ version. The project is pre-release, `SHIP_BUILDER_RELEASE_TAG` declares no
-release, and no link is published against table 1, so `docs/ship-link-codec.md` sanctions replacing
-that table in place. A published table would take the next table number instead.
+- `ship-builder/build-link`: State that a published identifier table is immutable. "Versioned
+  codec" already requires every published payload version to be preserved, but says nothing about
+  the table those versions read. The application is published, so a table a link names is a promise
+  to that link: the content it held when the link was made is the content it has to hold. The
+  package moved the frame-shift-drive candidate sets, which changes the table's content, so this
+  change is the first to owe a new table number rather than a regeneration.
 
 ## Impact
 
@@ -50,7 +54,11 @@ The change affects:
 - the offence domain projection and the analysis canvas that draws it;
 - the semantic colour tokens and both shipped locales;
 - the offence ownership policy;
-- build-link codec table 1, its reference corpus and `docs/ship-link-codec.md`;
+- the build-link codec tables, their loader, their generator, the capacity check, the reference
+  corpus and `docs/ship-link-codec.md`;
+- `docs/equipment-link-codec.md`, whose statement of the same rule named an exception that is
+  spent. Almanac 0.2.13 leaves the equipment table's content unchanged, so that codec needs no
+  new table here;
 - the unit and end-to-end coverage of all of them.
 
 The `exactSizeRequired` constraint needs no application text. A refusal keeps the package's
