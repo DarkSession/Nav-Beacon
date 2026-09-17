@@ -218,6 +218,21 @@ describe('OffenceAnalysis', () => {
       expect(widths).toBeCloseTo(1, 6);
     });
 
+    it('names the caustic type in the legend, in the active locale', () => {
+      // The type 0.2.13 added. The legend is the whole reading, so the label
+      // reaching it through the localisation layer is what says the new type is
+      // stated rather than merely projected.
+      const loadout = everyStateBuild();
+      const split = BuildMetrics.of(loadout).weaponMetrics().total.damageByType;
+
+      const { component } = render(loadout);
+      const caustic = component.damageSegments().find((segment) => segment.id === 'caustic');
+
+      expect(split.caustic).toBeGreaterThan(0);
+      expect(caustic?.legend).toContain(englishMessages['offence.damage.type.caustic']);
+      expect(caustic?.width).toBeGreaterThan(0);
+    });
+
     it('draws no segment at all for a build that deals no conventional damage', () => {
       const { component } = render(allDisabledBuild());
 

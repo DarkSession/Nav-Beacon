@@ -255,6 +255,24 @@ describe('projectDamageSegments', () => {
     }
   });
 
+  it('gives caustic its own segment, in the package\u2019s own order', () => {
+    // The one type 0.2.13 added. Pinned by name and by position, because a
+    // projection that silently dropped it would still divide, still sum to one
+    // and still agree with the split on every segment it did keep.
+    const split = BuildMetrics.of(everyStateBuild()).weaponMetrics().total.damageByType;
+
+    const segments = projectDamageSegments(split);
+
+    expect(split.caustic).toBeGreaterThan(0);
+    expect(segments.map((segment) => segment.type)).toEqual([
+      'kinetic',
+      'thermal',
+      'explosive',
+      'caustic',
+    ]);
+    expect(segments.at(-1)).toMatchObject({ type: 'caustic', amount: split.caustic });
+  });
+
   it('draws no segment for a type the build does not deal', () => {
     const segments = projectDamageSegments({
       kinetic: 4,

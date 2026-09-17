@@ -1,0 +1,76 @@
+## 1. Almanac contract
+
+- [x] 1.1 Add package-acceptance coverage for the six required amounts `damageByType` carries, and
+      verify the suite names kinetic, thermal, explosive, caustic, absolute and anti-xeno.
+- [x] 1.2 Add package-acceptance coverage for the caustic amount the caustic missile deals beside
+      its explosive share, and verify both the burst and the sustained split carry it.
+- [x] 1.3 Sweep the hardpoint catalogue for an unclassified amount, and verify the assertion states
+      what the suite's comment claims rather than checking one article.
+- [x] 1.4 Sweep the hardpoint catalogue for a caustic amount, and verify exactly one article carries
+      it, so the fixture stands for the whole of what the catalogue says.
+- [x] 1.5 Set `@elite-dangerous-almanac/core` to exact version 0.2.13 and update the lockfile.
+- [x] 1.6 Verify `pnpm list @elite-dangerous-almanac/core --depth 0` resolves 0.2.13, and that
+      `pnpm run legal:sync` leaves the mirrored licence and notices unchanged.
+- [x] 1.7 Repoint the offence fixture `OFFENCE_WEAPONS.caustic` at `Hpt_CausticMissile_Fixed_Medium`,
+      and verify its comment states the fixture's condition without writing down a damage figure.
+
+## 2. The caustic reading
+
+- [x] 2.1 Add caustic to the conventional damage types the offence domain projects, taken from
+      `DamageSplit` less `antiXeno`.
+- [x] 2.2 Pin the projection against `everyStateBuild()` by segment order and caustic amount, and
+      verify the assertion fails when caustic leaves the projected list.
+- [x] 2.3 Add the caustic legend label to every shipped locale, and verify `pnpm run typecheck`
+      accepts the label record against `Record<ConventionalDamageType, MessageKey>`.
+- [x] 2.4 Pin the rendered legend line against the active locale's caustic label, and verify the
+      assertion fails when caustic leaves the projected list.
+- [x] 2.5 Add the semantic colour token and the segment rule the bar draws caustic with, and verify
+      the token meets the AA non-text contrast ratio against the bar's own ground.
+- [x] 2.6 Add caustic to the offence ownership policy's figure fields, and verify
+      `node scripts/policy/offence-ownership.mjs` reports no violation.
+- [x] 2.7 Add an end-to-end step that fits the caustic article to a medium hardpoint, and verify the
+      reading gains one legend line naming the type with an amount, a share and a segment.
+- [x] 2.8 Move the end-to-end suppression step onto the caustic label, because the catalogue can
+      deal caustic and the stock Anaconda does not, where no article deals unclassified at all.
+      Verify the step finds no caustic line and no extra segment.
+
+## 3. Build-link codec table
+
+- [x] 3.1 Regenerate build-link codec table 1 under 0.2.13 with `--overwrite`, and verify the change
+      is confined to frame-shift-drive module sets.
+- [x] 3.2 Verify no symbol leaves `MODULES` and no index into `MODULES` moves, so the overwrite moves
+      only positions within candidate sets, and verify `pnpm run codec:capacity` reports 272 of 377
+      bytes.
+- [x] 3.3 Re-pin the reference corpus value whose candidate-set position moved and the reviewed
+      table 1 content hash, and verify the codec suites pass and the re-pinned value keeps its
+      length.
+- [x] 3.4 Record the tenth overwrite, its cause and its content hash in `docs/ship-link-codec.md`,
+      and verify the document's corpus table states the re-pinned value.
+- [x] 3.5 Verify `pnpm run codec:tables` reproduces the committed table without `--overwrite`, and
+      leaves the working tree clean.
+
+## 4. The record
+
+- [x] 4.1 State in the offence-profile requirement that each amount comes from `damageByType` on
+      `BuildMetrics.weaponMetrics()`, and the conventional types from that split less `antiXeno`.
+- [x] 4.2 Fold the delta into the accepted capability specification and archive this change in the
+      same commit, and verify `pnpm run policy:specs` reports no violation.
+
+## 5. Verification
+
+- [x] 5.1 Run `pnpm run typecheck`, `pnpm run format:check`, `pnpm run help:artifacts:check` and
+      `pnpm run search:sitemap:check`, and verify each passes.
+- [x] 5.2 Run `pnpm run build`, `pnpm run build:preview`, `pnpm run policy` and
+      `pnpm run codec:capacity`, and verify each passes with its output in `dist/verification/`.
+- [x] 5.3 Run `pnpm run test:scripts` and `pnpm run test`, and verify every suite passes with unit
+      coverage above the 80% threshold.
+- [ ] 5.4 Run the five Chromium projects of the responsive matrix, `pnpm run e2e:timing` and
+      `pnpm run e2e:offline` to completion, store each log under `dist/verification/`, and verify
+      the offence journey names the caustic type where the build deals it and gives it no line
+      where the build does not.
+- [ ] 5.5 Run the five Firefox projects of the responsive matrix, and verify each project passes.
+- [ ] 5.6 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
+      complete ten-project Playwright matrix pass.
+
+The versioned screen-reader and 400% browser-zoom protocols need no new run. Neither protocol covers
+feature 007, and the change adds a legend line of a kind the reading already carries.

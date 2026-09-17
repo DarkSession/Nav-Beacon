@@ -44,8 +44,8 @@ export const OFFENCE_WEAPONS = {
   /** A positive anti-xeno overlay beside conventional kinetic damage. */
   antiXeno: 'Hpt_ATMultiCannon_Fixed_Large',
   /**
-   * The one article in the catalogue with a caustic share: four parts explosive
-   * to one part caustic, which is the split's rarest legend row.
+   * The one article in the catalogue with a caustic share, which it deals
+   * beside an explosive one — the split's rarest legend row.
    */
   caustic: 'Hpt_CausticMissile_Fixed_Medium',
   /** The one Small article the hull's smallest mounts take beside a beam. */

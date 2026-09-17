@@ -1,7 +1,10 @@
 import { BuildMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
+import { HARDPOINT_MODULES } from '@elite-dangerous-almanac/core/ships/modules-hardpoint';
+import { weaponMetrics } from '@elite-dangerous-almanac/core/ships/weapons';
 import {
   OFFENCE_DEFAULT_SLOTS,
   OFFENCE_STATE_SLOTS,
+  OFFENCE_WEAPONS,
   allDisabledBuild,
   drainingBuild,
   everyStateBuild,
@@ -134,6 +137,29 @@ describe('the Almanac contract for weapon output and the weapons capacitor', () 
       const weapon = BuildMetrics.of(populatedBuild()).weaponMetrics().weapons[0];
 
       expect('unclassified' in weapon.metrics.damageByType).toBe(false);
+    });
+
+    it('reports no unclassified amount anywhere in the pinned catalogue', () => {
+      // The claim the comment above makes, as an assertion. The single-article
+      // check above says one weapon omits the field; this says the catalogue
+      // gives this suite nothing to pin an unclassified amount against, and it
+      // fails loudly the day a release deals the type again.
+      const dealt = HARDPOINT_MODULES.filter(
+        (module) => 'unclassified' in weaponMetrics(module).damageByType,
+      );
+
+      expect(dealt.map((module) => module.symbol)).toEqual([]);
+    });
+
+    it('deals a caustic amount from exactly one article', () => {
+      // Which is why one fixture carries the caustic state. If a release
+      // spreads the type across more articles, the fixture stops being the
+      // whole of what the catalogue says and this says so.
+      const dealt = HARDPOINT_MODULES.filter(
+        (module) => weaponMetrics(module).damageByType.caustic > 0,
+      );
+
+      expect(dealt.map((module) => module.symbol)).toEqual([OFFENCE_WEAPONS.caustic]);
     });
 
     it('carries caustic beside the explosive share of the same shot', () => {
