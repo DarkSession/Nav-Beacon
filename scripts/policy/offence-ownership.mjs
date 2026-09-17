@@ -104,6 +104,7 @@ export const FIGURE_FIELDS = [
   'kinetic',
   'thermal',
   'explosive',
+  'caustic',
   'absolute',
   'antiXeno',
   'unclassified',

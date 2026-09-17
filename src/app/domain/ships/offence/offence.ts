@@ -58,7 +58,7 @@ export interface Offence {
  * package documents it as an overlay on that damage rather than a share of it,
  * and a bar that gave it a slice would be describing a total nobody fires.
  * A type the build does not deal at all gets no segment, which is why the
- * canvas's sample draws two rather than five.
+ * canvas's sample draws two rather than six.
  */
 export interface DamageSegment {
   readonly type: ConventionalDamageType;
@@ -198,6 +198,7 @@ const CONVENTIONAL_DAMAGE_TYPES = [
   'kinetic',
   'thermal',
   'explosive',
+  'caustic',
   'absolute',
   'unclassified',
 ] as const satisfies readonly ConventionalDamageType[];

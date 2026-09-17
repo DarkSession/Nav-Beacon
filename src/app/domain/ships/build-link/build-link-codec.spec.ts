@@ -299,7 +299,7 @@ describe('build-link codec', () => {
     expect(minimalState(decoded)).toEqual(minimalState(source, true));
     expect(encodeBuildLinkFragment(decoded)).toBe(fragment);
     expect(fragment).toBe(
-      'b.26da!i-2iAMHR6!JZRgv2A4OO8ezAd.KALtMaTu1R3sY,Lfi0zRNpDcH3ulwYrH!KjCD0l0tW3jj!i',
+      'b.26da!i-2iAMHS,JA/pnkvFzkv/qWhnG0:VZE5Xj174k_cKfe,tswuTTtsPcQguIp!rTAKknjmMBGaE',
     );
     expect(`https://ships.example/#${fragment}`).toHaveLength(103);
   });
@@ -871,7 +871,7 @@ describe('build-link codec', () => {
     const { contentHash, tableVersion } = codecTable1.$generated;
     const { $generated: _omitted, ...payload } = codecTable1;
 
-    expect(contentHash).toBe('c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370');
+    expect(contentHash).toBe('12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90');
     expect(await canonicalHash(payload)).toBe(contentHash);
     expect(tableVersion).toBe(1);
   });

@@ -654,7 +654,7 @@ retained. A table committed before the hash existed is re-hashed the same way fo
 the rule has no bootstrap hole. `--overwrite` replaces a table in place and is sound only while no
 link has been published against it.
 
-The current application dependency is exactly pinned to Almanac `0.2.12`. Table 1 was overwritten in
+The current application dependency is exactly pinned to Almanac `0.2.13`. Table 1 was overwritten in
 place on 2026-08-22, while it is still pre-release and no link has been published against it, so
 that a module's pre-engineered variants contribute their blueprints to its candidate set — see
 "Where neither form fits" above. It was overwritten again on 2026-08-26, under the same rule, so
@@ -723,6 +723,17 @@ blueprint indices and their references. Running `pnpm run codec:tables` reproduc
 content hash `c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370`, at the same capacity — 272
 of the 377 bytes a 500-character value carries.
 
+The tenth overwrite, under Almanac 0.2.13, follows the package once more. Outfitting sells a
+Supercruise Overcharge drive only at the size of the mount being outfitted, so `modulesForSlot`
+stopped offering an SCO drive to a frame shift drive mount larger than its own class. Each frame
+shift drive candidate set therefore holds its own class's SCO drives and the plain drives at or
+below the mount, where it held the SCO drives of every smaller class as well. No symbol leaves
+`MODULES` and no global index moves, so a link minted against the earlier table still names the
+same articles; it names them at the wrong positions in those sets, which is what makes this an
+overwrite rather than an edit. Running `pnpm run codec:tables` reproduces table 1 at content hash
+`12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90`, at the same capacity — 272 of
+the 377 bytes a 500-character value carries.
+
 Every future Almanac upgrade must reproduce the committed table and pass the frozen literal-link
 reconstruction corpus. Protocol fixtures must not be regenerated merely to make an upgrade pass.
 After the first release, changed table content must use the next table number.
@@ -741,8 +752,8 @@ The frozen corpus produces these encoded data lengths. Each value and length inc
 the `b.` protocol prefix. Packed spellings are untouched by the symbol models, so the minimal and
 stock references have held their exact text throughout; every engineered reference, whose canonical
 body is arithmetic, has been re-pinned under the pre-release regeneration rule at each in-place
-overwrite. The Almanac 0.2.12 table keeps the Anaconda value and re-pins the Corvette at its own
-length after the sorted blueprint additions move later blueprint indices:
+overwrite. The Almanac 0.2.13 table keeps the Anaconda value and re-pins the Corvette at its own
+length after the withdrawn SCO candidates move the position of its frame shift drive:
 
 | Reference build               | Base70 encoded data                                                                | Data length |
 | ----------------------------- | ---------------------------------------------------------------------------------- | ----------: |
@@ -750,7 +761,7 @@ length after the sorted blueprint additions move later blueprint indices:
 | Stock Krait Mk II             | `b.vz,jdQ_4`                                                                       |          10 |
 | Festive flak Krait            | `b.5S25TzaeLjTwhwDXHrX`                                                            |          21 |
 | Full engineered Anaconda*     | `b.8oUeO4wu5ZrfCrTfzkyEp9VJ1NAj-M4u5tBFFEp3.:aLg6tfRJSrwSAe4Dz6jB`                 |          64 |
-| Supplied engineered Corvette† | `b.26da!i-2iAMHR6!JZRgv2A4OO8ezAd.KALtMaTu1R3sY,Lfi0zRNpDcH3ulwYrH!KjCD0l0tW3jj!i` |          80 |
+| Supplied engineered Corvette† | `b.26da!i-2iAMHS,JA/pnkvFzkv/qWhnG0:VZE5Xj174k_cKfe,tswuTTtsPcQguIp!rTAKknjmMBGaE` |          80 |
 
 \* All 38 outfittable slots are occupied, every currently offered fixture blueprint is applied, and
 the fixed cargo hatch has an explicit power state. Cargo racks remain stock because Almanac 0.1.4

@@ -307,7 +307,7 @@ test.describe('reading the build', () => {
       await expect(entries.first()).toHaveRole('listitem');
     });
     await test.step('gives a type the build does not deal no segment and no line', async () => {
-      // The stock Anaconda deals no unclassified damage, and the canvas draws a
+      // The stock Anaconda deals no caustic damage, and the canvas draws a
       // segment only for a type that has one. A legend entry always accompanies a
       // segment, so the two counts agreeing is what says nothing was invented.
       const segments = page.locator('ednb-offence-analysis .split__segment');
@@ -315,7 +315,7 @@ test.describe('reading the build', () => {
 
       await expect(entries).toHaveCount(await segments.count());
       expect((await entries.allInnerTexts()).join(' ').toLowerCase()).not.toContain(
-        englishMessages['offence.damage.type.unclassified'].toLowerCase(),
+        englishMessages['offence.damage.type.caustic'].toLowerCase(),
       );
     });
   });

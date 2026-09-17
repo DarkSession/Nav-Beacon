@@ -260,6 +260,7 @@ describe('projectDamageSegments', () => {
       kinetic: 4,
       thermal: 0,
       explosive: 0,
+      caustic: 0,
       absolute: 0,
       antiXeno: 0,
     });
@@ -274,6 +275,7 @@ describe('projectDamageSegments', () => {
         kinetic: 0,
         thermal: 0,
         explosive: 0,
+        caustic: 0,
         absolute: 0,
         antiXeno: 9,
       }),

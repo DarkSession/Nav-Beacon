@@ -19,7 +19,9 @@ import {
  * exist, which of them mean "there is nothing to say", and which sentinel
  * carries that meaning. An absent `unclassified` amount, an undefined range or
  * piercing member and an `Infinity` time-to-drain are all different, and a
- * screen that confused any two would say something the package did not.
+ * screen that confused any two would say something the package did not. No
+ * article in the pinned catalogue deals unclassified damage, so the absence is
+ * all this suite can pin about it.
  *
  * Only fields this feature reads are pinned. Ammunition and the projectile
  * boundaries are on the list no canvas draws, so nothing here can misread
@@ -113,10 +115,17 @@ describe('the Almanac contract for weapon output and the weapons capacitor', () 
   });
 
   describe('the damage split', () => {
-    it('always carries the five required amounts', () => {
+    it('always carries the six required amounts', () => {
       const split = BuildMetrics.of(populatedBuild()).weaponMetrics().total.damageByType;
 
-      for (const type of ['kinetic', 'thermal', 'explosive', 'absolute', 'antiXeno'] as const) {
+      for (const type of [
+        'kinetic',
+        'thermal',
+        'explosive',
+        'caustic',
+        'absolute',
+        'antiXeno',
+      ] as const) {
         expect(Number.isFinite(split[type])).toBe(true);
       }
     });
@@ -127,11 +136,12 @@ describe('the Almanac contract for weapon output and the weapons capacitor', () 
       expect('unclassified' in weapon.metrics.damageByType).toBe(false);
     });
 
-    it('carries unclassified as an amount when the weapon deals it', () => {
-      const weapon = weaponAt('unclassified');
+    it('carries caustic beside the explosive share of the same shot', () => {
+      const weapon = weaponAt('caustic');
 
-      expect(weapon.metrics.damageByType.unclassified).toBeGreaterThan(0);
-      expect(weapon.metrics.sustainedDamageByType.unclassified).toBeGreaterThan(0);
+      expect(weapon.metrics.damageByType.caustic).toBeGreaterThan(0);
+      expect(weapon.metrics.sustainedDamageByType.caustic).toBeGreaterThan(0);
+      expect(weapon.metrics.damageByType.explosive).toBeGreaterThan(0);
     });
 
     it('carries anti-xeno beside conventional damage rather than instead of it', () => {
