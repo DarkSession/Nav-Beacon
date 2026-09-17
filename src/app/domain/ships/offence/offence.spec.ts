@@ -1,5 +1,6 @@
 import { afterEach, vi } from 'vitest';
 import { BuildMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
+import type { DamageSplit } from '@elite-dangerous-almanac/core/ships/weapons';
 import {
   collectionMeaning,
   projectCapacitor,
@@ -271,6 +272,33 @@ describe('projectDamageSegments', () => {
       'caustic',
     ]);
     expect(segments.at(-1)).toMatchObject({ type: 'caustic', amount: split.caustic });
+  });
+
+  it('draws every conventional type in one fixed order', () => {
+    // The catalogue deals no absolute and no unclassified damage, so no build can
+    // pin where those two sit. A split written out here can: without this the last
+    // two positions could swap and every suite would stay green, which is the
+    // failure the projection's own order record exists to prevent.
+    const split = {
+      kinetic: 1,
+      thermal: 2,
+      explosive: 3,
+      caustic: 4,
+      absolute: 5,
+      unclassified: 6,
+      antiXeno: 7,
+    } satisfies DamageSplit;
+
+    const segments = projectDamageSegments(split);
+
+    expect(segments.map((segment) => segment.type)).toEqual([
+      'kinetic',
+      'thermal',
+      'explosive',
+      'caustic',
+      'absolute',
+      'unclassified',
+    ]);
   });
 
   it('draws no segment for a type the build does not deal', () => {

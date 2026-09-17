@@ -696,11 +696,10 @@ describe('build-link codec', () => {
 
   it('spells the six articles the package gives no engineering menu of their own', () => {
     // These sit on modules the package reports no ordinary blueprint for. The current table lists
-    // their
-    // variants' blueprints all the same, because a bought article can be climbed past the grade it
-    // was sold at and only an ordinary record can say so — without them the pre-engineered record
-    // would silently restore the purchase grade, and the encoder refused instead, so the link
-    // vanished the moment a Commander engineered one (2026-08-22).
+    // their variants' blueprints all the same, because a bought article can be climbed past the
+    // grade it was sold at and only an ordinary record can say so. Without them the pre-engineered
+    // record restores the purchase grade silently, so the encoder refuses the build instead, and a
+    // Commander who engineers one of these six loses the link.
     const menuless = PRE_ENGINEERED_MODULES.filter(
       (variant) => variant.acquisition === 'mercenary' && !hasOwnEngineeringMenu(variant.symbol),
     );
