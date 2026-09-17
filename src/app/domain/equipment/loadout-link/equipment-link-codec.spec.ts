@@ -202,11 +202,11 @@ describe('equipment link codec', () => {
     }
   });
 
-  it('freezes the fragments the pre-release table produces', () => {
+  it('freezes the fragments the published table produces', () => {
     // Pinned rather than round-tripped: a round trip passes just as happily when
     // both directions moved together, which is exactly what a changed table
-    // does. Re-pin only under the overwrite rule the table's own generator
-    // states, and never to make a build pass.
+    // does. Table 1 is published, so these values are never re-pinned: a fixture
+    // that moved would mean a link already shared had changed meaning.
     expect(encodeEquipmentLinkFragment(FLIGHT_SUIT)).toBe('e.T._otnWnXKrn');
     expect(encodeEquipmentLinkFragment(DOMINATOR)).toBe('e.4f@yCeG44mGCq1hcPOnHxlG');
     // Held content, pinned as an absolute encoding rather than as a round trip:
@@ -667,13 +667,12 @@ describe('equipment link codec', () => {
     );
   });
 
-  it('pins the reviewed pre-release table content hash', async () => {
-    // The table is pre-release and is regenerated in place under its generator's
-    // own overwrite rule. Once a link has been published against it, a changed
-    // hash belongs under the next table number rather than over this one. The
-    // hash is both pinned and recomputed: the literal catches a regenerated
-    // table, and the recomputation catches a payload edited under a hash that
-    // was left alone.
+  it('pins the published table content hash', async () => {
+    // The table is published, so it is never written again: a changed hash
+    // belongs under the next table number rather than over this one, and the
+    // generator refuses the write. The hash is both pinned and recomputed here:
+    // the literal catches a regenerated table, and the recomputation catches a
+    // payload edited under a hash that was left alone.
     const { $generated, ...payload } = table;
 
     expect($generated.tableVersion).toBe(1);

@@ -16,8 +16,9 @@
  * depend on the release that happened to be installed.
  *
  * Like the ship builder's table, a changed content hash is a new encoding and
- * belongs under the next table version. `--overwrite` replaces this one in
- * place, and is sound only while no link has been published against it.
+ * belongs under the next table version. The application is published, so table 1
+ * is what the `e.` links already shared name: this script refuses to write it
+ * once its content has moved, and there is no flag that permits it.
  */
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -31,8 +32,6 @@ const TABLE_VERSION = 1;
 const outputPath = fileURLToPath(
   new URL('../src/app/domain/equipment/loadout-link/equipment-link-table-1.json', import.meta.url),
 );
-const overwrite = process.argv.includes('--overwrite');
-
 const suits = Object.values(SUITS);
 const weapons = Object.values(PERSONAL_WEAPONS);
 const modifications = Object.entries(PERSONAL_MODIFICATIONS);
@@ -150,17 +149,13 @@ const previous = JSON.parse(await readFile(outputPath, 'utf8').catch(() => 'null
 const previousHash = previous?.$generated?.contentHash ?? null;
 
 if (previousHash !== null && previousHash !== contentHash) {
-  const detail =
+  throw new Error(
     `Equipment codec table ${TABLE_VERSION} content changed\n` +
-    `  committed: ${previousHash}\n  generated: ${contentHash}\n` +
-    'Every published link names the table version that decodes it, so a changed table is a\n' +
-    'new encoding: mint the next table version and keep this one for the links already out.';
-  if (!overwrite) {
-    throw new Error(
-      `${detail}\nRe-run with --overwrite only while no link has been published against table ${TABLE_VERSION}.`,
-    );
-  }
-  console.warn(`${detail}\nOverwriting table ${TABLE_VERSION} in place (--overwrite).`);
+      `  committed: ${previousHash}\n  generated: ${contentHash}\n` +
+      'Every published link names the table version that decodes it, so a changed table is a\n' +
+      'new encoding: mint the next table version and keep this one for the links already out.\n' +
+      `Table ${TABLE_VERSION} is published. It is never written again, and no flag permits it.`,
+  );
 }
 
 await writeFile(

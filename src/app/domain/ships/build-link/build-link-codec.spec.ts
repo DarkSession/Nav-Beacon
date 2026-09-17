@@ -642,8 +642,9 @@ describe('build-link codec', () => {
   });
 
   it('keeps the fitted grade of a Mercenary variant upgraded past its purchase', () => {
-    // Every one of them, including the six the package gives no ordinary engineering menu: table 1
-    // records their variants' own blueprints, so the ordinary record can name the climbed grade.
+    // Every one of them, including the six the package gives no ordinary engineering menu: the
+    // current table records their variants' own blueprints, so the ordinary record can name the
+    // climbed grade.
     for (const variant of mercenaryVariants()) {
       const grades = blueprintGrades(variant.blueprintSymbol);
       expect(grades).not.toContain(variant.grade);
@@ -694,7 +695,8 @@ describe('build-link codec', () => {
   });
 
   it('spells the six articles the package gives no engineering menu of their own', () => {
-    // These sit on modules the package reports no ordinary blueprint for. Table 1 lists their
+    // These sit on modules the package reports no ordinary blueprint for. The current table lists
+    // their
     // variants' blueprints all the same, because a bought article can be climbed past the grade it
     // was sold at and only an ordinary record can say so — without them the pre-engineered record
     // would silently restore the purchase grade, and the encoder refused instead, so the link
@@ -1493,11 +1495,12 @@ function makeImportedEngineeredBuild(includeCredits = true, quality = 1): ShipLo
 function blueprintGrades(fdname: string): readonly number[] {
   const index = codecTable.BLUEPRINTS.indexOf(fdname);
   const grades = codecTable.BLUEPRINT_GRADES[index] as readonly number[] | undefined;
-  if (!grades) throw new Error(`Blueprint ${fdname} is absent from codec table 1.`);
+  if (!grades)
+    throw new Error(`Blueprint ${fdname} is absent from codec table ${CURRENT_TABLE_VERSION}.`);
   return grades;
 }
 
-/** The blueprints table 1 lets a record over this module name, in table order. */
+/** The blueprints the current table lets a record over this module name, in table order. */
 function ordinaryBlueprints(symbol: string): readonly string[] {
   const moduleIndex = codecTable.MODULES.indexOf(symbol);
   const setIndex = codecTable.BLUEPRINT_SET_BY_MODULE[moduleIndex];

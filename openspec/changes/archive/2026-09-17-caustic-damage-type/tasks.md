@@ -45,16 +45,18 @@
 - [x] 3.3 Raise the loader's current table version to 2 and add the case that imports table 2, and
       verify a link written against table 1 still decodes through the loader while a codec pinned to
       table 2 refuses it.
-- [x] 3.4 Remove the `--overwrite` escape from the generator, re-hash every published table before
-      the current table is written, and verify the generator exits non-zero and writes nothing when
-      a published table has been edited.
-- [x] 3.5 Pin the content hash of both tables in the codec suite, re-pin the reference corpus
+- [x] 3.4 Remove the `--overwrite` escape from both codec generators, re-hash every published table
+      before the current table is written, and verify the generator exits non-zero and writes
+      nothing when a published table has been edited.
+- [x] 3.5 Read the published table versions off the committed files rather than a written-down list,
+      and verify `pnpm run codec:tables` and `pnpm run codec:tables:equipment` each reproduce their
+      committed table.
+- [x] 3.6 Pin the content hash of both tables in the codec suite, re-pin the reference corpus
       against table 2, and verify the corpus states the length each value now carries.
-- [x] 3.6 Record the two tables, the cause of the second and the spent overwrite exception in
-      `docs/ship-link-codec.md` and `docs/equipment-link-codec.md`, and verify each document's
-      corpus table states the re-pinned values.
-- [x] 3.7 Verify `pnpm run codec:tables` reproduces the committed table 2 and leaves the working tree
-      clean.
+- [x] 3.7 State the two tables, the catalogue move that separates them and the rule that a published
+      table is never written again in `docs/ship-link-codec.md` and `docs/equipment-link-codec.md`,
+      and verify each document's corpus and capacity tables state the measured values.
+- [x] 3.8 Verify the working tree is clean after both generators run.
 
 ## 4. The record
 
@@ -62,7 +64,9 @@
       `BuildMetrics.weaponMetrics()`, and the conventional types from that split less `antiXeno`.
 - [x] 4.2 State in the build-link requirement that a published identifier table is immutable, that a
       package upgrade mints the next version, and that the build refuses to write a published table.
-- [x] 4.3 Fold both deltas into the accepted capability specifications and archive this change in the
+- [x] 4.3 Hold the conventional damage types complete by the compiler rather than by a list, and
+      verify `pnpm run typecheck` fails when a type the package carries is absent from the record.
+- [x] 4.4 Fold both deltas into the accepted capability specifications and archive this change in the
       same commit, and verify `pnpm run policy:specs` reports no violation.
 
 ## 5. Verification

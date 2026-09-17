@@ -572,7 +572,7 @@ renderers must satisfy. That puts every structural ceiling around 2^31: 2,147,48
 representation tag is `ceil(log2(h + 1))` raw bits), 2^31 modules, blueprints, experimental effects
 or candidates per set, and 2^31 − 1 mounts on one hull. Grades are bounded at five by the game's own
 range, which the generator checks. The ten-bit table-version field is the one small structural
-limit: 1,023 snapshots, one of them spent.
+limit: 1,023 snapshots, two of them spent.
 
 What growth actually costs is link length, and links are bounded. Five hundred characters, two of
 them `b.`, hold 381 payload bytes: a 377-byte body plus its four-byte CRC-32, or 3,016 bits. The
@@ -588,14 +588,14 @@ numbers, and generation refuses a table that exceeds one.
 | Dimension                           | Table 2 | Budgeted for | Encoded width at that size   |
 | ----------------------------------- | ------: | -----------: | ---------------------------- |
 | Hulls                               |      48 |          128 | 8-bit representation tag     |
-| Modules                             |   1,195 |        2,048 | 11-bit global fallback index |
-| Blueprints                          |     110 |          256 | 8-bit global fallback index  |
+| Modules                             |   1,204 |        2,048 | 11-bit global fallback index |
+| Blueprints                          |     114 |          256 | 8-bit global fallback index  |
 | Experimental effects                |      86 |          256 | 8-bit global fallback index  |
 | Outfittable mounts on one hull      |      38 |           48 | 48-bit bitmap, 6-bit indexes |
 | Hull-implied components on one hull |       1 |            4 | power state only             |
 | Grades on one blueprint             |       5 |            5 | 1 bit, or 3 below the top    |
-| Largest module candidate set        |     464 |        1,024 | 10 bits per fitted module    |
-| Largest blueprint candidate set     |       9 |           32 | 5 bits per engineered module |
+| Largest module candidate set        |     469 |        1,024 | 10 bits per fitted module    |
+| Largest blueprint candidate set     |      10 |           32 | 5 bits per engineered module |
 | Largest experimental candidate set  |      12 |           32 | 5 bits per engineered module |
 | Largest pre-engineered set          |       6 |           32 | 5 bits per engineered module |
 
@@ -634,11 +634,16 @@ Two tables are defined. `codec-table-1.json` is published: links name it, so its
 and `pnpm run codec:tables` refuses to run at all if it has moved. `codec-table-2.json` is current,
 reproduced by `@elite-dangerous-almanac/core@0.2.13`, and a new link names it. A catalogue change
 publishes the next numbered JSON table while retaining every earlier table unchanged; it does not
-duplicate or version the codec logic. Minting a table is three edits: raise `TABLE_VERSION` in
+duplicate or version the codec logic. Minting a table is two edits in the codec, plus the pins the suites carry. The two are: raise
+`TABLE_VERSION` in
 [`scripts/generate-build-link-codec-tables.mjs`](../scripts/generate-build-link-codec-tables.mjs),
-add the retired number to `PUBLISHED_TABLE_VERSIONS` beside it, and give
+and give
 [`build-link-codec-loader.ts`](../src/app/domain/ships/build-link/build-link-codec-loader.ts) the
-new `CURRENT_TABLE_VERSION` and a `loadTables` case for the new file.
+new `CURRENT_TABLE_VERSION` and a `loadTables` case for the new file. The retired number needs no
+edit: the generator reads the committed table files to find which versions it must leave alone, so
+the guard cannot be switched off by forgetting to extend a list. The suites then need the new
+table's content hash and its re-pinned corpus values, the retired table's hash pinned beside them,
+and the table each of them reads named: the build states which pin failed and where.
 
 The public asynchronous loader initially imports only the generic envelope, radix, and CRC code.
 It radix-decodes the envelope and verifies CRC-32 once before using the table-version field, then
@@ -663,86 +668,22 @@ current table is written, so an edit to one of those files fails the build rathe
 link that was shared against it. `pnpm run codec:capacity` reads every committed table for the same
 reason: a published table has to stay inside the budget its links were measured against.
 
-The current application dependency is exactly pinned to Almanac `0.2.13`. Table 1 reached its
-published content through nine in-place regenerations, each sound only because the application had
-not shipped and no link named the table yet. That exception is spent: the application is published,
-and the paragraphs below record how table 1 came to hold what it holds, not a procedure that is
-still available. Table 1 was overwritten in place on 2026-08-22, so
-that a module's pre-engineered variants contribute their blueprints to its candidate set — see
-"Where neither form fits" above. It was overwritten again on 2026-08-26, under the same rule, so
-that `POWERED_MODULES` lists every module the catalogue does not price at zero draw rather than only
-those it prices above it — see "Power state" above. The third overwrite, on 2026-08-27, follows the
-package: nine starter `*_free` fittings and six bundle-granted Vessel Hangars are second identities
-for articles the game already sells, and `modulesForSlot` stopped offering them, so `MODULE_SETS`
-stopped listing them. They stay in `MODULES` at the same indices, because every lookup still
-resolves them and an imported build keeps the one it arrived with.
+The current application dependency is exactly pinned to Almanac `0.2.13`.
 
-The fourth overwrite, on 2026-08-29, also follows the package: ten Mercenary articles are recorded
-with the experimental effect the shop bakes in, so their `PRE_ENGINEERED_VARIANTS` rows carry an
-`experimental` index where they carried `null`. No row is added, removed or reordered, so every
-variant index an existing link would name is unchanged. The effect beside those ten rows is encoded
-against a default rather than written out, so a link minted against the earlier table that names
-one of them reads differently. The package also reconstructs every omitted required mount with the
-hull's default module. That changes the canonical minimal loadout and the current encoder output
-for it without changing the table's identity.
+Table 1 holds the catalogue at content hash
+`c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370`, which is the content it was
+published with. It is never regenerated, and the build refuses to write it: links name it, and a
+table whose content moved is a new encoding under the next number. Git holds how table 1 came to
+hold what it holds.
 
-The fifth overwrite, on 2026-08-31, is the first to move an index. Outfitting sells no size-8 frame
-shift drive outside the SCO line, so the package withdrew the five plain `Int_Hyperdrive_Size8_*`
-records and `MODULES` holds 1,195 symbols where it held 1,200. The five sat at indices 205 to 209,
-and every symbol above them moves down by five; `POWERED_MODULES`, `MODULE_SETS`,
-`FIXED_MODULES_BY_SHIP`, `DEFAULT_MODULES_BY_SHIP`, `PRE_ENGINEERED_VARIANTS` and the three
-per-module set columns carry the new indices. No hull loses an article: the size-8 hulls are stocked
-and fitted with the overcharge drives, so the symbol behind every default and every fixed mount is
-the one it was. A link minted against the earlier table that names a module above index 209
-therefore decodes to a different article, which is what makes this an overwrite rather than an edit.
-The package also stocks the planetary approach suite from the hull defaults when a source names
-none, which moves the canonical minimal loadout again without touching the table's identity.
-
-The sixth overwrite, on 2026-09-01, is the first to change how a table is priced rather than what it
-holds. Every module and blueprint candidate set is now ordered by the popularity prior described
-under "What the pinned models deliberately leave open", so the position an identity takes in its set
-has moved, and the `MODELS` block pins weights for four structural booleans and a floor for the
-context-index decay. No symbol leaves any table and no global index moves; a link minted against the
-earlier table still names the same articles, but it names them at the wrong positions, which is what
-makes this an overwrite rather than an edit. That overwrite left table 1 at content hash
-`6280af035fe6292f6e55ee11060b30f27b71773b68c18ae47b56a93c758fa5db`.
-
-The seventh overwrite, on 2026-09-02, follows the package again. Almanac 0.2.8 files the hull's
-built-in Cargo Hatch under the `internal` category but no longer offers it to an optional internal
-mount, because the hull is built with one and the fixed `CargoHatch` mount is the only place it
-goes. So `ModularCargoBayDoor` leaves every optional-internal candidate set and each of those sets
-is one article shorter. No symbol leaves `MODULES` and no global index moves, so a link minted
-against the earlier table still names the same articles; it names them at the wrong positions in
-those sets, which is what makes this an overwrite rather than an edit. That run left table 1 at
-content hash `9f6e25b28b5da41b391779dbb8eed63570fbc6b50a6be7ee21fcbb65c7a997ce`, at the same
-capacity — 272 of the 377 bytes a 500-character value carries.
-
-The eighth overwrite, on 2026-09-03, follows the package once more. Almanac 0.2.9 sells the large
-SRV hangar: nine symbols, `Int_LargeBuggyBay_Size{2,4,6}_Class3`, their `_Free` starter identities
-and the three `Int_MkIILargeBuggyBay` fittings, land at indices 841 through 849 and push the 354
-symbols above them up by nine. A link minted against the earlier table still carries the same
-global indices, so above index 841 it now names the wrong article outright — the sharpest form of
-the same overwrite. That run left table 1 at content hash
-`f9f977a6ebda651eb56cd082e8589ab32ce143458e0daa88b068df9f64247b68`, at the same capacity — 272 of
-the 377 bytes a 500-character value carries.
-
-The ninth overwrite, under Almanac 0.2.12, records the package's complete Mercenary catalogue.
-Four package blueprints enter `BLUEPRINTS`. Four Mercenary variants enter
-`PRE_ENGINEERED_VARIANTS`, and one replaced missile-rack variant leaves it. `MODULES` and
-`EXPERIMENTAL_EFFECTS` keep the same identities. The sorted blueprint additions move later
-blueprint indices and their references. That run left table 1 at content hash
-`c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370`, at the same capacity — 272 of
-the 377 bytes a 500-character value carries. That is the content table 1 is published with, and the
-content it holds today.
-
-Table 2 is the first table minted rather than regenerated, under Almanac 0.2.13. Outfitting sells a
-Supercruise Overcharge drive only at the size of the mount being outfitted, so `modulesForSlot`
-stopped offering an SCO drive to a frame shift drive mount larger than its own class. Each frame
-shift drive candidate set therefore holds its own class's SCO drives and the plain drives at or
-below the mount, where table 1 also listed the SCO drives of every smaller class. No symbol leaves
-`MODULES` and no global index moves, so a link naming table 1 still names the same articles; it
-names them at the positions table 1 recorded, which is why that table stays in the repository
-instead of being rewritten. Running `pnpm run codec:tables` reproduces table 2 at content hash
+Table 2 holds the same catalogue under Almanac 0.2.13, where it differs in the frame shift drive
+mounts. Outfitting sells a Supercruise Overcharge drive only at the size of the mount being
+outfitted, so `modulesForSlot` offers no SCO drive to a frame shift drive mount larger than its own
+class. Each frame shift drive candidate set therefore holds its own class's SCO drives and the
+plain drives at or below the mount, where table 1 also lists the SCO drives of every smaller class.
+No symbol leaves `MODULES` and no global index moves, so a link naming table 1 still names the same
+articles; it names them at the positions table 1 records, which is why that table stays in the
+repository. Running `pnpm run codec:tables` reproduces table 2 at content hash
 `12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90`, at the same capacity — 272 of
 the 377 bytes a 500-character value carries.
 
@@ -751,8 +692,9 @@ table 1 with a size-6 SCO drive decodes to `reconstructionFailed`, because the p
 the fit and nothing here substitutes a neighbouring article for it (constitution IV).
 
 Every future Almanac upgrade must reproduce the current committed table and pass the frozen
-literal-link reconstruction corpus. Protocol fixtures must not be regenerated merely to make an
-upgrade pass. Changed table content uses the next table number.
+literal-link reconstruction corpus. A protocol fixture is never regenerated to make an upgrade
+pass: a fixture that moved would mean a shared link had changed meaning. Changed table content uses
+the next table number.
 
 Note that the generator writes raw `JSON.stringify` output while the committed file
 is Prettier-formatted, so an upgrade check must compare against `pnpm run codec:tables`, which pairs
@@ -768,8 +710,10 @@ The frozen corpus produces these encoded data lengths under table 2, the table a
 Each value and length includes the `b.` protocol prefix. Every value carries the table-version
 field, so no value here is also a table 1 value; the table 1 spellings are frozen in
 [`build-link-codec.spec.ts`](../src/app/domain/ships/build-link/build-link-codec.spec.ts), which
-reads one of them back through the loader. Only the Krait Mk II value changes length between the
-two tables, because at ten characters its packed body sits on a Base70 digit boundary:
+reads one of them back through the loader. Four of the five differ from their table 1 spelling in
+that field alone. The Corvette differs in its body as well, because its drive sits at a moved
+position in the mount's candidate set, which is the whole reason table 2 exists. Only the Krait Mk
+II value changes length, because at ten characters its packed body sits on a Base70 digit boundary:
 
 | Reference build               | Base70 encoded data                                                                | Data length |
 | ----------------------------- | ---------------------------------------------------------------------------------- | ----------: |

@@ -9,7 +9,7 @@ import { PRE_ENGINEERED_MODULES } from '@elite-dangerous-almanac/core/ships/pre-
 import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { SHIPS } from '@elite-dangerous-almanac/core/ships/ships';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import {
   assertCapacityFitsEnvelope,
@@ -20,6 +20,11 @@ import {
 } from './build-link-codec-capacity.mjs';
 
 const TABLE_VERSION = 2;
+const tableDirectoryUrl = new URL('../src/app/domain/ships/build-link/', import.meta.url);
+const tablePathFor = (version) =>
+  fileURLToPath(new URL(`codec-table-${version}.json`, tableDirectoryUrl));
+const outputPath = process.env.CODEC_TABLE_OUTPUT_PATH ?? tablePathFor(TABLE_VERSION);
+
 /**
  * The table versions a decoder still answers for, oldest first.
  *
@@ -27,13 +32,21 @@ const TABLE_VERSION = 2;
  * shared against it: a Commander's link names the table that decodes it, and that table has to
  * hold the content it held when the link was made. This script therefore writes the current
  * table only, and refuses to touch an earlier one at all.
+ *
+ * The set is read off disk rather than written down, because a list that has to be remembered is
+ * the one thing this guard cannot afford: minting the next table and forgetting to add this one to
+ * it would stop the check that protects it, silently and exactly when it matters.
  */
-const PUBLISHED_TABLE_VERSIONS = [1];
-const tablePathFor = (version) =>
-  fileURLToPath(
-    new URL(`../src/app/domain/ships/build-link/codec-table-${version}.json`, import.meta.url),
-  );
-const outputPath = process.env.CODEC_TABLE_OUTPUT_PATH ?? tablePathFor(TABLE_VERSION);
+const publishedTableVersions = async () => {
+  const names = await readdir(fileURLToPath(tableDirectoryUrl));
+  const versions = names
+    .map((name) => /^codec-table-(\d+)\.json$/.exec(name)?.[1])
+    .filter((version) => version !== undefined)
+    .map(Number)
+    .sort((left, right) => left - right);
+  if (!versions.includes(TABLE_VERSION)) versions.push(TABLE_VERSION);
+  return versions.filter((version) => version !== TABLE_VERSION);
+};
 const almanacPackageUrl = new URL(
   '../../package.json',
   import.meta.resolve('@elite-dangerous-almanac/core/ships/ships'),
@@ -714,7 +727,7 @@ const readTable = async (path) => JSON.parse(await readFile(path, 'utf8').catch(
  * silently changes what an already-shared link means. Reading them back on every run is what
  * turns that from a thing to remember into a thing the build refuses.
  */
-for (const version of PUBLISHED_TABLE_VERSIONS) {
+for (const version of await publishedTableVersions()) {
   const path = tablePathFor(version);
   const table = await readTable(path);
   if (table === null) {
@@ -754,8 +767,9 @@ if (previous && previousHash !== contentHash) {
       `  committed: ${previousHash}\n` +
       `  generated: ${contentHash}\n` +
       'Every published link names the table version that decodes it, so a changed table is a\n' +
-      `new encoding. Raise TABLE_VERSION, add ${TABLE_VERSION} to PUBLISHED_TABLE_VERSIONS, and\n` +
-      'teach the codec loader to read the new file. A published table is never written again.',
+      `new encoding. Raise TABLE_VERSION to ${TABLE_VERSION + 1} and teach the codec loader to read\n` +
+      `the new file. Table ${TABLE_VERSION} stays where it is: a published table is never written ` +
+      'again.',
   );
 }
 

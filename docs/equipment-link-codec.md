@@ -138,16 +138,15 @@ the release installed, which is the thing a pinned table exists to prevent.
 
 The table is pinned by content hash, and the ship codec's rule applies unchanged: a changed hash
 is a new encoding and belongs under the next table number, with the old file kept for the links
-already published. The application is published, so the in-place regeneration the generator still
-accepts is no longer sound here: table 1 is what the `e.` links already shared name. The unit suite
-pins the hash and recomputes it, so neither a regenerated table nor a hand-edited one passes
-quietly.
+already published. The application is published, so table 1 is what the `e.` links already shared
+name, and the generator refuses to write it once its content has moved. The unit suite pins the
+hash and recomputes it, so neither a regenerated table nor a hand-edited one passes quietly.
 
 Unlike the ship codec, the table is imported statically rather than lazily: it is a few kilobytes
 and there is one of them, and `equipment-link-codec.ts` refuses any version but the current one.
 Minting table 2 therefore means teaching this codec to keep reading table 1 first. The loader
-pattern in `build-link-codec-loader.ts` is the one to copy, and the ship side's
-`PUBLISHED_TABLE_VERSIONS` check is the guard to copy with it.
+pattern in `build-link-codec-loader.ts` is the one to copy, and the ship generator's sweep over the
+committed tables is the guard to copy with it.
 
 ## Refusals
 
