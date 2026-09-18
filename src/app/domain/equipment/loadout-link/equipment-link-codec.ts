@@ -1,6 +1,6 @@
 import { RawBitReader, RawBitWriter } from '../../build-link/build-link-bits';
 import { BuildLinkCodecError } from '../../build-link/build-link-codec-error';
-import type { LinkEnvelope } from '../../build-link/build-link-envelope';
+import type { LinkEnvelope, VerifiedLinkBody } from '../../build-link/build-link-envelope';
 import { decodeLinkBody, encodeLinkBody } from '../../build-link/build-link-envelope';
 import type {
   EquipmentLoadout,
@@ -74,16 +74,24 @@ export interface EquipmentLinkCodec {
   encodeEquipmentLinkFragment(loadout: EquipmentLoadout): string;
   decodeEquipmentLinkFragment(fragment: string): EquipmentLoadout;
   /** Decode a body whose envelope is already verified, as the loader hands it over. */
-  decodeVerifiedEquipmentLinkBody(body: Uint8Array): EquipmentLoadout;
+  decodeVerifiedEquipmentLinkBody(body: VerifiedEquipmentLinkBody): EquipmentLoadout;
 }
 
+/**
+ * A codec body whose `e.` envelope, length and CRC-32 are already verified.
+ *
+ * The brand is what keeps a body that skipped those checks out of a decoder,
+ * so the version field the loader reads is one the envelope vouched for.
+ */
+export type VerifiedEquipmentLinkBody = VerifiedLinkBody;
+
 /** The body of a fragment whose prefix, length and checksum are already good. */
-export function decodeEquipmentLinkBody(fragment: string): Uint8Array {
+export function decodeEquipmentLinkBody(fragment: string): VerifiedEquipmentLinkBody {
   return decodeLinkBody(fragment, EQUIPMENT_LINK_ENVELOPE);
 }
 
 /** The table version a payload names, read before any table is chosen. */
-export function readPayloadTableVersion(body: Uint8Array): number {
+export function readPayloadTableVersion(body: VerifiedEquipmentLinkBody): number {
   return new RawBitReader(body).readBits(TABLE_VERSION_BITS);
 }
 
@@ -216,7 +224,7 @@ export function createEquipmentLinkCodec(
   }
 
   /** Restore the loadout a verified body carries, or refuse it. */
-  function decodeVerifiedEquipmentLinkBody(body: Uint8Array): EquipmentLoadout {
+  function decodeVerifiedEquipmentLinkBody(body: VerifiedEquipmentLinkBody): EquipmentLoadout {
     const reader = new RawBitReader(body);
 
     const payloadVersion = reader.readBits(TABLE_VERSION_BITS);

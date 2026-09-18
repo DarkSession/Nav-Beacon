@@ -4,6 +4,14 @@ import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equip
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
 import { toStoredLoadout } from '../../domain/equipment/loadout/stored-loadout.serializer';
+import {
+  decodeEquipmentLinkBody,
+  readPayloadTableVersion,
+} from '../../domain/equipment/loadout-link/equipment-link-codec';
+import {
+  CURRENT_EQUIPMENT_TABLE_VERSION,
+  decodeEquipmentLinkFragment,
+} from '../../domain/equipment/loadout-link/equipment-link-codec-loader';
 import germanCatalogue from '../../i18n/locales/de.json';
 import { HistoryLocationAdapter } from '../../platform/browser/history-location.adapter';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
@@ -228,6 +236,33 @@ describe('LoadoutLinkCoordinator', () => {
 
     expect(second.store.autosaveRecordId()).not.toBeNull();
     expect(second.storage.entries.size).toBe(1);
+  });
+
+  it('republishes a loadout that arrived on an older table in the current one', () => {
+    // A link is always written with the table this release carries, whatever
+    // table the loadout arrived on, so a Commander who opens an older link and
+    // passes it on hands over a current one (024/FR-003).
+    const first = setup();
+    const held = heldLoadout(first.store);
+
+    const { links, store, location } = setup();
+    const stop = links.start();
+    // The seam stands in for a table below the current one, which this release
+    // is the first of and therefore has none of.
+    links.decode = () => held;
+
+    expect(links.ingest('e.aFragmentAnOlderTableWrote')).toEqual({ kind: 'opened' });
+    TestBed.tick();
+
+    expect(store.loadout()).toEqual(held);
+    expect(location.fragmentValue).not.toBe('e.aFragmentAnOlderTableWrote');
+    expect(readPayloadTableVersion(decodeEquipmentLinkBody(location.fragmentValue))).toBe(
+      CURRENT_EQUIPMENT_TABLE_VERSION,
+    );
+    // And what it names is the loadout that arrived, not a fresh one.
+    expect(decodeEquipmentLinkFragment(location.fragmentValue)).toEqual(held);
+    expect(links.publishedUrl()).toContain(location.fragmentValue);
+    stop();
   });
 
   it('leaves a fragment that belongs to something else alone', () => {

@@ -137,7 +137,7 @@ raising the version mint a table.
       passes.
 - [x] 6.2 Run `pnpm run test:scripts` and `pnpm run test`, and verify every suite passes with unit
       coverage above the 80% threshold.
-- [x] 6.3 Run the equipment journeys of the responsive matrix across the five Chromium profiles and
+- [ ] 6.3 Run the equipment journeys of the responsive matrix across the five Chromium profiles and
       verify a loadout shared as a link opens on the same loadout at every profile.
 - [ ] 6.4 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
       complete ten-project Playwright matrix pass.
