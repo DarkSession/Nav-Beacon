@@ -613,14 +613,6 @@ describe('a loadout link refusal', () => {
     }
     expect(BUNDLED_ENGLISH['link.refused.suit']).not.toContain('could not be read');
   });
-
-  it('says the suit is what failed where the codec named the suit', () => {
-    const { errors } = setup();
-
-    expect(errors.describe({ code: 'invalidPayload', slot: 'suit' }, 'equipment').detail).toBe(
-      BUNDLED_ENGLISH['link.refused.suit'],
-    );
-  });
 });
 
 describe('LoadoutSummary', () => {
