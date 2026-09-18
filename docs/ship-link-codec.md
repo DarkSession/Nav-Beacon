@@ -727,11 +727,13 @@ path for the affected table version.
 
 The frozen corpus produces these encoded data lengths under table 2, the table a new link names.
 Each value and length includes the `b.` protocol prefix. Every value carries the table-version
-field, so no value here is also a table 1 value; the table 1 spellings are frozen in
+field, so no value here is also a table 1 value. One table 1 spelling is frozen in
 [`build-link-codec.spec.ts`](../src/app/domain/ships/build-link/build-link-codec.spec.ts), which
-reads one of them back through the loader. Four of the five differ from their table 1 spelling in
-that field alone. The Corvette differs in its body as well, because its drive sits at a moved
-position in the mount's candidate set, which is the whole reason table 2 exists. Only the Krait Mk
+reads it back through the loader. Table 1 links that were shared are held instead by the
+published-link corpus, which carries its own three. Four of the five differ from their table 1
+spelling in that field alone. The Corvette differs in its body as well, because its drive is named
+by an index into a set of 30 candidates where the table 1 set held 50: the drive keeps position 3 in
+both, but the narrower set changes the arithmetic context the index is written in. Only the Krait Mk
 II value changes length, because at ten characters its packed body sits on a Base70 digit boundary:
 
 | Reference build               | Base70 encoded data                                                                | Data length |

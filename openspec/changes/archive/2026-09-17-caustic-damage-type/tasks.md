@@ -100,9 +100,8 @@
 - [ ] 5.5 Run the five Firefox projects of the responsive matrix, and verify each project passes.
 - [ ] 5.6 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
       complete ten-project Playwright matrix pass.
-- [ ] 5.7 Give `buildStockHull` in `e2e/shell.ts` the press and retry budget its sibling
-      `openRecordFromLibrary` carries, and verify the five Chromium projects pass while the unit
-      suite runs beside them.
+- [ ] 5.7 Make the responsive matrix pass on a container that is also running the unit suite,
+      and verify the five Chromium projects pass together under that load twice in a row.
 
 Tasks 5.5 and 5.6 are open. Firefox is unobtainable in the environment this change was verified in:
 no binary is on disk, and the proxy refuses every download host Playwright offers. `pnpm run check`
@@ -118,12 +117,19 @@ its container with the unit suite. Every failing project was re-run whole, alone
 and each reports 723 tests passed; the three projects that passed under load are counted from the
 loaded sweep.
 
-Task 5.7 carries the defect the load exposes, which is a budget rather than a wait the application
-owes. `buildStockHull` in `e2e/shell.ts` presses with a two-second budget inside a fifteen-second
-retry, where `openRecordFromLibrary` in the same file presses with five inside thirty. A container
-running a second suite exceeds two seconds on a press the browser answers, so every attempt in the
-narrower budget fails and the retry runs out. The task belongs to the helper, not to the cases that
-report through it: none is skipped, quarantined or granted a retry of its own.
+Task 5.7 carries the defect the load exposes, and it is wider than one helper. `buildStockHull` in
+`e2e/shell.ts` presses with a two-second budget inside a fifteen-second retry, where
+`openRecordFromLibrary` in the same file presses with five inside thirty, and a container running a
+second suite exceeds two seconds on a press the browser answers. Widening `buildStockHull` to its
+sibling's figures was measured and does not settle the matrix: `chromium-desktop` then passes 723
+under that load, but `cost-and-materials.spec.ts:1006` starts exceeding its own forty-five-second
+case budget in `chromium-tablet-portrait`, which passed before. A press held five seconds on a stale
+control instead of two spends three more of the budget the case has for everything else, so the
+wider figure trades one exhausted budget for another. The helper keeps the narrower figures until a
+fix is measured that holds across all five projects.
+
+The defect is therefore the matrix under a loaded container, not any one case. Nothing is skipped,
+quarantined or granted a retry of its own, and no budget is widened on an unmeasured argument.
 
 The versioned screen-reader and 400% browser-zoom protocols need no new run. Neither protocol covers
 feature 007, and the change adds a legend line of a kind the reading already carries.
