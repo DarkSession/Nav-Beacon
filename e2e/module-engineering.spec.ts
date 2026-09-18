@@ -781,9 +781,8 @@ test.describe('purchased and reward articles', () => {
     // is to restore the article rather than to ask for one (wave 6).
     // The build still has a link. Six Mercenary articles — this small mining
     // hardpoint among them — sit on modules the package gives no engineering
-    // menu, so until table 1 recorded their variants' own blueprints there was
-    // no ordinary record to write and the link vanished the moment one was
-    // climbed off its purchase grade (2026-08-22).
+    // menu. The codec table records their variants' own blueprints, so an ordinary
+    // record can name a grade climbed off the purchase grade and the link stands.
     // Its own timeout: publishing is asynchronous, so the fragment appears one
     // encode after the climb is applied — comfortably under a second here, and
     // slower on a machine running the whole matrix.

@@ -28,9 +28,9 @@ export const OFFENCE_DEFAULT_SLOTS = ['SmallHardpoint1', 'SmallHardpoint2'] as c
  * The weapons that carry this feature's edge states, and which state each is for.
  *
  * Every one of them was found by walking the installed hardpoint catalogue, not
- * chosen from memory: these are the articles that actually produce an absent
- * `unclassified`, a present one, a missing piercing factor, absent range
- * fields and each of the three mounts at the pinned package version.
+ * chosen from memory: these are the articles that actually produce a caustic
+ * amount, a missing piercing factor, absent range fields and a turreted mount
+ * beside the fixed ones, at the pinned package version.
  */
 export const OFFENCE_WEAPONS = {
   /** Conventional kinetic, a clip and a reload behind it, both range fields present. */
@@ -43,8 +43,11 @@ export const OFFENCE_WEAPONS = {
   explosive: 'Hpt_DumbfireMissileRack_Fixed_Medium',
   /** A positive anti-xeno overlay beside conventional kinetic damage. */
   antiXeno: 'Hpt_ATMultiCannon_Fixed_Large',
-  /** The whole of its damage is `unclassified` — the split's rarest legend row. */
-  unclassified: 'Hpt_MkIIPlasmaShockAutocannon_Fixed_Large',
+  /**
+   * The one article in the catalogue with a caustic share, which it deals
+   * beside an explosive one — the split's rarest legend row.
+   */
+  caustic: 'Hpt_CausticMissile_Fixed_Medium',
   /** The one Small article the hull's smallest mounts take beside a beam. */
   mining: 'Hpt_Mining_AbrBlstr_Fixed_Small',
   /**
@@ -60,7 +63,7 @@ export const OFFENCE_WEAPONS = {
 /** The mount each edge-state weapon is fitted to in `everyStateBuild()`. */
 export const OFFENCE_STATE_SLOTS = {
   antiXeno: 'HugeHardpoint1',
-  unclassified: 'LargeHardpoint1',
+  caustic: 'LargeHardpoint1',
   turreted: 'LargeHardpoint2',
   kinetic: 'LargeHardpoint3',
   noPiercing: 'MediumHardpoint1',
@@ -98,12 +101,14 @@ export function allDisabledBuild(): ShipLoadout {
 /**
  * One build carrying every weapon state this feature draws differently.
  *
- * Eight mounts, eight articles: an anti-xeno overlay, a present `unclassified`
- * amount, a turreted mount, an absent piercing factor, absent range fields, a
- * continuous beam, a mining blaster and an ordinary kinetic weapon. Every
- * optional field this feature can find absent is absent on at least one of
- * them and present on another, and all three of the package's mounts are
- * represented, because the gunsight's shot sentences name them apart.
+ * Eight mounts, eight articles: an anti-xeno overlay, a caustic amount, a
+ * turreted mount, an absent piercing factor, absent range fields, a continuous
+ * beam, a mining blaster and an ordinary kinetic weapon. `armourPiercing` and
+ * both range fields are absent on at least one of them and present on another,
+ * and the build carries a fixed mount beside a turreted one, because the
+ * gunsight's shot sentences name them apart. No article in the catalogue deals
+ * unclassified damage, so that one type is absent throughout and the suite pins
+ * its position with a written-out split instead.
  */
 export function everyStateBuild(): ShipLoadout {
   const build = ShipLoadout.empty(OFFENCE_FIXTURE_HULL);

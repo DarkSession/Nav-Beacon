@@ -58,7 +58,7 @@ export interface Offence {
  * package documents it as an overlay on that damage rather than a share of it,
  * and a bar that gave it a slice would be describing a total nobody fires.
  * A type the build does not deal at all gets no segment, which is why the
- * canvas's sample draws two rather than five.
+ * canvas's sample draws two rather than six.
  */
 export interface DamageSegment {
   readonly type: ConventionalDamageType;
@@ -193,14 +193,26 @@ export function projectOffence(
  */
 export const RANGE_BANDS = [500, 1000, 2000, 3000] as const;
 
-/** The types that partition conventional damage, in the package's own field order. */
-const CONVENTIONAL_DAMAGE_TYPES = [
-  'kinetic',
-  'thermal',
-  'explosive',
-  'absolute',
-  'unclassified',
-] as const satisfies readonly ConventionalDamageType[];
+/**
+ * The types that partition conventional damage, in the package's own field order.
+ *
+ * Written as a record rather than a list so the set is held complete by the compiler: a
+ * conventional type the package adds appears here as a compilation failure rather than as an
+ * amount that quietly leaves the bar. A list checked with `satisfies` accepts a short one, so the
+ * set has to be the record's keys and the order has to be its values.
+ */
+const DAMAGE_TYPE_ORDER = {
+  kinetic: 0,
+  thermal: 1,
+  explosive: 2,
+  caustic: 3,
+  absolute: 4,
+  unclassified: 5,
+} as const satisfies Record<ConventionalDamageType, number>;
+
+const CONVENTIONAL_DAMAGE_TYPES: readonly ConventionalDamageType[] = (
+  Object.keys(DAMAGE_TYPE_ORDER) as ConventionalDamageType[]
+).sort((left, right) => DAMAGE_TYPE_ORDER[left] - DAMAGE_TYPE_ORDER[right]);
 
 /**
  * Split the burst total into the segments the canvas's bar draws.

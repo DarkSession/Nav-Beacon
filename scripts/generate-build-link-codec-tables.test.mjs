@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
@@ -18,10 +19,30 @@ import {
 } from './build-link-codec-capacity.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
+
+/** The generator's own payload hash, so a published table is checked the way it was written. */
+const canonicalise = (value) => {
+  if (Array.isArray(value)) return value.map(canonicalise);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalise(value[key])]),
+    );
+  }
+  return value;
+};
+const contentHashOf = (payload) =>
+  createHash('sha256')
+    .update(JSON.stringify(canonicalise(payload)))
+    .digest('hex');
 const generatorPath = fileURLToPath(
   new URL('./generate-build-link-codec-tables.mjs', import.meta.url),
 );
 const committedTablePath = fileURLToPath(
+  new URL('../src/app/domain/ships/build-link/codec-table-2.json', import.meta.url),
+);
+const publishedTablePath = fileURLToPath(
   new URL('../src/app/domain/ships/build-link/codec-table-1.json', import.meta.url),
 );
 
@@ -29,7 +50,7 @@ test('refuses to overwrite a table whose payload does not match its declared has
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ednb-codec-table-'));
   t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
 
-  const tamperedTablePath = join(temporaryDirectory, 'codec-table-1.json');
+  const tamperedTablePath = join(temporaryDirectory, 'codec-table-2.json');
   const table = JSON.parse(await readFile(committedTablePath, 'utf8'));
   table.SHIPS = [...table.SHIPS, 'TamperedHull'];
   const tamperedContent = `${JSON.stringify(table, null, 2)}\n`;
@@ -44,6 +65,130 @@ test('refuses to overwrite a table whose payload does not match its declared has
   assert.notEqual(result.status, 0);
   assert.match(`${result.stdout}\n${result.stderr}`, /content does not match its declared hash/);
   assert.equal(await readFile(tamperedTablePath, 'utf8'), tamperedContent);
+});
+
+test('every published table still holds the content its declared hash names', async () => {
+  const table = JSON.parse(await readFile(publishedTablePath, 'utf8'));
+  const { $generated: generated, ...payload } = table;
+
+  assert.equal(generated.tableVersion, 1);
+  assert.equal(generated.contentHash, contentHashOf(payload));
+  // Pinned by value as well as recomputed, so an edit that rewrote both still fails here.
+  assert.equal(
+    generated.contentHash,
+    'c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370',
+  );
+});
+
+test('refuses to run at all once a published table has been edited', async (t) => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ednb-codec-published-'));
+  t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+  // The generator reads the published tables beside its own file, so the tamper has to happen in
+  // a tree the generator resolves from. Its scripts are copied, because Node reports a symlinked
+  // module at its real path and the copy would have read the repository's own tables.
+  const tableDirectory = join(temporaryDirectory, 'src/app/domain/ships/build-link');
+  await mkdir(tableDirectory, { recursive: true });
+  await cp(join(repositoryRoot, 'scripts'), join(temporaryDirectory, 'scripts'), {
+    recursive: true,
+  });
+  for (const name of ['node_modules', 'package.json']) {
+    await symlink(join(repositoryRoot, name), join(temporaryDirectory, name));
+  }
+  // The capacity check reads the codec's own bounds out of these two files.
+  for (const name of ['build-link-codec.ts', 'build-link-payload.ts']) {
+    await symlink(
+      join(repositoryRoot, 'src/app/domain/ships/build-link', name),
+      join(tableDirectory, name),
+    );
+  }
+  const published = JSON.parse(await readFile(publishedTablePath, 'utf8'));
+  published.SHIPS = [...published.SHIPS, 'TamperedHull'];
+  await writeFile(join(tableDirectory, 'codec-table-1.json'), `${JSON.stringify(published)}\n`);
+
+  const result = spawnSync(
+    process.execPath,
+    [join(temporaryDirectory, 'scripts/generate-build-link-codec-tables.mjs')],
+    { cwd: temporaryDirectory, encoding: 'utf8', env: process.env },
+  );
+
+  assert.notEqual(result.status, 0);
+  const output = `${result.stdout}\n${result.stderr}`;
+  assert.match(output, /Codec table 1 content does not match its declared hash/);
+  assert.match(output, /mint a new table version/);
+  // The current table was never written, because the refusal comes before the write.
+  assert.equal(
+    await readFile(join(tableDirectory, 'codec-table-2.json'), 'utf8').catch(() => null),
+    null,
+  );
+});
+
+test('refuses to run at all once a published table is missing', async (t) => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ednb-codec-absent-'));
+  t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+  // A deleted table is a refusal here rather than a version that quietly leaves the guarded set:
+  // the generator derives the published versions from the current number, so table 1 is looked for
+  // whether or not the file is there.
+  const tableDirectory = join(temporaryDirectory, 'src/app/domain/ships/build-link');
+  await mkdir(tableDirectory, { recursive: true });
+  await cp(join(repositoryRoot, 'scripts'), join(temporaryDirectory, 'scripts'), {
+    recursive: true,
+  });
+  for (const name of ['node_modules', 'package.json']) {
+    await symlink(join(repositoryRoot, name), join(temporaryDirectory, name));
+  }
+  for (const name of ['build-link-codec.ts', 'build-link-payload.ts']) {
+    await symlink(
+      join(repositoryRoot, 'src/app/domain/ships/build-link', name),
+      join(tableDirectory, name),
+    );
+  }
+
+  const result = spawnSync(
+    process.execPath,
+    [join(temporaryDirectory, 'scripts/generate-build-link-codec-tables.mjs')],
+    { cwd: temporaryDirectory, encoding: 'utf8', env: process.env },
+  );
+
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Codec table 1 is missing/);
+  assert.equal(
+    await readFile(join(tableDirectory, 'codec-table-2.json'), 'utf8').catch(() => null),
+    null,
+  );
+});
+
+test('names the next version when the catalogue moves the current table', async (t) => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ednb-codec-moved-'));
+  t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+  // The table is self-consistent — its declared hash names the content it holds — and still is
+  // not what this Almanac produces. That is the case a package upgrade creates, and the refusal
+  // has to carry the instruction it turns on: the next version, not an edit to this one.
+  const movedTablePath = join(temporaryDirectory, 'codec-table-2.json');
+  const { $generated: generated, ...payload } = JSON.parse(
+    await readFile(committedTablePath, 'utf8'),
+  );
+  payload.SHIPS = [...payload.SHIPS, 'HullFromALaterRelease'];
+  const movedContent = `${JSON.stringify(
+    { $generated: { ...generated, contentHash: contentHashOf(payload) }, ...payload },
+    null,
+    2,
+  )}\n`;
+  await writeFile(movedTablePath, movedContent);
+
+  const result = spawnSync(process.execPath, [generatorPath], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    env: { ...process.env, CODEC_TABLE_OUTPUT_PATH: movedTablePath },
+  });
+
+  const output = `${result.stdout}\n${result.stderr}`;
+  assert.notEqual(result.status, 0);
+  assert.match(output, /content changed under Almanac/);
+  assert.match(output, /Raise TABLE_VERSION to 3/);
+  assert.equal(await readFile(movedTablePath, 'utf8'), movedContent);
 });
 
 test('the committed table pins a symbol-model block the generator validates', async () => {

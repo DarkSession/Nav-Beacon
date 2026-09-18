@@ -851,6 +851,7 @@
   "offence.damage.type.kinetic": "Kinetisch",
   "offence.damage.type.thermal": "Thermisch",
   "offence.damage.type.explosive": "Explosiv",
+  "offence.damage.type.caustic": "Ätzend",
   "offence.damage.type.absolute": "Absolut",
   "offence.damage.type.unclassified": "Nicht klassifiziert",
   "offence.capacitor.heading": "Waffenkondensator",

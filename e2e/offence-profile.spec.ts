@@ -4,6 +4,13 @@ import germanMessages from '../src/app/i18n/locales/de.json';
 import { everyPublishedSlotKey, sweepOutfittingState } from './accessibility';
 import { expectNoDocumentOverflow, settled } from './accessibility/assertions';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
+import {
+  benchFollowedSelection,
+  fitCommitted,
+  revealFamilyHolding,
+  revealMount,
+  surfacesAreLayers,
+} from './outfitting-surfaces';
 import { buildStockHull } from './shell';
 
 /**
@@ -34,6 +41,50 @@ async function openOffence(page: Page, messages = englishMessages): Promise<void
     .filter({ hasText: messages['anatomy.mode.offence'] })
     .click();
   await expect(page.locator('ednb-offence-analysis .offence')).toBeVisible();
+}
+
+/** The rendered name of the one article the catalogue gives a caustic share. */
+const CAUSTIC_ARTICLE = /enzyme missile rack/iu;
+
+/**
+ * Creates a stock build, fits the one article that deals caustic damage, and
+ * opens the `OFFENCE` mode.
+ *
+ * The stock Anaconda deals no caustic damage, so the caustic legend line
+ * cannot be reached without fitting for it. The article is named by its
+ * rendered name rather than its symbol, because that is what a Commander picks
+ * from.
+ */
+async function openOffenceDealingCaustic(page: Page): Promise<void> {
+  await page.goto(`/ships/${HULL}`);
+  await buildStockHull(page, englishMessages['hullDetail.create']);
+
+  // Waits on the row's own pressed state rather than on the bench appearing. A mount is
+  // already selected when this arrives, so its bench is already drawn and waiting for one
+  // proves nothing: the chooser that opened could still be the previous mount's.
+  await revealMount(page, 'MediumHardpoint1');
+  const select = page.locator('[data-slot-key="MediumHardpoint1"] button').first();
+  await select.click();
+  await expect(select).toHaveAttribute('aria-pressed', 'true');
+  await benchFollowedSelection(page);
+  await revealFamilyHolding(page, CAUSTIC_ARTICLE);
+  const row = page
+    .locator('.candidates__choices .candidate')
+    .filter({ hasText: CAUSTIC_ARTICLE })
+    .first();
+  await expect(row).toBeVisible();
+  await row.locator('.candidate__name').click();
+  if (await surfacesAreLayers(page)) {
+    await page.getByRole('button', { name: /fit module/iu }).click();
+  }
+  await fitCommitted(page);
+
+  await page
+    .locator('ednb-hull-anatomy .anatomy__modes button')
+    .filter({ hasText: englishMessages['anatomy.mode.offence'] })
+    .click();
+  await expect(page.locator('ednb-offence-analysis .offence')).toBeVisible();
+  await settled(page);
 }
 
 /** Every digit in a string, so a locale's own grouping cannot change the value. */
@@ -251,6 +302,28 @@ test.describe('reading the build', () => {
     });
   });
 
+  test('states the caustic type where the build deals it', async ({ page }) => {
+    await openOffenceDealingCaustic(page);
+
+    // The caustic reading as a Commander meets it: a legend line naming the
+    // type, an amount and a share beside it, and a segment of the bar to go
+    // with the line. Nothing here writes the amount down — the page is asked
+    // what it drew.
+    const entries = page.locator('ednb-offence-analysis .split__entry');
+    const segments = page.locator('ednb-offence-analysis .split__segment');
+    const caustic = entries.filter({
+      hasText: new RegExp(englishMessages['offence.damage.type.caustic'], 'iu'),
+    });
+
+    await expect(caustic).toHaveCount(1);
+    expect(digits(await caustic.innerText())).not.toBe('');
+    expect(await caustic.innerText()).toContain('%');
+    await expect(entries).toHaveCount(await segments.count());
+
+    // And the segment is drawn on the caustic ground rather than a neighbour's.
+    await expect(page.locator('ednb-offence-analysis .split__segment--caustic')).toHaveCount(1);
+  });
+
   test('names every damage segment in one complete legend', async ({ page }) => {
     await openOffence(page);
     await test.step('names each damage type where the canvas names it — in the legend', async () => {
@@ -261,8 +334,9 @@ test.describe('reading the build', () => {
       // label, which uppercases in CSS, and `innerText` reports what is rendered.
       const entries = page.locator('ednb-offence-analysis .split__entry');
       const legend = (await entries.allInnerTexts()).join(' ').toLowerCase();
-      const named = (['kinetic', 'thermal', 'explosive', 'absolute'] as const).filter((type) =>
-        legend.includes(englishMessages[`offence.damage.type.${type}` as const].toLowerCase()),
+      const named = (['kinetic', 'thermal', 'explosive', 'caustic', 'absolute'] as const).filter(
+        (type) =>
+          legend.includes(englishMessages[`offence.damage.type.${type}` as const].toLowerCase()),
       );
 
       expect(named.length).toBeGreaterThan(0);
@@ -307,7 +381,7 @@ test.describe('reading the build', () => {
       await expect(entries.first()).toHaveRole('listitem');
     });
     await test.step('gives a type the build does not deal no segment and no line', async () => {
-      // The stock Anaconda deals no unclassified damage, and the canvas draws a
+      // The stock Anaconda deals no caustic damage, and the canvas draws a
       // segment only for a type that has one. A legend entry always accompanies a
       // segment, so the two counts agreeing is what says nothing was invented.
       const segments = page.locator('ednb-offence-analysis .split__segment');
@@ -315,7 +389,7 @@ test.describe('reading the build', () => {
 
       await expect(entries).toHaveCount(await segments.count());
       expect((await entries.allInnerTexts()).join(' ').toLowerCase()).not.toContain(
-        englishMessages['offence.damage.type.unclassified'].toLowerCase(),
+        englishMessages['offence.damage.type.caustic'].toLowerCase(),
       );
     });
   });

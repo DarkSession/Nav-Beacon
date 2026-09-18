@@ -36,7 +36,7 @@ const MAX_LENGTH = 500;
  * runs from.
  */
 const CODEC_TABLE_CONTENT_HASH = (
-  JSON.parse(readFileSync('src/app/domain/ships/build-link/codec-table-1.json', 'utf8')) as {
+  JSON.parse(readFileSync('src/app/domain/ships/build-link/codec-table-2.json', 'utf8')) as {
     $generated: { contentHash: string };
   }
 ).$generated.contentHash;

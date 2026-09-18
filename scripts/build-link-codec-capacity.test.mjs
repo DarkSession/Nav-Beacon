@@ -28,7 +28,7 @@ import {
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 const table = JSON.parse(
-  await readFile(resolve(ROOT, 'src/app/domain/ships/build-link/codec-table-1.json'), 'utf8'),
+  await readFile(resolve(ROOT, 'src/app/domain/ships/build-link/codec-table-2.json'), 'utf8'),
 );
 const constants = await readCodecConstants();
 

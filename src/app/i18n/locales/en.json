@@ -851,6 +851,7 @@
   "offence.damage.type.kinetic": "Kinetic",
   "offence.damage.type.thermal": "Thermal",
   "offence.damage.type.explosive": "Explosive",
+  "offence.damage.type.caustic": "Caustic",
   "offence.damage.type.absolute": "Absolute",
   "offence.damage.type.unclassified": "Unclassified",
   "offence.capacitor.heading": "Weapon capacitor",

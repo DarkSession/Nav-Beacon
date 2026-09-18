@@ -7,7 +7,14 @@ import type { VerifiedBuildLinkBody } from './build-link-payload';
 export { BuildLinkCodecError } from '../../build-link/build-link-codec-error';
 export type { BuildLinkCodecErrorCode } from '../../build-link/build-link-codec-error';
 
-const CURRENT_TABLE_VERSION = 1;
+/**
+ * The table a new link is written with.
+ *
+ * Every table below it stays readable for as long as a link naming it can exist, which is
+ * indefinitely: a Commander who saved a link last year opens it against the table that made
+ * it. Raising this number is what a catalogue move costs, and it never edits an earlier table.
+ */
+export const CURRENT_TABLE_VERSION = 2;
 const CODECS_BY_TABLE_VERSION = new Map<number, Promise<BuildLinkCodec>>();
 
 /** Encode with the current table, loading the codec and table snapshot only when first used. */
@@ -54,6 +61,8 @@ async function loadTables(tableVersion: number): Promise<BuildLinkCodecTables> {
   switch (tableVersion) {
     case 1:
       return (await import('./codec-table-1.json')).default as BuildLinkCodecTables;
+    case 2:
+      return (await import('./codec-table-2.json')).default as BuildLinkCodecTables;
     default:
       throw new BuildLinkCodecError(
         'unsupportedTableVersion',

@@ -155,13 +155,17 @@
   // Damage types, where a bar splits one total across them. Canvas 1c draws
   // kinetic in the amber it draws every hull figure in and thermal in the hot
   // ink it draws heat in, which is the same pairing the power dashboard uses.
-  // The remaining three are the grounds already carrying a distinct meaning:
-  // explosive on the healthy green, absolute on the cool ink, unclassified on
-  // the faintest amber the scale holds. Every segment states its own amount and
-  // share in the legend beside it — the colour separates, it does not report.
+  // The remaining four are the grounds already carrying a distinct meaning:
+  // explosive on the healthy green, caustic on the brighter green beside it,
+  // absolute on the cool ink, unclassified on the faintest amber the scale
+  // holds. Two pairs sit close in hue — the two greens, and kinetic against
+  // unclassified — because the scale holds six grounds and no more. Every
+  // segment states its own type, amount and share in the legend beside it, so
+  // the colour separates, it does not report.
   --ednb-surface-damage-kinetic: var(--ednb-palette-amber);
   --ednb-surface-damage-thermal: var(--ednb-palette-hot);
   --ednb-surface-damage-explosive: var(--ednb-palette-good-2);
+  --ednb-surface-damage-caustic: var(--ednb-palette-good);
   --ednb-surface-damage-absolute: var(--ednb-palette-cool);
   --ednb-surface-damage-unclassified: var(--ednb-palette-amber-a40);
 

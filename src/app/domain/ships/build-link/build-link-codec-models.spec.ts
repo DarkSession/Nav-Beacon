@@ -3,13 +3,14 @@ import { SHIPS } from '@elite-dangerous-almanac/core/ships/ships';
 import { makeFullyEngineeredAnaconda, minimalState } from './build-link-codec.spec-helpers';
 import { createBuildLinkCodec } from './build-link-codec';
 import type { BuildLinkSymbolModels } from './build-link-codec';
-import codecTable1 from './codec-table-1.json';
+import { CURRENT_TABLE_VERSION } from './build-link-codec-loader';
+import codecTable from './codec-table-2.json';
 import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture.json';
 
 /**
- * Table 1 carries the symbol models the generator pins alongside its catalogue. The boolean and
- * power skews are defensible priors for real builds (grades are usually maximal, engineered
- * modules usually carry an experimental effect, identities are almost always contextual,
+ * The current table carries the symbol models the generator pins alongside its catalogue. The
+ * boolean and power skews are defensible priors for real builds (grades are usually maximal,
+ * engineered modules usually carry an experimental effect, identities are almost always contextual,
  * explicit enabled states are usually `on`, a changed mount is usually filled rather than
  * emptied). Names get English-like character weights while idents get callsign-like ones
  * (uppercase, digits, dash). Back-reference indexes use per-run adaptive contexts;
@@ -17,15 +18,15 @@ import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture
  * repetition-poor. The context-index decay pays because the table orders every candidate set by
  * a popularity prior, and its floor bounds what a late position costs when that prior is wrong.
  */
-const shippedModels: BuildLinkSymbolModels = codecTable1.MODELS;
-const modelledCodec = createBuildLinkCodec(1, codecTable1);
+const shippedModels: BuildLinkSymbolModels = codecTable.MODELS;
+const modelledCodec = createBuildLinkCodec(CURRENT_TABLE_VERSION, codecTable);
 /**
  * The models' own effect is measured against the same table without its models block. Bit
  * packing ignores models entirely, so the unmodelled codec reproduces every packed body — and
  * with it every empty and stock reference — byte for byte.
  */
-const { MODELS: _strippedForBaseline, ...unmodelledTable } = codecTable1;
-const baselineCodec = createBuildLinkCodec(1, unmodelledTable);
+const { MODELS: _strippedForBaseline, ...unmodelledTable } = codecTable;
+const baselineCodec = createBuildLinkCodec(CURRENT_TABLE_VERSION, unmodelledTable);
 
 describe('build-link codec pinned symbol models', () => {
   it('round-trips the reference corpus canonically under the modelled table', () => {
@@ -51,19 +52,21 @@ describe('build-link codec pinned symbol models', () => {
   });
 
   it('freezes the reference corpus literals in the encode direction', () => {
-    // Freeze before release; once table 1 ships, never regenerate these fixtures to make a
-    // build pass. The decode direction and canonical reserialization are covered by the
-    // round-trip test above.
+    // Frozen against table 2, the table a new link names. Table 2 is fixed to the catalogue
+    // it was minted from, so these fixtures are never regenerated to make a build pass: a
+    // literal that moved would mean a link already shared had changed meaning. A catalogue
+    // move mints table 3 instead.
+    // The decode direction and canonical reserialization are covered by the round-trip above.
     const fragments = referenceCorpus().map(({ source }) =>
       modelledCodec.encodeBuildLinkFragment(source),
     );
 
     expect(fragments).toEqual([
-      'b.1S..A@YX6Cjy!R',
-      'b.vz,jdQ_4',
-      'b.8oUeO4wu5ZrfCrTfzkyEp9VJ1NAj-M4u5tBFFEp3.:aLg6tfRJSrwSAe4Dz6jB',
-      'b.26da!i-2iAMHR6!JZRgv2A4OO8ezAd.KALtMaTu1R3sY,Lfi0zRNpDcH3ulwYrH!KjCD0l0tW3jj!i',
-      'b.7yvr6:PyEpDGgEs9aI:gxA@uHybdm4IM',
+      'b.2vapm0exwB0@N0',
+      'b.1QXDMzG/i',
+      'b.DgYsVh0,YFsU1l1OYC_AKTIZyFMvwucN86-gU,6@zqrfHVWvZ!!6aN:LoGQ6@F',
+      'b.3I7-5N665Yh9e/6bitRTwUjU7j67P_6EFdsgeuHEMYDI@@.!ylVeQ-TlQ21ch3tmnG,jAHbyOL.gka',
+      'b.CPHzLyCh7__FwUf1KTH0pAVksghBJMxl',
     ]);
   });
 
@@ -78,7 +81,7 @@ describe('build-link codec pinned symbol models', () => {
     // would let either column drift unnoticed; an assertion cannot.
     expect(rows).toEqual([
       { label: 'empty Sidewinder', baselineLength: 16, modelledLength: 16 },
-      { label: 'stock Krait Mk II', baselineLength: 10, modelledLength: 10 },
+      { label: 'stock Krait Mk II', baselineLength: 11, modelledLength: 11 },
       { label: 'engineered Anaconda', baselineLength: 73, modelledLength: 64 },
       { label: 'supplied engineered Corvette', baselineLength: 102, modelledLength: 80 },
       { label: 'named stock Krait Mk II', baselineLength: 38, modelledLength: 34 },
@@ -140,7 +143,10 @@ describe('build-link codec pinned symbol models', () => {
       { ...shippedModels, CONTEXT_INDEX_DECAY: [63, 64], CONTEXT_INDEX_FLOOR: undefined },
       { ...shippedModels, CONTEXT_INDEX_DECAY: [1, 2], CONTEXT_INDEX_FLOOR: 1_024 },
     ]) {
-      const decayCodec = createBuildLinkCodec(1, { ...codecTable1, MODELS: models });
+      const decayCodec = createBuildLinkCodec(CURRENT_TABLE_VERSION, {
+        ...codecTable,
+        MODELS: models,
+      });
 
       const fragment = decayCodec.encodeBuildLinkFragment(source);
       const decoded = decayCodec.decodeBuildLinkFragment(fragment);
@@ -156,8 +162,8 @@ describe('build-link codec pinned symbol models', () => {
     // adaptation off leaves it. A larger increment does cost: each new reference target pays
     // for the counts its predecessors built up, which the diverse Corvette feels first.
     const withIncrement = (increment: number) =>
-      createBuildLinkCodec(1, {
-        ...codecTable1,
+      createBuildLinkCodec(CURRENT_TABLE_VERSION, {
+        ...codecTable,
         MODELS: { ...shippedModels, CONTEXT_ADAPTATION: increment },
       });
     const lengths = (codec: ReturnType<typeof createBuildLinkCodec>) =>
@@ -197,8 +203,8 @@ describe('build-link codec pinned symbol models', () => {
 
   it('rejects malformed model weight tables', () => {
     const withModels = (models: unknown) => () =>
-      createBuildLinkCodec(1, {
-        ...codecTable1,
+      createBuildLinkCodec(CURRENT_TABLE_VERSION, {
+        ...codecTable,
         MODELS: models as BuildLinkSymbolModels,
       });
     const expectedError = 'The build-link codec table models are invalid.';

@@ -101,6 +101,7 @@ const DAMAGE_TYPE_LABELS = {
   kinetic: 'offence.damage.type.kinetic',
   thermal: 'offence.damage.type.thermal',
   explosive: 'offence.damage.type.explosive',
+  caustic: 'offence.damage.type.caustic',
   absolute: 'offence.damage.type.absolute',
   unclassified: 'offence.damage.type.unclassified',
 } as const satisfies Record<ConventionalDamageType, MessageKey>;
