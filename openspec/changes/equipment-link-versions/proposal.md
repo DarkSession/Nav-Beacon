@@ -21,7 +21,7 @@ and table 2 was minted beside a table 1 that still opens.
   it gains the path that writes the next table and the guard that holds every earlier table to its
   declared hash.
 - A published-link corpus holds real `e.` fragments per table version, each pinned to the loadout it
-  opens to. A version whose table is committed but whose corpus is empty fails the suite.
+  opens to. A version the registry holds whose corpus is empty fails the suite.
 - The bench publishes and exports a link in the current table version whatever version it opened, so
   a loadout that arrived on an older link is shared in the version this release writes.
 - Where the current table cannot represent a loadout an older table carried, the bench publishes no
@@ -49,7 +49,8 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   `GRADE_BITS`, the modification widths, `MODIFICATION_SLOTS` and `MOUNTS` are derived from the one
   imported table at module load, so all of them are recoverable per version; they move into the
   per-version codec. `CURRENT_TABLE_VERSION` is read from that table's stamp and becomes the
-  registry's, because a current version is a property of the registry rather than of a table.
+  registry's `CURRENT_EQUIPMENT_TABLE_VERSION`, because a current version is a property of the
+  registry rather than of a table.
 - A registry beside the codec, holding one codec per published version and the current table
   version.
 - `scripts/generate-equipment-link-codec-tables.mjs` — `TABLE_VERSION` and the output path are
@@ -58,7 +59,9 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   mint a table today.
 - `package.json` — the `codec:tables:equipment` script formats `equipment-link-table-1.json` by
   name.
-- `src/app/domain/equipment/loadout-link/equipment-link-codec.spec.ts`, a new published-link corpus
-  fixture and its suite, and the `equipment/link` entry in `e2e/coverage-ledger.ts`.
+- `src/app/domain/equipment/loadout-link/equipment-link-codec.spec.ts`,
+  `src/app/application/equipment/loadout-link.spec.ts`, a new published-link corpus fixture and
+  its suite, `e2e/equipment-link.spec.ts` and the `equipment/link` entry in
+  `e2e/coverage-ledger.ts`.
 - `docs/equipment-link-codec.md`.
 - No package dependency changes. `@elite-dangerous-almanac/core` stays the source of every identity.

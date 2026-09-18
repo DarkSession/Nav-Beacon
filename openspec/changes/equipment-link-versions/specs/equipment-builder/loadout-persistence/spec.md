@@ -74,8 +74,8 @@ can build.
 
 A link the bench publishes into the fragment or offers for export MUST name the
 current table version, whatever version the loadout arrived on. Where the current
-table cannot represent the loadout, no link MUST be published or offered and the
-loadout on the bench MUST be left as it is. An equipment fragment already in the
+table cannot represent the loadout, the application MUST NOT publish or offer a
+link, and the loadout on the bench MUST be left as it is. An equipment fragment already in the
 address MUST be removed, so the address names no loadout the bench cannot share,
 and a fragment belonging to another tool MUST be left as it is. The Commander MUST
 be told what refused it — the mount, or the suit where the suit is what the current

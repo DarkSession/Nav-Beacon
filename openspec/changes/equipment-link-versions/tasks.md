@@ -18,23 +18,27 @@
 
 - [ ] 2.1 Add a registry beside the codec: a `ReadonlyMap` holding one codec per version, each built
       from a statically imported table, exported with `CURRENT_EQUIPMENT_TABLE_VERSION`. Point the
-      comment where it is declared at the design's size reason rather than restating it. Verify the
-      map returns a codec for version 1 and for no other version, and that
-      `CURRENT_EQUIPMENT_TABLE_VERSION` is the highest version the map holds.
+      comment where it is declared at `docs/equipment-link-codec.md`, which carries the size reason
+      and does not move when this change is archived. Verify the map returns a codec for version 1
+      and for no other version, and that `CURRENT_EQUIPMENT_TABLE_VERSION` is the highest version the
+      map holds.
 - [ ] 2.2 Have `decodeEquipmentLinkFragment(fragment, codecs = EQUIPMENT_CODECS_BY_TABLE_VERSION)`
       read the version field first and select the codec the payload names, keeping the function
       synchronous, and verify a version 1 fragment decodes to the same loadout as before the change.
-- [ ] 2.3 Refuse a payload naming a version the given map does not hold with `unsupportedTableVersion`,
-      the internal message naming the version read and the versions carried, and verify the refusal
-      reaches the bench as `link.error.unsupportedTableVersion` through `LinkErrorMapper` with the
-      restored loadout unchanged and no catalogue key added.
+- [ ] 2.3 Refuse a payload naming a version the given map does not hold with
+      `unsupportedTableVersion`. Have the internal message name the version read and the versions
+      carried. Verify the refusal reaches the bench as `link.error.unsupportedTableVersion` through
+      `LinkErrorMapper`, that the restored loadout is unchanged, and that no catalogue key is added.
 - [ ] 2.4 Keep `encodeEquipmentLinkFragment` writing the current version whatever version was read,
       and verify a loadout decoded from a version 1 fragment re-encodes to a fragment naming the
       current version and restoring the same loadout.
 - [ ] 2.5 Drive `LoadoutLinkCoordinator` with a codec that refuses the open loadout. Verify the link
       state is `refused` and carries the slot. Verify an equipment fragment already in the address is
       removed, and a fragment belonging to another tool is left as it is. Verify the loadout on the
-      bench is untouched and no export is offered.
+      bench is untouched. Verify no link is offered for export, and that the structured payload and
+      the readable summary still are. Verify the refusal reaches the Commander through
+      `LinkErrorMapper` in the equipment wording, naming the mount by its package name or the suit,
+      and the reason.
 
 ## 3. Hold the published table immutable
 
@@ -42,11 +46,10 @@
       rather than writing the file name down, and change the `codec:tables:equipment` script to
       format `equipment-link-table-*.json`. Verify `pnpm run codec:tables:equipment` reproduces the
       committed table with the working tree clean afterwards.
-- [ ] 3.2 Give the generator the minting path the build-link generator carries: where the file for
-      `TABLE_VERSION` is absent and the version below it is committed it writes it, and where the
-      committed file's payload has moved it fails and names the version the new content belongs
-      under, exactly as
-      `generate-build-link-codec-tables.mjs` does. Today `TABLE_VERSION` reaches only the messages
+- [ ] 3.2 Give the generator a minting path. Where the file for `TABLE_VERSION` is absent and the
+      version below it is committed, it writes it; the published-version sweep of task 3.3 supplies
+      that condition, as it does for build-link table 2. Where the committed file's payload has
+      moved, it fails and names the version the new content belongs under. Today `TABLE_VERSION` reaches only the messages
       and the `$generated` stamp, so raising it to 2 rewrites table 1 in place stamped as version 2,
       and `CURRENT_TABLE_VERSION` is read back from that stamp. Once 3.1 derives the path, verify in
       `test:scripts`, against a temporary directory, that raising
@@ -81,24 +84,32 @@
 
 ## 5. State the behaviour
 
-- [ ] 5.1 Rewrite the passages of `docs/equipment-link-codec.md` this change makes false: the binary
-      body's preamble, which says the widths are derived "at module load" where they are now derived
-      per version; the generator paragraph, which names "both refusals" where there are more; the
-      paragraph stating that the table is imported statically because "there is one of them" and that
-      `build-link-codec-loader.ts` "is the one to copy"; and the Status section's closing that "the
-      version handling described above is what the first change to it needs". State instead that a
-      published table is immutable, that a payload names the table that decodes it, and that the
-      registry is synchronous because the equipment table is 3,021 bytes where a build-link table is
-      about 198 KB. Verify every size and corpus figure in the document is the measured one, and that
-      the per-table size and the table count are both stated.
-- [ ] 5.2 Add to the `equipment/link` entry in `e2e/coverage-ledger.ts` the assertion that a
-      published `e.` link opens against the table version its payload names, and the assertion that a
-      payload naming a table version this application does not carry is refused where the Commander
-      is, worded so it does not read as a duplicate of the existing line about a link this version
-      cannot read. The assertion that a link from an earlier published table still opens belongs to
-      the change that mints table 2, because version 1 is current and no journey can produce one.
-      Verify `pnpm run policy:specs` reports no violation and each assertion names the suite that
-      carries it.
+- [ ] 5.1 Rewrite the passages of `docs/equipment-link-codec.md` this change makes false:
+  - the binary body's preamble, which derives the widths "at module load" where they are now derived
+    per version;
+  - the generator paragraph, which names "both refusals" where there are more;
+  - the paragraph holding that the table is imported statically because "there is one of them" and
+    that `build-link-codec-loader.ts` "is the one to copy";
+  - the Status section's closing, that "the version handling described above is what the first
+    change to it needs".
+
+  Verify no passage still derives the widths at module load, names a single table, or points at
+  `build-link-codec-loader.ts` as the pattern to copy.
+
+- [ ] 5.2 State in the same document that a published table is immutable, that a payload names the
+      table that decodes it, and that the registry is synchronous because the equipment table is
+      3,021 bytes where a build-link table is about 198 KB. Verify every size figure in the document
+      is the measured one, and that the per-table size and the table count are both stated.
+- [ ] 5.3 Extend the `equipment/link` journey in `e2e/equipment-link.spec.ts` with a literal `e.`
+      fragment naming a table version this application does not carry, captured from task 4.5's
+      test-only table. Verify the bench states the refusal where the Commander is and leaves the open
+      loadout alone.
+- [ ] 5.4 Add two assertions to the `equipment/link` entry in `e2e/coverage-ledger.ts`: that a
+      published `e.` link opens against the table version its payload names, and that a payload
+      naming a table version this application does not carry is refused where the Commander is. Word
+      the second so it does not read as a duplicate of the existing line about a link this version
+      cannot read. Verify `pnpm run policy:specs` reports no violation, and that the journey carries
+      a test for each assertion added.
 
 ## 6. Verification
 

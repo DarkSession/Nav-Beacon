@@ -28,8 +28,8 @@ text, which `LinkErrorMapper` already states from a catalogue key; the requireme
 **Goals:**
 
 - Every published `e.` link keeps opening, with no cut-over and no dead links.
-- The version-to-table map is the one place a committed table is registered, and a registered
-  version with no corpus entry fails the suite.
+- The registry is the one place a committed table is registered, and a registered version with no
+  corpus entry fails the suite.
 
 **Non-Goals:**
 
@@ -60,7 +60,7 @@ size. `docs/equipment-link-codec.md` records the same choice. If the equipment t
 the build-link table's order of magnitude, the decision is worth revisiting, and moving to the async
 shape then is the refactor `build-link-codec-loader.ts` already demonstrates.
 
-**The registry is a parameter with a default, which is the seam a test supplies a table through.**
+**The registry is a parameter with a default, which is the seam a test supplies a codec through.**
 `decodeEquipmentLinkFragment(fragment, codecs = EQUIPMENT_CODECS_BY_TABLE_VERSION)` reads the
 version field and selects from the map it was given. A suite that wants a second version passes a
 map holding version 1 beside a codec it built itself, and the function under test is the shipped
@@ -108,7 +108,9 @@ this shape and the equipment corpus mirrors it.
 **The corpus starts with version 1 only, so version selection is unexercised across versions until a
 real table 2 exists** → A suite builds a test-only table and passes it through the registry
 parameter, which exercises the shipped selection without committing a table. The guard fails the
-suite where a real version arrives with no corpus entry.
+suite where a real version arrives with no corpus entry. The coverage ledger does not register an
+assertion that a link from an earlier published table opens: version 1 is current, so no journey can
+produce such a link, and the change that mints table 2 is where that assertion belongs.
 
 **A synchronous registry means every published table is in the initial bundle** → Accepted at the
 size stated in the decision above. What a link may cost is a separate bound, and
