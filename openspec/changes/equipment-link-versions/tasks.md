@@ -43,7 +43,9 @@
       Verify the loadout on the bench is untouched. Verify no link is offered for export, and that
       the structured payload and the readable summary still are. Verify the refusal reaches the
       Commander through `LinkErrorMapper` in the equipment wording, naming the mount by its package
-      name, or the suit where what refused sits on the suit, and the reason.
+      name, or the suit where what refused sits on the suit, and the reason. Verify that wording is
+      about a loadout that could not be written rather than about a link that could not be read, and
+      that a refusal on the way in keeps the wording it has.
 - [x] 2.6 Verify a default loadout the current table cannot represent takes no record: autosave
       stores none, the saved list holds no entry for it, and the refusal is stated while that
       loadout is still on the bench.

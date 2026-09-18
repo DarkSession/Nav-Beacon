@@ -65,7 +65,10 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   name.
 - `src/app/application/build-link/link-error.mapper.ts` and `src/app/i18n/locales/en.json` and
   `de.json` — `unsupportedTableVersion` falls through to the ship wording, which names a build
-  link. It gains an equipment entry beside `invalidPayload` and `unknownIdentity`.
+  link. It gains an equipment entry beside `invalidPayload` and `unknownIdentity`. The mapper also
+  gains the direction a refusal was going, because a loadout the current table cannot write is
+  refused with nothing having arrived, and `link.error.equipment.outgoing.*` says so for the four
+  codes the encoder raises.
 - `src/app/domain/equipment/loadout-link/equipment-link-codec.spec.ts`,
   `src/app/application/equipment/loadout-link.spec.ts`,
   `scripts/generate-equipment-link-codec-tables.test.mjs`, a new published-link corpus fixture and

@@ -256,10 +256,9 @@ export class LoadoutLinkCoordinator {
    * A loadout that now shares says nothing about the link the Commander opened
    * and could not read, and that notice is the only record they have of it.
    *
-   * Read untracked, like every other read on this path: a publisher that
-   * subscribed to the refusal would run again the moment a link was refused on
-   * the way in, and write the bench's own fragment over the one the Commander
-   * was handed.
+   * Read untracked, like the loadout above: a publisher that subscribed to the
+   * refusal would run again the moment a link was refused on the way in, and
+   * write the bench's own fragment over the one the Commander was handed.
    */
   #settleOutgoing(): void {
     if (untracked(() => this.#failure())?.direction === 'outgoing') {
@@ -267,6 +266,14 @@ export class LoadoutLinkCoordinator {
     }
   }
 
+  /**
+   * Takes down a fragment this tool owns, and leaves every other one alone.
+   *
+   * The fragment is read tracked, and it is the one tracked read the publisher
+   * makes. That subscription is what takes a refused link out of an address the
+   * bench holds no loadout for: the arrival changes the fragment, the publisher
+   * runs again, and this time there is something of ours to remove.
+   */
   #clear(): void {
     if (recognizeEquipmentLinkFragment(this.#location.fragment()).kind === 'unrelated') {
       return;

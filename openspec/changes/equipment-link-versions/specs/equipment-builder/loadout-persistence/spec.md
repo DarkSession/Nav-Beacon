@@ -89,7 +89,10 @@ fragment already in the address is stated by "The address carries the loadout on
 the bench" (024/FR-003). The Commander MUST
 be told what refused it — the mount, named by `getPersonalMountName` in
 `@elite-dangerous-almanac/core/i18n/suits`, or the suit where what refused sits on
-the suit rather than on a mount — and the reason.
+the suit rather than on a mount — and the reason. The refusal MUST be said of the
+loadout that could not be written, not of a link that could not be read: nothing
+arrived, and a Commander told their own loadout could not be read would go
+looking for a link that never existed.
 
 Source: 013/FR-020, 013/SC-005.
 
@@ -121,6 +124,8 @@ Source: 013/FR-020, 013/SC-005.
 - **AND** the loadout on the bench is left as it is
 - **AND** the Commander is told what refused it — the mount, or the suit — and the
   reason
+- **AND** the refusal says the loadout could not be written, not that a link could
+  not be read
 
 ### Requirement: The address carries the loadout on the bench
 

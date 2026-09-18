@@ -106,6 +106,14 @@ and the delta states it rather than building it. Substituting a neighbouring ide
 forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench
 intact.
 
+**A refusal is worded for the direction the link was going.** Every equipment refusal the bench
+could show until now was about a link that arrived and could not be read. This one is about a
+loadout that could not be written, and nothing arrived: a Commander told their own loadout could not
+be read would go looking for a link that never existed. The mapper therefore takes the direction
+alongside the tool, and `link.error.equipment.outgoing.*` carries the four codes the encoder raises.
+Where no outgoing wording is stated the incoming key stands, so the split adds wording rather than
+replacing any.
+
 **The corpus is real fragments, not regenerated ones.** A fixture holds published `e.` fragments per
 version with the loadout each opens to. Regenerating the expected value from the changed code would
 make the test agree with whatever that code does; a literal fragment captured from the shipped

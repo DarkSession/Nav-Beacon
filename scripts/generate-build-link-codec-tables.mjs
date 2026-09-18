@@ -26,7 +26,7 @@ const tablePathFor = (version) =>
 const outputPath = process.env.CODEC_TABLE_OUTPUT_PATH ?? tablePathFor(TABLE_VERSION);
 
 /**
- * The table versions a decoder still answers for, oldest first.
+ * The table versions below the one this run writes, oldest first.
  *
  * The application is published, so every one of these files is a promise to the links already
  * shared against it: a Commander's link names the table that decodes it, and that table has to
@@ -39,7 +39,7 @@ const outputPath = process.env.CODEC_TABLE_OUTPUT_PATH ?? tablePathFor(TABLE_VER
  * from the number rather than from the directory also means a deleted table is a missing file here,
  * where the refusal below explains it, rather than a version that quietly leaves the guarded set.
  */
-const publishedTableVersions = () =>
+const earlierTableVersions = () =>
   Array.from({ length: TABLE_VERSION - 1 }, (_entry, index) => index + 1);
 const almanacPackageUrl = new URL(
   '../../package.json',
@@ -721,7 +721,7 @@ const readTable = async (path) => JSON.parse(await readFile(path, 'utf8').catch(
  * silently changes what an already-shared link means. Reading them back on every run is what
  * turns that from a thing to remember into a thing the build refuses.
  */
-for (const version of publishedTableVersions()) {
+for (const version of earlierTableVersions()) {
   const path = tablePathFor(version);
   const table = await readTable(path);
   if (table === null) {
