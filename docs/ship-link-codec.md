@@ -646,7 +646,7 @@ edit: the generator derives the versions it must leave alone from the current ta
 table cannot leave the guarded set by being deleted or forgotten. The suites then need the new
 table's content hash and its re-pinned corpus values, the retired table's hash pinned beside them,
 the table each of them reads named, and a link written with the new table added to the published-link
-corpus: the build states which pin failed and where.
+corpus beside its `TABLE_BY_VERSION` row: the build states which pin failed and where.
 
 The public asynchronous loader initially imports only the generic envelope, radix, and CRC code.
 It radix-decodes the envelope and verifies CRC-32 once before using the table-version field, then
@@ -700,8 +700,9 @@ reads every entry twice: once through the loader, which picks the table out of t
 an arriving link is read, and once against the table the corpus files it under, which is what proves
 the entry is filed where it belongs. It then rewrites each one with the current table and reads the
 rewrite back on the same build, because a link is allowed to arrive in an older format and leave in
-the newest one. The suite fails until a newly minted table has both a row of its own and a link, so
-the corpus gains a version whenever `CURRENT_TABLE_VERSION` does and never loses one.
+the newest one. The suite fails until a newly minted table has both a row in the suite's own
+`TABLE_BY_VERSION` and a link in the corpus, so the corpus gains a version whenever
+`CURRENT_TABLE_VERSION` does and never loses one.
 
 A build the catalogue does not fit is refused rather than approximated. Outfitting sells a
 Supercruise Overcharge drive only at the mount's own size, so a link naming table 1 that fits one to

@@ -219,9 +219,9 @@ describe('OffenceAnalysis', () => {
     });
 
     it('names the caustic type in the legend, in the active locale', () => {
-      // The type 0.2.13 added. The legend is the whole reading, so the label
-      // reaching it through the localisation layer is what says the new type is
-      // stated rather than merely projected.
+      // The legend is the whole reading, so the caustic label reaching it
+      // through the localisation layer is what says the type is stated rather
+      // than merely projected.
       const loadout = everyStateBuild();
       const split = BuildMetrics.of(loadout).weaponMetrics().total.damageByType;
 

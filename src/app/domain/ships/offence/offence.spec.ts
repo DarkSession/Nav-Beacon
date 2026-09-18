@@ -257,9 +257,9 @@ describe('projectDamageSegments', () => {
   });
 
   it('gives caustic its own segment, in the package\u2019s own order', () => {
-    // The one type 0.2.13 added. Pinned by name and by position, because a
-    // projection that silently dropped it would still divide, still sum to one
-    // and still agree with the split on every segment it did keep.
+    // Caustic is pinned by name and by position, because a projection that
+    // silently dropped it would still divide, still sum to one and still agree
+    // with the split on every segment it did keep.
     const split = BuildMetrics.of(everyStateBuild()).weaponMetrics().total.damageByType;
 
     const segments = projectDamageSegments(split);

@@ -1,5 +1,45 @@
 ## MODIFIED Requirements
 
+### Requirement: Payload contents
+
+The payload MUST contain only non-derived modelled state: package-resolved identities, game slot
+keys, ordinary and package-identified pre-engineering, grade, enabled state, priority, ship name and
+ident. Every encoded identity MUST resolve in the installed package. A module's package variant and
+later ordinary engineering MUST both survive. Package-defaulted fixed modules MAY be implicit in a
+payload because reconstruction always restores them. Enabled state and priority MUST be carried for
+every fitted module except those the package prices at no power draw at all: a module whose draw the
+package does not publish MUST keep its state, because an unpublished figure is not a zero. That is
+the rule the outfitting mount card applies when it decides whether to draw a power chip, and a chip a
+Commander can set is a value a link has to carry.
+
+Source: 001/FR-016.
+
+#### Scenario: A module carries a package variant and later engineering
+
+- **WHEN** a fitted module has a package-identified pre-engineering and ordinary engineering applied after it
+- **THEN** both survive the round trip through the payload
+
+#### Scenario: A capture states a package variant without its modifiers
+
+- **WHEN** a fitted module carries a package variant and the capture it arrived in states no modifiers for it
+- **THEN** the payload carries the variant identity and the build survives the round trip
+
+#### Scenario: The package publishes no power draw for a module
+
+- **WHEN** a fitted module's power draw is not published by the package
+- **THEN** the payload carries its enabled state and priority
+
+#### Scenario: The package prices a module at no power draw
+
+- **WHEN** the package prices a fitted module at no power draw at all
+- **THEN** the payload need not carry its enabled state and priority
+
+#### Scenario: A valid link is opened
+
+- **WHEN** a Commander opens a valid build link
+- **THEN** the modelled build is restored
+- **AND** no named save is created
+
 ### Requirement: Versioned codec
 
 The application-owned codec MUST be versioned, use package identities and preserve all published

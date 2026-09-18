@@ -1,3 +1,4 @@
+import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import type { BuildLinkCodecTables } from './build-link-codec';
 import { createBuildLinkCodec } from './build-link-codec';
 import {
@@ -27,6 +28,23 @@ const corpus = Object.entries(publishedLinks).map(([version, entries]) => ({
 }));
 
 /**
+ * Which mount holds which package variant, by the blueprint the package identifies it from.
+ *
+ * `minimalState` reads a module's blueprint and grade, and a package variant's blueprint and grade
+ * are usually craftable as ordinary engineering too. A decode that lost the variant and left the
+ * ordinary roll behind would therefore project the same state, so the identity is read separately.
+ */
+function variantsOf(build: ShipLoadout): Record<string, string> {
+  return Object.fromEntries(
+    build
+      .fittedModules()
+      .filter((module) => module.preEngineeredVariant !== null)
+      .map((module) => [module.slot.toLowerCase(), module.preEngineeredVariant!.blueprintSymbol])
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+/**
  * Links that have been out in the world, and the builds they have to keep opening.
  *
  * A build link is a promise with no expiry: a Commander who saved one opens it against the
@@ -41,7 +59,11 @@ describe('published build links', () => {
     expect(versions).toEqual(
       Array.from({ length: CURRENT_TABLE_VERSION }, (_unused, index) => index + 1),
     );
-    expect(Object.keys(TABLE_BY_VERSION).map(Number).sort()).toEqual(versions);
+    expect(
+      Object.keys(TABLE_BY_VERSION)
+        .map(Number)
+        .sort((left, right) => left - right),
+    ).toEqual(versions);
     for (const { entries } of corpus) expect(entries.length).toBeGreaterThan(0);
   });
 
@@ -53,8 +75,11 @@ describe('published build links', () => {
       // still the one that made it.
       const pinned = createBuildLinkCodec(version, TABLE_BY_VERSION[version]!);
 
-      for (const { fragment, opensTo } of entries) {
-        expect(minimalState(await decodeBuildLinkFragment(fragment))).toEqual(opensTo);
+      for (const { fragment, opensTo, variants } of entries) {
+        const build = await decodeBuildLinkFragment(fragment);
+
+        expect(minimalState(build)).toEqual(opensTo);
+        expect(variantsOf(build)).toEqual(variants);
         expect(minimalState(pinned.decodeBuildLinkFragment(fragment))).toEqual(opensTo);
       }
     }
@@ -65,10 +90,12 @@ describe('published build links', () => {
     // the workspace does the moment an older link opens. What is not allowed is the build moving
     // on the way through.
     for (const { entries } of corpus) {
-      for (const { fragment, opensTo } of entries) {
+      for (const { fragment, opensTo, variants } of entries) {
         const rewritten = await encodeBuildLinkFragment(await decodeBuildLinkFragment(fragment));
+        const reread = await decodeBuildLinkFragment(rewritten);
 
-        expect(minimalState(await decodeBuildLinkFragment(rewritten))).toEqual(opensTo);
+        expect(minimalState(reread)).toEqual(opensTo);
+        expect(variantsOf(reread)).toEqual(variants);
       }
     }
   });

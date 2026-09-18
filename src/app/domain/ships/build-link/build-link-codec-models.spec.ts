@@ -7,9 +7,9 @@ import codecTable from './codec-table-2.json';
 import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture.json';
 
 /**
- * The current table carries the symbol models the generator pins alongside its catalogue. The boolean and
- * power skews are defensible priors for real builds (grades are usually maximal, engineered
- * modules usually carry an experimental effect, identities are almost always contextual,
+ * The current table carries the symbol models the generator pins alongside its catalogue. The
+ * boolean and power skews are defensible priors for real builds (grades are usually maximal,
+ * engineered modules usually carry an experimental effect, identities are almost always contextual,
  * explicit enabled states are usually `on`, a changed mount is usually filled rather than
  * emptied). Names get English-like character weights while idents get callsign-like ones
  * (uppercase, digits, dash). Back-reference indexes use per-run adaptive contexts;

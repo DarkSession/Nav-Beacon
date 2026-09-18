@@ -67,8 +67,9 @@ shared against it. Editing it would change what those links mean.
 
 The new content is therefore minted as table 2, and table 1 stays exactly as it was published. The
 codec architecture already carries this: the payload's first field is the table version, and
-`build-link-codec-loader.ts` imports the table that field names. Minting a version costs three
-edits and one new file, and touches no earlier table.
+`build-link-codec-loader.ts` imports the table that field names. Minting a version costs two edits
+in the codec and one new file, plus the pins and the corpus entry the suites carry, and touches no
+earlier table.
 
 The alternative considered was keeping one table and editing it, which the project did nine times
 while it was pre-release and no link could exist. That exception depended on there being no

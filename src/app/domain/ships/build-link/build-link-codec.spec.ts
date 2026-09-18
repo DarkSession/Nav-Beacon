@@ -9,6 +9,7 @@ import { ArithmeticEncoder } from './build-link-arithmetic';
 import { BuildLinkCodecError, createBuildLinkCodec } from './build-link-codec';
 import { encodeBuildLinkBody } from './build-link-payload';
 import {
+  CURRENT_TABLE_VERSION,
   decodeBuildLinkFragment as decodeBuildLinkFragmentOnDemand,
   encodeBuildLinkFragment as encodeBuildLinkFragmentOnDemand,
 } from './build-link-codec-loader';
@@ -23,7 +24,6 @@ import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture
 import { makeFullyEngineeredAnaconda, minimalState } from './build-link-codec.spec-helpers';
 
 /** The table a new link names, and so the one this suite encodes and measures against. */
-const CURRENT_TABLE_VERSION = 2;
 const codecTable = codecTable2Json;
 /** The table already published, kept readable for the links shared against it. */
 const publishedCodecTable1 = codecTable1Json;
@@ -435,7 +435,7 @@ describe('build-link codec', () => {
   it('pins which Mercenary articles the shop sells with an experimental effect', () => {
     // Twelve of the 25 arrive with an effect already on them. The record encodes the effect against
     // that pinned value rather than writing it out, so a row gaining or losing one changes the bit
-    // layout of every link that names it. Pin the ten so it cannot move unnoticed.
+    // layout of every link that names it. Pin the twelve so it cannot move unnoticed.
     const baked = PRE_ENGINEERED_MODULES.filter(
       ({ acquisition, experimentalEffectSymbol }) =>
         acquisition === 'mercenary' && experimentalEffectSymbol !== undefined,
@@ -500,12 +500,10 @@ describe('build-link codec', () => {
   });
 
   it('fits every Mercenary purchase stating exactly the modifiers its article moves', () => {
-    // What makes the pre-engineered record sufficient for a purchase. The package publishes no
-    // fixed stat block for a Mercenary article. What it moves is whatever its baked experimental
-    // effect moves, and the fitted module states that and nothing else. That is the same block
-    // `getPreEngineeredJournalModifiers` reports, which is what the record replays. An article
-    // moving nothing carries no `Modifiers` key rather than an empty array, so the two are
-    // compared through `?? []`.
+    // What makes the pre-engineered record sufficient for a purchase. A module fitted from the
+    // candidate list states the block the package publishes for the article and nothing else. That
+    // is the same block `getPreEngineeredJournalModifiers` reports, which is what the record
+    // replays.
     let covered = 0;
     for (const variant of mercenaryVariants()) {
       const build = ShipLoadout.empty('Anaconda');
@@ -588,9 +586,9 @@ describe('build-link codec', () => {
   });
 
   it('refuses a Mercenary purchase whose capture states modifiers the record cannot restore', () => {
-    // The package publishes no modifier block for a Mercenary purchase, so the pre-engineered
-    // record restores none. A capture that states them would decode as a stock module, which is
-    // why this is refused rather than encoded.
+    // The record replays the block the package publishes for the article. A capture stating
+    // anything else would decode to those published values instead of the ones it carries, which
+    // is why this is refused rather than encoded.
     for (const variant of mercenaryVariants()) {
       const slot = mercenarySlot(variant);
       const source = mercenaryBuild(variant, variant.grade, [

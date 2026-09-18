@@ -403,6 +403,10 @@
             }
           }
         ]
+      },
+      "variants": {
+        "military01": "ModuleReinforcement_HeavyDuty",
+        "slot07_size5": "ModuleReinforcement_HeavyDuty"
       }
     },
     {
@@ -789,10 +793,20 @@
             }
           }
         ]
+      },
+      "variants": {
+        "hugehardpoint1": "Weapon_LongRange",
+        "largehardpoint1": "Weapon_LongRange",
+        "largehardpoint2": "Weapon_LongRange",
+        "largehardpoint3": "Weapon_LongRange",
+        "mediumhardpoint1": "Weapon_LongRange",
+        "mediumhardpoint2": "Weapon_LongRange",
+        "slot06_size5": "ModuleReinforcement_HeavyDuty",
+        "slot07_size5": "ModuleReinforcement_HeavyDuty"
       }
     },
     {
-      "note": "An Explorer NX carrying a Mercenary Long Range Detailed Surface Scanner and a pre-engineered size-8 frame shift drive.",
+      "note": "An Explorer NX carrying a Mercenary Long Range Detailed Surface Scanner and a size-8 overcharge-booster frame shift drive.",
       "fragment": "b.LKk7XjJbhIg-2VUY1jUfv6wo9w586EpUF6,QI1Hj2SG.dCRK:msABhJRj,F@mWhL!Xy0CKs5WAazLDbtBTbi",
       "opensTo": {
         "shipSymbol": "explorer_nx",
@@ -978,6 +992,9 @@
             "priority": 3
           }
         ]
+      },
+      "variants": {
+        "slot12_size1": "DetailedSurfaceScanner_LongRange"
       }
     }
   ],
@@ -1385,6 +1402,10 @@
             }
           }
         ]
+      },
+      "variants": {
+        "military01": "ModuleReinforcement_HeavyDuty",
+        "slot07_size5": "ModuleReinforcement_HeavyDuty"
       }
     },
     {
@@ -1771,10 +1792,20 @@
             }
           }
         ]
+      },
+      "variants": {
+        "hugehardpoint1": "Weapon_LongRange",
+        "largehardpoint1": "Weapon_LongRange",
+        "largehardpoint2": "Weapon_LongRange",
+        "largehardpoint3": "Weapon_LongRange",
+        "mediumhardpoint1": "Weapon_LongRange",
+        "mediumhardpoint2": "Weapon_LongRange",
+        "slot06_size5": "ModuleReinforcement_HeavyDuty",
+        "slot07_size5": "ModuleReinforcement_HeavyDuty"
       }
     },
     {
-      "note": "An Explorer NX carrying a Mercenary Long Range Detailed Surface Scanner and a pre-engineered size-8 frame shift drive.",
+      "note": "An Explorer NX carrying a Mercenary Long Range Detailed Surface Scanner and a size-8 overcharge-booster frame shift drive.",
       "fragment": "b.WCsmKulyEt8JL7Em6/.SxsUrZ95-Xf@/9cG7n8fzFPHR.5:8H0issTDshZma4F1cEc@-TcHZAqG.kq68G34b",
       "opensTo": {
         "shipSymbol": "explorer_nx",
@@ -1960,6 +1991,9 @@
             "priority": 3
           }
         ]
+      },
+      "variants": {
+        "slot12_size1": "DetailedSurfaceScanner_LongRange"
       }
     }
   ]

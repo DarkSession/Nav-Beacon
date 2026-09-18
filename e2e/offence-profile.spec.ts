@@ -305,10 +305,10 @@ test.describe('reading the build', () => {
   test('states the caustic type where the build deals it', async ({ page }) => {
     await openOffenceDealingCaustic(page);
 
-    // The whole of what 0.2.13 added, as a Commander meets it: a legend line
-    // naming the type, an amount and a share beside it, and a segment of the
-    // bar to go with the line. Nothing here writes the amount down — the page
-    // is asked what it drew.
+    // The caustic reading as a Commander meets it: a legend line naming the
+    // type, an amount and a share beside it, and a segment of the bar to go
+    // with the line. Nothing here writes the amount down — the page is asked
+    // what it drew.
     const entries = page.locator('ednb-offence-analysis .split__entry');
     const segments = page.locator('ednb-offence-analysis .split__segment');
     const caustic = entries.filter({
