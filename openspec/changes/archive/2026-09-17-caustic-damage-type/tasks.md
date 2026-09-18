@@ -100,8 +100,9 @@
 - [ ] 5.5 Run the five Firefox projects of the responsive matrix, and verify each project passes.
 - [ ] 5.6 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
       complete ten-project Playwright matrix pass.
-- [ ] 5.7 Make the responsive matrix pass on a container that is also running the unit suite,
-      and verify the five Chromium projects pass together under that load twice in a row.
+- [ ] 5.7 Make the responsive matrix pass on a container that is also running the unit suite, which
+      is how the defect reproduces rather than a load `pnpm run check` imposes, and verify the five
+      Chromium projects pass together under it twice in a row.
 
 Tasks 5.5 and 5.6 are open. Firefox is unobtainable in the environment this change was verified in:
 no binary is on disk, and the proxy refuses every download host Playwright offers. `pnpm run check`
@@ -119,14 +120,17 @@ loaded sweep.
 
 Task 5.7 carries the defect the load exposes, and it is wider than one helper. `buildStockHull` in
 `e2e/shell.ts` presses with a two-second budget inside a fifteen-second retry, where
-`openRecordFromLibrary` in the same file presses with five inside thirty, and a container running a
-second suite exceeds two seconds on a press the browser answers. Widening `buildStockHull` to its
-sibling's figures was measured and does not settle the matrix: `chromium-desktop` then passes 723
-under that load, but `cost-and-materials.spec.ts:1006` starts exceeding its own forty-five-second
-case budget in `chromium-tablet-portrait`, which passed before. A press held five seconds on a stale
-control instead of two spends three more of the budget the case has for everything else, so the
-wider figure trades one exhausted budget for another. The helper keeps the narrower figures until a
-fix is measured that holds across all five projects.
+`openRecordFromLibrary` in the same file presses with five inside thirty.
+
+Widening `buildStockHull` to its sibling's figures — five seconds on the press, thirty on the retry
+— was measured twice under the same load. `chromium-desktop` passes 723 both times;
+`cost-and-materials.spec.ts:1006` exceeds its own forty-five-second case budget in
+`chromium-tablet-portrait` both times, where neither sweep before the widening failed it. The
+failure is a bare case timeout: no step is named, so what the case spent the extra time on is not
+recorded. The wider press is the leading explanation — the case reaches `buildStockHull` through
+`openStockBuild`, and a failed attempt then holds five seconds instead of two, inside a retry that
+spans thirty instead of fifteen — but that is a reading of the figures rather than a measurement.
+The helper keeps the narrower figures until a fix is measured that holds across all five projects.
 
 The defect is therefore the matrix under a loaded container, not any one case. Nothing is skipped,
 quarantined or granted a retry of its own, and no budget is widened on an unmeasured argument.
