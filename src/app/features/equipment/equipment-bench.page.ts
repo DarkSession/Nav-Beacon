@@ -343,8 +343,10 @@ export class EquipmentBenchPage {
    * words, never by its journal key.
    */
   readonly linkFailure = computed(() => {
-    const failure = this.#links.failure();
-    return failure === null ? null : this.#linkErrors.describe(failure, 'equipment');
+    const refused = this.#links.failure();
+    return refused === null
+      ? null
+      : this.#linkErrors.describe(refused.failure, 'equipment', refused.direction);
   });
 
   /** Whether saving is stopped until the Commander asks for it again. */

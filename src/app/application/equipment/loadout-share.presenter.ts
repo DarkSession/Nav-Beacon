@@ -69,7 +69,9 @@ export class LoadoutSharePresenter {
 
   readonly refusal = computed(() => {
     const link = this.#link.link();
-    return link.kind === 'refused' ? this.#errors.describe(link.failure, 'equipment') : null;
+    return link.kind === 'refused'
+      ? this.#errors.describe(link.failure, 'equipment', 'outgoing')
+      : null;
   });
 
   /** The whole loadout as one object, exactly as a saved record carries it. */

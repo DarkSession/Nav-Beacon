@@ -198,6 +198,13 @@ not available here", which is untrue of a recipe this release publishes and the 
 The bench says it in its own words instead: `link.error.equipment.unknownIdentity` names a suit,
 weapon or modification this version does not have. Each codec is right about its own links.
 
+The bench splits the wording a second time, by the direction the link was going. A loadout the
+current table cannot write is refused on the bench, where the Commander is, because a loadout at
+its suit's default is in no record either and one told only inside the export layer would be gone
+by the next reload. Nothing was read on that path, so the `link.error.equipment.outgoing.*` keys
+say the loadout could not be written rather than that a link could not be read. The mount detail is
+shared by both, and names the part involved rather than what happened to it.
+
 ### Length is checked twice, and the reader is the second check
 
 The envelope bounds the value's length; the reader bounds the body. The ship codec re-serialises

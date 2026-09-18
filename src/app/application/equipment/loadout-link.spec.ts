@@ -380,7 +380,10 @@ describe('LoadoutLinkCoordinator', () => {
     expect(store.autosaveRecordId()).toBeNull();
     expect(storage.entries.size).toBe(0);
     expect(store.hasLoadout()).toBe(true);
-    expect(links.failure()).toEqual({ code: 'unknownIdentity', slot: 'suit' });
+    expect(links.failure()).toEqual({
+      failure: { code: 'unknownIdentity', slot: 'suit' },
+      direction: 'outgoing',
+    });
   });
 
   it('takes the refusal down once a link is published again', () => {
@@ -403,6 +406,26 @@ describe('LoadoutLinkCoordinator', () => {
     expect(links.failure()).toBeNull();
     expect(links.link().kind).toBe('published');
     expect(location.fragmentValue).toMatch(/^e\./);
+  });
+
+  it('keeps a refused arrival standing through the first publish after it', () => {
+    // The bench publishes once the moment it opens, right after the address is
+    // read. A link that arrived unreadable is settled by another arrival and by
+    // nothing else, or that first publication would take the notice away before
+    // the Commander ever saw it (FR-021).
+    const { links, store } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    expect(links.ingest('e.notaloadoutatall').kind).toBe('refused');
+    const refused = links.failure();
+    expect(refused?.direction).toBe('incoming');
+
+    links.publish();
+
+    expect(links.failure()).toEqual(refused);
+    // And the loadout still shares: the notice is about the address, not about
+    // what is on the bench.
+    expect(links.link().kind).toBe('published');
   });
 
   it('takes the refusal down when the bench is emptied', () => {
@@ -480,6 +503,34 @@ describe('a loadout link refusal', () => {
 
     expect(detail).not.toContain('PrimaryWeapon1');
     expect(detail.length).toBeGreaterThan(0);
+  });
+
+  it('says a loadout could not be written where the refusal is on the way out', () => {
+    const { errors } = setup();
+
+    for (const code of ['unknownIdentity', 'invalidPayload', 'tooLong'] as const) {
+      const arriving = errors.describe({ code, slot: null }, 'equipment', 'incoming').message;
+      const leaving = errors.describe({ code, slot: null }, 'equipment', 'outgoing').message;
+
+      expect(leaving).toBe(BUNDLED_ENGLISH[`link.error.equipment.outgoing.${code}`]);
+      expect(leaving).not.toBe(arriving);
+      // Nothing was read on the way out, so nothing can be said to be unreadable.
+      expect(leaving).not.toContain('could not be read');
+      expect(germanCatalogue[`link.error.equipment.outgoing.${code}`]).not.toBe(leaving);
+    }
+  });
+
+  it('names the suit in words that fit a refusal in either direction', () => {
+    // The mount detail is shared by both wordings, so it says which part is
+    // involved rather than what happened to it.
+    const { errors } = setup();
+
+    for (const direction of ['incoming', 'outgoing'] as const) {
+      expect(
+        errors.describe({ code: 'invalidPayload', slot: 'suit' }, 'equipment', direction).detail,
+      ).toBe(BUNDLED_ENGLISH['link.refused.suit']);
+    }
+    expect(BUNDLED_ENGLISH['link.refused.suit']).not.toContain('could not be read');
   });
 
   it('says the suit is what failed where the codec named the suit', () => {

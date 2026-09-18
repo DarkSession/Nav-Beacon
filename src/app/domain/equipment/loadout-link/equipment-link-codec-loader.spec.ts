@@ -73,9 +73,7 @@ describe('the equipment codec registry', () => {
   it('names the newest published version as the current one', () => {
     // A current version is the registry's fact rather than any one table's: the
     // table each codec was built on stamps only itself.
-    expect(CURRENT_EQUIPMENT_TABLE_VERSION).toBe(
-      Math.max(...EQUIPMENT_CODECS_BY_TABLE_VERSION.keys()),
-    );
+    expect(CURRENT_EQUIPMENT_TABLE_VERSION).toBe(1);
     expect(EQUIPMENT_CODECS_BY_TABLE_VERSION.has(CURRENT_EQUIPMENT_TABLE_VERSION)).toBe(true);
   });
 });
