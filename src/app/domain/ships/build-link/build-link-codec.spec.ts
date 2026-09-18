@@ -968,7 +968,9 @@ describe('build-link codec', () => {
       'reconstructionFailed',
     );
     expect(error.message).toContain('Int_Hyperdrive_Overcharge_Size5_Class5');
-    expect(error.message).toContain('FrameShiftDrive');
+    // The mount travels structurally, because that is what the Commander's refusal is built
+    // from: the internal English message is never rendered.
+    expect(error.slot).toBe('FrameShiftDrive');
   });
 
   it('encodes both grades of a two-grade blueprint without a redundant bounded symbol', () => {
@@ -1130,9 +1132,10 @@ describe('build-link codec', () => {
     const emptyLink = `${baseUrl}#${emptyFragment}`;
     const typicalLink = `${baseUrl}#${typicalFragment}`;
     const largeLink = `${baseUrl}#${largeFragment}`;
-    // Frozen against table 2, the table a new link names. Table 2 is published, so these
-    // fixtures are never regenerated to make a build pass: a literal that moved would mean a
-    // link already shared had changed meaning. A catalogue move mints table 3 instead.
+    // Frozen against table 2, the table a new link names. Table 2 is fixed to the catalogue
+    // it was minted from, so these fixtures are never regenerated to make a build pass: a
+    // literal that moved would mean a link already shared had changed meaning. A catalogue
+    // move mints table 3 instead.
     expect([emptyFragment, typicalFragment, largeFragment]).toEqual([
       'b.2vapm0exwB0@N0',
       'b.1QXDMzG/i',

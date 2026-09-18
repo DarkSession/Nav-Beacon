@@ -275,10 +275,11 @@ describe('projectDamageSegments', () => {
   });
 
   it('draws every conventional type in one fixed order', () => {
-    // The catalogue deals no absolute and no unclassified damage, so no build can
-    // pin where those two sit. A split written out here can: without this the last
-    // two positions could swap and every suite would stay green, which is the
-    // failure the projection's own order record exists to prevent.
+    // The catalogue deals no unclassified damage at all, and `everyStateBuild()` fits
+    // no article that deals absolute, so no fixture build pins where those two sit. A
+    // split written out here can: without this the last two positions could swap and
+    // every suite would stay green, which is the failure the projection's own order
+    // record exists to prevent.
     const split = {
       kinetic: 1,
       thermal: 2,

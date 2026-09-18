@@ -103,10 +103,12 @@ export function allDisabledBuild(): ShipLoadout {
  *
  * Eight mounts, eight articles: an anti-xeno overlay, a caustic amount, a
  * turreted mount, an absent piercing factor, absent range fields, a continuous
- * beam, a mining blaster and an ordinary kinetic weapon. Every optional field
- * this feature can find absent is absent on at least one of them and present on
- * another, and the build carries a fixed mount beside a turreted one, because
- * the gunsight's shot sentences name them apart.
+ * beam, a mining blaster and an ordinary kinetic weapon. `armourPiercing` and
+ * both range fields are absent on at least one of them and present on another,
+ * and the build carries a fixed mount beside a turreted one, because the
+ * gunsight's shot sentences name them apart. No article in the catalogue deals
+ * unclassified damage, so that one type is absent throughout and the suite pins
+ * its position with a written-out split instead.
  */
 export function everyStateBuild(): ShipLoadout {
   const build = ShipLoadout.empty(OFFENCE_FIXTURE_HULL);

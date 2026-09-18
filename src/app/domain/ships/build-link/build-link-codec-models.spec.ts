@@ -51,9 +51,10 @@ describe('build-link codec pinned symbol models', () => {
   });
 
   it('freezes the reference corpus literals in the encode direction', () => {
-    // Frozen against table 2, the table a new link names. Table 2 is published, so these
-    // fixtures are never regenerated to make a build pass: a literal that moved would mean a
-    // link already shared had changed meaning. A catalogue move mints table 3 instead.
+    // Frozen against table 2, the table a new link names. Table 2 is fixed to the catalogue
+    // it was minted from, so these fixtures are never regenerated to make a build pass: a
+    // literal that moved would mean a link already shared had changed meaning. A catalogue
+    // move mints table 3 instead.
     // The decode direction and canonical reserialization are covered by the round-trip above.
     const fragments = referenceCorpus().map(({ source }) =>
       modelledCodec.encodeBuildLinkFragment(source),

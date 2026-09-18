@@ -656,8 +656,12 @@ function reconstructLoadout(codec: CodecContext, state: CodecState): ShipLoadout
  *
  * The package's own report is the source. Only an outcome naming the article the payload
  * supplied counts: a `defaulted` mount with no source symbol is a mount this payload
- * records as empty, which the hull stocks and `emptyTheMountsThePayloadLeavesEmpty` then
- * clears.
+ * records as empty, which the hull stocks; `emptyTheMountsThePayloadLeavesEmpty` clears
+ * the removable ones, and the package refuses to empty the rest.
+ *
+ * The mount travels as a structured value, because the message is an internal English
+ * string that is never rendered: what the Commander reads is built from the code and the
+ * slot (build-link contract, "Error presentation").
  */
 function refuseAnArticleThePackageWouldNotFit(loadout: ShipLoadout): void {
   const refused = loadout.importOutcomes.find(
@@ -670,6 +674,7 @@ function refuseAnArticleThePackageWouldNotFit(loadout: ShipLoadout): void {
     'reconstructionFailed',
     `The build link records ${refused.sourceSymbol} in ${refused.slot}, ` +
       'which the installed catalogue does not fit there.',
+    { slot: refused.slot },
   );
 }
 

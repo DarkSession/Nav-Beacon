@@ -73,7 +73,7 @@ edits and one new file, and touches no earlier table.
 The alternative considered was keeping one table and editing it, which the project did nine times
 while it was pre-release and no link could exist. That exception depended on there being no
 published links, and it is spent. The `--overwrite` flag that carried it is removed rather than left
-in place, because a flag that is never sound to use is an invitation to use it. The generator now
+in place, because a flag that is never sound to use is an invitation to use it. The generator
 re-hashes every published table before it writes, and the capacity check prices every committed
 table, so the rule is something the build holds rather than something to remember.
 
