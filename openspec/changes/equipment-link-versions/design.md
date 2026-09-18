@@ -75,14 +75,20 @@ passed in is a local argument and never reaches the registry, so the two cannot 
 
 **A payload naming an unregistered version is refused with the error the codec already has.**
 `BuildLinkCodecError` with `unsupportedTableVersion` is what the decoder raises today for exactly
-this case, and the refusal path through `LinkErrorMapper` is unchanged.
+this case, and the refusal reaches the Commander through `LinkErrorMapper` as every other one
+does.
 
 The internal message names the version read and the versions carried. `LinkErrorMapper` documents
 that a `BuildLinkCodecError` message is never rendered — it is an English string for whoever reads a
-stack trace — so naming versions in it costs no catalogue entry and no interpolation. The Commander
-reads `link.error.unsupportedTableVersion`, which is unchanged. That text says the link was made by
-a newer version of the application, which is what the code refuses once every earlier version is
-readable.
+stack trace — so naming versions in it costs no catalogue entry and no interpolation.
+
+What the Commander reads does cost one. `link.error.unsupportedTableVersion` says "This build link
+was made by a newer version of the application", which is the ship builder's noun on the loadout
+bench. `EQUIPMENT_MESSAGE_KEYS` in `LinkErrorMapper` holds the codes whose ship wording is wrong for
+a loadout, and the 013 contract's rule is that the envelope which refused selects the wording. One
+table leaves the code unreachable for equipment, so the wrong wording is never read; this change
+makes it a path a Commander meets and an end-to-end test opens.
+`link.error.equipment.unsupportedTableVersion` is therefore added in both shipped locales.
 
 **Export and publication always name the current table version.** The bench encodes with the current
 table whatever version it read, so a loadout that arrived on an older link is shared in the version
@@ -93,7 +99,8 @@ from the moment the loadout reaches the bench.
 
 **A loadout the current table cannot represent publishes no link.** Where an older table named an
 identity the current one does not hold, `encodeEquipmentLinkFragment` raises `unknownIdentity` with
-the mount, or with `suit` where the suit is what the current table cannot name.
+the mount, or with `suit` where what refused sits on the suit rather than on a mount: the suit
+itself, its grade, or one of its modifications.
 `LoadoutLinkCoordinator` already holds a `refused` link state for this, so the behaviour exists
 and the delta states it rather than building it. Substituting a neighbouring identity is
 forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench

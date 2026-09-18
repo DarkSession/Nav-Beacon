@@ -29,20 +29,32 @@
       synchronous, and verify a version 1 fragment decodes to the same loadout as before the change.
 - [ ] 2.3 Refuse a payload naming a version the given map does not hold with
       `unsupportedTableVersion`. Have the internal message name the version read and the versions
-      carried. Verify the refusal reaches the bench as `link.error.unsupportedTableVersion` through
-      `LinkErrorMapper`, that the restored loadout is unchanged, and that no catalogue key is added.
+      carried. Add `link.error.equipment.unsupportedTableVersion` to both shipped locales and to
+      `EQUIPMENT_MESSAGE_KEYS` in `link-error.mapper.ts`, because the key it falls through to names
+      a build link. Verify the refusal reaches the bench in the loadout wording through
+      `LinkErrorMapper`, that a ship link still reads the ship wording, that both locales carry the
+      new key, and that the restored loadout is unchanged.
 - [ ] 2.4 Keep `encodeEquipmentLinkFragment` writing the current version whatever version was read,
       and verify a loadout decoded from a version 1 fragment re-encodes to a fragment naming the
       current version and restoring the same loadout.
 - [ ] 2.5 Drive `LoadoutLinkCoordinator` with a codec that refuses the open loadout. Verify the link
-      state is `refused` and carries the slot. Verify an equipment fragment already in the address is
-      removed, and a fragment belonging to another tool is left as it is. Verify the loadout on the
-      bench is untouched. Verify no link is offered for export, and that the structured payload and
-      the readable summary still are. Verify the refusal reaches the Commander through
-      `LinkErrorMapper` in the equipment wording, naming the mount by its package name or the suit,
-      and the reason.
+      state is `refused` and carries the mount key in its `slot` field. Verify an equipment fragment
+      already in the address is removed, and a fragment belonging to another tool is left as it is.
+      Verify the loadout on the bench is untouched. Verify no link is offered for export, and that
+      the structured payload and the readable summary still are. Verify the refusal reaches the
+      Commander through `LinkErrorMapper` in the equipment wording, naming the mount by its package
+      name, or the suit where what refused sits on the suit, and the reason.
+- [ ] 2.6 Verify a default loadout the current table cannot represent takes no record: autosave
+      stores none, the saved list holds no entry for it, and the refusal is stated while that
+      loadout is still on the bench.
 
 ## 3. Hold the published table immutable
+
+`scripts/generate-equipment-link-codec-tables.mjs` writes `TABLE_VERSION` and its output path down
+separately, so `TABLE_VERSION` reaches only the messages and the `$generated` stamp. Raising it to 2
+rewrites `equipment-link-table-1.json` in place, stamped as version 2, and the codec reads its
+current version back from that stamp. Tasks 2.1 and 3.1 remove both, and this section is what makes
+raising the version mint a table.
 
 - [ ] 3.1 Derive the generator's output path and its published-version set from `TABLE_VERSION`
       rather than writing the file name down, and change the `codec:tables:equipment` script to
@@ -51,11 +63,9 @@
 - [ ] 3.2 Give the generator a minting path. Where the file for `TABLE_VERSION` is absent, it writes
       it only where a version below it is committed. Table 1 has no version below it, so it keeps
       the refusal the script carries today. Where the committed file's payload has moved, the run
-      fails and names the version the new content belongs under. Today `TABLE_VERSION` reaches only
-      the messages and the `$generated` stamp. Raising it to 2 therefore rewrites table 1 in place,
-      stamped as version 2. Until task 2.1 moves the current version to the registry, the codec
-      reads `CURRENT_TABLE_VERSION` back from that stamp. Verify the following in `test:scripts`,
-      against a temporary directory, once 3.1 derives the path. Raising the version writes
+      fails and names the version the new content belongs under. Verify the following in
+      `test:scripts`, against a temporary directory, once 3.1 derives the path. Raising the version
+      writes
       `equipment-link-table-2.json`. A moved payload under an unchanged version writes nothing and
       names version 2 in the failure. `equipment-link-table-1.json` is byte-identical after both. An
       absent table 1 still fails and writes nothing, which

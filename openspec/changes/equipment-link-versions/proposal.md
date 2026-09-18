@@ -13,8 +13,8 @@ and table 2 was minted beside a table 1 that still opens.
 
 - The equipment codec reads a payload against the table the payload names, rather than against the
   one table the application was built with. Table 1 stays readable for as long as the tool exists.
-- A payload naming a table version the application does not carry is refused and explained, rather
-  than decoded against the wrong table.
+- A payload naming a table version the application does not carry is refused rather than decoded
+  against the wrong table, and the refusal is said in the words of a loadout, not of a ship build.
 - The equipment table becomes immutable once published, as the build-link table is: a package
   upgrade that changes what the generator produces fails the build and names the version the new
   content belongs under. The generator already refuses to write table 1 once its content has moved;
@@ -43,6 +43,9 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   version an exported or published link names, and what happens to a loadout the current table
   cannot represent. "The address carries the loadout on the bench" gains the exception for such a
   loadout: nothing is published and an equipment fragment already in the address is removed.
+  "Autosave of the open loadout" gains what becomes of a default loadout the current table cannot
+  represent: no record holds it and no fragment carries it, so the Commander is told at once rather
+  than on the next reload.
 
 ## Impact
 
@@ -60,8 +63,12 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   mint a table today.
 - `package.json` — the `codec:tables:equipment` script formats `equipment-link-table-1.json` by
   name.
+- `src/app/application/build-link/link-error.mapper.ts` and `src/app/i18n/locales/en.json` and
+  `de.json` — `unsupportedTableVersion` falls through to the ship wording, which names a build
+  link. It gains an equipment entry beside `invalidPayload` and `unknownIdentity`.
 - `src/app/domain/equipment/loadout-link/equipment-link-codec.spec.ts`,
-  `src/app/application/equipment/loadout-link.spec.ts`, a new published-link corpus fixture and
+  `src/app/application/equipment/loadout-link.spec.ts`,
+  `scripts/generate-equipment-link-codec-tables.test.mjs`, a new published-link corpus fixture and
   its suite, `e2e/equipment-link.spec.ts` and the `equipment/link` entry in
   `e2e/coverage-ledger.ts`.
 - `docs/equipment-link-codec.md`.

@@ -14,7 +14,8 @@ table, with no flag that permits it, and MUST refuse to run where a published ta
 matches the hash it declares.
 
 A link the bench opens MUST be decoded against the table version its payload names, for every
-version the application carries.
+version the application carries. Where a payload names a version the application does not carry,
+the Commander MUST be told so in the words of a loadout, not of a ship build.
 
 Decoding against the named table resolves the identities the table holds. Whether the installed
 package still publishes them is a separate question, answered by "A link that names unresolvable
@@ -35,6 +36,7 @@ Source: 013/FR-020, 013/SC-005.
 - **WHEN** an equipment payload names a table version this application does not carry
 - **THEN** the link is refused rather than guessed
 - **AND** the restored loadout on the bench is unchanged and the Commander is told why
+- **AND** what the Commander is told names a loadout link, not a build link
 
 #### Scenario: A package upgrade changes what the table holds
 
@@ -80,8 +82,8 @@ link, and the loadout on the bench MUST be left as it is. What becomes of a
 fragment already in the address is stated by "The address carries the loadout on
 the bench" (024/FR-003). The Commander MUST
 be told what refused it — the mount, named by `getPersonalMountName` in
-`@elite-dangerous-almanac/core/i18n/suits`, or the suit where the suit is what the
-current table cannot name — and the reason.
+`@elite-dangerous-almanac/core/i18n/suits`, or the suit where what refused sits on
+the suit rather than on a mount — and the reason.
 
 Source: 013/FR-020, 013/SC-005.
 
