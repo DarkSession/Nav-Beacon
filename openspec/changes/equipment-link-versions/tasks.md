@@ -1,9 +1,9 @@
 ## 1. Turn the codec into a factory over a table
 
-- [ ] 1.0 Capture the corpus before anything below changes the codec: encode loadouts with the code
-      as it stands, copy the fragments and the loadout each opens to out to the scratchpad, and
-      verify each fragment decodes to its recorded loadout under this unchanged code. Nothing else in
-      this section starts until the capture is out of the working tree.
+- [ ] 1.0 Capture the corpus before anything below changes the codec. Encode loadouts with the code
+      as it stands, and write the fragments, and the loadout each one opens to, out to the
+      scratchpad. Verify each fragment decodes to its recorded loadout under this unchanged code.
+      Nothing else in this section starts until the capture is out of the working tree.
 - [ ] 1.1 Export an `EquipmentLinkCodecTables` type derived from `equipment-link-table-1.json`, and
       verify `pnpm run typecheck` passes with the committed table assigned to it.
 - [ ] 1.2 Move `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`, `SUIT_MODIFICATION_BITS`,
@@ -16,11 +16,11 @@
 
 ## 2. Read a payload against the table it names
 
-- [ ] 2.1 Add a registry beside the codec holding statically imported tables keyed by version as a
-      `ReadonlyMap`, exporting it with `CURRENT_EQUIPMENT_TABLE_VERSION`, and point the comment where
-      it is declared at the design's size reason rather than restating it. Verify the map returns a
-      codec for every committed `equipment-link-table-*.json` and for no other version, and that
-      `CURRENT_EQUIPMENT_TABLE_VERSION` is the highest committed table number.
+- [ ] 2.1 Add a registry beside the codec: a `ReadonlyMap` holding one codec per version, each built
+      from a statically imported table, exported with `CURRENT_EQUIPMENT_TABLE_VERSION`. Point the
+      comment where it is declared at the design's size reason rather than restating it. Verify the
+      map returns a codec for version 1 and for no other version, and that
+      `CURRENT_EQUIPMENT_TABLE_VERSION` is the highest version the map holds.
 - [ ] 2.2 Have `decodeEquipmentLinkFragment(fragment, codecs = EQUIPMENT_CODECS_BY_TABLE_VERSION)`
       read the version field first and select the codec the payload names, keeping the function
       synchronous, and verify a version 1 fragment decodes to the same loadout as before the change.
@@ -31,10 +31,10 @@
 - [ ] 2.4 Keep `encodeEquipmentLinkFragment` writing the current version whatever version was read,
       and verify a loadout decoded from a version 1 fragment re-encodes to a fragment naming the
       current version and restoring the same loadout.
-- [ ] 2.5 Verify that a loadout the current table cannot represent publishes no fragment and no
-      export: drive `LoadoutLinkCoordinator` with a codec that refuses, and assert the link state is
-      `refused` carrying the slot, an equipment fragment already in the address is removed, a
-      fragment belonging to another tool is left as it is, and the loadout on the bench is untouched.
+- [ ] 2.5 Drive `LoadoutLinkCoordinator` with a codec that refuses the open loadout. Verify the link
+      state is `refused` and carries the slot. Verify an equipment fragment already in the address is
+      removed, and a fragment belonging to another tool is left as it is. Verify the loadout on the
+      bench is untouched and no export is offered.
 
 ## 3. Hold the published table immutable
 
@@ -43,15 +43,18 @@
       format `equipment-link-table-*.json`. Verify `pnpm run codec:tables:equipment` reproduces the
       committed table with the working tree clean afterwards.
 - [ ] 3.2 Give the generator the minting path the build-link generator carries: where the file for
-      `TABLE_VERSION` is absent it writes it, and where the committed file's payload has moved it
-      fails and names the version the new content belongs under, exactly as
+      `TABLE_VERSION` is absent and the version below it is committed it writes it, and where the
+      committed file's payload has moved it fails and names the version the new content belongs
+      under, exactly as
       `generate-build-link-codec-tables.mjs` does. Today `TABLE_VERSION` reaches only the messages
       and the `$generated` stamp, so raising it to 2 rewrites table 1 in place stamped as version 2,
       and `CURRENT_TABLE_VERSION` is read back from that stamp. Once 3.1 derives the path, verify in
       `test:scripts`, against a temporary directory, that raising
       the version writes `equipment-link-table-2.json`, that a moved payload under an unchanged
       version writes nothing and names version 2 in the failure, and that
-      `equipment-link-table-1.json` is byte-identical after both.
+      `equipment-link-table-1.json` is byte-identical after both. An absent table 1 has no version
+      below it, so verify it still fails with the refusal the script carries today rather than
+      minting a fresh table 1, and that nothing is written.
 - [ ] 3.3 Add the guard that holds every version below `TABLE_VERSION` to the hash it declares, as
       the build-link generator does, and verify in `test:scripts` that an edited published table
       fails the build, names the table, and writes nothing.
@@ -66,30 +69,36 @@
 - [ ] 4.2 Add a suite that opens every fixture fragment through `decodeEquipmentLinkFragment` and
       asserts the recorded loadout, and verify it fails when an entry is filed under the wrong
       version.
-- [ ] 4.3 Assert in that suite that every committed `equipment-link-table-*.json` has at least one
-      corpus entry, reading the table files rather than the registry map, and verify the test fails
-      when a table file is committed with no entry.
+- [ ] 4.3 Assert in that suite that every version the shipped registry holds has at least one corpus
+      entry, reading the registry's keys as `build-link-published-links.spec.ts` reads its table map,
+      and verify the test fails when a version is registered with no entry.
 - [ ] 4.4 Assert that every fixture fragment re-encodes to the current version and reopens on the
       same loadout, and verify the held weapons and modifications survive the rewrite.
-- [ ] 4.5 Exercise version selection without committing a table: build a test-only version 2 table,
-      pass a map holding it beside version 1 into `decodeEquipmentLinkFragment`, and verify the
-      shipped function decodes a version 2 fragment and a version 1 fragment to their own loadouts in
-      the same run, and refuses a version 3 payload.
+- [ ] 4.5 Exercise version selection without committing a table. Build a test-only version 2 table,
+      and pass a map holding its codec beside version 1 into `decodeEquipmentLinkFragment`. Verify
+      the shipped function decodes a version 2 fragment and a version 1 fragment to their own
+      loadouts in the same run, and refuses a version 3 payload.
 
 ## 5. State the behaviour
 
-- [ ] 5.1 Rewrite the two passages of `docs/equipment-link-codec.md` this change makes false — the
+- [ ] 5.1 Rewrite the passages of `docs/equipment-link-codec.md` this change makes false: the binary
+      body's preamble, which says the widths are derived "at module load" where they are now derived
+      per version; the generator paragraph, which names "both refusals" where there are more; the
       paragraph stating that the table is imported statically because "there is one of them" and that
-      `build-link-codec-loader.ts` "is the one to copy", and the Status section's closing that "the
+      `build-link-codec-loader.ts` "is the one to copy"; and the Status section's closing that "the
       version handling described above is what the first change to it needs". State instead that a
       published table is immutable, that a payload names the table that decodes it, and that the
       registry is synchronous because the equipment table is 3,021 bytes where a build-link table is
       about 198 KB. Verify every size and corpus figure in the document is the measured one, and that
       the per-table size and the table count are both stated.
-- [ ] 5.2 Add to the `equipment/link` entry in `e2e/coverage-ledger.ts` the assertion that a link
-      written by an earlier published table still opens, and the assertion that a payload naming an
-      unknown table version is refused where the Commander is. Verify `pnpm run policy:specs` reports
-      no violation and each assertion names the suite that carries it.
+- [ ] 5.2 Add to the `equipment/link` entry in `e2e/coverage-ledger.ts` the assertion that a
+      published `e.` link opens against the table version its payload names, and the assertion that a
+      payload naming a table version this application does not carry is refused where the Commander
+      is, worded so it does not read as a duplicate of the existing line about a link this version
+      cannot read. The assertion that a link from an earlier published table still opens belongs to
+      the change that mints table 2, because version 1 is current and no journey can produce one.
+      Verify `pnpm run policy:specs` reports no violation and each assertion names the suite that
+      carries it.
 
 ## 6. Verification
 

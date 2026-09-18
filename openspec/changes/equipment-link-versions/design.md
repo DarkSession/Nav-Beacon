@@ -10,9 +10,9 @@ needs no change at all.
 What is built around that field is the obstacle. The codec derives its constants once, at module
 load, from the single imported table: `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`,
 `SUIT_MODIFICATION_BITS`, `WEAPON_MODIFICATION_BITS`, `MODIFICATION_SLOTS` and the `MOUNTS` list.
-Each is derived from the table, so every one of them is recoverable from whichever table a payload
-names. Nothing in the format is fixed in the module rather than in the table, which is what makes a
-backward-compatible registry possible at all.
+Every one of them is therefore recoverable from whichever table a payload names, which is what makes
+a backward-compatible registry possible at all. What stays in the module is what no table moves: the
+10-bit version field, the `e.` prefix and the 500-character bound are the same for every version.
 
 Decoding resolves an identity out of the table by index, and the table holds what the package held
 when it was generated. Whether the installed package still publishes that identity is settled after
@@ -52,7 +52,8 @@ each table it may need is about 198 KB, and deferring one is worth an `await` at
 The equipment table is 3,021 bytes against `codec-table-1.json` at 198,777, so it takes about
 sixty-five equipment versions to cost one build-link table. Paying for that with `async` would push
 a promise through `loadout-link.coordinator.ts`, the bench page and their suites for no measurable
-gain. The registry therefore holds statically imported tables keyed by version.
+gain. The registry therefore holds one codec per version, each built by
+`createEquipmentLinkCodec` from a statically imported table.
 
 This is a deliberate divergence from the sibling codec rather than an oversight, and the reason is
 size. `docs/equipment-link-codec.md` records the same choice. If the equipment table ever approaches
@@ -62,14 +63,15 @@ shape then is the refactor `build-link-codec-loader.ts` already demonstrates.
 **The registry is a parameter with a default, which is the seam a test supplies a table through.**
 `decodeEquipmentLinkFragment(fragment, codecs = EQUIPMENT_CODECS_BY_TABLE_VERSION)` reads the
 version field and selects from the map it was given. A suite that wants a second version passes a
-map holding version 1 and a table it built itself, and the function under test is the shipped one,
-not a copy of its selection. `LoadoutLinkCoordinator` already documents this technique for its own
+map holding version 1 beside a codec it built itself, and the function under test is the shipped
+one, not a copy of its selection. `LoadoutLinkCoordinator` already documents this technique for its own
 `encode` and `decode` properties, so it is the established seam in this area rather than a new one.
 The map stays a `ReadonlyMap` and no production path mutates it.
 
-The corpus guard reads the committed `equipment-link-table-*.json` files rather than the map,
-because a table file committed and never registered is exactly the mistake worth catching and a
-map-reading guard cannot see it. A committed table with no corpus entry is what the guard fails on.
+The corpus guard reads the registry's own keys, as `build-link-published-links.spec.ts` reads its
+hand-written table map: a registered version with no corpus entry fails the suite. No suite under
+`src/` enumerates files, so the guard does not either. A version registered in the map a suite
+passed in is a local argument and never reaches the registry, so the two cannot interfere.
 
 **A payload naming an unregistered version is refused with the error the codec already has.**
 `BuildLinkCodecError` with `unsupportedTableVersion` is what the decoder raises today for exactly
@@ -91,7 +93,7 @@ from the moment the loadout reaches the bench.
 
 **A loadout the current table cannot represent publishes no link.** Where an older table named an
 identity the current one does not hold, `encodeEquipmentLinkFragment` raises `unknownIdentity` with
-the mount. `LoadoutLinkCoordinator` already holds a `refused` link state for this, so the behaviour
+the mount, or with `suit` where the suit is what the current table cannot name. `LoadoutLinkCoordinator` already holds a `refused` link state for this, so the behaviour
 exists and the delta states it rather than building it. Substituting a neighbouring identity is
 forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench intact.
 
@@ -105,14 +107,12 @@ this shape and the equipment corpus mirrors it.
 
 **The corpus starts with version 1 only, so version selection is unexercised across versions until a
 real table 2 exists** → A suite builds a test-only table and passes it through the registry
-parameter, which exercises the shipped selection without committing a table. The guard that a
-committed version needs a corpus entry is what keeps this honest when a real version arrives.
+parameter, which exercises the shipped selection without committing a table. The guard fails the
+suite where a real version arrives with no corpus entry.
 
 **A synchronous registry means every published table is in the initial bundle** → Accepted at the
-size stated in the decision above: every equipment version published together would have to reach
-sixty-five tables before it weighed what one build-link table already weighs. What a link may cost
-is a separate bound, and `equipment-link-codec.spec.ts` already asserts the largest loadout the
-format can state against it.
+size stated in the decision above. What a link may cost is a separate bound, and
+`equipment-link-codec.spec.ts` already asserts the largest loadout the format can state against it.
 
 ## Migration Plan
 

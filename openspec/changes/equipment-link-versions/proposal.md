@@ -17,8 +17,9 @@ and table 2 was minted beside a table 1 that still opens.
   than decoded against the wrong table.
 - The equipment table becomes immutable once published, as the build-link table is: a package
   upgrade that changes what the generator produces fails the build and names the version the new
-  content belongs under. The generator already refuses to rewrite table 1; it gains the path that
-  writes the next table and the guard that holds every earlier table to its declared hash.
+  content belongs under. The generator already refuses to write table 1 once its content has moved;
+  it gains the path that writes the next table and the guard that holds every earlier table to its
+  declared hash.
 - A published-link corpus holds real `e.` fragments per table version, each pinned to the loadout it
   opens to. A version whose table is committed but whose corpus is empty fails the suite.
 - The bench publishes and exports a link in the current table version whatever version it opened, so
@@ -44,12 +45,13 @@ None. The link is already specified under `equipment-builder/loadout-persistence
 
 ## Impact
 
-- `src/app/domain/equipment/loadout-link/equipment-link-codec.ts` — the module-level constants
-  (`CURRENT_TABLE_VERSION`, `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`, the modification widths,
-  `MODIFICATION_SLOTS` and `MOUNTS`) are derived from the one imported table at load. Each is
-  derived from the table, so all of them are recoverable per version; they move into a per-version
-  context.
-- A registry beside the codec, holding the version-to-table map and the current table version.
+- `src/app/domain/equipment/loadout-link/equipment-link-codec.ts` — `SUIT_BITS`, `WEAPON_BITS`,
+  `GRADE_BITS`, the modification widths, `MODIFICATION_SLOTS` and `MOUNTS` are derived from the one
+  imported table at module load, so all of them are recoverable per version; they move into the
+  per-version codec. `CURRENT_TABLE_VERSION` is read from that table's stamp and becomes the
+  registry's, because a current version is a property of the registry rather than of a table.
+- A registry beside the codec, holding one codec per published version and the current table
+  version.
 - `scripts/generate-equipment-link-codec-tables.mjs` — `TABLE_VERSION` and the output path are
   written down separately, the script refuses to run when the file for the current version is
   absent, and no guard holds an earlier table to its hash. Raising the version therefore cannot
