@@ -32,7 +32,7 @@ const TABLE_VERSION = 1;
 const tableDirectoryUrl = new URL('../src/app/domain/equipment/loadout-link/', import.meta.url);
 const tablePathFor = (version) =>
   fileURLToPath(new URL(`equipment-link-table-${version}.json`, tableDirectoryUrl));
-const outputPath = process.env.EQUIPMENT_CODEC_TABLE_OUTPUT_PATH ?? tablePathFor(TABLE_VERSION);
+const outputPath = tablePathFor(TABLE_VERSION);
 
 /**
  * The table versions a decoder still answers for, oldest first.

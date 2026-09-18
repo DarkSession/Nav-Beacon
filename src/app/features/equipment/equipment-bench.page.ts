@@ -334,12 +334,13 @@ export class EquipmentBenchPage {
   }
 
   /**
-   * Why the last incoming loadout link was refused, in the Commander's language.
+   * Why the last loadout link was refused, in the Commander's language.
    *
-   * On the bench rather than inside the export layer: a Commander who opened an
-   * address and got nothing is not going to go looking in a layer for the
-   * reason (FR-021). The mount is named in the library's words, never by its
-   * journal key.
+   * Either direction: an address that opened nothing, and a loadout the current
+   * table cannot write. On the bench rather than inside the export layer, because
+   * a Commander who opened an address and got nothing is not going to go looking
+   * in a layer for the reason (FR-021). The mount is named in the library's
+   * words, never by its journal key.
    */
   readonly linkFailure = computed(() => {
     const failure = this.#links.failure();

@@ -33,7 +33,7 @@ import type {
  * fragment at all, and this format uses a twentieth of it. It bounds what may
  * be tried; it is not a budget the format was drawn against.
  */
-export const EQUIPMENT_LINK_ENVELOPE: LinkEnvelope = { prefix: 'e.', maxCharacters: 500 };
+const EQUIPMENT_LINK_ENVELOPE: LinkEnvelope = { prefix: 'e.', maxCharacters: 500 };
 
 /**
  * The width of the table-version field, which no table moves.
@@ -41,7 +41,7 @@ export const EQUIPMENT_LINK_ENVELOPE: LinkEnvelope = { prefix: 'e.', maxCharacte
  * It is the first field of every payload, so the version is readable before a
  * table is chosen. That is what lets a payload name the table that decodes it.
  */
-export const TABLE_VERSION_BITS = 10;
+const TABLE_VERSION_BITS = 10;
 
 /** The identifier table one published version of the format is written against. */
 export interface EquipmentLinkCodecTables {

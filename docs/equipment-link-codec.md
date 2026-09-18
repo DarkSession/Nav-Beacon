@@ -195,8 +195,8 @@ The ship codec draws that line elsewhere: an identity that is absent from its co
 `unknownIdentity` there, whichever reason it is absent for. The equipment codec splits the two
 because `link.error.unknownIdentity` tells a Commander the link "names a hull or module that is
 not available here", which is untrue of a recipe this release publishes and the bench can show.
-The two are worth reconciling when the equipment bench is built and both strings are on screen;
-until then, neither codec is wrong about its own links.
+The bench says it in its own words instead: `link.error.equipment.unknownIdentity` names a suit,
+weapon or modification this version does not have. Each codec is right about its own links.
 
 ### Length is checked twice, and the reader is the second check
 
@@ -251,4 +251,4 @@ The codec has a consumer: the equipment builder at `/equipment` mints and reads 
 The bench has shipped, so table 1 is published: a changed content hash is table 2, with this file
 kept for the links already out. Almanac 0.2.13 leaves the table's content unchanged, so table 1 is
 still the only minted table. Minting the next one is a raised `TABLE_VERSION`, a row in the
-registry and a corpus entry.
+registry, a row in the corpus suite's table map and a corpus entry.

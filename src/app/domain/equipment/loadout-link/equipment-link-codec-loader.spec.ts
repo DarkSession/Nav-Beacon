@@ -128,8 +128,10 @@ describe('reading a payload against the table it names', () => {
 
 describe('writing a link', () => {
   it('names the current version whatever version was read', () => {
-    // An older table is only ever read. A loadout that arrived on one is shared
-    // in the version this release writes.
+    // A link is written with the current table whatever version it arrived on,
+    // so the version read and the version written differ here. The genuine
+    // older-link assertion belongs to the change that mints table 2, which is
+    // where the corpus gains a second version (design.md).
     const codecs = withTestOnlyVersion(2);
     const arrived = codecs.get(2)!.encodeEquipmentLinkFragment(DOMINATOR);
     const shared = encodeEquipmentLinkFragment(decodeEquipmentLinkFragment(arrived, codecs));

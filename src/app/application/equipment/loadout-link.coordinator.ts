@@ -78,9 +78,12 @@ export class LoadoutLinkCoordinator {
    * find (FR-021).
    *
    * A loadout the current table cannot represent is refused on the way out for
-   * the same reason. It is in no record while it is at its suit's default and
-   * now in no fragment either, so a Commander told only inside the export layer
-   * would learn on the next reload that it is gone.
+   * the same reason. It is in no record while it is at its suit's default and in
+   * no fragment either, so a Commander told only inside the export layer would
+   * learn on the next reload that it is gone.
+   *
+   * It is `null` again the moment a link is published or the bench is emptied:
+   * a notice about a loadout that shares is a notice about nothing.
    */
   readonly failure = this.#failure.asReadonly();
 
@@ -129,6 +132,7 @@ export class LoadoutLinkCoordinator {
 
     if (loadout === null) {
       this.#clear();
+      this.#failure.set(null);
       this.#link.set({ kind: 'absent' });
       return;
     }
@@ -149,6 +153,7 @@ export class LoadoutLinkCoordinator {
     }
 
     this.#settled = fragment;
+    this.#failure.set(null);
     this.#location.replaceFragment(fragment);
     this.#link.set({ kind: 'published', fragment });
   }

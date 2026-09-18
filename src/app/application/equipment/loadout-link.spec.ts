@@ -315,7 +315,12 @@ describe('LoadoutLinkCoordinator', () => {
 
     // What a refusal withholds is the link. The loadout is still exportable as
     // a payload and as something a Commander can read.
-    expect(JSON.parse(JSON.stringify(toStoredLoadout(store.loadout()!)))).toBeTruthy();
+    const payload = toStoredLoadout(store.loadout()!);
+    expect(payload.suitFamily).toBe(held.suitFamily);
+    expect(payload.suitGrade).toBe(held.suitGrade);
+    expect(payload.weapons.map((weapon) => weapon?.symbol ?? null)).toEqual(
+      held.weapons.map((weapon) => weapon?.symbol ?? null),
+    );
     expect(summary.write(store.loadout()!).length).toBeGreaterThan(0);
 
     const said = errors.describe(
@@ -359,7 +364,7 @@ describe('LoadoutLinkCoordinator', () => {
   });
 
   it('tells the Commander at once about a default loadout it cannot represent', () => {
-    // A loadout at its suit's default is in no record by rule and now in no
+    // A loadout at its suit's default is in no record by rule and in no
     // fragment either, so the refusal has to reach the bench rather than wait
     // inside the export layer for a reload that finds nothing (024/FR-002).
     const { links, store, autosave, storage } = setup();
@@ -376,6 +381,44 @@ describe('LoadoutLinkCoordinator', () => {
     expect(storage.entries.size).toBe(0);
     expect(store.hasLoadout()).toBe(true);
     expect(links.failure()).toEqual({ code: 'unknownIdentity', slot: 'suit' });
+  });
+
+  it('takes the refusal down once a link is published again', () => {
+    // The notice says a link was refused. A Commander who changed the loadout
+    // and got a link has no refusal left to read about, and a notice standing
+    // beside a loadout that shares says something untrue.
+    const { links, store, location } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    const encode = links.encode;
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+    expect(links.failure()).not.toBeNull();
+
+    links.encode = encode;
+    links.publish();
+
+    expect(links.failure()).toBeNull();
+    expect(links.link().kind).toBe('published');
+    expect(location.fragmentValue).toMatch(/^e\./);
+  });
+
+  it('takes the refusal down when the bench is emptied', () => {
+    const { links, store } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+    expect(links.failure()).not.toBeNull();
+
+    store.open(null);
+    links.publish();
+
+    expect(links.failure()).toBeNull();
+    expect(links.link().kind).toBe('absent');
   });
 });
 
