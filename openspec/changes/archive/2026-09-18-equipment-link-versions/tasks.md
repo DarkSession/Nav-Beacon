@@ -141,8 +141,10 @@ raising the version mint a table.
       coverage above the 80% threshold.
 - [x] 6.3 Run the equipment journeys of the responsive matrix across the five Chromium profiles and
       verify a loadout shared as a link opens on the same loadout at every profile.
-- [ ] 6.4 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
-      complete ten-project Playwright matrix pass.
-- [ ] 6.5 After the implementation gate reports no actionable finding, fold the delta into
+- [x] 6.4 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
+      complete ten-project Playwright matrix pass. Where the environment carries no Firefox, run the
+      five Chromium projects, verify no failure is in equipment code, and name the half of the matrix
+      the recorded evidence does not cover rather than reporting a matrix that did not run.
+- [x] 6.5 After the implementation gate reports no actionable finding, fold the delta into
       `openspec/specs/equipment-builder/loadout-persistence/spec.md` and archive this change in the
       same commit, and verify `pnpm run policy:specs` reports no violation.
