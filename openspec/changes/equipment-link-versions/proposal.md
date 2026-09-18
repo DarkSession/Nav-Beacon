@@ -63,6 +63,9 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   mint a table today.
 - `package.json` — the `codec:tables:equipment` script formats `equipment-link-table-1.json` by
   name.
+- `scripts/generate-build-link-codec-tables.mjs` — the helper holding the versions below the current
+  one is named for what it holds, so the two generators read the same way side by side. A rename and
+  one documentation line; the build-link codec itself is untouched.
 - `src/app/application/build-link/link-error.mapper.ts` and `src/app/i18n/locales/en.json` and
   `de.json` — `unsupportedTableVersion` falls through to the ship wording, which names a build
   link. It gains an equipment entry beside `invalidPayload` and `unknownIdentity`. The mapper also

@@ -36,7 +36,8 @@ text, which `LinkErrorMapper` already states from a catalogue key; the requireme
 - Publishing equipment table 2. Nothing in the installed package has moved an equipment identity;
   this change builds the mechanism, and the first upgrade that needs it uses it.
 - Changing the payload layout, the `e.` prefix, the Base70 alphabet or the CRC envelope.
-- Revisiting the build-link codec, which already carries this behaviour.
+- Revisiting the build-link codec, which already carries this behaviour. Its generator is renamed
+  where the equipment one was, so the pair reads alike, and nothing it does changes.
 
 ## Decisions
 
