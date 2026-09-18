@@ -4,8 +4,9 @@
   pixels (responsive composition, "Verification matrix").
 -->
 @if (linkFailure(); as failure) {
-  <!-- A link that arrived unreadable, said where the Commander is: they opened
-       an address and the bench did not change (FR-021). -->
+  <!-- A link refused in either direction, said where the Commander is: one that
+       arrived unreadable and left the bench alone (FR-021), or a loadout on the
+       bench this version cannot write into a link (FR-020). -->
   <ednb-status-notice tone="error" [message]="failure.message" [detail]="failure.detail" />
 }
 

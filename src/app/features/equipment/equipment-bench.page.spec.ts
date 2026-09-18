@@ -1,13 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { LoadoutStore } from '../../application/equipment/loadout.store';
+import { BuildLinkCodecError } from '../../domain/build-link/build-link-codec-error';
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { LoadoutLinkCoordinator } from '../../application/equipment/loadout-link.coordinator';
 import { LoadoutAutosaveService } from '../../application/equipment/loadout-autosave.service';
 import { LoadoutOpenService } from '../../application/equipment/loadout-open.service';
 import { EmptyBenchService } from '../../application/equipment/empty-bench.service';
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
-import { encodeEquipmentLinkFragment } from '../../domain/equipment/loadout-link/equipment-link-codec';
+import { encodeEquipmentLinkFragment } from '../../domain/equipment/loadout-link/equipment-link-codec-loader';
 import { isEquipmentRecord } from '../../domain/records/local-record';
 import { WebLocksAdapter } from '../../platform/browser/web-locks.adapter';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';
@@ -310,6 +311,31 @@ describe('EquipmentBenchPage', () => {
     // Never Frontier's journal key, and never the bench's own loadout.
     expect(notice?.textContent).not.toContain('PrimaryWeapon');
     expect(store.loadout()).toBe(before);
+  });
+
+  it('says a loadout this version cannot write into a link is what refused', () => {
+    // The refusal on the way out reaches the bench too, where the Commander is,
+    // and in the words of a loadout that could not be written. A loadout at its
+    // suit's default is in no record either, so one told inside the export layer
+    // alone would learn on the next reload that it is gone (FR-021).
+    const links = TestBed.inject(LoadoutLinkCoordinator);
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    const fixture = TestBed.createComponent(EquipmentBenchPage);
+    fixture.detectChanges();
+    wear();
+    fixture.detectChanges();
+
+    const notice = (fixture.nativeElement as HTMLElement).querySelector('ednb-status-notice');
+    expect(notice?.textContent).toContain(
+      BUNDLED_ENGLISH['link.error.equipment.outgoing.unknownIdentity'],
+    );
+    // Nothing was read, so the bench never says a link could not be read.
+    expect(notice?.textContent).not.toContain(
+      BUNDLED_ENGLISH['link.error.equipment.unknownIdentity'],
+    );
+    expect(store.hasLoadout()).toBe(true);
   });
 
   /**

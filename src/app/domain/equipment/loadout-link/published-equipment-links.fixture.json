@@ -1,0 +1,220 @@
+{
+  "1": [
+    {
+      "note": "A Flight Suit at grade 1, with every mount empty.",
+      "fragment": "e.T._otnWnXKrn",
+      "opensTo": {
+        "suitFamily": "flightsuit",
+        "suitGrade": 1,
+        "suitModifications": [null, null, null, null],
+        "weapons": [null, null, null]
+      },
+      "modifications": {
+        "suit": [null, null, null, null]
+      }
+    },
+    {
+      "note": "A Maverick Suit at grade 4, holding a weapon on a mount that suit does not offer.",
+      "fragment": "e.GW0Gx@v12t0ULK6p:CuX",
+      "opensTo": {
+        "suitFamily": "utilitysuit",
+        "suitGrade": 4,
+        "suitModifications": [null, null, null, null],
+        "weapons": [
+          {
+            "symbol": "wpn_m_assaultrifle_plasma_fauto",
+            "grade": 3,
+            "modifications": [null, null, null, null]
+          },
+          {
+            "symbol": "wpn_m_sniper_plasma_charged",
+            "grade": 5,
+            "modifications": ["weapon_range_plasma", null, null, null]
+          },
+          null
+        ]
+      },
+      "modifications": {
+        "suit": [null, null, null, null],
+        "PrimaryWeapon1": [null, null, null, null],
+        "PrimaryWeapon2": ["weapon_range_plasma", null, null, null]
+      }
+    },
+    {
+      "note": "A Dominator Suit at grade 5, every mount filled and every modification slot held.",
+      "fragment": "e.4f@yCeG44mGCq1hcPOnHxlG",
+      "opensTo": {
+        "suitFamily": "tacticalsuit",
+        "suitGrade": 5,
+        "suitModifications": [
+          "suit_increasedshieldregen",
+          "suit_improvedarmourrating",
+          "suit_increasedbatterycapacity",
+          "suit_nightvision"
+        ],
+        "weapons": [
+          {
+            "symbol": "wpn_m_assaultrifle_plasma_fauto",
+            "grade": 5,
+            "modifications": [
+              "weapon_clipsize",
+              "weapon_stability",
+              "weapon_scope",
+              "weapon_reloadspeed"
+            ]
+          },
+          {
+            "symbol": "wpn_m_sniper_plasma_charged",
+            "grade": 4,
+            "modifications": ["weapon_range_plasma", null, "weapon_headshotdamage_plasma", null]
+          },
+          {
+            "symbol": "wpn_s_pistol_kinetic_sauto",
+            "grade": 3,
+            "modifications": [null, null, null, null]
+          }
+        ]
+      },
+      "modifications": {
+        "suit": [
+          "suit_increasedshieldregen",
+          "suit_improvedarmourrating",
+          "suit_increasedbatterycapacity",
+          "suit_nightvision"
+        ],
+        "PrimaryWeapon1": [
+          "weapon_clipsize",
+          "weapon_stability",
+          "weapon_scope",
+          "weapon_reloadspeed"
+        ],
+        "PrimaryWeapon2": ["weapon_range_plasma", null, "weapon_headshotdamage_plasma", null],
+        "SecondaryWeapon": [null, null, null, null]
+      }
+    },
+    {
+      "note": "The same Dominator Suit at grade 3, which locks the slots its modifications sit in.",
+      "fragment": "e.4J@6@/Xti903ez1c5CxVoM4",
+      "opensTo": {
+        "suitFamily": "tacticalsuit",
+        "suitGrade": 3,
+        "suitModifications": [
+          "suit_increasedshieldregen",
+          "suit_improvedarmourrating",
+          "suit_increasedbatterycapacity",
+          "suit_nightvision"
+        ],
+        "weapons": [
+          {
+            "symbol": "wpn_m_assaultrifle_plasma_fauto",
+            "grade": 5,
+            "modifications": [
+              "weapon_clipsize",
+              "weapon_stability",
+              "weapon_scope",
+              "weapon_reloadspeed"
+            ]
+          },
+          {
+            "symbol": "wpn_m_sniper_plasma_charged",
+            "grade": 4,
+            "modifications": ["weapon_range_plasma", null, "weapon_headshotdamage_plasma", null]
+          },
+          {
+            "symbol": "wpn_s_pistol_kinetic_sauto",
+            "grade": 3,
+            "modifications": [null, null, null, null]
+          }
+        ]
+      },
+      "modifications": {
+        "suit": [
+          "suit_increasedshieldregen",
+          "suit_improvedarmourrating",
+          "suit_increasedbatterycapacity",
+          "suit_nightvision"
+        ],
+        "PrimaryWeapon1": [
+          "weapon_clipsize",
+          "weapon_stability",
+          "weapon_scope",
+          "weapon_reloadspeed"
+        ],
+        "PrimaryWeapon2": ["weapon_range_plasma", null, "weapon_headshotdamage_plasma", null],
+        "SecondaryWeapon": [null, null, null, null]
+      }
+    },
+    {
+      "note": "The longest fragment the format states: the widest suit, the widest weapons, every slot held.",
+      "fragment": "e.4f@yCeG45@RQ,_31FzJVQzQ",
+      "opensTo": {
+        "suitFamily": "tacticalsuit",
+        "suitGrade": 5,
+        "suitModifications": [
+          "suit_increasedshieldregen",
+          "suit_improvedarmourrating",
+          "suit_increasedbatterycapacity",
+          "suit_nightvision"
+        ],
+        "weapons": [
+          {
+            "symbol": "wpn_m_assaultrifle_plasma_fauto",
+            "grade": 5,
+            "modifications": [
+              "weapon_clipsize",
+              "weapon_stability",
+              "weapon_scope",
+              "weapon_reloadspeed"
+            ]
+          },
+          {
+            "symbol": "wpn_m_sniper_plasma_charged",
+            "grade": 5,
+            "modifications": [
+              "weapon_range_plasma",
+              "weapon_headshotdamage_plasma",
+              "weapon_accuracy_plasma",
+              "weapon_clipsize"
+            ]
+          },
+          {
+            "symbol": "wpn_s_pistol_kinetic_sauto",
+            "grade": 5,
+            "modifications": [
+              "weapon_range_kinetic",
+              "weapon_headshotdamage_kinetic",
+              "weapon_accuracy_kinetic",
+              "weapon_clipsize"
+            ]
+          }
+        ]
+      },
+      "modifications": {
+        "suit": [
+          "suit_increasedshieldregen",
+          "suit_improvedarmourrating",
+          "suit_increasedbatterycapacity",
+          "suit_nightvision"
+        ],
+        "PrimaryWeapon1": [
+          "weapon_clipsize",
+          "weapon_stability",
+          "weapon_scope",
+          "weapon_reloadspeed"
+        ],
+        "PrimaryWeapon2": [
+          "weapon_range_plasma",
+          "weapon_headshotdamage_plasma",
+          "weapon_accuracy_plasma",
+          "weapon_clipsize"
+        ],
+        "SecondaryWeapon": [
+          "weapon_range_kinetic",
+          "weapon_headshotdamage_kinetic",
+          "weapon_accuracy_kinetic",
+          "weapon_clipsize"
+        ]
+      }
+    }
+  ]
+}

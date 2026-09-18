@@ -18,12 +18,54 @@ export interface LinkFailure {
 /** Which codec refused, because two codes read wrongly for the other one. */
 export type LinkTool = 'ship' | 'equipment';
 
+/**
+ * Which way the link was going when it was refused.
+ *
+ * `incoming` is a link that arrived; `outgoing` is one this application could
+ * not write. The wording differs because nothing was read on the way out, and a
+ * Commander told their own loadout "could not be read" would go looking for a
+ * link that never existed.
+ */
+export type LinkDirection = 'incoming' | 'outgoing';
+
 /** A failure, said in the Commander's language. */
 export interface LinkFailureText {
   readonly message: string;
   /** Which mount is involved, when the codec could say. */
   readonly detail: string | null;
 }
+
+/**
+ * The codes a loadout says in its own words on the way in.
+ *
+ * Each names something the ship key gets wrong: a hull or module where the
+ * bench holds a suit, and a build where it holds a loadout (013
+ * contracts/equipment-loadout-link.md, "Refusal wording").
+ *
+ * `invalidEncoding` and `integrityCheckFailed`, and an arriving
+ * `reconstructionFailed` or `tooLong`, fall through to the ship key below and
+ * reach the bench saying "build link". They are about the fragment rather than
+ * about what it describes, and no requirement states their loadout wording yet.
+ */
+const EQUIPMENT_MESSAGE_KEYS: Partial<Record<LinkFailureCode, MessageKey>> = {
+  invalidPayload: 'link.error.equipment.invalidPayload',
+  unknownIdentity: 'link.error.equipment.unknownIdentity',
+  unsupportedTableVersion: 'link.error.equipment.unsupportedTableVersion',
+};
+
+/**
+ * The same refusals, said of a loadout that could not be written.
+ *
+ * Every key above is about a link that arrived and could not be read. These are
+ * the codes the encoder raises, where there is no link yet and the loadout on
+ * the bench is what the current table cannot state.
+ */
+const EQUIPMENT_OUTGOING_MESSAGE_KEYS: Partial<Record<LinkFailureCode, MessageKey>> = {
+  invalidPayload: 'link.error.equipment.outgoing.invalidPayload',
+  unknownIdentity: 'link.error.equipment.outgoing.unknownIdentity',
+  reconstructionFailed: 'link.error.equipment.outgoing.reconstructionFailed',
+  tooLong: 'link.error.equipment.outgoing.tooLong',
+};
 
 /**
  * Every reason a link failed, in one place, keyed by a stable code.
@@ -34,18 +76,6 @@ export interface LinkFailureText {
  * they would tell a Commander nothing they could act on (build-link contract,
  * "Error presentation").
  */
-/**
- * The two codes whose ship wording is wrong for a loadout.
- *
- * The rest read the same either way — an altered fragment is an altered
- * fragment — so only these two are said twice (013
- * contracts/equipment-loadout-link.md, "Refusal wording").
- */
-const EQUIPMENT_MESSAGE_KEYS: Partial<Record<LinkFailureCode, MessageKey>> = {
-  invalidPayload: 'link.error.equipment.invalidPayload',
-  unknownIdentity: 'link.error.equipment.unknownIdentity',
-};
-
 const MESSAGE_KEYS: Readonly<Record<LinkFailureCode, MessageKey>> = {
   invalidEncoding: 'link.error.invalidEncoding',
   integrityCheckFailed: 'link.error.integrityCheckFailed',
@@ -81,10 +111,18 @@ export class LinkErrorMapper {
    *
    * Which codec refused selects the wording: a loadout link that names a
    * missing identity is not naming "a hull or module", and a Commander told so
-   * would go looking for the wrong thing.
+   * would go looking for the wrong thing. Which direction it was going selects
+   * it too, for the same reason: on the way out there is no link to have read.
    */
-  describe(failure: LinkFailure, tool: LinkTool = 'ship'): LinkFailureText {
+  describe(
+    failure: LinkFailure,
+    tool: LinkTool = 'ship',
+    direction: LinkDirection = 'incoming',
+  ): LinkFailureText {
     const key =
+      (tool === 'equipment' && direction === 'outgoing'
+        ? EQUIPMENT_OUTGOING_MESSAGE_KEYS[failure.code]
+        : null) ??
       (tool === 'equipment' ? EQUIPMENT_MESSAGE_KEYS[failure.code] : null) ??
       MESSAGE_KEYS[failure.code];
 

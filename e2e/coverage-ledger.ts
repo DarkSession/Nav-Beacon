@@ -252,6 +252,8 @@ export const COVERAGE_LEDGER: readonly CoverageEntry[] = [
       'opening that address restores the loadout, held content included',
       'the export layer offers the object, the link and the readable summary',
       'a link this version cannot read says so where the Commander is, naming no journal key',
+      'a literal e. link naming table 1 opens on the loadout it was shared as, whatever table version the bench writes',
+      'a payload naming a table version this application does not carry is refused in the words of a loadout, and the open loadout stays',
     ],
     manualRecord: null,
   },

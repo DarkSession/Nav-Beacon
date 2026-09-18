@@ -3,6 +3,16 @@ import { BuildLinkCodecError } from '../../domain/build-link/build-link-codec-er
 import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equipment-loadout';
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
+import { toStoredLoadout } from '../../domain/equipment/loadout/stored-loadout.serializer';
+import {
+  decodeEquipmentLinkBody,
+  readPayloadTableVersion,
+} from '../../domain/equipment/loadout-link/equipment-link-codec';
+import {
+  CURRENT_EQUIPMENT_TABLE_VERSION,
+  decodeEquipmentLinkFragment,
+} from '../../domain/equipment/loadout-link/equipment-link-codec-loader';
+import germanCatalogue from '../../i18n/locales/de.json';
 import { HistoryLocationAdapter } from '../../platform/browser/history-location.adapter';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { LinkErrorMapper } from '../build-link/link-error.mapper';
@@ -12,6 +22,7 @@ import {
 } from '../build-link/link-payload.allowlist';
 import { LoadoutAutosaveService } from './loadout-autosave.service';
 import { LoadoutLinkCoordinator } from './loadout-link.coordinator';
+import { LoadoutSharePresenter } from './loadout-share.presenter';
 import { LoadoutSummary } from './loadout-summary';
 import { LoadoutStore } from './loadout.store';
 
@@ -227,6 +238,33 @@ describe('LoadoutLinkCoordinator', () => {
     expect(second.storage.entries.size).toBe(1);
   });
 
+  it('republishes a loadout that arrived on an older table in the current one', () => {
+    // A link is always written with the table this release carries, whatever
+    // table the loadout arrived on, so a Commander who opens an older link and
+    // passes it on hands over a current one (024/FR-003).
+    const first = setup();
+    const held = heldLoadout(first.store);
+
+    const { links, store, location } = setup();
+    const stop = links.start();
+    // The seam stands in for a table below the current one, which this release
+    // is the first of and therefore has none of.
+    links.decode = () => held;
+
+    expect(links.ingest('e.aFragmentAnOlderTableWrote')).toEqual({ kind: 'opened' });
+    TestBed.tick();
+
+    expect(store.loadout()).toEqual(held);
+    expect(location.fragmentValue).not.toBe('e.aFragmentAnOlderTableWrote');
+    expect(readPayloadTableVersion(decodeEquipmentLinkBody(location.fragmentValue))).toBe(
+      CURRENT_EQUIPMENT_TABLE_VERSION,
+    );
+    // And what it names is the loadout that arrived, not a fresh one.
+    expect(decodeEquipmentLinkFragment(location.fragmentValue)).toEqual(held);
+    expect(links.publishedUrl()).toContain(location.fragmentValue);
+    stop();
+  });
+
   it('leaves a fragment that belongs to something else alone', () => {
     const { links, store } = setup();
     store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
@@ -289,6 +327,195 @@ describe('LoadoutLinkCoordinator', () => {
     expect(location.fragmentValue).toBe('');
     expect(links.link().kind).toBe('refused');
   });
+
+  it('carries the mount a refused loadout is about, and leaves the bench alone', () => {
+    const { links, store, location, errors } = setup();
+    const share = TestBed.inject(LoadoutSharePresenter);
+    const held = heldLoadout(store);
+    links.publish();
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'No handheld weapon is named x.', {
+        slot: 'PrimaryWeapon1',
+      });
+    };
+    links.publish();
+
+    const link = links.link();
+    expect(link.kind === 'refused' && link.failure).toEqual({
+      code: 'unknownIdentity',
+      slot: 'PrimaryWeapon1',
+    });
+    expect(store.loadout()).toEqual(held);
+    expect(links.publishedUrl()).toBeNull();
+    expect(location.fragmentValue).toBe('');
+
+    // What a refusal withholds is the link, and the export layer says so. The
+    // loadout is still offered there as a payload and as something a Commander
+    // can read.
+    expect(share.state()).toBe('refused');
+    expect(share.url()).toBeNull();
+    expect(JSON.parse(share.json())).toEqual(toStoredLoadout(held));
+    expect(share.text().length).toBeGreaterThan(0);
+
+    // The words the Commander meets, from the layer that shows them, for a
+    // loadout this version could not write.
+    const said = share.refusal();
+    expect(said?.message).toBe(BUNDLED_ENGLISH['link.error.equipment.outgoing.unknownIdentity']);
+    expect(said?.detail).toBe(
+      errors.describe({ code: 'unknownIdentity', slot: 'PrimaryWeapon1' }, 'equipment').detail,
+    );
+    expect(said?.detail).not.toContain('PrimaryWeapon1');
+    expect(said?.detail?.length).toBeGreaterThan(0);
+  });
+
+  it('says the suit refused it where the refusal is about the suit', () => {
+    const { links, store, errors } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    links.publish();
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'No suit is named x.', { slot: 'suit' });
+    };
+    links.publish();
+
+    const link = links.link();
+    expect(link.kind === 'refused' && link.failure.slot).toBe('suit');
+    expect(errors.describe({ code: 'unknownIdentity', slot: 'suit' }, 'equipment').detail).toBe(
+      BUNDLED_ENGLISH['link.refused.suit'],
+    );
+  });
+
+  it('leaves a fragment belonging to another tool where a loadout is refused', () => {
+    const { links, store, location } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    location.fragmentValue = 'b.somebodyelses';
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+
+    expect(location.fragmentValue).toBe('b.somebodyelses');
+    expect(links.link().kind).toBe('refused');
+  });
+
+  it('tells the Commander at once about a default loadout it cannot represent', () => {
+    // A loadout at its suit's default is in no record by rule and in no
+    // fragment either, so the refusal has to reach the bench rather than wait
+    // inside the export layer for a reload that finds nothing (024/FR-002).
+    const { links, store, autosave, storage } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+    autosave.flush();
+
+    expect(store.atDefault()).toBe(true);
+    expect(store.autosaveRecordId()).toBeNull();
+    expect(storage.entries.size).toBe(0);
+    expect(store.hasLoadout()).toBe(true);
+    expect(links.failure()).toEqual({
+      failure: { code: 'unknownIdentity', slot: 'suit' },
+      direction: 'outgoing',
+    });
+  });
+
+  it('takes the refusal down once a link is published again', () => {
+    // The notice says a link was refused. A Commander who changed the loadout
+    // and got a link has no refusal left to read about, and a notice standing
+    // beside a loadout that shares says something untrue.
+    const { links, store, location } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    const encode = links.encode;
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+    expect(links.failure()).not.toBeNull();
+
+    links.encode = encode;
+    links.publish();
+
+    expect(links.failure()).toBeNull();
+    expect(links.link().kind).toBe('published');
+    expect(location.fragmentValue).toMatch(/^e\./);
+  });
+
+  it('keeps a refused arrival standing through the first publish after it', () => {
+    // The bench publishes once the moment it opens, right after the address is
+    // read. A link that arrived unreadable is settled by another arrival and by
+    // nothing else, or that first publication would take the notice away before
+    // the Commander ever saw it (FR-021).
+    const { links, store } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    expect(links.ingest('e.notaloadoutatall').kind).toBe('refused');
+    const refused = links.failure();
+    expect(refused?.direction).toBe('incoming');
+
+    links.publish();
+
+    expect(links.failure()).toEqual(refused);
+    // And the loadout still shares: the notice is about the address, not about
+    // what is on the bench.
+    expect(links.link().kind).toBe('published');
+  });
+
+  it('leaves the refused fragment in the address while the publisher is running', () => {
+    // The publisher must not subscribe to the refusal. One that did would run
+    // on a refused arrival and write the bench's own loadout over the fragment
+    // the Commander was handed — the one thing they have to pass to someone who
+    // can read it.
+    const { links, store, location } = setup();
+    const stop = links.start();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    TestBed.tick();
+    const replacements = location.replacements;
+
+    location.fragmentValue = 'e.notaloadoutatall';
+    expect(links.ingest(location.fragmentValue).kind).toBe('refused');
+    TestBed.tick();
+
+    expect(location.fragmentValue).toBe('e.notaloadoutatall');
+    expect(location.replacements).toBe(replacements);
+    stop();
+  });
+
+  it('takes a refused arrival out of the address where the bench holds nothing', () => {
+    // The address carries the loadout on the bench, so a bench holding none
+    // carries nothing either. The notice is the whole record of the link.
+    const { links, location } = setup();
+    const stop = links.start();
+    TestBed.tick();
+
+    location.fragmentValue = 'e.notaloadoutatall';
+    expect(links.ingest(location.fragmentValue).kind).toBe('refused');
+    links.publish();
+
+    expect(location.fragmentValue).toBe('');
+    expect(links.failure()?.direction).toBe('incoming');
+    stop();
+  });
+
+  it('takes the refusal down when the bench is emptied', () => {
+    const { links, store } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+    expect(links.failure()).not.toBeNull();
+
+    store.open(null);
+    links.publish();
+
+    expect(links.failure()).toBeNull();
+    expect(links.link().kind).toBe('absent');
+  });
 });
 
 describe('the loadout link payload allowlist', () => {
@@ -321,13 +548,24 @@ describe('a loadout link refusal', () => {
   it('says what a loadout link failed at, not what a build link would have', () => {
     const { errors } = setup();
 
-    for (const code of ['unknownIdentity', 'invalidPayload'] as const) {
+    for (const code of ['unknownIdentity', 'invalidPayload', 'unsupportedTableVersion'] as const) {
       const ship = errors.describe({ code, slot: null }).message;
       const loadout = errors.describe({ code, slot: null }, 'equipment').message;
 
       expect(loadout).toBe(BUNDLED_ENGLISH[`link.error.equipment.${code}`]);
       expect(loadout).not.toBe(ship);
     }
+  });
+
+  it('says a loadout link is from a newer version in every shipped locale', () => {
+    // The key is the one a Commander meets when a link names a table this
+    // application does not carry, so a locale missing it would leave the ship
+    // wording in its place.
+    const key = 'link.error.equipment.unsupportedTableVersion';
+
+    expect(BUNDLED_ENGLISH[key]).toContain('loadout link');
+    expect(germanCatalogue[key]).toContain('Loadout-Link');
+    expect(germanCatalogue[key]).not.toBe(BUNDLED_ENGLISH[key]);
   });
 
   it('names the mount in the library’s words, never by its journal key (FR-021)', () => {
@@ -340,12 +578,56 @@ describe('a loadout link refusal', () => {
     expect(detail.length).toBeGreaterThan(0);
   });
 
-  it('says the suit is what failed where the codec named the suit', () => {
+  it('says a loadout could not be written where the refusal is on the way out', () => {
+    // Every code the encoder raises: `unknownIdentity`, `invalidPayload` and
+    // `tooLong` from the codec and the bound, and `reconstructionFailed` for
+    // anything else thrown on that path.
+    const { errors } = setup();
+    const codes = ['unknownIdentity', 'invalidPayload', 'reconstructionFailed', 'tooLong'] as const;
+
+    for (const code of codes) {
+      const arriving = errors.describe({ code, slot: null }, 'equipment', 'incoming').message;
+      const leaving = errors.describe({ code, slot: null }, 'equipment', 'outgoing').message;
+
+      expect(leaving).toBe(BUNDLED_ENGLISH[`link.error.equipment.outgoing.${code}`]);
+      expect(leaving).not.toBe(arriving);
+      // Nothing was read on the way out, so nothing can be said to be unreadable.
+      expect(leaving).not.toContain('could not be read');
+      expect(leaving).toContain('loadout');
+      expect(germanCatalogue[`link.error.equipment.outgoing.${code}`]).toContain('Loadout');
+    }
+  });
+
+  it('says a loadout could not be written for anything else thrown on the way out', () => {
+    // The encoder's default. `classify` answers `reconstructionFailed` for what
+    // is not a codec error, so the key it maps to is the one a Commander meets
+    // when the encoder fails in a way the codec did not name.
+    const { links, store } = setup();
+    const share = TestBed.inject(LoadoutSharePresenter);
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    links.encode = () => {
+      throw new Error('a defect, not a refusal the codec states');
+    };
+    links.publish();
+
+    expect(links.link().kind).toBe('refused');
+    expect(share.refusal()?.message).toBe(
+      BUNDLED_ENGLISH['link.error.equipment.outgoing.reconstructionFailed'],
+    );
+  });
+
+  it('names the suit in words that fit a refusal in either direction', () => {
+    // The mount detail is shared by both wordings, so it says which part is
+    // involved rather than what happened to it.
     const { errors } = setup();
 
-    expect(errors.describe({ code: 'invalidPayload', slot: 'suit' }, 'equipment').detail).toBe(
-      BUNDLED_ENGLISH['link.refused.suit'],
-    );
+    for (const direction of ['incoming', 'outgoing'] as const) {
+      expect(
+        errors.describe({ code: 'invalidPayload', slot: 'suit' }, 'equipment', direction).detail,
+      ).toBe(BUNDLED_ENGLISH['link.refused.suit']);
+    }
+    expect(BUNDLED_ENGLISH['link.refused.suit']).not.toContain('could not be read');
   });
 });
 

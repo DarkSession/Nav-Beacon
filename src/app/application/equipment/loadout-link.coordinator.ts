@@ -2,7 +2,7 @@ import { Injectable, Injector, effect, inject, signal, untracked } from '@angula
 import {
   decodeEquipmentLinkFragment,
   encodeEquipmentLinkFragment,
-} from '../../domain/equipment/loadout-link/equipment-link-codec';
+} from '../../domain/equipment/loadout-link/equipment-link-codec-loader';
 import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equipment-loadout';
 import { reconstructLoadout } from '../../domain/equipment/loadout/loadout-reconstructor';
 import { toStoredLoadout } from '../../domain/equipment/loadout/stored-loadout.serializer';
@@ -11,7 +11,11 @@ import {
   MAX_BUILD_LINK_LENGTH,
   recognizeEquipmentLinkFragment,
 } from '../build-link/fragment-recognizer';
-import { LinkErrorMapper, type LinkFailure } from '../build-link/link-error.mapper';
+import {
+  LinkErrorMapper,
+  type LinkDirection,
+  type LinkFailure,
+} from '../build-link/link-error.mapper';
 import { equipmentLinkPayloadSource } from '../build-link/link-payload.allowlist';
 import { LoadoutStore } from './loadout.store';
 
@@ -20,6 +24,12 @@ export type LoadoutLinkState =
   | { readonly kind: 'absent' }
   | { readonly kind: 'published'; readonly fragment: string }
   | { readonly kind: 'refused'; readonly failure: LinkFailure };
+
+/** A refusal, and which way the link was going when it was refused. */
+export interface LoadoutLinkRefusal {
+  readonly failure: LinkFailure;
+  readonly direction: LinkDirection;
+}
 
 /** How an incoming fragment was dealt with. */
 export type LoadoutIngressResult =
@@ -66,16 +76,29 @@ export class LoadoutLinkCoordinator {
   /** What the address bar is carrying for this bench, or why it is not. */
   readonly link = this.#link.asReadonly();
 
-  readonly #failure = signal<LinkFailure | null>(null);
+  readonly #failure = signal<LoadoutLinkRefusal | null>(null);
 
   /**
-   * Why the last incoming link was refused, or `null`.
+   * Why the last link was refused, or `null`.
    *
    * Kept apart from the publication state above, because the two are read in
    * different places: a link that arrives refused is not something a Commander
    * went looking for — they opened an address and nothing happened — so the
    * reason belongs where they are rather than inside a layer they would have to
    * find (FR-021).
+   *
+   * A loadout the current table cannot represent is refused on the way out for
+   * the same reason. It is in no record while it is at its suit's default and in
+   * no fragment either, so a Commander told only inside the export layer would
+   * learn on the next reload that it is gone.
+   *
+   * The direction rides along because the two are settled by different events.
+   * A refusal on the way out is `null` again the moment a link is published or
+   * the bench is emptied: a notice about a loadout that shares is a notice about
+   * nothing. A link that arrived unreadable stands until another one is read,
+   * because publishing the bench's own loadout says nothing about it — and the
+   * bench publishes once as soon as it opens, which would otherwise take the
+   * notice away before the Commander saw it.
    */
   readonly failure = this.#failure.asReadonly();
 
@@ -124,6 +147,7 @@ export class LoadoutLinkCoordinator {
 
     if (loadout === null) {
       this.#clear();
+      this.#settleOutgoing();
       this.#link.set({ kind: 'absent' });
       return;
     }
@@ -144,6 +168,7 @@ export class LoadoutLinkCoordinator {
     }
 
     this.#settled = fragment;
+    this.#settleOutgoing();
     this.#location.replaceFragment(fragment);
     this.#link.set({ kind: 'published', fragment });
   }
@@ -189,6 +214,8 @@ export class LoadoutLinkCoordinator {
     }
 
     this.#settled = recognized.fragment;
+    // A link that was read settles both directions: the bench now holds what
+    // the address carried, so no earlier refusal is still about it.
     this.#failure.set(null);
     // A link is nobody's saved record, so the loadout it opens belongs to no
     // save and the next save asks for a name (013 contracts/loadout-persistence).
@@ -200,12 +227,18 @@ export class LoadoutLinkCoordinator {
   /**
    * Refuses an incoming link, leaving the bench exactly as it was.
    *
-   * The fragment stays in the address bar: it is what the Commander was handed,
-   * it is not this application's output, and removing it would take away the
-   * thing they would paste to someone who can read it.
+   * While the bench holds a loadout the fragment stays in the address bar: it
+   * is what the Commander was handed, it is not this application's output, and
+   * the publisher has its own fragment to write and no reason to touch this
+   * one.
+   *
+   * An empty bench is the exception. The address carries the loadout on the
+   * bench, so a bench holding none carries nothing, and the publisher takes the
+   * refused fragment down with everything else. Either way the notice stands,
+   * and it is the record of the link that would not open.
    */
   #refuseIncoming(failure: LinkFailure): LoadoutIngressResult {
-    this.#failure.set(failure);
+    this.#failure.set({ failure, direction: 'incoming' });
     return { kind: 'refused', failure };
   }
 
@@ -213,9 +246,35 @@ export class LoadoutLinkCoordinator {
     // The loadout stays exactly as it is — one that cannot be shared is still a
     // loadout. What cannot stay is a fragment describing an earlier version.
     this.#clear();
+    this.#failure.set({ failure, direction: 'outgoing' });
     this.#link.set({ kind: 'refused', failure });
   }
 
+  /**
+   * Drops a refusal publication itself raised, and leaves an arrival's alone.
+   *
+   * A loadout that now shares says nothing about the link the Commander opened
+   * and could not read, and that notice is the only record they have of it.
+   *
+   * Read untracked, like the loadout above: a publisher that subscribed to the
+   * refusal would run again the moment a link was refused on the way in, and
+   * write the bench's own fragment over the one the Commander was handed.
+   */
+  #settleOutgoing(): void {
+    if (untracked(() => this.#failure())?.direction === 'outgoing') {
+      this.#failure.set(null);
+    }
+  }
+
+  /**
+   * Takes down a fragment this tool owns, and leaves every other one alone.
+   *
+   * The fragment is read tracked, and it is the one tracked read `publish` makes;
+   * the store reads the watcher subscribes to are in `start`. That subscription
+   * is what takes a refused link out of an address the bench holds no loadout
+   * for: the arrival changes the fragment, the watcher runs again, and this time
+   * there is something of ours to remove.
+   */
   #clear(): void {
     if (recognizeEquipmentLinkFragment(this.#location.fragment()).kind === 'unrelated') {
       return;
