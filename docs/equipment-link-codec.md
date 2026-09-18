@@ -196,7 +196,11 @@ The ship codec draws that line elsewhere: an identity that is absent from its co
 because `link.error.unknownIdentity` tells a Commander the link "names a hull or module that is
 not available here", which is untrue of a recipe this release publishes and the bench can show.
 The bench says it in its own words instead: `link.error.equipment.unknownIdentity` names a suit,
-weapon or modification this version does not have. Each codec is right about its own links.
+weapon or modification this version does not have.
+
+Three codes still reach the bench in the ship codec's words: `invalidEncoding`, `integrityCheckFailed`
+and an arriving `tooLong` all open with "This build link". They are about the fragment rather than
+about the loadout it describes, and `link-error.mapper.ts` carries no equipment key for them.
 
 The bench splits the wording a second time, by the direction the link was going. A loadout the
 current table cannot write is refused on the bench, where the Commander is, because a loadout at

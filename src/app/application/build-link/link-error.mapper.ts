@@ -36,24 +36,16 @@ export interface LinkFailureText {
 }
 
 /**
- * Every reason a link failed, in one place, keyed by a stable code.
+ * The codes a loadout says in its own words on the way in.
  *
- * A `BuildLinkCodecError` message is an internal English string written for
- * whoever is reading a stack trace. None of them is ever rendered: they name
- * table versions, bit widths and canonical forms, they are not translated, and
- * they would tell a Commander nothing they could act on (build-link contract,
- * "Error presentation").
- */
-/**
- * The codes whose ship wording is wrong for a loadout.
- *
- * The rest read the same either way — an altered fragment is an altered
- * fragment — so only these are said twice (013
+ * Each names something the ship key gets wrong: a hull or module where the
+ * bench holds a suit, and a build where it holds a loadout (013
  * contracts/equipment-loadout-link.md, "Refusal wording").
  *
- * `unsupportedTableVersion` is among them for the same reason: the ship key
- * calls a loadout link a build link, and a payload naming a table this
- * application does not carry is a refusal a Commander meets.
+ * `invalidEncoding` and `integrityCheckFailed`, and an arriving
+ * `reconstructionFailed` or `tooLong`, fall through to the ship key below and
+ * reach the bench saying "build link". They are about the fragment rather than
+ * about what it describes, and no requirement states their loadout wording yet.
  */
 const EQUIPMENT_MESSAGE_KEYS: Partial<Record<LinkFailureCode, MessageKey>> = {
   invalidPayload: 'link.error.equipment.invalidPayload',
@@ -75,6 +67,15 @@ const EQUIPMENT_OUTGOING_MESSAGE_KEYS: Partial<Record<LinkFailureCode, MessageKe
   tooLong: 'link.error.equipment.outgoing.tooLong',
 };
 
+/**
+ * Every reason a link failed, in one place, keyed by a stable code.
+ *
+ * A `BuildLinkCodecError` message is an internal English string written for
+ * whoever is reading a stack trace. None of them is ever rendered: they name
+ * table versions, bit widths and canonical forms, they are not translated, and
+ * they would tell a Commander nothing they could act on (build-link contract,
+ * "Error presentation").
+ */
 const MESSAGE_KEYS: Readonly<Record<LinkFailureCode, MessageKey>> = {
   invalidEncoding: 'link.error.invalidEncoding',
   integrityCheckFailed: 'link.error.integrityCheckFailed',

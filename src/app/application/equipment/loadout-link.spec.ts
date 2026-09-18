@@ -14,6 +14,7 @@ import {
 } from '../build-link/link-payload.allowlist';
 import { LoadoutAutosaveService } from './loadout-autosave.service';
 import { LoadoutLinkCoordinator } from './loadout-link.coordinator';
+import { LoadoutSharePresenter } from './loadout-share.presenter';
 import { LoadoutSummary } from './loadout-summary';
 import { LoadoutStore } from './loadout.store';
 
@@ -293,7 +294,8 @@ describe('LoadoutLinkCoordinator', () => {
   });
 
   it('carries the mount a refused loadout is about, and leaves the bench alone', () => {
-    const { links, store, location, errors, summary } = setup();
+    const { links, store, location, errors } = setup();
+    const share = TestBed.inject(LoadoutSharePresenter);
     const held = heldLoadout(store);
     links.publish();
 
@@ -313,23 +315,23 @@ describe('LoadoutLinkCoordinator', () => {
     expect(links.publishedUrl()).toBeNull();
     expect(location.fragmentValue).toBe('');
 
-    // What a refusal withholds is the link. The loadout is still exportable as
-    // a payload and as something a Commander can read.
-    const payload = toStoredLoadout(store.loadout()!);
-    expect(payload.suitFamily).toBe(held.suitFamily);
-    expect(payload.suitGrade).toBe(held.suitGrade);
-    expect(payload.weapons.map((weapon) => weapon?.symbol ?? null)).toEqual(
-      held.weapons.map((weapon) => weapon?.symbol ?? null),
-    );
-    expect(summary.write(store.loadout()!).length).toBeGreaterThan(0);
+    // What a refusal withholds is the link, and the export layer says so. The
+    // loadout is still offered there as a payload and as something a Commander
+    // can read.
+    expect(share.state()).toBe('refused');
+    expect(share.url()).toBeNull();
+    expect(JSON.parse(share.json())).toEqual(toStoredLoadout(held));
+    expect(share.text().length).toBeGreaterThan(0);
 
-    const said = errors.describe(
-      link.kind === 'refused' ? link.failure : { code: 'tooLong', slot: null },
-      'equipment',
+    // The words the Commander meets, from the layer that shows them, for a
+    // loadout this version could not write.
+    const said = share.refusal();
+    expect(said?.message).toBe(BUNDLED_ENGLISH['link.error.equipment.outgoing.unknownIdentity']);
+    expect(said?.detail).toBe(
+      errors.describe({ code: 'unknownIdentity', slot: 'PrimaryWeapon1' }, 'equipment').detail,
     );
-    expect(said.message).toBe(BUNDLED_ENGLISH['link.error.equipment.unknownIdentity']);
-    expect(said.detail).not.toContain('PrimaryWeapon1');
-    expect(said.detail?.length).toBeGreaterThan(0);
+    expect(said?.detail).not.toContain('PrimaryWeapon1');
+    expect(said?.detail?.length).toBeGreaterThan(0);
   });
 
   it('says the suit refused it where the refusal is about the suit', () => {
@@ -428,6 +430,26 @@ describe('LoadoutLinkCoordinator', () => {
     expect(links.link().kind).toBe('published');
   });
 
+  it('leaves the refused fragment in the address while the publisher is running', () => {
+    // The publisher must not subscribe to the refusal. One that did would run
+    // on a refused arrival and write the bench's own loadout over the fragment
+    // the Commander was handed — the one thing they have to pass to someone who
+    // can read it.
+    const { links, store, location } = setup();
+    const stop = links.start();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    TestBed.tick();
+    const replacements = location.replacements;
+
+    location.fragmentValue = 'e.notaloadoutatall';
+    expect(links.ingest(location.fragmentValue).kind).toBe('refused');
+    TestBed.tick();
+
+    expect(location.fragmentValue).toBe('e.notaloadoutatall');
+    expect(location.replacements).toBe(replacements);
+    stop();
+  });
+
   it('takes the refusal down when the bench is emptied', () => {
     const { links, store } = setup();
     store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
@@ -506,9 +528,13 @@ describe('a loadout link refusal', () => {
   });
 
   it('says a loadout could not be written where the refusal is on the way out', () => {
+    // Every code the encoder raises: `unknownIdentity`, `invalidPayload` and
+    // `tooLong` from the codec and the bound, and `reconstructionFailed` for
+    // anything else thrown on that path.
     const { errors } = setup();
+    const codes = ['unknownIdentity', 'invalidPayload', 'reconstructionFailed', 'tooLong'] as const;
 
-    for (const code of ['unknownIdentity', 'invalidPayload', 'tooLong'] as const) {
+    for (const code of codes) {
       const arriving = errors.describe({ code, slot: null }, 'equipment', 'incoming').message;
       const leaving = errors.describe({ code, slot: null }, 'equipment', 'outgoing').message;
 
@@ -516,8 +542,28 @@ describe('a loadout link refusal', () => {
       expect(leaving).not.toBe(arriving);
       // Nothing was read on the way out, so nothing can be said to be unreadable.
       expect(leaving).not.toContain('could not be read');
-      expect(germanCatalogue[`link.error.equipment.outgoing.${code}`]).not.toBe(leaving);
+      expect(leaving).toContain('loadout');
+      expect(germanCatalogue[`link.error.equipment.outgoing.${code}`]).toContain('Loadout');
     }
+  });
+
+  it('says a loadout could not be written for anything else thrown on the way out', () => {
+    // The encoder's default. `classify` answers `reconstructionFailed` for what
+    // is not a codec error, so the key it maps to is the one a Commander meets
+    // when the encoder fails in a way the codec did not name.
+    const { links, store } = setup();
+    const share = TestBed.inject(LoadoutSharePresenter);
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    links.encode = () => {
+      throw new Error('a defect, not a refusal the codec states');
+    };
+    links.publish();
+
+    expect(links.link().kind).toBe('refused');
+    expect(share.refusal()?.message).toBe(
+      BUNDLED_ENGLISH['link.error.equipment.outgoing.reconstructionFailed'],
+    );
   });
 
   it('names the suit in words that fit a refusal in either direction', () => {

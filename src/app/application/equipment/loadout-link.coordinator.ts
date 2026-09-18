@@ -249,9 +249,14 @@ export class LoadoutLinkCoordinator {
    *
    * A loadout that now shares says nothing about the link the Commander opened
    * and could not read, and that notice is the only record they have of it.
+   *
+   * Read untracked, like every other read on this path: a publisher that
+   * subscribed to the refusal would run again the moment a link was refused on
+   * the way in, and write the bench's own fragment over the one the Commander
+   * was handed.
    */
   #settleOutgoing(): void {
-    if (this.#failure()?.direction === 'outgoing') {
+    if (untracked(() => this.#failure())?.direction === 'outgoing') {
       this.#failure.set(null);
     }
   }
