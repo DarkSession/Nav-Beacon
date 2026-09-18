@@ -485,6 +485,22 @@ describe('LoadoutLinkCoordinator', () => {
     stop();
   });
 
+  it('takes a refused arrival out of the address where the bench holds nothing', () => {
+    // The address carries the loadout on the bench, so a bench holding none
+    // carries nothing either. The notice is the whole record of the link.
+    const { links, location } = setup();
+    const stop = links.start();
+    TestBed.tick();
+
+    location.fragmentValue = 'e.notaloadoutatall';
+    expect(links.ingest(location.fragmentValue).kind).toBe('refused');
+    links.publish();
+
+    expect(location.fragmentValue).toBe('');
+    expect(links.failure()?.direction).toBe('incoming');
+    stop();
+  });
+
   it('takes the refusal down when the bench is emptied', () => {
     const { links, store } = setup();
     store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });

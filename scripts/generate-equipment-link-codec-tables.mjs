@@ -35,7 +35,7 @@ const tablePathFor = (version) =>
 const outputPath = tablePathFor(TABLE_VERSION);
 
 /**
- * The table versions a decoder still answers for, oldest first.
+ * The table versions below the one this run writes, oldest first.
  *
  * The application is published, so every one of these files is a promise to the
  * links already shared against it: a Commander's link names the table that
@@ -48,7 +48,7 @@ const outputPath = tablePathFor(TABLE_VERSION);
  * afford, because minting the next table and forgetting to extend it would stop
  * the check silently and exactly when it matters.
  */
-const publishedTableVersions = () =>
+const earlierTableVersions = () =>
   Array.from({ length: TABLE_VERSION - 1 }, (_entry, index) => index + 1);
 const suits = Object.values(SUITS);
 const weapons = Object.values(PERSONAL_WEAPONS);
@@ -176,7 +176,7 @@ const readTable = async (path) => JSON.parse(await readFile(path, 'utf8').catch(
  * them back on every run is what turns that from a thing to remember into a
  * thing the build refuses.
  */
-for (const version of publishedTableVersions()) {
+for (const version of earlierTableVersions()) {
   const path = tablePathFor(version);
   const table = await readTable(path);
   if (table === null) {
@@ -216,7 +216,7 @@ const previous = await readTable(outputPath);
  * below it, so the same absence means the published table was deleted, and that
  * is the one case this script must still refuse.
  */
-if (previous === null && publishedTableVersions().length === 0) {
+if (previous === null && earlierTableVersions().length === 0) {
   throw new Error(
     `Equipment codec table ${TABLE_VERSION} is missing.\nA link naming table ${TABLE_VERSION} ` +
       'has no other table that decodes it, so the file stays in the repository for as long as ' +

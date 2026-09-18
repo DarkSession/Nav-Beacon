@@ -227,9 +227,15 @@ export class LoadoutLinkCoordinator {
   /**
    * Refuses an incoming link, leaving the bench exactly as it was.
    *
-   * The fragment stays in the address bar: it is what the Commander was handed,
-   * it is not this application's output, and removing it would take away the
-   * thing they would paste to someone who can read it.
+   * While the bench holds a loadout the fragment stays in the address bar: it
+   * is what the Commander was handed, it is not this application's output, and
+   * the publisher has its own fragment to write and no reason to touch this
+   * one.
+   *
+   * An empty bench is the exception. The address carries the loadout on the
+   * bench, so a bench holding none carries nothing, and the publisher takes the
+   * refused fragment down with everything else. Either way the notice stands,
+   * and it is the record of the link that would not open.
    */
   #refuseIncoming(failure: LinkFailure): LoadoutIngressResult {
     this.#failure.set({ failure, direction: 'incoming' });
