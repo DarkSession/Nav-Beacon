@@ -69,10 +69,17 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   gains the direction a refusal was going, because a loadout the current table cannot write is
   refused with nothing having arrived, and `link.error.equipment.outgoing.*` says so for the four
   codes the encoder raises.
+- `src/app/application/equipment/loadout-link.coordinator.ts` — the refusal it holds carries the
+  direction the link was going, and publication settles only a refusal publication itself raised, so
+  a loadout the current table cannot write reaches the bench notice where before only an arriving
+  link did. `src/app/features/equipment/equipment-bench.page.ts` and its template, and
+  `src/app/application/equipment/loadout-share.presenter.ts`, pass that direction on.
 - `src/app/domain/equipment/loadout-link/equipment-link-codec.spec.ts`,
+  `src/app/domain/equipment/loadout-link/equipment-link-codec-loader.spec.ts`,
   `src/app/application/equipment/loadout-link.spec.ts`,
-  `scripts/generate-equipment-link-codec-tables.test.mjs`, a new published-link corpus fixture and
-  its suite, `e2e/equipment-link.spec.ts` and the `equipment/link` entry in
-  `e2e/coverage-ledger.ts`.
+  `src/app/features/equipment/equipment-bench.page.spec.ts`,
+  `scripts/generate-equipment-link-codec-tables.test.mjs`, a table helper the suites share, a new
+  published-link corpus fixture and its suite, `e2e/equipment-link.spec.ts` and the `equipment/link`
+  entry in `e2e/coverage-ledger.ts`.
 - `docs/equipment-link-codec.md`.
 - No package dependency changes. `@elite-dangerous-almanac/core` stays the source of every identity.

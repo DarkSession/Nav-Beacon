@@ -101,10 +101,11 @@ from the moment the loadout reaches the bench.
 identity the current one does not hold, `encodeEquipmentLinkFragment` raises `unknownIdentity` with
 the mount, or with `suit` where what refused sits on the suit rather than on a mount: the suit
 itself, its grade, or one of its modifications.
-`LoadoutLinkCoordinator` already holds a `refused` link state for this, so the behaviour exists
-and the delta states it rather than building it. Substituting a neighbouring identity is
-forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench
-intact.
+`LoadoutLinkCoordinator` already holds a `refused` link state for this, so publishing nothing and
+taking the fragment down are stated rather than built. Telling the Commander is built here: the
+refusal reached the export layer and no further, and a bench that silently stops publishing says
+nothing a Commander could act on. Substituting a neighbouring identity is forbidden by
+constitution IV, and publishing nothing is what leaves the loadout on the bench intact.
 
 **A refusal is worded for the direction the link was going.** Every equipment refusal the bench
 could show until now was about a link that arrived and could not be read. This one is about a

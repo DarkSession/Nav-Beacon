@@ -269,10 +269,11 @@ export class LoadoutLinkCoordinator {
   /**
    * Takes down a fragment this tool owns, and leaves every other one alone.
    *
-   * The fragment is read tracked, and it is the one tracked read the publisher
-   * makes. That subscription is what takes a refused link out of an address the
-   * bench holds no loadout for: the arrival changes the fragment, the publisher
-   * runs again, and this time there is something of ours to remove.
+   * The fragment is read tracked, and it is the one tracked read `publish` makes;
+   * the store reads the watcher subscribes to are in `start`. That subscription
+   * is what takes a refused link out of an address the bench holds no loadout
+   * for: the arrival changes the fragment, the watcher runs again, and this time
+   * there is something of ours to remove.
    */
   #clear(): void {
     if (recognizeEquipmentLinkFragment(this.#location.fragment()).kind === 'unrelated') {
