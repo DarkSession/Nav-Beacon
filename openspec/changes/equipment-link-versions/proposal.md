@@ -41,7 +41,8 @@ None. The link is already specified under `equipment-builder/loadout-persistence
   table stays readable, a published table is immutable, and a payload naming an unknown version is
   refused rather than guessed. The accepted requirement "Exporting the open loadout" gains the
   version an exported or published link names, and what happens to a loadout the current table
-  cannot represent.
+  cannot represent. "The address carries the loadout on the bench" gains the exception for such a
+  loadout: nothing is published and an equipment fragment already in the address is removed.
 
 ## Impact
 

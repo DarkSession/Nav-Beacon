@@ -75,9 +75,9 @@ can build.
 A link the bench publishes into the fragment or offers for export MUST name the
 current table version, whatever version the loadout arrived on. Where the current
 table cannot represent the loadout, the application MUST NOT publish or offer a
-link, and the loadout on the bench MUST be left as it is. An equipment fragment already in the
-address MUST be removed, so the address names no loadout the bench cannot share,
-and a fragment belonging to another tool MUST be left as it is. The Commander MUST
+link, and the loadout on the bench MUST be left as it is. What becomes of a
+fragment already in the address is stated by "The address carries the loadout on
+the bench" (024/FR-003). The Commander MUST
 be told what refused it — the mount, named by `getPersonalMountName` in
 `@elite-dangerous-almanac/core/i18n/suits`, or the suit where the suit is what the
 current table cannot name — and the reason.
@@ -110,8 +110,6 @@ Source: 013/FR-020, 013/SC-005.
   carries
 - **THEN** no link is published into the fragment and none is offered for export
 - **AND** the loadout on the bench is left as it is
-- **AND** an equipment fragment already in the address is removed, and a fragment
-  belonging to another tool is left as it is
 - **AND** the Commander is told what refused it — the mount, or the suit — and the
   reason
 
@@ -121,9 +119,10 @@ The loadout MUST be published into the fragment from the moment it reaches the b
 after a change, and each change MUST replace the fragment without adding a history entry. A bench
 holding no loadout MUST publish none. The path and the query MUST NOT carry any part of it.
 
-Where the current table cannot represent the loadout, nothing MUST be published and an equipment
-fragment already in the address MUST be removed, so the address names no loadout the bench cannot
-share. Removing that fragment publishes nothing, so it is not a loadout stated into the address.
+Where the current table cannot represent the loadout, the application MUST NOT publish a link, and
+an equipment fragment already in the address MUST be removed, so the address names no loadout the
+bench cannot share. A fragment belonging to another tool MUST be left as it is. Removing a fragment
+publishes nothing, so it is not a loadout stated into the address.
 
 This is what makes a loadout that is in no record recoverable. A loadout still at its suit's default
 is stored nowhere, so the fragment is the only thing holding it, and a Commander who reloads the tab
@@ -158,3 +157,4 @@ Source: 024/FR-003.
 - **WHEN** the current table cannot represent the loadout on the bench
 - **THEN** nothing is published into the fragment
 - **AND** an equipment fragment carrying an earlier loadout is removed
+- **AND** a fragment belonging to another tool is left as it is

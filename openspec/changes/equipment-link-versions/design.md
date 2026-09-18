@@ -93,7 +93,11 @@ from the moment the loadout reaches the bench.
 
 **A loadout the current table cannot represent publishes no link.** Where an older table named an
 identity the current one does not hold, `encodeEquipmentLinkFragment` raises `unknownIdentity` with
-the mount, or with `suit` where the suit is what the current table cannot name. `LoadoutLinkCoordinator` already holds a `refused` link state for this, so the behaviour
+the mount, or with `suit` where the suit is what the current table cannot name.
+`LoadoutLinkCoordinator` already holds a `refused` link state for this, so the behaviour exists
+and the delta states it rather than building it. Substituting a neighbouring identity is
+forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench
+intact.
 exists and the delta states it rather than building it. Substituting a neighbouring identity is
 forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench intact.
 
