@@ -78,8 +78,9 @@ table cannot represent the loadout, the application MUST NOT publish or offer a
 link, and the loadout on the bench MUST be left as it is. An equipment fragment already in the
 address MUST be removed, so the address names no loadout the bench cannot share,
 and a fragment belonging to another tool MUST be left as it is. The Commander MUST
-be told what refused it — the mount, or the suit where the suit is what the current
-table cannot name — and the reason.
+be told what refused it — the mount, named by `getPersonalMountName` in
+`@elite-dangerous-almanac/core/i18n/suits`, or the suit where the suit is what the
+current table cannot name — and the reason.
 
 Source: 013/FR-020, 013/SC-005.
 
@@ -113,3 +114,47 @@ Source: 013/FR-020, 013/SC-005.
   belonging to another tool is left as it is
 - **AND** the Commander is told what refused it — the mount, or the suit — and the
   reason
+
+### Requirement: The address carries the loadout on the bench
+
+The loadout MUST be published into the fragment from the moment it reaches the bench, not only
+after a change, and each change MUST replace the fragment without adding a history entry. A bench
+holding no loadout MUST publish none. The path and the query MUST NOT carry any part of it.
+
+Where the current table cannot represent the loadout, nothing MUST be published and an equipment
+fragment already in the address MUST be removed, so the address names no loadout the bench cannot
+share. Removing that fragment publishes nothing, so it is not a loadout stated into the address.
+
+This is what makes a loadout that is in no record recoverable. A loadout still at its suit's default
+is stored nowhere, so the fragment is the only thing holding it, and a Commander who reloads the tab
+gets the loadout back from there.
+
+Source: 024/FR-003.
+
+#### Scenario: A suit is chosen and nothing else is done
+
+- **WHEN** a Commander chooses a suit at the gate and makes no other choice
+- **THEN** that loadout is published into the fragment
+
+#### Scenario: The bench is reloaded on a default loadout
+
+- **WHEN** a Commander reloads the tab while the bench holds a loadout at its suit's default
+- **AND** the fragment carries that loadout
+- **THEN** the same loadout is on the bench
+
+#### Scenario: The bench is opened at an address carrying no loadout
+
+- **WHEN** a Commander opens the bench at an address whose fragment carries no loadout
+- **THEN** the bench opens on the suit gate
+
+#### Scenario: Each change replaces what the fragment carries
+
+- **WHEN** a Commander makes a change on the bench
+- **THEN** the fragment carries the changed loadout
+- **AND** no history entry is added for the change
+
+#### Scenario: The codec refuses the loadout on the bench
+
+- **WHEN** the current table cannot represent the loadout on the bench
+- **THEN** nothing is published into the fragment
+- **AND** an equipment fragment carrying an earlier loadout is removed

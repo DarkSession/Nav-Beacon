@@ -6,10 +6,11 @@
       Nothing else in this section starts until the capture is out of the working tree.
 - [ ] 1.1 Export an `EquipmentLinkCodecTables` type derived from `equipment-link-table-1.json`, and
       verify `pnpm run typecheck` passes with the committed table assigned to it.
-- [ ] 1.2 Move `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`, `SUIT_MODIFICATION_BITS`,
-      `WEAPON_MODIFICATION_BITS`, `MOUNTS` and `MODIFICATION_SLOTS` from module constants into a
-      `createEquipmentLinkCodec(tableVersion, table)` factory, and verify the existing
-      `equipment-link-codec.spec.ts` passes unchanged against a codec built on table 1.
+- [ ] 1.2 Move the encode and decode pair into a `createEquipmentLinkCodec(tableVersion, table)`
+      factory, with the seven module constants and every `table.` read inside it. Verify
+      `equipment-link-codec.ts` imports no table file, so the registry of task 2.1 is the only module
+      that does. Verify the existing `equipment-link-codec.spec.ts` passes unchanged against a codec
+      built on table 1.
 - [ ] 1.3 Have the factory's encoder write the table version it was built with rather than a module
       constant, and verify a fragment encoded by a codec built on a test-only version 2 table carries
       2 in its first ten bits.
@@ -46,21 +47,23 @@
       rather than writing the file name down, and change the `codec:tables:equipment` script to
       format `equipment-link-table-*.json`. Verify `pnpm run codec:tables:equipment` reproduces the
       committed table with the working tree clean afterwards.
-- [ ] 3.2 Give the generator a minting path. Where the file for `TABLE_VERSION` is absent and the
-      version below it is committed, it writes it; the published-version sweep of task 3.3 supplies
-      that condition, as it does for build-link table 2. Where the committed file's payload has
-      moved, it fails and names the version the new content belongs under. Today `TABLE_VERSION` reaches only the messages
-      and the `$generated` stamp, so raising it to 2 rewrites table 1 in place stamped as version 2,
-      and `CURRENT_TABLE_VERSION` is read back from that stamp. Once 3.1 derives the path, verify in
-      `test:scripts`, against a temporary directory, that raising
-      the version writes `equipment-link-table-2.json`, that a moved payload under an unchanged
-      version writes nothing and names version 2 in the failure, and that
-      `equipment-link-table-1.json` is byte-identical after both. An absent table 1 has no version
-      below it, so verify it still fails with the refusal the script carries today rather than
-      minting a fresh table 1, and that nothing is written.
+- [ ] 3.2 Give the generator a minting path. Where the file for `TABLE_VERSION` is absent, it writes
+      it only where a version below it is committed. Table 1 has no version below it, so it keeps the
+      refusal the script carries today. Where the committed file's payload has moved, the run fails
+      and names the version the new content belongs under. Today `TABLE_VERSION` reaches only the
+      messages and the `$generated` stamp, so raising it to 2 rewrites table 1 in place stamped as
+      version 2, and `CURRENT_TABLE_VERSION` is read back from that stamp. Verify the following in
+      `test:scripts`, against a temporary directory, once 3.1 derives the path. Raising the version
+      writes `equipment-link-table-2.json`. A moved payload under an unchanged version writes nothing
+      and names version 2 in the failure. `equipment-link-table-1.json` is byte-identical after both.
+      An absent table 1 still fails and writes nothing, which
+      `generate-equipment-link-codec-tables.test.mjs` already pins and this task keeps as a
+      regression guard.
 - [ ] 3.3 Add the guard that holds every version below `TABLE_VERSION` to the hash it declares, as
-      the build-link generator does, and verify in `test:scripts` that an edited published table
-      fails the build, names the table, and writes nothing.
+      the build-link generator does. The committed table for the current version is already guarded,
+      so verify the sweep's own case: in `test:scripts`, against a temporary directory with
+      `TABLE_VERSION` raised, a table below it whose content no longer matches its declared hash
+      fails the run, names that table, and writes nothing.
 
 ## 4. Prove an old link stays readable
 
@@ -93,13 +96,15 @@
   - the Status section's closing, that "the version handling described above is what the first
     change to it needs".
 
-  Verify no passage still derives the widths at module load, names a single table, or points at
-  `build-link-codec-loader.ts` as the pattern to copy.
+  Verify no passage still says the widths are derived at module load, that the table is imported
+  statically because there is one of it, that `build-link-codec-loader.ts` is the pattern to copy, or
+  that the script test pins both refusals. A passage naming table 1 as the only minted table stays
+  true and stays as it is.
 
-- [ ] 5.2 State in the same document that a published table is immutable, that a payload names the
-      table that decodes it, and that the registry is synchronous because the equipment table is
-      3,021 bytes where a build-link table is about 198 KB. Verify every size figure in the document
-      is the measured one, and that the per-table size and the table count are both stated.
+- [ ] 5.2 State in the same document that a published table is immutable. State that a payload names
+      the table that decodes it. State that the registry is synchronous because the equipment table
+      is 3,021 bytes where a build-link table is about 198 KB. Verify every size figure in the
+      document is the measured one, and that the per-table size and the table count are both stated.
 - [ ] 5.3 Extend the `equipment/link` journey in `e2e/equipment-link.spec.ts` with a literal `e.`
       fragment naming a table version this application does not carry, captured from task 4.5's
       test-only table. Verify the bench states the refusal where the Commander is and leaves the open
