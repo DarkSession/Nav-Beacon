@@ -49,9 +49,9 @@ None. The link is already specified under `equipment-builder/loadout-persistence
 - `src/app/domain/equipment/loadout-link/equipment-link-codec.ts` — `SUIT_BITS`, `WEAPON_BITS`,
   `GRADE_BITS`, the modification widths, `MODIFICATION_SLOTS` and `MOUNTS` are derived from the one
   imported table at module load, so all of them are recoverable per version; they move into the
-  per-version codec. `CURRENT_TABLE_VERSION` is read from that table's stamp and becomes the
-  registry's `CURRENT_EQUIPMENT_TABLE_VERSION`, because a current version is a property of the
-  registry rather than of a table.
+  per-version codec. `CURRENT_TABLE_VERSION` is read from that table's stamp; the registry's
+  `CURRENT_EQUIPMENT_TABLE_VERSION` replaces it and is the highest version the registry holds,
+  because a current version is a property of the registry rather than of a table.
 - A registry beside the codec, holding one codec per published version and the current table
   version.
 - `scripts/generate-equipment-link-codec-tables.mjs` — `TABLE_VERSION` and the output path are

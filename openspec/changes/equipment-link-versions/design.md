@@ -98,8 +98,6 @@ the mount, or with `suit` where the suit is what the current table cannot name.
 and the delta states it rather than building it. Substituting a neighbouring identity is
 forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench
 intact.
-exists and the delta states it rather than building it. Substituting a neighbouring identity is
-forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench intact.
 
 **The corpus is real fragments, not regenerated ones.** A fixture holds published `e.` fragments per
 version with the loadout each opens to. Regenerating the expected value from the changed code would

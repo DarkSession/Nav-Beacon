@@ -22,8 +22,8 @@
       comment where it is declared at `docs/equipment-link-codec.md`, which carries the size reason
       and does not move when this change is archived. Verify the map returns a codec for version 1
       and for no other version. Verify `CURRENT_EQUIPMENT_TABLE_VERSION` is the highest version the
-      map holds. Verify no module under `src/` outside the registry imports a table file; the suites
-      still do.
+      map holds. Verify no module under `src/` outside the registry imports an equipment table file;
+      the suites still do.
 - [ ] 2.2 Have `decodeEquipmentLinkFragment(fragment, codecs = EQUIPMENT_CODECS_BY_TABLE_VERSION)`
       read the version field first and select the codec the payload names, keeping the function
       synchronous, and verify a version 1 fragment decodes to the same loadout as before the change.
@@ -49,16 +49,16 @@
       format `equipment-link-table-*.json`. Verify `pnpm run codec:tables:equipment` reproduces the
       committed table with the working tree clean afterwards.
 - [ ] 3.2 Give the generator a minting path. Where the file for `TABLE_VERSION` is absent, it writes
-      it only where a version below it is committed. Table 1 has no version below it, so it keeps the
-      refusal the script carries today. Where the committed file's payload has moved, the run fails
-      and names the version the new content belongs under. Today `TABLE_VERSION` reaches only the
-      messages and the `$generated` stamp. Raising it to 2 therefore rewrites table 1 in place,
-      stamped as version 2. `CURRENT_TABLE_VERSION` is read back from that stamp. Verify the
-      following in
-      `test:scripts`, against a temporary directory, once 3.1 derives the path. Raising the version
-      writes `equipment-link-table-2.json`. A moved payload under an unchanged version writes nothing
-      and names version 2 in the failure. `equipment-link-table-1.json` is byte-identical after both.
-      An absent table 1 still fails and writes nothing, which
+      it only where a version below it is committed. Table 1 has no version below it, so it keeps
+      the refusal the script carries today. Where the committed file's payload has moved, the run
+      fails and names the version the new content belongs under. Today `TABLE_VERSION` reaches only
+      the messages and the `$generated` stamp. Raising it to 2 therefore rewrites table 1 in place,
+      stamped as version 2. Until task 2.1 moves the current version to the registry, the codec
+      reads `CURRENT_TABLE_VERSION` back from that stamp. Verify the following in `test:scripts`,
+      against a temporary directory, once 3.1 derives the path. Raising the version writes
+      `equipment-link-table-2.json`. A moved payload under an unchanged version writes nothing and
+      names version 2 in the failure. `equipment-link-table-1.json` is byte-identical after both. An
+      absent table 1 still fails and writes nothing, which
       `generate-equipment-link-codec-tables.test.mjs` already pins and this task keeps as a
       regression guard.
 - [ ] 3.3 Add the guard that holds every version below `TABLE_VERSION` to the hash it declares, as
@@ -99,20 +99,21 @@
     change to it needs".
 
   Verify no passage still says the widths are derived at module load, that the table is imported
-  statically because there is one of it, that `build-link-codec-loader.ts` is the pattern to copy,
-  that the script test pins both refusals, or that the version handling described above is what the
-  first change to the codec needs. A passage naming table 1 as the only minted table stays true and
-  stays as it is.
+  statically because there is only one of them, that `build-link-codec-loader.ts` is the pattern to
+  copy, that the script test pins both refusals, or that the version handling described above is
+  what the first change to the codec needs. A passage naming table 1 as the only minted table stays
+  true and stays as it is.
 
 - [ ] 5.2 State in the same document that a published table is immutable. State that a payload names
       the table that decodes it. State that the registry is synchronous because the equipment table
       is 3,021 bytes where a build-link table is about 198 KB. Verify every size figure in the
       document is the measured one, and that it states the per-table size and how many equipment
       tables the bundle carries.
-- [ ] 5.3 Extend the `equipment/link` journey in `e2e/equipment-link.spec.ts` with a literal `e.`
-      fragment naming a table version this application does not carry, captured from task 4.5's
-      test-only table. Verify the bench states the refusal where the Commander is and leaves the open
-      loadout alone.
+- [ ] 5.3 Extend the `equipment/link` journey in `e2e/equipment-link.spec.ts` with two literal `e.`
+      fragments. The first names table 1 and is taken from the task 4.1 fixture: verify the bench
+      opens on the loadout that fixture records for it. The second names a table version this
+      application does not carry, captured from task 4.5's test-only table: verify the bench states
+      the refusal where the Commander is and leaves the open loadout alone.
 - [ ] 5.4 Add two assertions to the `equipment/link` entry in `e2e/coverage-ledger.ts`. The first:
       a literal `e.` link naming table 1 opens on the loadout it was shared as, whatever version the
       bench is on. The second: a payload naming a table version this application does not carry is
