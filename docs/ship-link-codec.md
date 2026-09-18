@@ -635,14 +635,14 @@ Two tables are defined. `codec-table-1.json` is published: links name it, so its
 and `pnpm run codec:tables` refuses to run at all if it has moved. `codec-table-2.json` is current,
 reproduced by `@elite-dangerous-almanac/core@0.2.13`, and a new link names it. A catalogue change
 publishes the next numbered JSON table while retaining every earlier table unchanged; it does not
-duplicate or version the codec logic. Minting a table is two edits in the codec, plus the pins the
-suites carry. The two are: raise `TABLE_VERSION` in
+duplicate or version the codec logic. Minting a table touches two files in the codec, plus the pins
+the suites carry. The two are: raise `TABLE_VERSION` in
 [`scripts/generate-build-link-codec-tables.mjs`](../scripts/generate-build-link-codec-tables.mjs),
 and give
 [`build-link-codec-loader.ts`](../src/app/domain/ships/build-link/build-link-codec-loader.ts) the
 new `CURRENT_TABLE_VERSION` and a `loadTables` case for the new file. The retired number needs no
-edit: the generator reads the committed table files to find which versions it must leave alone, so
-the guard cannot be switched off by forgetting to extend a list. The suites then need the new
+edit: the generator derives the versions it must leave alone from the current table number, so a
+table cannot leave the guarded set by being deleted or forgotten. The suites then need the new
 table's content hash and its re-pinned corpus values, the retired table's hash pinned beside them,
 and the table each of them reads named: the build states which pin failed and where.
 

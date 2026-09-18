@@ -621,6 +621,7 @@ function reconstructLoadout(codec: CodecContext, state: CodecState): ShipLoadout
     Modules: modules,
   };
   const loadout = ShipLoadout.fromLoadout(event);
+  refuseAnArticleThePackageWouldNotFit(loadout);
   emptyTheMountsThePayloadLeavesEmpty(loadout, slots, state.moduleIndexes);
   occupiedSlots.forEach((slotIndex, occupiedIndex) => {
     const engineering = state.engineeringStates[occupiedIndex];
@@ -641,6 +642,35 @@ function reconstructLoadout(codec: CodecContext, state: CodecState): ShipLoadout
     });
   });
   return loadout;
+}
+
+/**
+ * Refuse a payload whose article the installed package declines to fit.
+ *
+ * A published table holds the catalogue of the release it was minted from, so a link can
+ * name a fit a later release withdraws. Reconstruction goes through a journal `Loadout`,
+ * which the package repairs rather than rejects: it empties a removable mount it cannot
+ * resolve and stocks a core mount with the hull's own article. Either leaves a build the
+ * Commander never fitted, and the envelope says nothing is wrong, so the link has to be
+ * refused here instead (constitution IV).
+ *
+ * The package's own report is the source. Only an outcome naming the article the payload
+ * supplied counts: a `defaulted` mount with no source symbol is a mount this payload
+ * records as empty, which the hull stocks and `emptyTheMountsThePayloadLeavesEmpty` then
+ * clears.
+ */
+function refuseAnArticleThePackageWouldNotFit(loadout: ShipLoadout): void {
+  const refused = loadout.importOutcomes.find(
+    (outcome) =>
+      (outcome.action === 'emptied' || outcome.action === 'defaulted') &&
+      outcome.sourceSymbol !== null,
+  );
+  if (!refused) return;
+  throw new BuildLinkCodecError(
+    'reconstructionFailed',
+    `The build link records ${refused.sourceSymbol} in ${refused.slot}, ` +
+      'which the installed catalogue does not fit there.',
+  );
 }
 
 /**

@@ -145,10 +145,38 @@ function canonical(value) {
 }
 
 const contentHash = contentHashOf(payload);
-const previous = JSON.parse(await readFile(outputPath, 'utf8').catch(() => 'null'));
-const previousHash = previous?.$generated?.contentHash ?? null;
+const payloadOf = (table) =>
+  Object.fromEntries(Object.entries(table).filter(([key]) => key !== '$generated'));
 
-if (previousHash !== null && previousHash !== contentHash) {
+/**
+ * The committed table still holds the content its declared hash names.
+ *
+ * The hash the file declares is the one thing an edit can carry with it, so trusting it would
+ * let a hand-edited table pass this check and be written over in silence. Hashing the payload
+ * back is what makes the file itself the evidence.
+ */
+const previous = JSON.parse(await readFile(outputPath, 'utf8').catch(() => 'null'));
+
+if (previous === null) {
+  throw new Error(
+    `Equipment codec table ${TABLE_VERSION} is missing.\nA link naming table ${TABLE_VERSION} ` +
+      'has no other table that decodes it, so the file stays in the repository for as long as ' +
+      'the link does.',
+  );
+}
+
+const previousHash = contentHashOf(payloadOf(previous));
+
+if (previous.$generated?.contentHash !== previousHash) {
+  throw new Error(
+    `Equipment codec table ${TABLE_VERSION} content does not match its declared hash\n` +
+      `  declared: ${previous.$generated?.contentHash ?? '(none recorded)'}\n` +
+      `  actual:   ${previousHash}\n` +
+      'Refusing to replace a table whose integrity check failed.',
+  );
+}
+
+if (previousHash !== contentHash) {
   throw new Error(
     `Equipment codec table ${TABLE_VERSION} content changed\n` +
       `  committed: ${previousHash}\n  generated: ${contentHash}\n` +

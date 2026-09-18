@@ -159,6 +159,38 @@ test('refuses to run at all once a published table is missing', async (t) => {
   );
 });
 
+test('names the next version when the catalogue moves the current table', async (t) => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ednb-codec-moved-'));
+  t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+  // The table is self-consistent — its declared hash names the content it holds — and still is
+  // not what this Almanac produces. That is the case a package upgrade creates, and the refusal
+  // has to carry the instruction it turns on: the next version, not an edit to this one.
+  const movedTablePath = join(temporaryDirectory, 'codec-table-2.json');
+  const { $generated: generated, ...payload } = JSON.parse(
+    await readFile(committedTablePath, 'utf8'),
+  );
+  payload.SHIPS = [...payload.SHIPS, 'HullFromALaterRelease'];
+  const movedContent = `${JSON.stringify(
+    { $generated: { ...generated, contentHash: contentHashOf(payload) }, ...payload },
+    null,
+    2,
+  )}\n`;
+  await writeFile(movedTablePath, movedContent);
+
+  const result = spawnSync(process.execPath, [generatorPath], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    env: { ...process.env, CODEC_TABLE_OUTPUT_PATH: movedTablePath },
+  });
+
+  const output = `${result.stdout}\n${result.stderr}`;
+  assert.notEqual(result.status, 0);
+  assert.match(output, /content changed under Almanac/);
+  assert.match(output, /Raise TABLE_VERSION to 3/);
+  assert.equal(await readFile(movedTablePath, 'utf8'), movedContent);
+});
+
 test('the committed table pins a symbol-model block the generator validates', async () => {
   const { MODELS: models } = JSON.parse(await readFile(committedTablePath, 'utf8'));
 

@@ -913,6 +913,64 @@ describe('build-link codec', () => {
     expectCodecError(() => decodeBuildLinkFragment(fragment), 'unsupportedTableVersion');
   });
 
+  it('refuses a published link whose article the catalogue no longer fits', () => {
+    // Table 1 was minted when outfitting sold a Supercruise Overcharge drive below the mount's
+    // own size, so its candidate set for the Anaconda's frame shift drive still names one. The
+    // package reconstructs a journal loadout by repairing it, not by rejecting it: the mount
+    // refuses the drive and comes back holding the hull's stock article instead. That is a build
+    // the Commander never fitted, so the link is refused rather than opened (constitution IV).
+    const slotIndex = publishedCodecTable1.SLOTS_BY_SHIP['Anaconda']!.indexOf('FrameShiftDrive');
+    const setIndex = publishedCodecTable1.MODULE_SET_BY_SHIP['Anaconda']![slotIndex]!;
+    const candidates = publishedCodecTable1.MODULE_SETS[setIndex]!;
+    const withdrawn = candidates.findIndex(
+      (moduleIndex) =>
+        publishedCodecTable1.MODULES[moduleIndex] === 'Int_Hyperdrive_Overcharge_Size5_Class5',
+    );
+    const fitted = candidates.findIndex(
+      (moduleIndex) =>
+        publishedCodecTable1.MODULES[moduleIndex] === 'Int_Hyperdrive_Overcharge_Size6_Class5',
+    );
+    expect(withdrawn).toBeGreaterThan(-1);
+    expect(fitted).toBeGreaterThan(-1);
+
+    // A payload naming the withdrawn drive cannot be written from a build, because the package
+    // declines to fit one. Swapping the two candidates' positions gives a table that writes the
+    // withdrawn drive's position for a drive that still fits, so the bytes are the ones a
+    // Commander's own table-1 link carries. Nothing else about the table moves: the two sets are
+    // the same size, and the probability models the encoder reads are table-wide.
+    const asWritten = {
+      ...publishedCodecTable1,
+      MODULE_SETS: publishedCodecTable1.MODULE_SETS.map((set, index) =>
+        index === setIndex
+          ? set.map((moduleIndex, position) =>
+              position === withdrawn
+                ? candidates[fitted]!
+                : position === fitted
+                  ? candidates[withdrawn]!
+                  : moduleIndex,
+            )
+          : set,
+      ),
+    };
+    const source = ShipLoadout.default('Anaconda');
+    source.setModule(
+      'FrameShiftDrive',
+      source
+        .modulesForSlot('FrameShiftDrive')
+        .find(({ symbol }) => symbol === 'Int_Hyperdrive_Overcharge_Size6_Class5')!,
+    );
+    const fragment = createBuildLinkCodec(1, asWritten).encodeBuildLinkFragment(source);
+    expect(readPayloadBits(fragment, 0, 10)).toBe(1);
+
+    const codec1 = createBuildLinkCodec(1, publishedCodecTable1);
+    const error = expectCodecError(
+      () => codec1.decodeBuildLinkFragment(fragment),
+      'reconstructionFailed',
+    );
+    expect(error.message).toContain('Int_Hyperdrive_Overcharge_Size5_Class5');
+    expect(error.message).toContain('FrameShiftDrive');
+  });
+
   it('encodes both grades of a two-grade blueprint without a redundant bounded symbol', () => {
     const blueprintIndex = codecTable.BLUEPRINTS.indexOf('FSD_LongRange');
     const table3 = {

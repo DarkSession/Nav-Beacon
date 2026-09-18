@@ -44,10 +44,19 @@ reuse a token that carries another meaning in the theme.
 ## Builds carrying a withdrawn SCO fit
 
 A stored build, a link or a SLEF payload can name a Supercruise Overcharge drive in a frame shift
-drive mount larger than its class. `ShipLoadout.setModule` refuses that fit, and the application
-already answers a refusal during reconstruction: the codec raises `reconstructionFailed`, and SLEF
-carries the package diagnostic. The Commander is told the loadout could not be reconstructed rather
-than shown a build with the drive dropped. No new outcome is needed.
+drive mount larger than its class. `ShipLoadout.setModule` refuses that fit, so no Commander reaches
+it through outfitting. A payload is the other way in, and there the package repairs rather than
+refuses: `ShipLoadout.fromLoadout` stocks the mount with the hull's own drive and reports the
+substitution in `importOutcomes`.
+
+The two ingress paths want opposite answers to that, so each keeps its own. A journal or SLEF
+payload records a ship that flew, and the package's reading of it is the build, which is why
+`build-ingress-normalizer.ts` treats a defaulted mount as ordinary state. A build link is this
+application's own lossless format: its payload names exactly what the Commander fitted, so a
+substituted article is a build they never had. The codec therefore reads `importOutcomes` after
+reconstruction and raises `reconstructionFailed` naming the article and the mount, rather than
+opening a build with the drive silently exchanged (constitution IV). No new outcome code is needed;
+the existing refusal carries it.
 
 ## A new codec table rather than an edited one
 

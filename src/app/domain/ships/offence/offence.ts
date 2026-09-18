@@ -198,8 +198,8 @@ export const RANGE_BANDS = [500, 1000, 2000, 3000] as const;
  *
  * Written as a record rather than a list so the set is held complete by the compiler: a
  * conventional type the package adds appears here as a compilation failure rather than as an
- * amount that quietly leaves the bar. A list checked with `satisfies` accepts a short one, which
- * is how a type the package already carried came to be missing from this projection.
+ * amount that quietly leaves the bar. A list checked with `satisfies` accepts a short one, so the
+ * set has to be the record's keys and the order has to be its values.
  */
 const DAMAGE_TYPE_ORDER = {
   kinetic: 0,
@@ -210,11 +210,9 @@ const DAMAGE_TYPE_ORDER = {
   unclassified: 5,
 } as const satisfies Record<ConventionalDamageType, number>;
 
-const CONVENTIONAL_DAMAGE_TYPES = (
-  Object.keys(DAMAGE_TYPE_ORDER) as readonly ConventionalDamageType[]
-)
-  .slice()
-  .sort((left, right) => DAMAGE_TYPE_ORDER[left] - DAMAGE_TYPE_ORDER[right]);
+const CONVENTIONAL_DAMAGE_TYPES = (Object.keys(DAMAGE_TYPE_ORDER) as ConventionalDamageType[]).sort(
+  (left, right) => DAMAGE_TYPE_ORDER[left] - DAMAGE_TYPE_ORDER[right],
+);
 
 /**
  * Split the burst total into the segments the canvas's bar draws.

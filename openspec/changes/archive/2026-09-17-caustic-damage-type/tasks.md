@@ -48,15 +48,20 @@
 - [x] 3.4 Remove the `--overwrite` escape from both codec generators, re-hash every published table
       before the current table is written, and verify the generator exits non-zero and writes
       nothing when a published table has been edited.
-- [x] 3.5 Read the published table versions off the committed files rather than a written-down list,
-      and verify `pnpm run codec:tables` and `pnpm run codec:tables:equipment` each reproduce their
-      committed table.
+- [x] 3.5 Derive the published table versions from the current table number rather than a
+      written-down list, and verify `pnpm run codec:tables` and `pnpm run codec:tables:equipment`
+      each reproduce their committed table.
 - [x] 3.6 Pin the content hash of both tables in the codec suite, re-pin the reference corpus
       against table 2, and verify the corpus states the length each value now carries.
 - [x] 3.7 State the two tables, the catalogue move that separates them and the rule that a published
       table is never written again in `docs/ship-link-codec.md` and `docs/equipment-link-codec.md`,
       and verify each document's corpus and capacity tables state the measured values.
 - [x] 3.8 Verify the working tree is clean after both generators run.
+- [x] 3.9 Hash the committed equipment table's payload back before the generator writes, refuse a
+      missing one, and verify `node --test scripts/generate-equipment-link-codec-tables.test.mjs`
+      covers the edited table, the absent table and the unchanged one.
+- [x] 3.10 Verify the ship generator names the next version when the catalogue moves the current
+      table, with a node:test case over a table whose declared hash matches its own edited content.
 
 ## 4. The record
 
@@ -66,7 +71,11 @@
       package upgrade mints the next version, and that the build refuses to write a published table.
 - [x] 4.3 Hold the conventional damage types complete by the compiler rather than by a list, and
       verify `pnpm run typecheck` fails when a type the package carries is absent from the record.
-- [x] 4.4 Fold both deltas into the accepted capability specifications and archive this change in the
+- [x] 4.4 Refuse a build link whose payload names an article the installed catalogue declines to
+      fit, reading the package's own `importOutcomes` rather than re-deriving the fit, and verify
+      a table-1 payload naming a withdrawn Supercruise Overcharge drive raises
+      `reconstructionFailed` naming the article and the mount.
+- [x] 4.5 Fold both deltas into the accepted capability specifications and archive this change in the
       same commit, and verify `pnpm run policy:specs` reports no violation.
 
 ## 5. Verification
