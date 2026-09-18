@@ -58,6 +58,24 @@ reconstruction and raises `reconstructionFailed` naming the article and the moun
 opening a build with the drive silently exchanged (constitution IV). No new outcome code is needed;
 the existing refusal carries it.
 
+## A Mercenary purchase in a capture that states no modifiers
+
+Outfitting sells all 25 Mercenary articles at grade 1, and every one of their purchase-exclusive
+blueprints crafts grades 2 to 5 only. The ordinary record spells a blueprint and a grade, so it
+cannot spell the purchase at all; the pre-engineered record is the only one that can.
+
+An exchange that keeps a module's blueprint and grade and nothing else — a SLEF export among them —
+states no modifiers for such a purchase, and the Almanac reads that as the purchase untouched: it
+resolves the same variant and the same effective stats whether the published modifier block is
+stated or absent. The record therefore reproduces the module, and the encoder takes it. A capture
+stating modifiers that differ from the block the record replays is a different article, and that one
+is still refused.
+
+Nothing is substituted here. The payload never carries modifier values; it carries the variant
+identity, and reconstruction replays the package's own block for it. Refusing instead would lose the
+whole build's link over a module the application reads without ambiguity, which is the loss
+constitution IV exists to prevent.
+
 ## A new codec table rather than an edited one
 
 The catalogue move narrows the module sets a frame shift drive mount offers, so the generator no
@@ -67,9 +85,11 @@ shared against it. Editing it would change what those links mean.
 
 The new content is therefore minted as table 2, and table 1 stays exactly as it was published. The
 codec architecture already carries this: the payload's first field is the table version, and
-`build-link-codec-loader.ts` imports the table that field names. Minting a version costs two edits
-in the codec and one new file, plus the pins and the corpus entry the suites carry, and touches no
-earlier table.
+`build-link-codec-loader.ts` imports the table that field names. Minting a version raises
+`TABLE_VERSION` in the generator, gives the loader the new `CURRENT_TABLE_VERSION` and a
+`loadTables` case, and writes one new table file. The suites then take the new hash, the re-pinned
+corpus values, a `TABLE_BY_VERSION` row and a published link of the new table's own. No earlier
+table is touched.
 
 The alternative considered was keeping one table and editing it, which the project did nine times
 while it was pre-release and no link could exist. That exception depended on there being no

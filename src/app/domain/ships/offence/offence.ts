@@ -210,9 +210,9 @@ const DAMAGE_TYPE_ORDER = {
   unclassified: 5,
 } as const satisfies Record<ConventionalDamageType, number>;
 
-const CONVENTIONAL_DAMAGE_TYPES = (Object.keys(DAMAGE_TYPE_ORDER) as ConventionalDamageType[]).sort(
-  (left, right) => DAMAGE_TYPE_ORDER[left] - DAMAGE_TYPE_ORDER[right],
-);
+const CONVENTIONAL_DAMAGE_TYPES: readonly ConventionalDamageType[] = (
+  Object.keys(DAMAGE_TYPE_ORDER) as ConventionalDamageType[]
+).sort((left, right) => DAMAGE_TYPE_ORDER[left] - DAMAGE_TYPE_ORDER[right]);
 
 /**
  * Split the burst total into the segments the canvas's bar draws.

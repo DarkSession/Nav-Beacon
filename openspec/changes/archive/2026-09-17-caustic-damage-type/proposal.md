@@ -28,6 +28,11 @@ mount's own class, which moves the position of every candidate under them.
   published so the links already shared against it still decode.
 - Refuse an in-place rewrite of a published table outright, in the generator and in the capacity
   check, rather than leaving an `--overwrite` flag that is no longer sound.
+- Refuse a build link whose payload records a fit the installed catalogue declines, rather than
+  opening the build the package repairs it into.
+- Take the pre-engineered record for a Mercenary purchase whose capture states no modifiers, so a
+  build carrying one still shares.
+- Hold a published link for every table version a link can name, pinned to the build it opens.
 
 ## Capabilities
 
@@ -44,7 +49,9 @@ None.
   the table those versions read. The application is published, so a table a link names is a promise
   to that link: the content it held when the link was made is the content it has to hold. The
   package moved the frame-shift-drive candidate sets, which changes the table's content, so this
-  change is the first to owe a new table number rather than a regeneration.
+  change is the first to owe a new table number rather than a regeneration. State also what a
+  payload the catalogue refuses becomes, and what a capture carrying a package variant without its
+  modifiers carries.
 
 ## Impact
 

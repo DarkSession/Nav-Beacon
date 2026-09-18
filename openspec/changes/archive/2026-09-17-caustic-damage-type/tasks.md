@@ -52,7 +52,7 @@
       written-down list, and verify `pnpm run codec:tables` and `pnpm run codec:tables:equipment`
       each reproduce their committed table.
 - [x] 3.6 Pin the content hash of both tables in the codec suite, re-pin the reference corpus
-      against table 2, and verify the corpus states the length each value now carries.
+      against table 2, and verify the corpus states the length each value carries.
 - [x] 3.7 State the two tables, the catalogue move that separates them and the rule that a published
       table is never written again in `docs/ship-link-codec.md` and `docs/equipment-link-codec.md`,
       and verify each document's corpus and capacity tables state the measured values.
@@ -100,11 +100,30 @@
 - [ ] 5.5 Run the five Firefox projects of the responsive matrix, and verify each project passes.
 - [ ] 5.6 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
       complete ten-project Playwright matrix pass.
+- [ ] 5.7 Give `buildStockHull` in `e2e/shell.ts` the press and retry budget its sibling
+      `openRecordFromLibrary` carries, and verify the five Chromium projects pass while the unit
+      suite runs beside them.
 
 Tasks 5.5 and 5.6 are open. Firefox is unobtainable in the environment this change was verified in:
 no binary is on disk, and the proxy refuses every download host Playwright offers. `pnpm run check`
 runs the ten-project matrix, so it cannot complete either. Everything else in `pnpm run check` ran
-on its own and passed, and the five Chromium projects of the matrix each report 723 tests passed.
+on its own and passed.
+
+The matrix ran twice, and neither sweep is green on its own. `dist/verification/matrix-summary.txt`
+holds the second: `chromium-desktop EXIT=1 :: 3 failed 720 passed` and
+`chromium-tablet-landscape EXIT=1 :: 1 failed 722 passed`, the failures being three cases in
+`offence-profile.spec.ts` and one at `build-library.spec.ts:801`. The first sweep failed in two
+different projects, `chromium-mobile-portrait` and `chromium-mobile-landscape`. Each sweep shared
+its container with the unit suite. Every failing project was re-run whole, alone on the container,
+and each reports 723 tests passed; the three projects that passed under load are counted from the
+loaded sweep.
+
+Task 5.7 carries the defect the load exposes, which is a budget rather than a wait the application
+owes. `buildStockHull` in `e2e/shell.ts` presses with a two-second budget inside a fifteen-second
+retry, where `openRecordFromLibrary` in the same file presses with five inside thirty. A container
+running a second suite exceeds two seconds on a press the browser answers, so every attempt in the
+narrower budget fails and the retry runs out. The task belongs to the helper, not to the cases that
+report through it: none is skipped, quarantined or granted a retry of its own.
 
 The versioned screen-reader and 400% browser-zoom protocols need no new run. Neither protocol covers
 feature 007, and the change adds a legend line of a kind the reading already carries.

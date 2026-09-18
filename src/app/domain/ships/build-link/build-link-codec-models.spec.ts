@@ -3,6 +3,7 @@ import { SHIPS } from '@elite-dangerous-almanac/core/ships/ships';
 import { makeFullyEngineeredAnaconda, minimalState } from './build-link-codec.spec-helpers';
 import { createBuildLinkCodec } from './build-link-codec';
 import type { BuildLinkSymbolModels } from './build-link-codec';
+import { CURRENT_TABLE_VERSION } from './build-link-codec-loader';
 import codecTable from './codec-table-2.json';
 import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture.json';
 
@@ -18,14 +19,14 @@ import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture
  * a popularity prior, and its floor bounds what a late position costs when that prior is wrong.
  */
 const shippedModels: BuildLinkSymbolModels = codecTable.MODELS;
-const modelledCodec = createBuildLinkCodec(2, codecTable);
+const modelledCodec = createBuildLinkCodec(CURRENT_TABLE_VERSION, codecTable);
 /**
  * The models' own effect is measured against the same table without its models block. Bit
  * packing ignores models entirely, so the unmodelled codec reproduces every packed body — and
  * with it every empty and stock reference — byte for byte.
  */
 const { MODELS: _strippedForBaseline, ...unmodelledTable } = codecTable;
-const baselineCodec = createBuildLinkCodec(2, unmodelledTable);
+const baselineCodec = createBuildLinkCodec(CURRENT_TABLE_VERSION, unmodelledTable);
 
 describe('build-link codec pinned symbol models', () => {
   it('round-trips the reference corpus canonically under the modelled table', () => {
@@ -142,7 +143,10 @@ describe('build-link codec pinned symbol models', () => {
       { ...shippedModels, CONTEXT_INDEX_DECAY: [63, 64], CONTEXT_INDEX_FLOOR: undefined },
       { ...shippedModels, CONTEXT_INDEX_DECAY: [1, 2], CONTEXT_INDEX_FLOOR: 1_024 },
     ]) {
-      const decayCodec = createBuildLinkCodec(2, { ...codecTable, MODELS: models });
+      const decayCodec = createBuildLinkCodec(CURRENT_TABLE_VERSION, {
+        ...codecTable,
+        MODELS: models,
+      });
 
       const fragment = decayCodec.encodeBuildLinkFragment(source);
       const decoded = decayCodec.decodeBuildLinkFragment(fragment);
@@ -158,7 +162,7 @@ describe('build-link codec pinned symbol models', () => {
     // adaptation off leaves it. A larger increment does cost: each new reference target pays
     // for the counts its predecessors built up, which the diverse Corvette feels first.
     const withIncrement = (increment: number) =>
-      createBuildLinkCodec(2, {
+      createBuildLinkCodec(CURRENT_TABLE_VERSION, {
         ...codecTable,
         MODELS: { ...shippedModels, CONTEXT_ADAPTATION: increment },
       });
@@ -199,7 +203,7 @@ describe('build-link codec pinned symbol models', () => {
 
   it('rejects malformed model weight tables', () => {
     const withModels = (models: unknown) => () =>
-      createBuildLinkCodec(2, {
+      createBuildLinkCodec(CURRENT_TABLE_VERSION, {
         ...codecTable,
         MODELS: models as BuildLinkSymbolModels,
       });
