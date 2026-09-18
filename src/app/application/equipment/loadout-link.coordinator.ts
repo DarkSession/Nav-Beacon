@@ -2,7 +2,7 @@ import { Injectable, Injector, effect, inject, signal, untracked } from '@angula
 import {
   decodeEquipmentLinkFragment,
   encodeEquipmentLinkFragment,
-} from '../../domain/equipment/loadout-link/equipment-link-codec';
+} from '../../domain/equipment/loadout-link/equipment-link-codec-loader';
 import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equipment-loadout';
 import { reconstructLoadout } from '../../domain/equipment/loadout/loadout-reconstructor';
 import { toStoredLoadout } from '../../domain/equipment/loadout/stored-loadout.serializer';
@@ -69,13 +69,18 @@ export class LoadoutLinkCoordinator {
   readonly #failure = signal<LinkFailure | null>(null);
 
   /**
-   * Why the last incoming link was refused, or `null`.
+   * Why the last link was refused, or `null`.
    *
    * Kept apart from the publication state above, because the two are read in
    * different places: a link that arrives refused is not something a Commander
    * went looking for — they opened an address and nothing happened — so the
    * reason belongs where they are rather than inside a layer they would have to
    * find (FR-021).
+   *
+   * A loadout the current table cannot represent is refused on the way out for
+   * the same reason. It is in no record while it is at its suit's default and
+   * now in no fragment either, so a Commander told only inside the export layer
+   * would learn on the next reload that it is gone.
    */
   readonly failure = this.#failure.asReadonly();
 
@@ -213,6 +218,7 @@ export class LoadoutLinkCoordinator {
     // The loadout stays exactly as it is — one that cannot be shared is still a
     // loadout. What cannot stay is a fragment describing an earlier version.
     this.#clear();
+    this.#failure.set(failure);
     this.#link.set({ kind: 'refused', failure });
   }
 

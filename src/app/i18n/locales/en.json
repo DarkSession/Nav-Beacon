@@ -272,6 +272,7 @@
   "link.error.unsupportedTableVersion": "This build link was made by a newer version of the application and cannot be read here.",
   "link.error.invalidPayload": "This build link does not describe a build that can be rebuilt.",
   "link.error.unknownIdentity": "This build link names a hull or module that is not available here.",
+  "link.error.equipment.unsupportedTableVersion": "This loadout link was made by a newer version of the application and cannot be read here.",
   "link.error.equipment.invalidPayload": "This loadout link does not describe a loadout a Commander could assemble.",
   "link.error.equipment.unknownIdentity": "This loadout link names a suit, weapon or modification this version does not have.",
   "link.error.reconstructionFailed": "This build link was read, but the build it describes could not be rebuilt.",

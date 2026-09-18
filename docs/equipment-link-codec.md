@@ -38,7 +38,7 @@ not arithmetically coded. A fully engineered hull is hundreds of choices and nee
 codec's adaptive model to stay inside its budget; a loadout is a suit, at most three weapons and
 their modification slots, and packs into a handful of bytes without one.
 
-Fields are written in this order, with widths derived from the table at module load:
+Fields are written in this order, with widths derived from the table the payload names:
 
 | Field                 | Width  | Meaning                                                          |
 | --------------------- | ------ | ---------------------------------------------------------------- |
@@ -136,20 +136,35 @@ the release installed, which is the thing a pinned table exists to prevent.
 
 ### Versioning
 
-The table is pinned by content hash, and the ship codec's rule applies unchanged: a changed hash
-is a new encoding and belongs under the next table number, with the old file kept for the links
-already published. The application is published, so table 1 is what the `e.` links already shared
-name. The generator hashes the committed file's payload back before it writes anything, and
-refuses once that hash has moved or the file has gone, so neither a regenerated table nor a
-hand-edited one passes quietly — the declared hash is never the evidence, because an edit can
-carry it. `scripts/generate-equipment-link-codec-tables.test.mjs` pins both refusals, and the
-unit suite pins the hash again from the application's side.
+A published table is immutable. The application is published, so table 1 is what the `e.` links
+already shared name, and the file that number points at is what those links mean. The ship codec's
+rule applies unchanged: a changed content hash is a new encoding and belongs under the next table
+number, with the old file kept for the links already published.
 
-Unlike the ship codec, the table is imported statically rather than lazily: it is a few kilobytes
-and there is one of them, and `equipment-link-codec.ts` refuses any version but the current one.
-Minting table 2 therefore means teaching this codec to keep reading table 1 first. The loader
-pattern in `build-link-codec-loader.ts` is the one to copy, and the ship generator's sweep over
-every version below the current one is the guard to copy with it.
+A payload names the table that decodes it. The version field is the body's first ten bits, so it is
+readable before a table is chosen: `equipment-link-codec-loader.ts` reads it, selects the codec
+registered under that number, and refuses a number this application does not carry.
+`createEquipmentLinkCodec` derives every field width from the table it was handed and reads no
+version but its own, so an earlier table stays readable exactly as it was minted. A link is always
+written with the newest table, whatever version it arrived on.
+
+The registry is synchronous where the ship builder's is asynchronous, and the reason is size: one
+equipment table is 3,021 bytes where one build-link table is about 198 KB. The bundle carries one
+equipment table, so every published table loads with the application and a link opens without a
+fetch. The choice is worth revisiting when the equipment tables together approach the size of a
+single build-link table.
+
+The generator holds the published files to that promise. It hashes each committed table's payload
+back before it writes anything, and refuses once a hash has moved or a file has gone, so neither a
+regenerated table nor a hand-edited one passes quietly — the declared hash is never the evidence,
+because an edit can carry it. Raising `TABLE_VERSION` mints the next file and leaves every earlier
+one untouched. `scripts/generate-equipment-link-codec-tables.test.mjs` pins those refusals and the
+minting path, and the unit suite pins the hash again from the application's side.
+
+`published-equipment-links.fixture.json` is the other half of the promise: fragments that have been
+shared, transcribed from the run that produced them and filed under the table version each one
+names. The suite beside it opens every entry on the loadout it was shared as, and fails until a
+newly minted version has an entry of its own.
 
 ## Refusals
 
@@ -217,8 +232,9 @@ application's own message, because the refusal is about the suit rather than abo
 - `build-link-codec-error.ts` — the error type and its codes
 
 A codec supplies its prefix and its bound and gets envelope handling that is identical on both
-sides by construction. It is the reason the equipment codec is a little over 300 lines: the parts
-that are hard to get right were already written and already tested.
+sides by construction. It is the reason the equipment codec and the registry beside it come to
+under 500 lines together: the parts that are hard to get right were already written and already
+tested.
 
 ## What is deliberately not in the format
 
@@ -233,5 +249,6 @@ that are hard to get right were already written and already tested.
 
 The codec has a consumer: the equipment builder at `/equipment` mints and reads `e.` fragments.
 The bench has shipped, so table 1 is published: a changed content hash is table 2, with this file
-kept for the links already out. Almanac 0.2.13 leaves the table's content unchanged, so nothing is
-owed yet; the version handling described above is what the first change to it needs.
+kept for the links already out. Almanac 0.2.13 leaves the table's content unchanged, so table 1 is
+still the only minted table. Minting the next one is a raised `TABLE_VERSION`, a row in the
+registry and a corpus entry.

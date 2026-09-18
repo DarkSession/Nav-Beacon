@@ -35,15 +35,20 @@ export interface LinkFailureText {
  * "Error presentation").
  */
 /**
- * The two codes whose ship wording is wrong for a loadout.
+ * The codes whose ship wording is wrong for a loadout.
  *
  * The rest read the same either way — an altered fragment is an altered
- * fragment — so only these two are said twice (013
+ * fragment — so only these are said twice (013
  * contracts/equipment-loadout-link.md, "Refusal wording").
+ *
+ * `unsupportedTableVersion` joined them when the equipment codec gained the
+ * versions below the current one: a loadout link from a newer table is a
+ * refusal a Commander now meets, and the ship key calls it a build link.
  */
 const EQUIPMENT_MESSAGE_KEYS: Partial<Record<LinkFailureCode, MessageKey>> = {
   invalidPayload: 'link.error.equipment.invalidPayload',
   unknownIdentity: 'link.error.equipment.unknownIdentity',
+  unsupportedTableVersion: 'link.error.equipment.unsupportedTableVersion',
 };
 
 const MESSAGE_KEYS: Readonly<Record<LinkFailureCode, MessageKey>> = {

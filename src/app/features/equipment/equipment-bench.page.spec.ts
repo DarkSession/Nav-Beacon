@@ -7,7 +7,7 @@ import { LoadoutAutosaveService } from '../../application/equipment/loadout-auto
 import { LoadoutOpenService } from '../../application/equipment/loadout-open.service';
 import { EmptyBenchService } from '../../application/equipment/empty-bench.service';
 import { newLoadout } from '../../domain/equipment/loadout/loadout-edit';
-import { encodeEquipmentLinkFragment } from '../../domain/equipment/loadout-link/equipment-link-codec';
+import { encodeEquipmentLinkFragment } from '../../domain/equipment/loadout-link/equipment-link-codec-loader';
 import { isEquipmentRecord } from '../../domain/records/local-record';
 import { WebLocksAdapter } from '../../platform/browser/web-locks.adapter';
 import { LocalRecordRepository } from '../../platform/storage/local-record.repository';

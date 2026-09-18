@@ -272,6 +272,7 @@
   "link.error.unsupportedTableVersion": "Dieser Aufbau-Link stammt von einer neueren Version der Anwendung und lässt sich hier nicht lesen.",
   "link.error.invalidPayload": "Dieser Aufbau-Link beschreibt keinen Aufbau, der sich wiederherstellen lässt.",
   "link.error.unknownIdentity": "Dieser Aufbau-Link nennt einen Rumpf oder ein Modul, das hier nicht verfügbar ist.",
+  "link.error.equipment.unsupportedTableVersion": "Dieser Loadout-Link stammt von einer neueren Version der Anwendung und lässt sich hier nicht lesen.",
   "link.error.equipment.invalidPayload": "Dieser Loadout-Link beschreibt kein Loadout, das ein Kommandant zusammenstellen könnte.",
   "link.error.equipment.unknownIdentity": "Dieser Loadout-Link nennt einen Anzug, eine Waffe oder eine Modifikation, die diese Version nicht hat.",
   "link.error.reconstructionFailed": "Dieser Aufbau-Link ließ sich lesen, der beschriebene Aufbau konnte aber nicht wiederhergestellt werden.",

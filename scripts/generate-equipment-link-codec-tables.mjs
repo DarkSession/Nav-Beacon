@@ -29,9 +29,27 @@ import { PERSONAL_MODIFICATIONS } from '@elite-dangerous-almanac/core/equipment/
 import { resolvePersonalModificationForWeapon } from '@elite-dangerous-almanac/core/equipment/modification-journal';
 
 const TABLE_VERSION = 1;
-const outputPath = fileURLToPath(
-  new URL('../src/app/domain/equipment/loadout-link/equipment-link-table-1.json', import.meta.url),
-);
+const tableDirectoryUrl = new URL('../src/app/domain/equipment/loadout-link/', import.meta.url);
+const tablePathFor = (version) =>
+  fileURLToPath(new URL(`equipment-link-table-${version}.json`, tableDirectoryUrl));
+const outputPath = process.env.EQUIPMENT_CODEC_TABLE_OUTPUT_PATH ?? tablePathFor(TABLE_VERSION);
+
+/**
+ * The table versions a decoder still answers for, oldest first.
+ *
+ * The application is published, so every one of these files is a promise to the
+ * links already shared against it: a Commander's link names the table that
+ * decodes it, and that table has to hold the content it held when the link was
+ * made. This script therefore writes the current table only, and refuses to
+ * touch an earlier one at all.
+ *
+ * The set is every version below the current one, derived rather than written
+ * down: a list that has to be remembered is the one thing this guard cannot
+ * afford, because minting the next table and forgetting to extend it would stop
+ * the check silently and exactly when it matters.
+ */
+const publishedTableVersions = () =>
+  Array.from({ length: TABLE_VERSION - 1 }, (_entry, index) => index + 1);
 const suits = Object.values(SUITS);
 const weapons = Object.values(PERSONAL_WEAPONS);
 const modifications = Object.entries(PERSONAL_MODIFICATIONS);
@@ -148,6 +166,38 @@ const contentHash = contentHashOf(payload);
 const payloadOf = (table) =>
   Object.fromEntries(Object.entries(table).filter(([key]) => key !== '$generated'));
 
+const readTable = async (path) => JSON.parse(await readFile(path, 'utf8').catch(() => 'null'));
+
+/**
+ * Every earlier table still holds the content its declared hash names.
+ *
+ * A link shared before today decodes with the table it names, so an edit to one
+ * of those files silently changes what an already-shared link means. Reading
+ * them back on every run is what turns that from a thing to remember into a
+ * thing the build refuses.
+ */
+for (const version of publishedTableVersions()) {
+  const path = tablePathFor(version);
+  const table = await readTable(path);
+  if (table === null) {
+    throw new Error(
+      `Equipment codec table ${version} is missing.\nA link naming table ${version} has no ` +
+        'other table that decodes it, so the file stays in the repository for as long as the ' +
+        'link does.',
+    );
+  }
+  const actual = contentHashOf(payloadOf(table));
+  if (table.$generated?.contentHash !== actual) {
+    throw new Error(
+      `Equipment codec table ${version} content does not match its declared hash\n` +
+        `  declared: ${table.$generated?.contentHash ?? '(none recorded)'}\n` +
+        `  actual:   ${actual}\n` +
+        `Table ${version} is published. Restore it, and mint a new table version for the ` +
+        'content you meant to change.',
+    );
+  }
+}
+
 /**
  * The committed table still holds the content its declared hash names.
  *
@@ -155,9 +205,18 @@ const payloadOf = (table) =>
  * let a hand-edited table pass this check and be written over in silence. Hashing the payload
  * back is what makes the file itself the evidence.
  */
-const previous = JSON.parse(await readFile(outputPath, 'utf8').catch(() => 'null'));
+const previous = await readTable(outputPath);
 
-if (previous === null) {
+/**
+ * An absent file is a mint, but only where there is a table below it to mint past.
+ *
+ * The sweep above has already proved every earlier version present and intact,
+ * so reaching here with nothing committed for this version means the version was
+ * raised and the new content belongs in a new file. Version 1 has no version
+ * below it, so the same absence means the published table was deleted, and that
+ * is the one case this script must still refuse.
+ */
+if (previous === null && publishedTableVersions().length === 0) {
   throw new Error(
     `Equipment codec table ${TABLE_VERSION} is missing.\nA link naming table ${TABLE_VERSION} ` +
       'has no other table that decodes it, so the file stays in the repository for as long as ' +
@@ -165,9 +224,9 @@ if (previous === null) {
   );
 }
 
-const previousHash = contentHashOf(payloadOf(previous));
+const previousHash = previous ? contentHashOf(payloadOf(previous)) : null;
 
-if (previous.$generated?.contentHash !== previousHash) {
+if (previous && previous.$generated?.contentHash !== previousHash) {
   throw new Error(
     `Equipment codec table ${TABLE_VERSION} content does not match its declared hash\n` +
       `  declared: ${previous.$generated?.contentHash ?? '(none recorded)'}\n` +
@@ -176,13 +235,15 @@ if (previous.$generated?.contentHash !== previousHash) {
   );
 }
 
-if (previousHash !== contentHash) {
+if (previous && previousHash !== contentHash) {
   throw new Error(
     `Equipment codec table ${TABLE_VERSION} content changed\n` +
       `  committed: ${previousHash}\n  generated: ${contentHash}\n` +
       'Every published link names the table version that decodes it, so a changed table is a\n' +
-      'new encoding: mint the next table version and keep this one for the links already out.\n' +
-      `Table ${TABLE_VERSION} is published. It is never written again, and no flag permits it.`,
+      `new encoding. Raise TABLE_VERSION to ${TABLE_VERSION + 1} and register the new table with\n` +
+      'the codec loader. Table ' +
+      `${TABLE_VERSION} stays where it is: a published table is never written again, and no flag ` +
+      'permits it.',
   );
 }
 
@@ -191,7 +252,7 @@ await writeFile(
   `${JSON.stringify({ $generated: { tableVersion: TABLE_VERSION, contentHash }, ...payload })}\n`,
 );
 console.log(
-  `Equipment codec table ${TABLE_VERSION} written: ${payload.SUITS.length} suits, ` +
+  `Equipment codec table ${TABLE_VERSION} ${previous ? 'written' : 'minted'}: ${payload.SUITS.length} suits, ` +
     `${payload.MOUNT_SLOTS} mounts, ${payload.WEAPONS.length} weapons, ` +
     `${payload.SUIT_MODIFICATIONS.length + payload.WEAPON_MODIFICATIONS.length} modifications ` +
     `(${contentHash.slice(0, 12)}…).`,

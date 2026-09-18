@@ -6,7 +6,16 @@ import { RawBitWriter } from '../../build-link/build-link-bits';
 import { BuildLinkCodecError } from '../../build-link/build-link-codec-error';
 import { encodeLinkBody } from '../../build-link/build-link-envelope';
 import type { BuildLinkCodecErrorCode } from '../../build-link/build-link-codec-error';
-import { decodeEquipmentLinkFragment, encodeEquipmentLinkFragment } from './equipment-link-codec';
+import {
+  createEquipmentLinkCodec,
+  decodeEquipmentLinkBody,
+  readPayloadTableVersion,
+} from './equipment-link-codec';
+import {
+  decodeEquipmentLinkFragment,
+  encodeEquipmentLinkFragment,
+} from './equipment-link-codec-loader';
+import { testOnlyEquipmentTable } from './equipment-link-table.spec-helpers';
 import type { EquipmentLoadout } from './equipment-loadout';
 import table from './equipment-link-table-1.json';
 
@@ -700,3 +709,37 @@ async function canonicalHash(payload: unknown): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', encoded);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
+
+describe('equipment link codec factory', () => {
+  it('writes the version it was built with', () => {
+    // The version field is what a payload names its table by, so a codec that
+    // wrote a module constant instead would file every table's links under one
+    // number and leave the loader nothing to select on.
+    const codec = createEquipmentLinkCodec(2, testOnlyEquipmentTable(2));
+    const fragment = codec.encodeEquipmentLinkFragment(FLIGHT_SUIT);
+
+    expect(readPayloadTableVersion(decodeEquipmentLinkBody(fragment))).toBe(2);
+    expect(
+      readPayloadTableVersion(decodeEquipmentLinkBody(encodeEquipmentLinkFragment(FLIGHT_SUIT))),
+    ).toBe(table.$generated.tableVersion);
+  });
+
+  it('reads only the version it was built with', () => {
+    const codec = createEquipmentLinkCodec(2, testOnlyEquipmentTable(2));
+
+    expect(codec.decodeEquipmentLinkFragment(codec.encodeEquipmentLinkFragment(DOMINATOR))).toEqual(
+      DOMINATOR,
+    );
+    expectRefusal(
+      () => codec.decodeEquipmentLinkFragment(encodeEquipmentLinkFragment(DOMINATOR)),
+      'unsupportedTableVersion',
+    );
+  });
+
+  it('refuses a table whose stamp is not the version it is registered under', () => {
+    // The stamp is the table's own claim about which version it is. A codec
+    // built on a mismatched pair would write links no loader could file.
+    expect(() => createEquipmentLinkCodec(2, testOnlyEquipmentTable(3))).toThrow();
+    expect(() => createEquipmentLinkCodec(0, testOnlyEquipmentTable(0))).toThrow();
+  });
+});

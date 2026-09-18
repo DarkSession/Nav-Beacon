@@ -3,6 +3,8 @@ import { BuildLinkCodecError } from '../../domain/build-link/build-link-codec-er
 import type { EquipmentLoadout } from '../../domain/equipment/loadout-link/equipment-loadout';
 import { provideLocalization } from '../../i18n/i18n.providers';
 import { BUNDLED_ENGLISH } from '../../i18n/locale-registry';
+import { toStoredLoadout } from '../../domain/equipment/loadout/stored-loadout.serializer';
+import germanCatalogue from '../../i18n/locales/de.json';
 import { HistoryLocationAdapter } from '../../platform/browser/history-location.adapter';
 import { MemoryStorage, provideMemoryStorage } from '../../platform/storage/storage.spec-helpers';
 import { LinkErrorMapper } from '../build-link/link-error.mapper';
@@ -289,6 +291,92 @@ describe('LoadoutLinkCoordinator', () => {
     expect(location.fragmentValue).toBe('');
     expect(links.link().kind).toBe('refused');
   });
+
+  it('carries the mount a refused loadout is about, and leaves the bench alone', () => {
+    const { links, store, location, errors, summary } = setup();
+    const held = heldLoadout(store);
+    links.publish();
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'No handheld weapon is named x.', {
+        slot: 'PrimaryWeapon1',
+      });
+    };
+    links.publish();
+
+    const link = links.link();
+    expect(link.kind === 'refused' && link.failure).toEqual({
+      code: 'unknownIdentity',
+      slot: 'PrimaryWeapon1',
+    });
+    expect(store.loadout()).toEqual(held);
+    expect(links.publishedUrl()).toBeNull();
+    expect(location.fragmentValue).toBe('');
+
+    // What a refusal withholds is the link. The loadout is still exportable as
+    // a payload and as something a Commander can read.
+    expect(JSON.parse(JSON.stringify(toStoredLoadout(store.loadout()!)))).toBeTruthy();
+    expect(summary.write(store.loadout()!).length).toBeGreaterThan(0);
+
+    const said = errors.describe(
+      link.kind === 'refused' ? link.failure : { code: 'tooLong', slot: null },
+      'equipment',
+    );
+    expect(said.message).toBe(BUNDLED_ENGLISH['link.error.equipment.unknownIdentity']);
+    expect(said.detail).not.toContain('PrimaryWeapon1');
+    expect(said.detail?.length).toBeGreaterThan(0);
+  });
+
+  it('says the suit refused it where the refusal is about the suit', () => {
+    const { links, store, errors } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    links.publish();
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'No suit is named x.', { slot: 'suit' });
+    };
+    links.publish();
+
+    const link = links.link();
+    expect(link.kind === 'refused' && link.failure.slot).toBe('suit');
+    expect(errors.describe({ code: 'unknownIdentity', slot: 'suit' }, 'equipment').detail).toBe(
+      BUNDLED_ENGLISH['link.refused.suit'],
+    );
+  });
+
+  it('leaves a fragment belonging to another tool where a loadout is refused', () => {
+    const { links, store, location } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+    location.fragmentValue = 'b.somebodyelses';
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+
+    expect(location.fragmentValue).toBe('b.somebodyelses');
+    expect(links.link().kind).toBe('refused');
+  });
+
+  it('tells the Commander at once about a default loadout it cannot represent', () => {
+    // A loadout at its suit's default is in no record by rule and now in no
+    // fragment either, so the refusal has to reach the bench rather than wait
+    // inside the export layer for a reload that finds nothing (024/FR-002).
+    const { links, store, autosave, storage } = setup();
+    store.dispatch({ kind: 'selectSuit', suitFamily: 'tacticalsuit' });
+
+    links.encode = () => {
+      throw new BuildLinkCodecError('unknownIdentity', 'internal detail', { slot: 'suit' });
+    };
+    links.publish();
+    autosave.flush();
+
+    expect(store.atDefault()).toBe(true);
+    expect(store.autosaveRecordId()).toBeNull();
+    expect(storage.entries.size).toBe(0);
+    expect(store.hasLoadout()).toBe(true);
+    expect(links.failure()).toEqual({ code: 'unknownIdentity', slot: 'suit' });
+  });
 });
 
 describe('the loadout link payload allowlist', () => {
@@ -321,13 +409,24 @@ describe('a loadout link refusal', () => {
   it('says what a loadout link failed at, not what a build link would have', () => {
     const { errors } = setup();
 
-    for (const code of ['unknownIdentity', 'invalidPayload'] as const) {
+    for (const code of ['unknownIdentity', 'invalidPayload', 'unsupportedTableVersion'] as const) {
       const ship = errors.describe({ code, slot: null }).message;
       const loadout = errors.describe({ code, slot: null }, 'equipment').message;
 
       expect(loadout).toBe(BUNDLED_ENGLISH[`link.error.equipment.${code}`]);
       expect(loadout).not.toBe(ship);
     }
+  });
+
+  it('says a loadout link is from a newer version in every shipped locale', () => {
+    // The key is the one a Commander meets when a link names a table this
+    // application does not carry, so a locale missing it would leave the ship
+    // wording in its place.
+    const key = 'link.error.equipment.unsupportedTableVersion';
+
+    expect(BUNDLED_ENGLISH[key]).toContain('loadout link');
+    expect(germanCatalogue[key]).toContain('Loadout-Link');
+    expect(germanCatalogue[key]).not.toBe(BUNDLED_ENGLISH[key]);
   });
 
   it('names the mount in the library’s words, never by its journal key (FR-021)', () => {

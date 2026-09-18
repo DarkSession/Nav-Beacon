@@ -47,6 +47,26 @@ const treeWithGenerator = async (t, prefix) => {
   return root;
 };
 
+/** The generator with its version raised, which is what minting the next table looks like. */
+const raiseTableVersion = async (root, version) => {
+  const scriptPath = join(root, 'scripts/generate-equipment-link-codec-tables.mjs');
+  const source = await readFile(scriptPath, 'utf8');
+  assert.match(source, /^const TABLE_VERSION = 1;$/m);
+  await writeFile(
+    scriptPath,
+    source.replace(/^const TABLE_VERSION = 1;$/m, `const TABLE_VERSION = ${version};`),
+  );
+};
+
+/** A table whose payload has moved and whose declared hash was recomputed over it. */
+const movedTable = async (change) => {
+  const { $generated: generated, ...payload } = JSON.parse(
+    await readFile(committedTablePath, 'utf8'),
+  );
+  change(payload);
+  return `${JSON.stringify({ $generated: { ...generated, contentHash: contentHashOf(payload) }, ...payload })}\n`;
+};
+
 const runGenerator = (root) =>
   spawnSync(process.execPath, [join(root, 'scripts/generate-equipment-link-codec-tables.mjs')], {
     cwd: root,
@@ -109,4 +129,82 @@ test('rewrites nothing when the catalogue still produces the committed table', a
   // The generator writes its own spacing; prettier gives the committed file its. Comparing the
   // parsed content is what says the table did not move.
   assert.deepEqual(JSON.parse(await readFile(tablePath, 'utf8')), JSON.parse(committed));
+});
+
+test('mints the next table when the version is raised, and leaves the published one alone', async (t) => {
+  const root = await treeWithGenerator(t, 'ednb-equipment-mint-');
+  const table1Path = join(root, tableDirectoryPath, tableFileName);
+  const table2Path = join(root, tableDirectoryPath, 'equipment-link-table-2.json');
+  const committed = await readFile(committedTablePath, 'utf8');
+  await writeFile(table1Path, committed);
+  await raiseTableVersion(root, 2);
+
+  const result = runGenerator(root);
+
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.equal(JSON.parse(await readFile(table2Path, 'utf8')).$generated.tableVersion, 2);
+  // The published table is a promise to the links already shared against it, so
+  // minting past it never touches the file it is in.
+  assert.equal(await readFile(table1Path, 'utf8'), committed);
+});
+
+test('refuses a moved payload under an unchanged version, and names the version it belongs under', async (t) => {
+  const root = await treeWithGenerator(t, 'ednb-equipment-moved-');
+  const table1Path = join(root, tableDirectoryPath, tableFileName);
+  const moved = await movedTable((payload) => {
+    payload.SUITS = [...payload.SUITS, 'newsuit'];
+  });
+  await writeFile(table1Path, moved);
+
+  const result = runGenerator(root);
+
+  assert.notEqual(result.status, 0);
+  const said = `${result.stdout}\n${result.stderr}`;
+  assert.match(said, /Equipment codec table 1 content changed/);
+  assert.match(said, /Raise TABLE_VERSION to 2/);
+  assert.equal(await readFile(table1Path, 'utf8'), moved);
+  assert.equal(
+    await readFile(join(root, tableDirectoryPath, 'equipment-link-table-2.json'), 'utf8').catch(
+      () => null,
+    ),
+    null,
+  );
+});
+
+test('refuses to run at all once a table below the current one has been edited', async (t) => {
+  // The sweep's own case. Table 1 is guarded by the checks on the current
+  // version while it is the current version; this is what guards it once it is
+  // not, which is the moment a Commander's link depends on it most.
+  const root = await treeWithGenerator(t, 'ednb-equipment-sweep-');
+  const table1Path = join(root, tableDirectoryPath, tableFileName);
+  const table2Path = join(root, tableDirectoryPath, 'equipment-link-table-2.json');
+  const table = JSON.parse(await readFile(committedTablePath, 'utf8'));
+  table.SUITS = [...table.SUITS, 'TamperedSuit'];
+  const tamperedContent = `${JSON.stringify(table)}\n`;
+  await writeFile(table1Path, tamperedContent);
+  await raiseTableVersion(root, 2);
+
+  const result = runGenerator(root);
+
+  assert.notEqual(result.status, 0);
+  const said = `${result.stdout}\n${result.stderr}`;
+  assert.match(said, /Equipment codec table 1 content does not match its declared hash/);
+  assert.equal(await readFile(table1Path, 'utf8'), tamperedContent);
+  assert.equal(await readFile(table2Path, 'utf8').catch(() => null), null);
+});
+
+test('refuses to mint past a table below the current one that is missing', async (t) => {
+  const root = await treeWithGenerator(t, 'ednb-equipment-sweep-absent-');
+  await raiseTableVersion(root, 2);
+
+  const result = runGenerator(root);
+
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Equipment codec table 1 is missing/);
+  assert.equal(
+    await readFile(join(root, tableDirectoryPath, 'equipment-link-table-2.json'), 'utf8').catch(
+      () => null,
+    ),
+    null,
+  );
 });

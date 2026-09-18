@@ -195,6 +195,75 @@ test.describe('handing a loadout to someone else', () => {
   });
 });
 
+/**
+ * A link that has been out in the world, transcribed rather than minted here.
+ *
+ * It is the Dominator entry of `published-equipment-links.fixture.json`: table 1, every mount
+ * filled, every modification slot held. A link this application wrote today would prove only that
+ * it agrees with itself, so the corpus is what says a shared link still opens.
+ */
+const PUBLISHED_LINK = 'e.4f@yCeG44mGCq1hcPOnHxlG';
+
+/**
+ * The same loadout under table 2, which this application does not carry.
+ *
+ * Captured from the test-only table the unit suite drives version selection with, so the payload
+ * is well formed in every way but the number it names.
+ */
+const LINK_FROM_A_TABLE_THIS_VERSION_LACKS = 'e.784_peEBdC5G1GTekg-:wnS';
+
+test.describe('a loadout link already shared', () => {
+  test('opens on the loadout it was shared as, whatever table this version writes', async ({
+    page,
+  }) => {
+    await page.goto(`/equipment#${PUBLISHED_LINK}`);
+
+    // The gate stands until a suit is worn, so its absence is the link having opened.
+    await expect(page.locator('.gate')).toHaveCount(0);
+
+    await openRow(page, 'suit');
+    await expect(page.locator('.item[data-target="suit"] .item__name')).toContainText(
+      'Dominator Suit',
+    );
+
+    for (const [mount, weapon] of [
+      ['PrimaryWeapon1', 'Manticore Oppressor'],
+      ['PrimaryWeapon2', 'Manticore Executioner'],
+      ['SecondaryWeapon', 'Karma P-15'],
+    ]) {
+      await openRow(page, mount!);
+      await expect(page.locator(`.item[data-target="${mount}"] .item__name`)).toContainText(
+        weapon!,
+      );
+    }
+  });
+});
+
+test.describe('a loadout link naming a table this version does not carry', () => {
+  test('says so where the Commander is, and leaves the open loadout alone', async ({ page }) => {
+    await page.goto('/equipment');
+    await wearSuit(page, 'Maverick Suit');
+
+    await page.evaluate((fragment) => {
+      location.hash = fragment;
+    }, LINK_FROM_A_TABLE_THIS_VERSION_LACKS);
+
+    const notice = page.locator('ednb-status-notice');
+    await expect(notice).toBeVisible();
+    // A loadout link, said as one: the ship builder's wording is about a build.
+    await expect(notice).toContainText(/loadout link/i);
+    await expect(notice).toContainText(/newer version of the application/i);
+    await expect(notice).not.toContainText(/build link/i);
+
+    // What the Commander had is still there. A refusal replaces nothing.
+    await expect(page.locator('.gate')).toHaveCount(0);
+    await openRow(page, 'suit');
+    await expect(page.locator('.item[data-target="suit"] .item__name')).toContainText(
+      'Maverick Suit',
+    );
+  });
+});
+
 test.describe('a loadout link this version cannot read', () => {
   test('says so where the Commander is, and leaves the bench as it was', async ({ page }) => {
     // An `e.` fragment that is not a loadout this application minted.
