@@ -326,25 +326,26 @@ Their modifier arrays are not encoded, because decoding regenerates them from th
 A module therefore takes this record only while that regeneration would reproduce the engineering it
 carries; see the Mercenary case below.
 
-Almanac 0.1.4 publishes modifier signatures for 54 fixed variants, which makes those articles
-identifiable and shareable. Its 22 Mercenary-system variants still have no published modifier
-signatures, but the package identifies them by their purchase-exclusive blueprint instead, so they
-are identifiable and shareable too. The codec continues to take every identity from the package and
-re-derives nothing from blueprint metadata itself.
+The Almanac publishes a modifier signature for all 79 fixed variants, which makes those articles
+identifiable and shareable. It identifies the 25 Mercenary-system variants by their
+purchase-exclusive blueprint rather than by that signature, so they are identifiable and shareable
+on a route of their own. The codec continues to take every identity from the package and re-derives
+nothing from blueprint metadata itself.
 
 The difference between the two identification routes matters to the encoder. A reward article is
 recognised _from_ its published block, so a module carrying that identity is carrying that state and
 the record restores exactly what identified it. A Mercenary article is recognised from a blueprint
 instead, so its identity says nothing about its state, and it is the one fixed variant that can hold
-engineering the record cannot describe. Two ways: its purchase is grade 1 while the same blueprint
-crafts grades 2 to 5 with the identity surviving the upgrade, so the fitted grade can be past the one
-the record replays; and no modifier block is published for the purchase, so the record restores only
-whatever an experimental effect contributes, and a capture stating anything else would decode to
-different values.
+engineering the record cannot describe: its purchase is grade 1 while the same blueprint crafts
+grades 2 to 5 with the identity surviving the upgrade, so the fitted grade can be past the one the
+record replays.
 
 For a Mercenary article, therefore, the record is used only when decoding it would reproduce the
-module's engineering outright — same grade, same modifiers. Reward articles keep taking the record
-whenever the package identifies them. Anything a record cannot describe is written as an ordinary
+module's engineering: the same grade, and either the same modifiers or none stated at all. A capture
+stating none says nothing the record can contradict — the Almanac reads the purchase untouched
+either way and derives the same article — which is how an exchange carrying only the blueprint and
+the grade, a SLEF export among them, still shares. Reward articles keep taking the record whenever
+the package identifies them. Anything a record cannot describe is written as an ordinary
 record containing its blueprint and grade, and the Almanac re-derives the purchase identity on
 reconstruction. The two forms stay unambiguous because no Mercenary blueprint offers grade 1 as a
 craftable grade, so the purchase grade is unspellable in the ordinary form and grades 2 to 5 are
@@ -364,7 +365,7 @@ encoder refused, and a Commander who engineered one watched the build's link dis
 Since 2026-08-22 each module's set is its own menu plus the blueprints its pre-engineered variants
 carry. The six gain a set of exactly their variants' blueprints — no menu is invented, only the
 blueprint a climbed article has to name — and with it the discriminator that tells the two forms
-apart. Every one of the 22 Mercenary articles shares at every craftable grade, as do the
+apart. Every one of the 25 Mercenary articles shares at every craftable grade, as do the
 community-goal and tech-broker variants on those same modules. The record layouts are unchanged.
 
 Festive launchers are normal fixed pre-engineered variants in the Almanac model. They therefore use
@@ -644,7 +645,8 @@ new `CURRENT_TABLE_VERSION` and a `loadTables` case for the new file. The retire
 edit: the generator derives the versions it must leave alone from the current table number, so a
 table cannot leave the guarded set by being deleted or forgotten. The suites then need the new
 table's content hash and its re-pinned corpus values, the retired table's hash pinned beside them,
-and the table each of them reads named: the build states which pin failed and where.
+the table each of them reads named, and a link written with the new table added to the published-link
+corpus: the build states which pin failed and where.
 
 The public asynchronous loader initially imports only the generic envelope, radix, and CRC code.
 It radix-decodes the envelope and verifies CRC-32 once before using the table-version field, then
@@ -689,6 +691,17 @@ articles; it names them at the positions table 1 records, which is why that tabl
 repository. Running `pnpm run codec:tables` reproduces table 2 at content hash
 `12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90`, at the same capacity — 272 of
 the 377 bytes a 500-character value carries.
+
+Every table a link can name carries links of its own in
+[`published-build-links.fixture.json`](../src/app/domain/ships/build-link/published-build-links.fixture.json),
+each pinned to the build it opens.
+[`build-link-published-links.spec.ts`](../src/app/domain/ships/build-link/build-link-published-links.spec.ts)
+reads every entry twice: once through the loader, which picks the table out of the payload the way
+an arriving link is read, and once against the table the corpus files it under, which is what proves
+the entry is filed where it belongs. It then rewrites each one with the current table and reads the
+rewrite back on the same build, because a link is allowed to arrive in an older format and leave in
+the newest one. The suite fails until a newly minted table has both a row of its own and a link, so
+the corpus gains a version whenever `CURRENT_TABLE_VERSION` does and never loses one.
 
 A build the catalogue does not fit is refused rather than approximated. Outfitting sells a
 Supercruise Overcharge drive only at the mount's own size, so a link naming table 1 that fits one to

@@ -14,7 +14,7 @@ export type { BuildLinkCodecErrorCode } from '../../build-link/build-link-codec-
  * indefinitely: a Commander who saved a link last year opens it against the table that made
  * it. Raising this number is what a catalogue move costs, and it never edits an earlier table.
  */
-const CURRENT_TABLE_VERSION = 2;
+export const CURRENT_TABLE_VERSION = 2;
 const CODECS_BY_TABLE_VERSION = new Map<number, Promise<BuildLinkCodec>>();
 
 /** Encode with the current table, loading the codec and table snapshot only when first used. */

@@ -62,6 +62,9 @@
       covers the edited table, the absent table and the unchanged one.
 - [x] 3.10 Verify the ship generator names the next version when the catalogue moves the current
       table, with a node:test case over a table whose declared hash matches its own edited content.
+- [x] 3.11 Hold a published link for every table version a link can name, pinned to the build it
+      opens, and verify each one is read through the loader, read again against the table it is
+      filed under, and rewritten with the current table on the same build.
 
 ## 4. The record
 
@@ -75,7 +78,11 @@
       fit, reading the package's own `importOutcomes` rather than re-deriving the fit, and verify
       a table-1 payload naming a withdrawn Supercruise Overcharge drive raises
       `reconstructionFailed` naming the article and the mount.
-- [x] 4.5 Fold both deltas into the accepted capability specifications and archive this change in the
+- [x] 4.5 Take the pre-engineered record for a Mercenary article whose capture states no modifiers,
+      because the Almanac reads such a capture as the purchase untouched and the purchase grade has
+      no ordinary record to fall back on. Verify every Mercenary article round-trips out of a
+      capture carrying its blueprint and grade alone.
+- [x] 4.6 Fold both deltas into the accepted capability specifications and archive this change in the
       same commit, and verify `pnpm run policy:specs` reports no violation.
 
 ## 5. Verification

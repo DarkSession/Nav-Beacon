@@ -1931,12 +1931,17 @@ function resolvePreEngineeredEngineering(
  * A Mercenary article is the exception, because it is the one identified from a blueprint instead.
  * Its identity therefore says nothing about its state, and it can hold engineering the record
  * cannot describe: the purchase-exclusive blueprint crafts grades 2 to 5 with the identity
- * surviving the upgrade, and no modifier block is published for the purchase itself, so a capture
- * stating modifiers would come back with only whatever an experimental effect contributes. For
- * those the record is used only when it reproduces the module's engineering outright. Anything else
- * takes the ordinary record — blueprint and grade, with the Almanac re-deriving the purchase
- * identity on reconstruction — and where that cannot spell the module the encoder refuses. A link
- * that opens as a different build than the one shared is worse than no link.
+ * surviving the upgrade. For those the record is used only where it reproduces the module's
+ * engineering. A capture stating modifiers has to state the ones the record replays. A capture
+ * stating none says nothing the record can contradict — the Almanac reads the purchase untouched
+ * either way and derives the same article — so the record reproduces it. A capture out of an
+ * exchange that keeps only the blueprint and the grade arrives that way, and the ordinary record
+ * cannot rescue it: the purchase-exclusive blueprint sells at a grade its own crafting menu does
+ * not offer.
+ *
+ * Anything else takes the ordinary record — blueprint and grade, with the Almanac re-deriving the
+ * purchase identity on reconstruction — and where that cannot spell the module the encoder refuses.
+ * A link that opens as a different build than the one shared is worse than no link.
  */
 function preEngineeredRecordReproduces(
   codec: CodecContext,
@@ -1946,6 +1951,7 @@ function preEngineeredRecordReproduces(
 ): boolean {
   if (engineering.Level !== variant.grade) return false;
   if (variant.acquisition !== 'mercenary') return true;
+  if ((engineering.Modifiers ?? []).length === 0) return true;
   return sameModifiers(
     resolvePreEngineeredEngineering(codec, record).Modifiers,
     engineering.Modifiers,

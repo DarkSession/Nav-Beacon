@@ -380,6 +380,49 @@ describe('build-link codec', () => {
     }
   });
 
+  it('round-trips a Mercenary article out of a capture that states no modifiers', () => {
+    // An exchange that keeps only the blueprint and the grade — a SLEF export among them — states
+    // nothing about a purchase's modifiers, and the Almanac reads that as the purchase untouched.
+    // Every Mercenary article is sold at a grade its own crafting menu does not offer, so the
+    // ordinary record cannot spell one: without the pre-engineered record such a capture takes the
+    // whole build's link down with it.
+    const mercenary = PRE_ENGINEERED_MODULES.filter(
+      ({ acquisition }) => acquisition === 'mercenary',
+    );
+    expect(mercenary).toHaveLength(25);
+
+    for (const variant of mercenary) {
+      const slot = variant.symbol.toLowerCase().startsWith('hpt_')
+        ? 'LargeHardpoint1'
+        : 'Slot01_Size7';
+      const source = ShipLoadout.fromLoadout({
+        Ship: 'Anaconda',
+        Modules: [
+          {
+            Slot: slot,
+            Item: variant.symbol,
+            Engineering: {
+              BlueprintName: variant.blueprintSymbol,
+              Level: variant.grade,
+              Quality: 1,
+              ...(variant.experimentalEffectSymbol === undefined
+                ? {}
+                : { ExperimentalEffect: variant.experimentalEffectSymbol }),
+            },
+          },
+        ],
+      });
+      const decoded = decodeBuildLinkFragment(encodeBuildLinkFragment(source));
+
+      expect(decoded.fittedModuleAt(slot)?.preEngineeredVariant).toEqual(
+        source.fittedModuleAt(slot)?.preEngineeredVariant,
+      );
+      expect(decoded.fittedModuleAt(slot)?.effectiveStats).toEqual(
+        source.fittedModuleAt(slot)?.effectiveStats,
+      );
+    }
+  });
+
   it('pins the modifier block published for every fixed variant', () => {
     // The pre-engineered record can restore every package variant from its published modifier
     // block. Pin both sets so a variant losing that block cannot pass unnoticed.

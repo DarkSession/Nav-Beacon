@@ -43,6 +43,11 @@ Source: 001/FR-016.
 - **WHEN** a fitted module has a package-identified pre-engineering and ordinary engineering applied after it
 - **THEN** both survive the round trip through the payload
 
+#### Scenario: A capture states a package variant without its modifiers
+
+- **WHEN** a fitted module carries a package variant and the capture it arrived in states no modifiers for it
+- **THEN** the payload carries the variant identity and the build survives the round trip
+
 #### Scenario: The package publishes no power draw for a module
 
 - **WHEN** a fitted module's power draw is not published by the package
