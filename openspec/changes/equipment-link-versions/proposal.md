@@ -6,7 +6,8 @@ names version 1, so the format can say which table wrote a link and the decoder 
 The first package upgrade that moves an equipment identity mints table 2, and every link a Commander
 has already shared stops opening.
 
-The ship builder settled the same question when Almanac 0.2.13 moved its identifiers.
+The ship builder already answers this question: Almanac 0.2.13 changed what its table holds,
+and table 2 was minted beside a table 1 that still opens.
 
 ## What Changes
 
@@ -44,9 +45,10 @@ None. The link is already specified under `equipment-builder/loadout-persistence
 ## Impact
 
 - `src/app/domain/equipment/loadout-link/equipment-link-codec.ts` — the module-level constants
-  (`CURRENT_TABLE_VERSION`, `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`, the modification widths and
-  `MOUNTS`) are derived from the one imported table at load. Each is `bitsFor` over a table array,
-  so all of them are recoverable per version; they move into a per-version context.
+  (`CURRENT_TABLE_VERSION`, `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`, the modification widths,
+  `MODIFICATION_SLOTS` and `MOUNTS`) are derived from the one imported table at load. Each is
+  derived from the table, so all of them are recoverable per version; they move into a per-version
+  context.
 - A registry beside the codec, holding the version-to-table map and the current table version.
 - `scripts/generate-equipment-link-codec-tables.mjs` — `TABLE_VERSION` and the output path are
   written down separately, the script refuses to run when the file for the current version is

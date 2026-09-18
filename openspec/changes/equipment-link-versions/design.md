@@ -9,9 +9,9 @@ needs no change at all.
 
 What is built around that field is the obstacle. The codec derives its constants once, at module
 load, from the single imported table: `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`,
-`SUIT_MODIFICATION_BITS`, `WEAPON_MODIFICATION_BITS` and the `MOUNTS` list. Each is `bitsFor` over a
-table array or a table value, so every one of them is recoverable from whichever table a payload
-names. Nothing in the format is baked into the module rather than the table, which is what makes a
+`SUIT_MODIFICATION_BITS`, `WEAPON_MODIFICATION_BITS`, `MODIFICATION_SLOTS` and the `MOUNTS` list.
+Each is derived from the table, so every one of them is recoverable from whichever table a payload
+names. Nothing in the format is fixed in the module rather than in the table, which is what makes a
 backward-compatible registry possible at all.
 
 Decoding resolves an identity out of the table by index, and the table holds what the package held
@@ -49,10 +49,10 @@ call and reads worse at every call site.
 
 **Loading stays synchronous, unlike the build-link loader.** The build-link loader is async because
 each table it may need is about 198 KB, and deferring one is worth an `await` at every call site.
-The equipment table is 3,021 bytes. A long series of equipment versions still costs less than a
-hundredth of one build-link table, and paying for it with `async` would push a promise through
-`loadout-link.coordinator.ts`, the bench page and their suites for no measurable gain. The registry
-therefore holds statically imported tables keyed by version.
+The equipment table is 3,021 bytes against `codec-table-1.json` at 198,777, so it takes about
+sixty-five equipment versions to cost one build-link table. Paying for that with `async` would push
+a promise through `loadout-link.coordinator.ts`, the bench page and their suites for no measurable
+gain. The registry therefore holds statically imported tables keyed by version.
 
 This is a deliberate divergence from the sibling codec rather than an oversight, and the reason is
 size. `docs/equipment-link-codec.md` records the same choice. If the equipment table ever approaches
@@ -67,9 +67,9 @@ not a copy of its selection. `LoadoutLinkCoordinator` already documents this tec
 `encode` and `decode` properties, so it is the established seam in this area rather than a new one.
 The map stays a `ReadonlyMap` and no production path mutates it.
 
-The corpus guard therefore reads the committed `equipment-link-table-*.json` files rather than the
-map, so a version a suite passed in for one test cannot satisfy the guard or be reported missing
-from it. A committed table with no corpus entry is what the guard fails on.
+The corpus guard reads the committed `equipment-link-table-*.json` files rather than the map,
+because a table file committed and never registered is exactly the mistake worth catching and a
+map-reading guard cannot see it. A committed table with no corpus entry is what the guard fails on.
 
 **A payload naming an unregistered version is refused with the error the codec already has.**
 `BuildLinkCodecError` with `unsupportedTableVersion` is what the decoder raises today for exactly
@@ -109,12 +109,10 @@ parameter, which exercises the shipped selection without committing a table. The
 committed version needs a corpus entry is what keeps this honest when a real version arrives.
 
 **A synchronous registry means every published table is in the initial bundle** → Accepted at the
-size stated in the decision above, and the capacity check gains the equipment tables so the total is
-visible rather than assumed.
-
-**The divergence from the build-link loader could read as an inconsistency to a later reader** →
-The design records the size reason, and the codec's own comment points at it where the registry is
-declared.
+size stated in the decision above: every equipment version published together would have to reach
+sixty-five tables before it weighed what one build-link table already weighs. What a link may cost
+is a separate bound, and `equipment-link-codec.spec.ts` already asserts the largest loadout the
+format can state against it.
 
 ## Migration Plan
 

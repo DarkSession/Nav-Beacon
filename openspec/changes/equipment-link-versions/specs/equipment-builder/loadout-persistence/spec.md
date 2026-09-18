@@ -43,6 +43,12 @@ Source: 013/FR-020, 013/SC-005.
 - **AND** the published table keeps the content it was published with
 - **AND** a new link names the new version while an older link still names, and is decoded by, its own
 
+#### Scenario: A published table's content has moved
+
+- **WHEN** the generator produces content the committed table for the current version does not hold
+- **THEN** the build fails and names the version the new content belongs under
+- **AND** no table is written
+
 #### Scenario: A published table has been edited
 
 - **WHEN** the content of a published equipment table no longer matches the hash it declares
@@ -68,9 +74,12 @@ can build.
 
 A link the bench publishes into the fragment or offers for export MUST name the
 current table version, whatever version the loadout arrived on. Where the current
-table cannot represent the loadout, no link MUST be published or offered, the
-loadout on the bench MUST be left as it is, and the Commander MUST be told which
-mount and which reason refused it.
+table cannot represent the loadout, no link MUST be published or offered and the
+loadout on the bench MUST be left as it is. An equipment fragment already in the
+address MUST be removed, so the address names no loadout the bench cannot share,
+and a fragment belonging to another tool MUST be left as it is. The Commander MUST
+be told what refused it — the mount, or the suit where the suit is what the current
+table cannot name — and the reason.
 
 Source: 013/FR-020, 013/SC-005.
 
@@ -100,4 +109,7 @@ Source: 013/FR-020, 013/SC-005.
   carries
 - **THEN** no link is published into the fragment and none is offered for export
 - **AND** the loadout on the bench is left as it is
-- **AND** the Commander is told which mount and which reason refused it
+- **AND** an equipment fragment already in the address is removed, and a fragment
+  belonging to another tool is left as it is
+- **AND** the Commander is told what refused it — the mount, or the suit — and the
+  reason
