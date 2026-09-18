@@ -1,0 +1,125 @@
+## Context
+
+See proposal.md — Why.
+
+The format already reserves what this change needs. `equipment-link-codec.ts` writes a 10-bit table
+version as the first field of every payload and reads it back on decode. What it does with the value
+is compare it to the one table the module imported and refuse anything else, so the payload layout
+needs no change at all.
+
+What is built around that field is the obstacle. The codec derives its constants once, at module
+load, from the single imported table: `SUIT_BITS`, `WEAPON_BITS`, `GRADE_BITS`,
+`SUIT_MODIFICATION_BITS`, `WEAPON_MODIFICATION_BITS` and the `MOUNTS` list. Each is `bitsFor` over a
+table array or a table value, so every one of them is recoverable from whichever table a payload
+names. Nothing in the format is baked into the module rather than the table, which is what makes a
+backward-compatible registry possible at all.
+
+Decoding resolves an identity out of the table by index, and the table holds what the package held
+when it was generated. Whether the installed package still publishes that identity is settled after
+decoding, by `reconstructLoadout` in `LoadoutLinkCoordinator`, and this change does not touch that
+step.
+
+This change introduces no screen. The one surface it touches is the equipment bench's own refusal
+text, which `LinkErrorMapper` already states from a catalogue key; the requirement mapping is the
+`equipment/link` entry in `e2e/coverage-ledger.ts`.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Every published `e.` link keeps opening, with no cut-over and no dead links.
+- The version-to-table map is the one place a committed table is registered, and a registered
+  version with no corpus entry fails the suite.
+
+**Non-Goals:**
+
+- Publishing equipment table 2. Nothing in the installed package has moved an equipment identity;
+  this change builds the mechanism, and the first upgrade that needs it uses it.
+- Changing the payload layout, the `e.` prefix, the Base70 alphabet or the CRC envelope.
+- Revisiting the build-link codec, which already carries this behaviour.
+
+## Decisions
+
+**The codec becomes a factory over a table, as the build-link codec is.**
+`createEquipmentLinkCodec(tableVersion, table)` returns the encode and decode pair with the widths
+derived inside it. This is the same shape as `createBuildLinkCodec`, so the two codecs stay legible
+side by side, and it is what turns module-level constants into per-version ones. The alternative —
+threading a table argument through every existing function — leaves the widths recomputed on each
+call and reads worse at every call site.
+
+**Loading stays synchronous, unlike the build-link loader.** The build-link loader is async because
+each table it may need is about 198 KB, and deferring one is worth an `await` at every call site.
+The equipment table is 3,021 bytes. A long series of equipment versions still costs less than a
+hundredth of one build-link table, and paying for it with `async` would push a promise through
+`loadout-link.coordinator.ts`, the bench page and their suites for no measurable gain. The registry
+therefore holds statically imported tables keyed by version.
+
+This is a deliberate divergence from the sibling codec rather than an oversight, and the reason is
+size. `docs/equipment-link-codec.md` records the same choice. If the equipment table ever approaches
+the build-link table's order of magnitude, the decision is worth revisiting, and moving to the async
+shape then is the refactor `build-link-codec-loader.ts` already demonstrates.
+
+**The registry is a parameter with a default, which is the seam a test supplies a table through.**
+`decodeEquipmentLinkFragment(fragment, codecs = EQUIPMENT_CODECS_BY_TABLE_VERSION)` reads the
+version field and selects from the map it was given. A suite that wants a second version passes a
+map holding version 1 and a table it built itself, and the function under test is the shipped one,
+not a copy of its selection. `LoadoutLinkCoordinator` already documents this technique for its own
+`encode` and `decode` properties, so it is the established seam in this area rather than a new one.
+The map stays a `ReadonlyMap` and no production path mutates it.
+
+The corpus guard therefore reads the committed `equipment-link-table-*.json` files rather than the
+map, so a version a suite passed in for one test cannot satisfy the guard or be reported missing
+from it. A committed table with no corpus entry is what the guard fails on.
+
+**A payload naming an unregistered version is refused with the error the codec already has.**
+`BuildLinkCodecError` with `unsupportedTableVersion` is what the decoder raises today for exactly
+this case, and the refusal path through `LinkErrorMapper` is unchanged.
+
+The internal message names the version read and the versions carried. `LinkErrorMapper` documents
+that a `BuildLinkCodecError` message is never rendered — it is an English string for whoever reads a
+stack trace — so naming versions in it costs no catalogue entry and no interpolation. The Commander
+reads `link.error.unsupportedTableVersion`, which is unchanged. That text says the link was made by
+a newer version of the application, which is what the code refuses once every earlier version is
+readable.
+
+**Export and publication always name the current table version.** The bench encodes with the current
+table whatever version it read, so a loadout that arrived on an older link is shared in the version
+this release writes, and an older table is only ever read. This matches the ship builder, and it is
+what keeps the older tables read-only in practice as well as by rule. It applies to the fragment the
+bench publishes after every choice, not only to the export layer, because that fragment is published
+from the moment the loadout reaches the bench.
+
+**A loadout the current table cannot represent publishes no link.** Where an older table named an
+identity the current one does not hold, `encodeEquipmentLinkFragment` raises `unknownIdentity` with
+the mount. `LoadoutLinkCoordinator` already holds a `refused` link state for this, so the behaviour
+exists and the delta states it rather than building it. Substituting a neighbouring identity is
+forbidden by constitution IV, and publishing nothing is what leaves the loadout on the bench intact.
+
+**The corpus is real fragments, not regenerated ones.** A fixture holds published `e.` fragments per
+version with the loadout each opens to. Regenerating the expected value from the changed code would
+make the test agree with whatever that code does; a literal fragment captured from the shipped
+application is the only thing that proves an old link still opens. The build-link change established
+this shape and the equipment corpus mirrors it.
+
+## Risks / Trade-offs
+
+**The corpus starts with version 1 only, so version selection is unexercised across versions until a
+real table 2 exists** → A suite builds a test-only table and passes it through the registry
+parameter, which exercises the shipped selection without committing a table. The guard that a
+committed version needs a corpus entry is what keeps this honest when a real version arrives.
+
+**A synchronous registry means every published table is in the initial bundle** → Accepted at the
+size stated in the decision above, and the capacity check gains the equipment tables so the total is
+visible rather than assumed.
+
+**The divergence from the build-link loader could read as an inconsistency to a later reader** →
+The design records the size reason, and the codec's own comment points at it where the registry is
+declared.
+
+## Migration Plan
+
+None. No published link changes meaning, no stored loadout is touched, and the payload layout is
+unchanged. Version 1 is the only published version and it stays readable.
+
+Rollback is reverting the commit. Every link names version 1, which both the reverted code and this
+one decode.
