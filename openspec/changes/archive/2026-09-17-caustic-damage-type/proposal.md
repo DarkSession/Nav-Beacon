@@ -12,9 +12,9 @@ principle IV forbids.
 
 The same release restricts one outfitting choice. Outfitting sells a Supercruise Overcharge drive
 only at the mount's own size. `ShipLoadout.modulesForSlot` offers no SCO drive to a larger frame
-shift drive mount, and `setModule` refuses such a fit with the `exactSizeRequired` constraint. The
-withdrawn candidates move positions inside the build-link codec table's frame-shift-drive module
-sets.
+shift drive mount, and `setModule` refuses such a fit with the `exactSizeRequired` constraint. Each
+frame-shift-drive module set in the build-link codec table therefore loses the SCO drives below the
+mount's own class, which moves the position of every candidate under them.
 
 ## What Changes
 

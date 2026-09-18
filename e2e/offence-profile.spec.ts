@@ -5,8 +5,8 @@ import { everyPublishedSlotKey, sweepOutfittingState } from './accessibility';
 import { expectNoDocumentOverflow, settled } from './accessibility/assertions';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
 import {
+  benchFollowedSelection,
   fitCommitted,
-  openChooserRows,
   revealFamilyHolding,
   revealMount,
   surfacesAreLayers,
@@ -59,9 +59,14 @@ async function openOffenceDealingCaustic(page: Page): Promise<void> {
   await page.goto(`/ships/${HULL}`);
   await buildStockHull(page, englishMessages['hullDetail.create']);
 
-  const mount = await revealMount(page, 'MediumHardpoint1');
-  await mount.locator('button').first().click();
-  await openChooserRows(page);
+  // Waits on the row's own pressed state rather than on the bench appearing. A mount is
+  // already selected when this arrives, so its bench is already drawn and waiting for one
+  // proves nothing: the chooser that opened could still be the previous mount's.
+  await revealMount(page, 'MediumHardpoint1');
+  const select = page.locator('[data-slot-key="MediumHardpoint1"] button').first();
+  await select.click();
+  await expect(select).toHaveAttribute('aria-pressed', 'true');
+  await benchFollowedSelection(page);
   await revealFamilyHolding(page, CAUSTIC_ARTICLE);
   const row = page
     .locator('.candidates__choices .candidate')
