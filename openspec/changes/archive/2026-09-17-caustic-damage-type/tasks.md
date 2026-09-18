@@ -93,13 +93,18 @@
       `pnpm run codec:capacity`, and verify each passes with its output in `dist/verification/`.
 - [x] 5.3 Run `pnpm run test:scripts` and `pnpm run test`, and verify every suite passes with unit
       coverage above the 80% threshold.
-- [ ] 5.4 Run the five Chromium projects of the responsive matrix, `pnpm run e2e:timing` and
+- [x] 5.4 Run the five Chromium projects of the responsive matrix, `pnpm run e2e:timing` and
       `pnpm run e2e:offline` to completion, store each log under `dist/verification/`, and verify
       the offence journey names the caustic type where the build deals it and gives it no line
       where the build does not.
 - [ ] 5.5 Run the five Firefox projects of the responsive matrix, and verify each project passes.
 - [ ] 5.6 Run `pnpm run check` and verify format, typecheck, build, policy, unit coverage and the
       complete ten-project Playwright matrix pass.
+
+Tasks 5.5 and 5.6 are open. Firefox is unobtainable in the environment this change was verified in:
+no binary is on disk, and the proxy refuses every download host Playwright offers. `pnpm run check`
+runs the ten-project matrix, so it cannot complete either. Everything else in `pnpm run check` ran
+on its own and passed, and the five Chromium projects of the matrix each report 723 tests passed.
 
 The versioned screen-reader and 400% browser-zoom protocols need no new run. Neither protocol covers
 feature 007, and the change adds a legend line of a kind the reading already carries.
