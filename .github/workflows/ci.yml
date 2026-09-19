@@ -324,9 +324,10 @@ jobs:
           path: dist/navbeacon/browser
           # Keep one known-good artifact available to the manual recovery
           # workflow without rebuilding or executing repository code there.
-          # v5 declares this input directly; 90 days is this repository's
-          # configured maximum for Actions artifacts.
-          retention-days: 90
+          # v5 declares this input directly. Recovery republishes the tip
+          # commit of `main`, so the window must outlast the age of that
+          # commit. After the window ends, `deploy.yml` asks for a CI re-run.
+          retention-days: 7
 
       - name: Upload unit test coverage
         if: ${{ !cancelled() }}
@@ -432,22 +433,31 @@ jobs:
           echo "::error title=End-to-end suite not run::The Check job did not succeed, so the end-to-end jobs were skipped."
           exit 1
 
+      # Only a failed suite keeps its report, so a passing run has nothing to
+      # build. The job runs anyway. Its other work is the skipped-suite check
+      # above and the failed result it carries forward below. `deploy` waits
+      # on this job.
       - name: Check out the repository
+        if: ${{ success() && needs.e2e.result == 'failure' }}
         uses: actions/checkout@v7
 
       - name: Set up pnpm
+        if: ${{ success() && needs.e2e.result == 'failure' }}
         uses: pnpm/action-setup@v6
 
       - name: Set up Node.js
+        if: ${{ success() && needs.e2e.result == 'failure' }}
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install dependencies
+        if: ${{ success() && needs.e2e.result == 'failure' }}
         run: pnpm install --frozen-lockfile
 
       - name: Download every shard's report data
+        if: ${{ success() && needs.e2e.result == 'failure' }}
         uses: actions/download-artifact@v7
         with:
           path: all-blob-reports
@@ -455,10 +465,13 @@ jobs:
           merge-multiple: true
 
       - name: Merge into one report
+        if: ${{ success() && needs.e2e.result == 'failure' }}
         run: pnpm exec playwright merge-reports --reporter html ./all-blob-reports
 
+      # Keep a failed suite's report only. Each copy uses about 11 MB of the
+      # account's shared Actions storage.
       - name: Upload the Playwright report
-        if: ${{ !cancelled() && needs.e2e.result != 'skipped' }}
+        if: ${{ !cancelled() && needs.e2e.result == 'failure' }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
@@ -534,8 +547,11 @@ jobs:
 
       # No shard means no blob reporter, so this job writes a complete HTML
       # report of its own and needs nothing from `e2e-report`.
+      #
+      # Keep a failed suite's report only. Each copy uses about 1 MB of the
+      # account's shared Actions storage.
       - name: Upload the production report
-        if: ${{ !cancelled() }}
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report-production
