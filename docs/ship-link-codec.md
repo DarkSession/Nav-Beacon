@@ -634,7 +634,7 @@ table.
 
 Two tables are defined. `codec-table-1.json` is published: links name it, so its content is fixed
 and `pnpm run codec:tables` refuses to run at all if it has moved. `codec-table-2.json` is current,
-reproduced by `@elite-dangerous-almanac/core@0.2.13`, and a new link names it. A catalogue change
+reproduced by `@elite-dangerous-almanac/core@0.2.17`, and a new link names it. A catalogue change
 publishes the next numbered JSON table while retaining every earlier table unchanged; it does not
 duplicate or version the codec logic. Minting a table touches two files in the codec, plus the pins
 the suites carry. The two are: raise `TABLE_VERSION` in
@@ -671,7 +671,7 @@ current table is written, so an edit to one of those files fails the build rathe
 link that was shared against it. `pnpm run codec:capacity` reads every committed table for the same
 reason: a published table has to stay inside the budget its links were measured against.
 
-The current application dependency is exactly pinned to Almanac `0.2.13`.
+The current application dependency is exactly pinned to Almanac `0.2.17`.
 
 Table 1 holds the catalogue at content hash
 `c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370`, which is the content it was

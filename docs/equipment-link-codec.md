@@ -261,6 +261,6 @@ tested.
 
 The codec has a consumer: the equipment builder at `/equipment` mints and reads `e.` fragments.
 The bench has shipped, so table 1 is published: a changed content hash is table 2, with this file
-kept for the links already out. Almanac 0.2.13 leaves the table's content unchanged, so table 1 is
+kept for the links already out. Almanac 0.2.17 leaves the table's content unchanged, so table 1 is
 still the only minted table. Minting the next one is a raised `TABLE_VERSION`, a row in the
 registry, a row in the corpus suite's table map and a corpus entry.
