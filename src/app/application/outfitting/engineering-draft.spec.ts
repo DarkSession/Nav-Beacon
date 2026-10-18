@@ -735,5 +735,15 @@ describe('engineering draft over a recipe the build spells other than the menu',
     expect(draft.selectedGrade).toBe(5);
     expect(draft.current.blueprintFdname).toBe('LifeSupport_LightWeight');
     expect(engineeringIntent(draft)).toBeNull();
+
+    // A new grade rolls the menu's recipe.
+    const regraded = openEngineeringDraft(loadout, slot, 1, withGrade(draft, 4), TEXT)!;
+    expect(engineeringIntent(regraded)).toEqual(
+      expect.objectContaining({
+        kind: 'applyEngineering',
+        blueprintFdname: 'LifeSupport_LightWeight',
+        grade: 4,
+      }),
+    );
   });
 });
