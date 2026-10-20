@@ -67,7 +67,7 @@
     "@angular/build": "^22.1.7",
     "@angular/cli": "^22.1.7",
     "@angular/compiler-cli": "^22.1.5",
-    "@angular/platform-server": "^22.1.5",
+    "@angular/platform-server": "^22.2.1",
     "@angular/ssr": "^22.1.7",
     "@axe-core/playwright": "^4.13.0",
     "@fission-ai/openspec": "^1.11.0",
