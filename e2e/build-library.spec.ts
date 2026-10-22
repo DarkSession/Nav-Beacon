@@ -142,7 +142,7 @@ async function chooseRecord(page: Page, title: string): Promise<void> {
   // because "Anaconda" would otherwise also match "Anaconda explorer".
   const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   // Scoped to the layer. The screen it stands over is in the same document, and
-  // the shipyard behind it names forty-eight of its own controls `Build a stock
+  // the shipyard behind it names forty-nine of its own controls `Build a stock
   // …` — which a bare page-wide match claims as well (2026-09-04).
   const row = page
     .getByRole('dialog', { name: 'Saved builds' })

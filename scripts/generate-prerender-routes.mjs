@@ -5,7 +5,7 @@
  * `prerender.routesFile` in `angular.json` names this file, and
  * `discoverRoutes: false` beside it means this list is the whole set: the
  * builder renders these addresses and no others. So what is written here
- * decides, exactly, which of the 52 advertised addresses answer with a body.
+ * decides, exactly, which of the 53 advertised addresses answer with a body.
  *
  * **Derived, never listed.** The addresses come from `contentBearingAddresses`,
  * which is `publishedAddresses` — the same function the sitemap is written from

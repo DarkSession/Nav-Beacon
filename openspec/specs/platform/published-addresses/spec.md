@@ -184,9 +184,9 @@ Source: 015/FR-004.
 - **WHEN** the package reports a value as unavailable
 - **THEN** the document states the absence rather than a plausible number
 
-### Requirement: The head on all 52 advertised addresses
+### Requirement: The head on all 53 advertised addresses
 
-Every one of the 52 advertised addresses MUST carry the per-address head — title, description,
+Every one of the 53 advertised addresses MUST carry the per-address head — title, description,
 canonical, `og:url` and card image — byte-for-byte what that machinery produces, whether or not a
 body was generated for it. The head is applied to the generated document rather than to a
 content-free shell.
@@ -195,7 +195,7 @@ Source: 015/FR-005.
 
 #### Scenario: Any advertised address is fetched
 
-- **WHEN** a reader that executes no script fetches any of the 52 advertised addresses
+- **WHEN** a reader that executes no script fetches any of the 53 advertised addresses
 - **THEN** the response carries that address's own title, description, canonical, `og:url` and card
   image
 
@@ -600,7 +600,7 @@ Source: 015/FR-017.
 ### Requirement: Which addresses get a document
 
 A document MUST be generated for every content-bearing advertised address: the root, the hull
-catalogue and each of the 48 hulls. `/outfitting` and `/equipment` MUST NOT be generated, and MUST
+catalogue and each of the 49 hulls. `/outfitting` and `/equipment` MUST NOT be generated, and MUST
 keep today's behaviour and today's head unchanged. Which addresses are content-bearing is recorded
 once. A bench that later gains package-derived resting content becomes content-bearing and is
 generated then.
@@ -610,7 +610,7 @@ Source: 015/FR-018.
 #### Scenario: The generated set is counted
 
 - **WHEN** the generated documents are counted
-- **THEN** there is one for the root, one for the hull catalogue and one for each of the 48 hulls
+- **THEN** there is one for the root, one for the hull catalogue and one for each of the 49 hulls
 
 #### Scenario: A bench address is opened
 

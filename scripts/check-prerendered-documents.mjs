@@ -2,7 +2,7 @@
 /**
  * Holds every generated document to the package it was rendered from.
  *
- * Feature 015 renders 50 of the 52 advertised addresses at build time, so what
+ * Feature 015 renders 51 of the 53 advertised addresses at build time, so what
  * a crawler reads is a file rather than a frame. That file is written once and
  * then never looked at again — which is the whole problem. A component that
  * stops rendering a hull's mass lock, a formatter that starts rounding, a

@@ -28,7 +28,7 @@ test.describe('the catalogue, at full size', () => {
     await page.goto('/ships');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     // The complete installed manifest, not a page of it.
-    await expect(page.locator('[data-hull-symbol]:visible')).toHaveCount(48);
+    await expect(page.locator('[data-hull-symbol]:visible')).toHaveCount(49);
   });
 
   test('searches, filters and orders the whole manifest without a perceptible wait', async ({

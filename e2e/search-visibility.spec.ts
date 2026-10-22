@@ -101,7 +101,7 @@ test.describe('what the head says this page is', () => {
     const address = new URL(page.url()).pathname.split('/').at(-1) ?? '';
     expect(symbol.length).toBeGreaterThan(0);
 
-    // The hull's own name and the hull's own picture. Forty-eight addresses
+    // The hull's own name and the hull's own picture. Forty-nine addresses
     // that describe themselves identically are one address as far as a search
     // engine is concerned (011/FR-027).
     //

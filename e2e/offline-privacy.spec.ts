@@ -74,7 +74,7 @@ test.describe('offline capability', () => {
     // the wait is stated here and the count is taken once the page is the
     // application's.
     await waitForTakeover(page);
-    await expect(page.locator('[data-hull-symbol]:visible')).toHaveCount(48);
+    await expect(page.locator('[data-hull-symbol]:visible')).toHaveCount(49);
     // Both compositions, and one of each: the view draws a table and a card
     // list into every document and hides one (`responsive-catalogue-view.html`).
     // Twice this is a catalogue rendered on top of a catalogue.

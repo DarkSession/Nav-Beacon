@@ -35,7 +35,7 @@
 }
 
 // Search, the size strip and the column headers stay put while the manifest
-// scrolls under them: with 48 hulls, a Commander comparing a figure two
+// scrolls under them: with 49 hulls, a Commander comparing a figure two
 // screenfuls down should not have to scroll back to find out which column it
 // belongs to, or to narrow the list again.
 //
@@ -118,7 +118,7 @@
 // under the manifest. Same route, same history entry, same state — only the
 // composition changes (hull-detail design, "Composition").
 //
-// The step is the rail's, not the compact one. With 48 hulls the manifest is
+// The step is the rail's, not the compact one. With 49 hulls the manifest is
 // several screenfuls, so a detail stacked under it at 900px opened below every
 // row of it: a Commander pressed a row and the page did not appear to change
 // (Commander request 2026-08-30).

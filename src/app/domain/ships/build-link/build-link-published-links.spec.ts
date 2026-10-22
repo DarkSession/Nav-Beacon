@@ -9,6 +9,7 @@ import {
 import { minimalState } from './build-link-codec.spec-helpers';
 import codecTable1Json from './codec-table-1.json';
 import codecTable2Json from './codec-table-2.json';
+import codecTable3Json from './codec-table-3.json';
 import publishedLinks from './published-build-links.fixture.json';
 
 /**
@@ -20,6 +21,7 @@ import publishedLinks from './published-build-links.fixture.json';
 const TABLE_BY_VERSION: Readonly<Record<string, BuildLinkCodecTables>> = {
   1: codecTable1Json as BuildLinkCodecTables,
   2: codecTable2Json as BuildLinkCodecTables,
+  3: codecTable3Json as BuildLinkCodecTables,
 };
 
 const corpus = Object.entries(publishedLinks).map(([version, entries]) => ({

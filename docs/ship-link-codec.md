@@ -511,7 +511,7 @@ Two measured findings shaped the design:
 or hull link lengthens while the engineered references shrink. The comparison baseline is the same
 table with its `MODELS` block removed: bit packing ignores models, so the baseline reproduces every
 packed body — and with it every minimal and stock reference — byte for byte, which the spec asserts
-character for character across all 48 hulls.
+character for character across all 49 hulls.
 
 | Reference build              | Without models | With models | Saving |
 | ---------------------------- | -------------: | ----------: | -----: |
@@ -587,10 +587,10 @@ The table below is the growth this format promises to absorb. `CODEC_TABLE_CAPAC
 [`scripts/build-link-codec-capacity.mjs`](../scripts/build-link-codec-capacity.mjs) holds these
 numbers, and generation refuses a table that exceeds one.
 
-| Dimension                           | Table 2 | Budgeted for | Encoded width at that size   |
+| Dimension                           | Table 3 | Budgeted for | Encoded width at that size   |
 | ----------------------------------- | ------: | -----------: | ---------------------------- |
-| Hulls                               |      48 |          128 | 8-bit representation tag     |
-| Modules                             |   1,204 |        2,048 | 11-bit global fallback index |
+| Hulls                               |      49 |          128 | 8-bit representation tag     |
+| Modules                             |   1,211 |        2,048 | 11-bit global fallback index |
 | Blueprints                          |     114 |          256 | 8-bit global fallback index  |
 | Experimental effects                |      86 |          256 | 8-bit global fallback index  |
 | Outfittable mounts on one hull      |      38 |           48 | 48-bit bitmap, 6-bit indexes |
@@ -632,9 +632,10 @@ power-drawing module identities, pre-engineered identities, and the `MODELS` blo
 weights. Stable game identities originate from the package; indexes exist only inside the selected
 table.
 
-Two tables are defined. `codec-table-1.json` is published: links name it, so its content is fixed
-and `pnpm run codec:tables` refuses to run at all if it has moved. `codec-table-2.json` is current,
-reproduced by `@elite-dangerous-almanac/core@0.2.13`, and a new link names it. A catalogue change
+Three tables are defined. `codec-table-1.json` and `codec-table-2.json` are published: links name
+them, so their content is fixed and `pnpm run codec:tables` refuses to run at all if either has
+moved. `codec-table-3.json` is current, reproduced by `@elite-dangerous-almanac/core@0.2.18`, and a
+new link names it. A catalogue change
 publishes the next numbered JSON table while retaining every earlier table unchanged; it does not
 duplicate or version the codec logic. Minting a table touches two files in the codec, plus the pins
 the suites carry. The two are: raise `TABLE_VERSION` in
@@ -671,7 +672,7 @@ current table is written, so an edit to one of those files fails the build rathe
 link that was shared against it. `pnpm run codec:capacity` reads every committed table for the same
 reason: a published table has to stay inside the budget its links were measured against.
 
-The current application dependency is exactly pinned to Almanac `0.2.13`.
+The current application dependency is exactly pinned to Almanac `0.2.18`.
 
 Table 1 holds the catalogue at content hash
 `c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370`, which is the content it was
@@ -688,9 +689,19 @@ class. Each frame shift drive candidate set therefore holds its own class's SCO 
 plain drives at or below the mount, where table 1 also lists the SCO drives of every smaller class.
 No symbol leaves `MODULES` and no global index moves, so a link naming table 1 still names the same
 articles; it names them at the positions table 1 records, which is why that table stays in the
-repository. Running `pnpm run codec:tables` reproduces table 2 at content hash
-`12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90`, at the same capacity — 272 of
-the 377 bytes a 500-character value carries.
+repository. Table 2 is published at content hash
+`12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90`, which
+`@elite-dangerous-almanac/core@0.2.13` reproduces.
+
+Table 3 holds the catalogue under Almanac 0.2.18. It adds the Anaconda Mk II, its five armour
+grades, its stock armour and the size-6 Mk II Cargo Rack its `Cargo01` mount takes, and the mounts
+the in-game hull revisions gave five hulls: an unrestricted `Slot00` optional mount on the Federal
+Dropship, Imperial Clipper, Type-6 and Type-7 (the Type-7 gains two), and a third utility mount on
+the Asp Scout. The new modules sit inside `MODULES` rather than after it, so global module indexes
+move, and the five revised hulls' slot lists grow; a link naming table 2 is read against table 2,
+which is why that table stays in the repository. Running `pnpm run codec:tables` reproduces table 3
+at content hash `4655fa533dbe9c34e2f2756ffc147f05f76e8a58ac5c063d58d6d22cff84873e`, at the same
+capacity — 272 of the 377 bytes a 500-character value carries.
 
 Every table a link can name carries links of its own in
 [`published-build-links.fixture.json`](../src/app/domain/ships/build-link/published-build-links.fixture.json),
@@ -725,24 +736,22 @@ path for the affected table version.
 
 ## Reference corpus
 
-The frozen corpus produces these encoded data lengths under table 2, the table a new link names.
+The frozen corpus produces these encoded data lengths under table 3, the table a new link names.
 Each value and length includes the `b.` protocol prefix. Every value carries the table-version
 field, so no value here is also a table 1 value. One table 1 spelling is frozen in
 [`build-link-codec.spec.ts`](../src/app/domain/ships/build-link/build-link-codec.spec.ts), which
-reads it back through the loader. Table 1 links that were shared are held instead by the
-published-link corpus, which carries its own three. Four of the five differ from their table 1
-spelling in that field alone. The Corvette differs in its body as well, because its drive is named
-by an index into a set of 30 candidates where the table 1 set held 50: the drive keeps position 3 in
-both, but the narrower set changes the arithmetic context the index is written in. Only the Krait Mk
-II value changes length, because at ten characters its packed body sits on a Base70 digit boundary:
+reads it back through the loader. Links that were shared under tables 1 and 2 are held instead by
+the published-link corpus, which carries three for each. Every value differs from its table 2
+spelling: table 3 inserts seven modules into `MODULES`, so the indexes and candidate-set contexts
+the bodies are written in move, but no value changes length:
 
 | Reference build               | Base70 encoded data                                                                | Data length |
 | ----------------------------- | ---------------------------------------------------------------------------------- | ----------: |
-| Minimal Sidewinder            | `b.2vapm0exwB0@N0`                                                                 |          16 |
-| Stock Krait Mk II             | `b.1QXDMzG/i`                                                                      |          11 |
-| Festive flak Krait            | `b.9021d@0BPKJ:r/5IwZe`                                                            |          21 |
-| Full engineered Anaconda*     | `b.DgYsVh0,YFsU1l1OYC_AKTIZyFMvwucN86-gU,6@zqrfHVWvZ!!6aN:LoGQ6@F`                 |          64 |
-| Supplied engineered Corvette† | `b.3I7-5N665Yh9e/6bitRTwUjU7j67P_6EFdsgeuHEMYDI@@.!ylVeQ-TlQ21ch3tmnG,jAHbyOL.gka` |          80 |
+| Minimal Sidewinder            | `b.4G9eF2lGh27y8C`                                                                 |          16 |
+| Stock Krait Mk II             | `b.1_4RfiN5F`                                                                      |          11 |
+| Festive flak Krait            | `b.Cg1:o4XqS_A6!1v2kDD`                                                            |          21 |
+| Full engineered Anaconda*     | `b.IiJspVdj1M72ngDPhIcE/f_nObkuD6ME!EXZe5Cy8.@@O8HCIjrtWa2.JWouDD`                 |          64 |
+| Supplied engineered Corvette† | `b.4WEiIbteI9PLD-u:OODGmqUy,Zz7eS/61Uv8bxynw5duJmp:gak:MmM,N40rCm8YV3YxEvWIc6Hil9` |          80 |
 
 \* All 38 outfittable slots are occupied, every currently offered fixture blueprint is applied, and
 the fixed cargo hatch has an explicit power state. Cargo racks remain stock because Almanac 0.1.4
@@ -753,8 +762,8 @@ cargo hatch's power state. Sixteen cosmetic and livery slots are outside the out
 scope and are not part of the codec model. Identifying ship metadata and all calculated, health,
 ammo, engineer, localisation, and purchase fields were removed from the checked-in reference.
 
-The every-hull baseline corpus covers minimal and stock configurations for all 48 catalogue hulls.
-Its longest minimal value is 18 characters (the Anaconda). The festive literal covers an otherwise
+The every-hull baseline corpus covers minimal and stock configurations for all 49 catalogue hulls.
+Its longest minimal value is 19 characters (the Anaconda Mk II). The festive literal covers an otherwise
 unengineered Krait Mk II whose medium hardpoint carries a
 package-owned green flak-launcher variant. The sanitised real engineered Federal Corvette produces
 80 characters of encoded data, 102 without the symbol models. Its source capture records a partial

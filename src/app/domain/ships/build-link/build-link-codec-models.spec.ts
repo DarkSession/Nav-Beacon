@@ -4,7 +4,7 @@ import { makeFullyEngineeredAnaconda, minimalState } from './build-link-codec.sp
 import { createBuildLinkCodec } from './build-link-codec';
 import type { BuildLinkSymbolModels } from './build-link-codec';
 import { CURRENT_TABLE_VERSION } from './build-link-codec-loader';
-import codecTable from './codec-table-2.json';
+import codecTable from './codec-table-3.json';
 import realisticEngineeredCorvette from './realistic-engineered-corvette.fixture.json';
 
 /**
@@ -52,21 +52,21 @@ describe('build-link codec pinned symbol models', () => {
   });
 
   it('freezes the reference corpus literals in the encode direction', () => {
-    // Frozen against table 2, the table a new link names. Table 2 is fixed to the catalogue
+    // Frozen against table 3, the table a new link names. Table 3 is fixed to the catalogue
     // it was minted from, so these fixtures are never regenerated to make a build pass: a
     // literal that moved would mean a link already shared had changed meaning. A catalogue
-    // move mints table 3 instead.
+    // move mints table 4 instead.
     // The decode direction and canonical reserialization are covered by the round-trip above.
     const fragments = referenceCorpus().map(({ source }) =>
       modelledCodec.encodeBuildLinkFragment(source),
     );
 
     expect(fragments).toEqual([
-      'b.2vapm0exwB0@N0',
-      'b.1QXDMzG/i',
-      'b.DgYsVh0,YFsU1l1OYC_AKTIZyFMvwucN86-gU,6@zqrfHVWvZ!!6aN:LoGQ6@F',
-      'b.3I7-5N665Yh9e/6bitRTwUjU7j67P_6EFdsgeuHEMYDI@@.!ylVeQ-TlQ21ch3tmnG,jAHbyOL.gka',
-      'b.CPHzLyCh7__FwUf1KTH0pAVksghBJMxl',
+      'b.4G9eF2lGh27y8C',
+      'b.1_4RfiN5F',
+      'b.IiJspVdj1M72ngDPhIcE/f_nObkuD6ME!EXZe5Cy8.@@O8HCIjrtWa2.JWouDD',
+      'b.4WEiIbteI9PLD-u:OODGmqUy,Zz7eS/61Uv8bxynw5duJmp:gak:MmM,N40rCm8YV3YxEvWIc6Hil9',
+      'b.H4Fhv:8kAB3:FwOYbDF12kwgypIHrOWs',
     ]);
   });
 
@@ -108,7 +108,7 @@ describe('build-link codec pinned symbol models', () => {
         expect(modelledFragment, symbol).toBe(baselineCodec.encodeBuildLinkFragment(source));
       }
     }
-    expect(longest).toBe(18);
+    expect(longest).toBe(19);
   });
 
   it('shrinks compact metadata under the character model', () => {

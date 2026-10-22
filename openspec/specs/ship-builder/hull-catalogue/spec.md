@@ -87,7 +87,7 @@ mounts the package restricts to one module family MUST be stated separately from
 group of their own, with each restriction named. A hull with no restricted mount to state MUST state
 nothing about restriction — an empty group is not drawn as an absence.
 
-The planetary-approach mount is left out. All 48 hulls the installed package publishes carry one, and
+The planetary-approach mount is left out. All 49 hulls the installed package publishes carry one, and
 it takes the approach suite and nothing else. A mount every hull has separates no hull from another,
 so it MUST appear in neither optional group and MUST be counted in neither total. It is the only
 mount both groups leave out. Nineteen hulls restrict something else as well; the other twenty-nine

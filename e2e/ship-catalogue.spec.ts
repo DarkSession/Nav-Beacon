@@ -45,21 +45,21 @@ const sortControl = (page: Page, field: string) =>
 test.beforeEach(async ({ page }) => {
   await page.goto('/ships');
   await expect(page.getByRole('heading', { level: 1, name: /ship builder/i })).toBeVisible();
-  await expect(visibleHulls(page)).toHaveCount(48);
+  await expect(visibleHulls(page)).toHaveCount(49);
 });
 
 test.describe('hull catalogue', () => {
   // The reference carries the size of the shipyard in the command bar beside
   // the screen's own name, and nowhere else (canvas 1a "48 SHIPS").
   test('lists every installed hull before anything is narrowed', async ({ page }) => {
-    await expect(commandBar(page).getByText('48 ships')).toBeVisible();
+    await expect(commandBar(page).getByText('49 ships')).toBeVisible();
   });
 
   test('keeps the shipyard’s own size in the bar while the list is narrowed', async ({ page }) => {
-    await search(page).fill('anaconda');
+    await search(page).fill('cutter');
 
     await expect(visibleHulls(page)).toHaveCount(1);
-    await expect(commandBar(page).getByText('48 ships')).toBeVisible();
+    await expect(commandBar(page).getByText('49 ships')).toBeVisible();
   });
 
   // The reference toolbar narrows two ways and no more: the search field and
@@ -67,16 +67,16 @@ test.describe('hull catalogue', () => {
   // two. Manufacturer, hardpoint class and price are words the search matches.
   test('narrows by search and by landing-pad size', async ({ page }) => {
     await page.getByRole('radio', { name: 'Large' }).check();
-    await expect(visibleHulls(page)).not.toHaveCount(48);
+    await expect(visibleHulls(page)).not.toHaveCount(49);
 
     await page.getByRole('radio', { name: 'Medium' }).check();
     await expect(page.getByRole('radio', { name: 'Large' })).not.toBeChecked();
 
     await page.getByRole('radio', { name: 'All', exact: true }).check();
-    await expect(visibleHulls(page)).toHaveCount(48);
+    await expect(visibleHulls(page)).toHaveCount(49);
 
     await search(page).fill('type');
-    await expect(visibleHulls(page)).not.toHaveCount(48);
+    await expect(visibleHulls(page)).not.toHaveCount(49);
   });
 
   // One field, so a Commander types everything they know: a manufacturer and
@@ -138,7 +138,7 @@ test.describe('hull catalogue', () => {
       nodes.map((node) => node.getAttribute('data-hull-symbol')),
     );
 
-    expect(ascending).toHaveLength(48);
+    expect(ascending).toHaveLength(49);
     expect(new Set(ascending)).toEqual(new Set(descending));
     // Ties keep the package's own order, so reversing is not a mirror image.
     expect(descending).not.toEqual([...ascending].reverse());
@@ -291,7 +291,7 @@ test.describe('hull catalogue', () => {
     await expectNoDocumentOverflow(page);
 
     await search(page).fill('type');
-    await expect(visibleHulls(page)).not.toHaveCount(48);
+    await expect(visibleHulls(page)).not.toHaveCount(49);
     await expectNoDocumentOverflow(page);
   });
 

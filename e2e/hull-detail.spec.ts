@@ -248,7 +248,7 @@ test.describe('hull detail', () => {
     // A restriction the screen does not name is a restriction it does not draw,
     // which is how the planetary-approach mount every hull carries stays off
     // the group: the allowlist above is what holds that, and the unit suite
-    // holds it over all 48 hulls against the package's own layout. Here the
+    // holds it over all 49 hulls against the package's own layout. Here the
     // group's total is held against the mounts the group itself states, so a
     // count that included something the list does not show would fail
     // (001/FR-022).
@@ -266,7 +266,7 @@ test.describe('hull detail', () => {
   test('draws no restricted rule at all on a hull that restricts nothing it states', async ({
     page,
   }) => {
-    // Twenty-nine of the 48 hulls restrict the planetary-approach mount and
+    // Twenty-nine of the 49 hulls restrict the planetary-approach mount and
     // nothing else, and that mount is left out, so the group is absent rather
     // than empty. The Sidewinder is one of them (001/FR-022).
     await page.goto('/ships/Sidewinder');
@@ -488,7 +488,7 @@ test.describe('hull detail', () => {
 
   test('is the sheet over the manifest at every width below the rail’s', async ({ page }) => {
     // Ruled 2026-08-30 (Commander request). There is no band between the two
-    // compositions. With 48 hulls the manifest is several screenfuls, so a hull
+    // compositions. With 49 hulls the manifest is several screenfuls, so a hull
     // opened at 900px under it would land below all of them: the Commander
     // presses a row and the page does not appear to change
     // (`design/hull-detail.md`, "Every width below the rail's is the sheet's").

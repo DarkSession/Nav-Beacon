@@ -1,0 +1,56 @@
+{
+ "symbol": "AnacondaMkII",
+ "side": "top",
+ "viewBox": "0 0 1200 800",
+ "source": "678ae6370099c557254a6fcaef3c4efdbf80c9710dde1d1458164f55d89d9fec",
+ "content": {
+  "x": 437.841,
+  "y": 38.4,
+  "width": 324.318,
+  "height": 723.2
+ },
+ "mounts": [
+  {
+   "feature": "hardpoint",
+   "slot": "HugeHardpoint1",
+   "x": 599.999,
+   "y": 131.531
+  },
+  {
+   "feature": "hardpoint",
+   "slot": "LargeHardpoint1",
+   "x": 581.422,
+   "y": 364.209
+  },
+  {
+   "feature": "hardpoint",
+   "slot": "LargeHardpoint2",
+   "x": 618.578,
+   "y": 364.209
+  },
+  {
+   "feature": "utility_mount",
+   "slot": "TinyHardpoint3",
+   "x": 554.545,
+   "y": 427.141
+  },
+  {
+   "feature": "utility_mount",
+   "slot": "TinyHardpoint4",
+   "x": 645.455,
+   "y": 427.141
+  },
+  {
+   "feature": "utility_mount",
+   "slot": "TinyHardpoint7",
+   "x": 514.747,
+   "y": 657.403
+  },
+  {
+   "feature": "utility_mount",
+   "slot": "TinyHardpoint8",
+   "x": 685.253,
+   "y": 657.403
+  }
+ ]
+}
