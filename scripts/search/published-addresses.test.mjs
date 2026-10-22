@@ -142,8 +142,8 @@ describe('what a published document says', () => {
  * Which advertised addresses carry content a build can state.
  *
  * The property under test is that the two consumers of this verdict cannot
- * disagree, because there is only one verdict. A build that generated 49
- * documents and a gate that expected 50 would not fail here — it would fail
+ * disagree, because there is only one verdict. A build that generated 50
+ * documents and a gate that expected 51 would not fail here — it would fail
  * with a message about a missing file, days later, in a job nobody attached to
  * this decision (015/FR-021).
  */

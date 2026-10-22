@@ -766,9 +766,9 @@ describe('build-link codec', () => {
   });
 
   it('refers a repeated engineering record back to its own module', () => {
-    // Three mounts of one module, two rolls, and the third mount repeats the first. The
-    // dictionary the third refers into belongs to the module, so its index covers two records
-    // rather than every record in the build.
+    // Four mounts of one module, two rolls, and the third and fourth mounts repeat the first
+    // two. The dictionary the repeats refer into belongs to the module, so its index covers two
+    // records rather than every record in the build.
     const repeated = shieldBoosterKrait([
       'ShieldBooster_Resistive',
       'ShieldBooster_HeavyDuty',
@@ -1178,10 +1178,10 @@ describe('build-link codec', () => {
     const emptyLink = `${baseUrl}#${emptyFragment}`;
     const typicalLink = `${baseUrl}#${typicalFragment}`;
     const largeLink = `${baseUrl}#${largeFragment}`;
-    // Frozen against table 2, the table a new link names. Table 2 is fixed to the catalogue
+    // Frozen against table 3, the table a new link names. Table 3 is fixed to the catalogue
     // it was minted from, so these fixtures are never regenerated to make a build pass: a
     // literal that moved would mean a link already shared had changed meaning. A catalogue
-    // move mints table 3 instead.
+    // move mints table 4 instead.
     expect([emptyFragment, typicalFragment, largeFragment]).toEqual([
       'b.4G9eF2lGh27y8C',
       'b.1_4RfiN5F',
@@ -1697,7 +1697,7 @@ function shieldBoosterKrait(blueprints: readonly string[]): ShipLoadout {
       .find((module) => module.symbol.toLowerCase() === SHIELD_BOOSTER.toLowerCase())!;
     source.setModule(slot, candidate);
     // The effect makes each written record cost more than a reference back to it, so the saving
-    // outlasts the rounding of a bit count into link characters whatever the table's indexes.
+    // outlasts the rounding of a bit count into link characters under tables 2 and 3 alike.
     source.applyBlueprint(slot, blueprint, {
       grade: 5,
       quality: 1,
@@ -1708,8 +1708,8 @@ function shieldBoosterKrait(blueprints: readonly string[]): ShipLoadout {
 }
 
 /**
- * A hand-built packed body for the same shield-booster Krait, with its engineering records
- * written one at a time.
+ * A hand-built packed body for a shield-booster Krait like `shieldBoosterKrait`'s, without the
+ * experimental effect, with its engineering records written one at a time.
  *
  * The encoder never spells a repeated literal or an index its dictionary does not hold, so the
  * only way to present the reader with one is to write the body here. Everything ahead of the

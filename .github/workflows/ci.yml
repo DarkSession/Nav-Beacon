@@ -300,7 +300,7 @@ jobs:
       # The failure it exists for is silent by nature. A component that stops
       # rendering a figure, a formatter that starts rounding, a publishing step
       # that writes the shell over a rendered body: each leaves a build that
-      # exits 0 with all 52 addresses answering 200 and every head correct.
+      # exits 0 with all 53 addresses answering 200 and every head correct.
       # Nothing else in this workflow compares a body to anything.
       - name: Check the generated documents against the package
         run: node scripts/check-prerendered-documents.mjs

@@ -214,7 +214,7 @@ describe('where the builder leaves each document', () => {
  * Publishing over the rendered documents rather than over a shell.
  *
  * The defect this stands against does not look like a defect: the build
- * succeeds, all 52 addresses answer 200, every head is correct, and every body
+ * succeeds, all 53 addresses answer 200, every head is correct, and every body
  * is empty. Nothing else in the pipeline notices, because nothing else compares
  * a body to anything. So the assertion is on the *template* — that a document
  * with content in it survives being published (015/FR-005, address-set.md §5).
@@ -256,9 +256,9 @@ describe('publishing a document that already has a body', () => {
 /**
  * The empty directories the move leaves behind.
  *
- * `ships/` holds the 48 hull documents as well as the catalogue's own rendered
+ * `ships/` holds the 49 hull documents as well as the catalogue's own rendered
  * `index.html`, and `ships` is published before any hull is — so removing a
- * document's directory as each is published deletes 48 documents that have not
+ * document's directory as each is published deletes 49 documents that have not
  * been written yet, and the build still exits 0.
  */
 describe('pruning what the move leaves behind', () => {

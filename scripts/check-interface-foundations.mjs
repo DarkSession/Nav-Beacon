@@ -2764,7 +2764,7 @@ export function searchMetadataViolations(input) {
 
   // Which advertised addresses the build renders a document for.
   //
-  // Feature 015 turns 50 of the 52 into documents that state their subject
+  // Feature 015 turns 51 of the 53 into documents that state their subject
   // before any script runs, and leaves 2 as the head-only shells they have
   // always been. What makes that safe is that the verdict is recorded once and
   // read by both the build and the gate — so this reconciles the record against
@@ -3008,7 +3008,7 @@ export function searchMetadataViolations(input) {
       }
     }
 
-    // The forty-eight hull cards, which no file in this repository names: they
+    // The forty-nine hull cards, which no file in this repository names: they
     // are derived per hull from the installed package, so a pin move that adds
     // a hull adds an address, a document and an `og:image` pointing at artwork
     // nobody has rendered. Every other rule here would stay green while that

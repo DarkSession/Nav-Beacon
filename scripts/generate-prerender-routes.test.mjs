@@ -65,7 +65,7 @@ describe('the prerender routes file', () => {
   });
 
   it('refuses to write a file that would render nothing', () => {
-    // A build that rendered no address would exit 0 and publish 52 shells —
+    // A build that rendered no address would exit 0 and publish 53 shells —
     // today's behaviour, wearing this feature's name and passing its head
     // assertions. Loud is the only acceptable failure here.
     assert.throws(

@@ -102,8 +102,8 @@ tag also selects the body representation. For a table with `h` hulls, its width 
 - tag values from `h` upward select arithmetic coding and carry the hull-index remainder across the
   unused tag values; the arithmetic stream begins with the corresponding quotient when needed.
 
-For both defined tables, `h = 48`, so their six-bit values `0..47` are packed hulls and `48..63`
-are arithmetic markers. This uses capacity the hull tag already needed and preserves small packed
+Tables 1 and 2 have `h = 48`, so their six-bit values `0..47` are packed hulls and `48..63` are
+arithmetic markers; table 3 has `h = 49`, so `0..48` are packed hulls and `49..63` are markers. This uses capacity the hull tag already needed and preserves small packed
 bodies exactly.
 That no-penalty reuse applies when `h` is not a power of two; a future power-of-two hull count makes
 the combined tag one bit wider than a packed hull index alone. The writer finalises both
@@ -516,7 +516,7 @@ character for character across all 49 hulls.
 | Reference build              | Without models | With models | Saving |
 | ---------------------------- | -------------: | ----------: | -----: |
 | Minimal Sidewinder           |             16 |          16 |      — |
-| Stock Krait Mk II            |             10 |          10 |      — |
+| Stock Krait Mk II            |             11 |          11 |      — |
 | Engineered Anaconda          |             73 |          64 | −12.3% |
 | Supplied engineered Corvette |            102 |          80 | −21.6% |
 | Named stock Krait Mk II      |             38 |          34 | −10.5% |
@@ -574,7 +574,7 @@ renderers must satisfy. That puts every structural ceiling around 2^31: 2,147,48
 representation tag is `ceil(log2(h + 1))` raw bits), 2^31 modules, blueprints, experimental effects
 or candidates per set, and 2^31 − 1 mounts on one hull. Grades are bounded at five by the game's own
 range, which the generator checks. The ten-bit table-version field is the one small structural
-limit: 1,023 snapshots, two of them spent.
+limit: 1,023 snapshots, three of them spent.
 
 What growth actually costs is link length, and links are bounded. Five hundred characters, two of
 them `b.`, hold 381 payload bytes: a 377-byte body plus its four-byte CRC-32, or 3,016 bits. The
@@ -742,8 +742,10 @@ field, so no value here is also a table 1 value. One table 1 spelling is frozen 
 [`build-link-codec.spec.ts`](../src/app/domain/ships/build-link/build-link-codec.spec.ts), which
 reads it back through the loader. Links that were shared under tables 1 and 2 are held instead by
 the published-link corpus, which carries three for each. Every value differs from its table 2
-spelling: table 3 inserts seven modules into `MODULES`, so the indexes and candidate-set contexts
-the bodies are written in move, but no value changes length:
+spelling in the table-version field. The Sidewinder, Krait and festive bodies are otherwise the
+same bits; the Anaconda and Corvette bodies change too, because table 3 inserts seven modules into
+`MODULES` and moves the indexes and candidate-set contexts they are written in. No value changes
+length:
 
 | Reference build               | Base70 encoded data                                                                | Data length |
 | ----------------------------- | ---------------------------------------------------------------------------------- | ----------: |

@@ -7,7 +7,7 @@
  * then never looked at again — which is the whole problem. A component that
  * stops rendering a hull's mass lock, a formatter that starts rounding, a
  * publishing step that overwrites a body with a shell: each of those leaves a
- * build that exits 0, 52 addresses answering 200, and every head correct. None
+ * build that exits 0, 53 addresses answering 200, and every head correct. None
  * of the existing gates compares a body to anything.
  *
  * So this one does, and it fails the build rather than letting a document that
@@ -67,7 +67,7 @@ let lastParse = null;
  *
  * One document at a time, remembered: the gate asks three questions of every
  * file — its text, its markup and its headings — and parsing 293 KB three times
- * over 52 files is twenty seconds a contributor waits for nothing.
+ * over 53 files is twenty seconds a contributor waits for nothing.
  *
  * Scripts and styles are cut here rather than by each reader because no reader
  * below wants them. The bundle's own module preloads and Angular's serialized

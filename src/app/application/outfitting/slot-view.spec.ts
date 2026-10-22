@@ -97,7 +97,7 @@ describe('slot views', () => {
   });
 
   it('keeps the numbers of the optional mounts that follow the withheld one', () => {
-    // Stated over a hull the package does not publish, because on all 48 that it
+    // Stated over a hull the package does not publish, because on all 49 that it
     // does the withheld mount is the last optional one — so no published build
     // can tell counting before the filter from counting after it. The rule is
     // still the rule: a mount the ledger does not draw must not renumber the

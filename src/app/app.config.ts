@@ -148,7 +148,7 @@ export const appConfig: ApplicationConfig = {
     // protect and Angular says so — NG05001 calls hydration and enabled
     // blocking initial navigation a contradiction, which is exactly what they
     // are where nothing was rendered to hydrate. The warning is `ngDevMode`
-    // only; what ships is the blocking navigation, because what ships has 50
+    // only; what ships is the blocking navigation, because what ships has 51
     // documents to adopt.
     ROUTING_PROVIDERS,
     // Route titles are message keys resolved in the committed locale, so the

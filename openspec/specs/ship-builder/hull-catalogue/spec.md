@@ -90,14 +90,15 @@ nothing about restriction — an empty group is not drawn as an absence.
 The planetary-approach mount is left out. All 49 hulls the installed package publishes carry one, and
 it takes the approach suite and nothing else. A mount every hull has separates no hull from another,
 so it MUST appear in neither optional group and MUST be counted in neither total. It is the only
-mount both groups leave out. Nineteen hulls restrict something else as well; the other twenty-nine
+mount both groups leave out. Twenty hulls restrict something else as well; the other twenty-nine
 draw no restricted group.
 
 Each total MUST count the mounts of its own group and nothing else. The hull's optional column is
 therefore the two totals plus the approach mount, and neither total is a subset of the other.
 
-Sixteen hulls restrict mounts to military modules, one to cargo, one to passenger cabins, and one to
-both limpet controllers and vessel hangars. So the group MUST take a hull's restrictions as a list
+Seventeen hulls restrict mounts to military modules, two to cargo, one to passenger cabins, and one
+to both limpet controllers and vessel hangars; the Anaconda Mk II restricts mounts to both military
+modules and cargo. So the group MUST take a hull's restrictions as a list
 rather than as one, and MUST name each restriction beside the mounts it holds.
 
 The application names each restriction `Military`, `Cargo`, `Limpet controller`, `Vessel hangar` and

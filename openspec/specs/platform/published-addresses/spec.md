@@ -622,7 +622,7 @@ Source: 015/FR-018.
 
 WCAG 2.2 AA with the eight named exclusions (2.1.1, 2.1.2, 2.1.4, 2.2.1, 2.4.1, 2.4.3, 2.4.7, 2.4.11)
 MUST hold for the generated first frame exactly as it holds for every other frame. The automated scan
-MUST cover that frame, not only the settled page, for each of the 50 content-bearing addresses. The
+MUST cover that frame, not only the settled page, for each of the 51 content-bearing addresses. The
 two head-only addresses have no generated first frame to scan and keep the coverage they have. The
 scan MUST run in CI, because a generated document exists only in a production build.
 
@@ -630,7 +630,7 @@ Source: 015/FR-019, 015/SC-005.
 
 #### Scenario: The scan runs over the generated first frame
 
-- **WHEN** the automated accessibility scan runs in CI over the generated first frame of all 50
+- **WHEN** the automated accessibility scan runs in CI over the generated first frame of all 51
   content-bearing addresses across the ten Playwright projects
 - **THEN** it reports no in-scope violation
 

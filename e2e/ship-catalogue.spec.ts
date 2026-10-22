@@ -145,7 +145,7 @@ test.describe('hull catalogue', () => {
   });
 
   test('keeps browsing state out of the route, the fragment and storage', async ({ page }) => {
-    await search(page).fill('anaconda');
+    await search(page).fill('cutter');
     await page.getByRole('radio', { name: 'Large' }).check();
     await expect(visibleHulls(page)).toHaveCount(1);
 

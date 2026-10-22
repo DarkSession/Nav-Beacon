@@ -27,7 +27,7 @@ const BUILT = join(ROOT, OUTPUT);
  * notice. A gate nobody has watched fail is a gate nobody has tested: the
  * defects it exists for — a body overwritten by a shell, a figure that stopped
  * matching, a version baked into static HTML — all leave a build that exits 0
- * and 52 addresses answering 200, so "it passed" tells you nothing on its own
+ * and 53 addresses answering 200, so "it passed" tells you nothing on its own
  * (015/FR-020).
  *
  * These need a build. Where there is none they skip rather than fail, because a
