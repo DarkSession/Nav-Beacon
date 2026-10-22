@@ -19,7 +19,7 @@ import {
   readCodecConstants,
 } from './build-link-codec-capacity.mjs';
 
-const TABLE_VERSION = 2;
+const TABLE_VERSION = 3;
 const tableDirectoryUrl = new URL('../src/app/domain/ships/build-link/', import.meta.url);
 const tablePathFor = (version) =>
   fileURLToPath(new URL(`codec-table-${version}.json`, tableDirectoryUrl));

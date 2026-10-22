@@ -107,7 +107,7 @@ interface ListFrame {
  *
  * The catalogue document is a quarter of a megabyte and the browser paints it
  * while it is still reading it, so the list genuinely passes through 18 rows
- * and 30 rows on its way to the 48 the document states. Those are not shapes
+ * and 30 rows on its way to the 49 the document states. Those are not shapes
  * the application composed; they are the document not being all there yet, and
  * counting them would make every run report a list that changed several times
  * before anything had run at all.

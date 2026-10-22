@@ -65,7 +65,7 @@ export interface HullCapacity {
    * The restricted optional mounts, one entry per restriction the hull has.
    *
    * Every hull the installed package publishes carries at least one — the
-   * planetary approach suite's own mount — and nineteen carry two or three. The
+   * planetary approach suite's own mount — and twenty carry two or three. The
    * list is still allowed to be empty: a hull that restricted nothing would
    * have nothing to say here.
    */

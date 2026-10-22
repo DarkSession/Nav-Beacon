@@ -1996,5 +1996,271 @@
         "slot12_size1": "DetailedSurfaceScanner_LongRange"
       }
     }
+  ],
+  "3": [
+    {
+      "note": "An Anaconda Mk II carrying the size-6 Mk II Cargo Rack and a Mining Volley Repeater on a large hardpoint that also takes mining tools.",
+      "fragment": "b.B@8@P@Xm8kqhUSUsc/pGZ24mVU.XiiWgWouJ",
+      "opensTo": {
+        "shipSymbol": "anacondamkii",
+        "shipName": "Deep Core Lark",
+        "shipIdent": "AMK-02",
+        "modules": [
+          {
+            "slot": "armour",
+            "symbol": "anacondamkii_armour_grade1_default"
+          },
+          {
+            "slot": "cargo01",
+            "symbol": "int_largecargorack_size6_class1"
+          },
+          {
+            "slot": "frameshiftdrive",
+            "symbol": "int_hyperdrive_overcharge_size8_class1",
+            "engineering": {
+              "blueprint": "fsd_longrange",
+              "grade": 5,
+              "quality": 1,
+              "experimental": "special_fsd_heavy"
+            }
+          },
+          {
+            "slot": "fueltank",
+            "symbol": "int_fueltank_size6_class3"
+          },
+          {
+            "slot": "largehardpoint3",
+            "symbol": "hpt_miningtoolv2_fixed_large"
+          },
+          {
+            "slot": "lifesupport",
+            "symbol": "int_lifesupport_size5_class1"
+          },
+          {
+            "slot": "mainengines",
+            "symbol": "int_engine_size7_class1"
+          },
+          {
+            "slot": "planetaryapproachsuite",
+            "symbol": "int_planetapproachsuite_advanced"
+          },
+          {
+            "slot": "powerdistributor",
+            "symbol": "int_powerdistributor_size8_class1"
+          },
+          {
+            "slot": "powerplant",
+            "symbol": "int_powerplant_size8_class1"
+          },
+          {
+            "slot": "radar",
+            "symbol": "int_sensors_size8_class1"
+          },
+          {
+            "slot": "slot01_size8",
+            "symbol": "int_cargorack_size7_class1"
+          },
+          {
+            "slot": "slot02_size7",
+            "symbol": "int_cargorack_size6_class1"
+          },
+          {
+            "slot": "slot03_size7",
+            "symbol": "int_shieldgenerator_size7_class1"
+          },
+          {
+            "slot": "slot04_size5",
+            "symbol": "int_cargorack_size4_class1"
+          },
+          {
+            "slot": "slot10_size2",
+            "symbol": "int_supercruiseassist"
+          },
+          {
+            "slot": "slot11_size1",
+            "symbol": "int_dockingcomputer_advanced"
+          },
+          {
+            "slot": "smallhardpoint1",
+            "symbol": "hpt_pulselaser_fixed_small"
+          },
+          {
+            "slot": "smallhardpoint2",
+            "symbol": "hpt_pulselaser_fixed_small"
+          }
+        ]
+      },
+      "variants": {}
+    },
+    {
+      "note": "A Type-7 Transporter with a size-7 cargo rack in the optional mount the 0.2.18 hull revision added.",
+      "fragment": "b.1EK:tN5v-,BFU",
+      "opensTo": {
+        "shipSymbol": "type7",
+        "shipName": null,
+        "shipIdent": null,
+        "modules": [
+          {
+            "slot": "armour",
+            "symbol": "type7_armour_grade1"
+          },
+          {
+            "slot": "frameshiftdrive",
+            "symbol": "int_hyperdrive_size5_class1"
+          },
+          {
+            "slot": "fueltank",
+            "symbol": "int_fueltank_size5_class3"
+          },
+          {
+            "slot": "lifesupport",
+            "symbol": "int_lifesupport_size4_class1"
+          },
+          {
+            "slot": "mainengines",
+            "symbol": "int_engine_size5_class1"
+          },
+          {
+            "slot": "planetaryapproachsuite",
+            "symbol": "int_planetapproachsuite_advanced"
+          },
+          {
+            "slot": "powerdistributor",
+            "symbol": "int_powerdistributor_size3_class1"
+          },
+          {
+            "slot": "powerplant",
+            "symbol": "int_powerplant_size4_class1"
+          },
+          {
+            "slot": "radar",
+            "symbol": "int_sensors_size3_class1"
+          },
+          {
+            "slot": "slot00_size7",
+            "symbol": "int_cargorack_size7_class1"
+          },
+          {
+            "slot": "slot01_size6",
+            "symbol": "int_cargorack_size5_class1"
+          },
+          {
+            "slot": "slot02_size6",
+            "symbol": "int_cargorack_size5_class1"
+          },
+          {
+            "slot": "slot03_size5",
+            "symbol": "int_cargorack_size5_class1"
+          },
+          {
+            "slot": "slot04_size5",
+            "symbol": "int_cargorack_size4_class1"
+          },
+          {
+            "slot": "slot05_size4",
+            "symbol": "int_cargorack_size4_class1"
+          },
+          {
+            "slot": "slot06_size4",
+            "symbol": "int_shieldgenerator_size4_class1"
+          },
+          {
+            "slot": "slot09_size1",
+            "symbol": "int_supercruiseassist"
+          },
+          {
+            "slot": "smallhardpoint1",
+            "symbol": "hpt_pulselaser_fixed_small"
+          },
+          {
+            "slot": "smallhardpoint2",
+            "symbol": "hpt_pulselaser_fixed_small"
+          }
+        ]
+      },
+      "variants": {}
+    },
+    {
+      "note": "An Asp Scout with an engineered shield booster in its third utility mount.",
+      "fragment": "b.5LeagoAPG@k74x",
+      "opensTo": {
+        "shipSymbol": "asp_scout",
+        "shipName": null,
+        "shipIdent": null,
+        "modules": [
+          {
+            "slot": "armour",
+            "symbol": "asp_scout_armour_grade1"
+          },
+          {
+            "slot": "frameshiftdrive",
+            "symbol": "int_hyperdrive_size4_class1"
+          },
+          {
+            "slot": "fueltank",
+            "symbol": "int_fueltank_size4_class3"
+          },
+          {
+            "slot": "lifesupport",
+            "symbol": "int_lifesupport_size3_class1"
+          },
+          {
+            "slot": "mainengines",
+            "symbol": "int_engine_size4_class1"
+          },
+          {
+            "slot": "planetaryapproachsuite",
+            "symbol": "int_planetapproachsuite_advanced"
+          },
+          {
+            "slot": "powerdistributor",
+            "symbol": "int_powerdistributor_size4_class1"
+          },
+          {
+            "slot": "powerplant",
+            "symbol": "int_powerplant_size4_class1"
+          },
+          {
+            "slot": "radar",
+            "symbol": "int_sensors_size4_class1"
+          },
+          {
+            "slot": "slot01_size4",
+            "symbol": "int_cargorack_size3_class1"
+          },
+          {
+            "slot": "slot02_size4",
+            "symbol": "int_cargorack_size3_class1"
+          },
+          {
+            "slot": "slot03_size3",
+            "symbol": "int_shieldgenerator_size3_class1"
+          },
+          {
+            "slot": "slot07_size1",
+            "symbol": "int_supercruiseassist"
+          },
+          {
+            "slot": "smallhardpoint1",
+            "symbol": "hpt_pulselaser_fixed_small"
+          },
+          {
+            "slot": "smallhardpoint2",
+            "symbol": "hpt_pulselaser_fixed_small"
+          },
+          {
+            "slot": "tinyhardpoint3",
+            "symbol": "hpt_shieldbooster_size0_class5",
+            "engineering": {
+              "blueprint": "shieldbooster_heavyduty",
+              "grade": 5,
+              "quality": 1,
+              "experimental": "special_shieldbooster_toughened"
+            }
+          }
+        ]
+      },
+      "variants": {}
+    }
   ]
 }

@@ -142,8 +142,8 @@ describe('what a published document says', () => {
  * Which advertised addresses carry content a build can state.
  *
  * The property under test is that the two consumers of this verdict cannot
- * disagree, because there is only one verdict. A build that generated 49
- * documents and a gate that expected 50 would not fail here — it would fail
+ * disagree, because there is only one verdict. A build that generated 50
+ * documents and a gate that expected 51 would not fail here — it would fail
  * with a message about a missing file, days later, in a job nobody attached to
  * this decision (015/FR-021).
  */
@@ -169,7 +169,7 @@ describe('the content-bearing registry', () => {
 
     assert.ok(bearing.some((entry) => entry.path === ''));
     assert.ok(bearing.some((entry) => entry.path === HULL_PARENT));
-    // Every hull, counted against the package rather than against 48 — a pin
+    // Every hull, counted against the package rather than against 49 — a pin
     // move that adds a hull must not need this number edited (015/SC-009).
     const hulls = publishedAddresses({ origin: ORIGIN }).filter((entry) =>
       entry.path.startsWith(`${HULL_PARENT}/`),

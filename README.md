@@ -246,9 +246,9 @@ Two details make the deployment behave on Pages:
   from `index.csr.html` — the body-less shell — rather than from `index.html`,
   because `index.html` is now the start page's own document and an unmatched
   address answered with it would show one screen's content at another's address.
-- Fifty of the fifty-two addresses `public/sitemap.xml` advertises are **rendered
+- Fifty-one of the fifty-three addresses `public/sitemap.xml` advertises are **rendered
   at build time**, each to its own `<route>.html`: the root, the hull catalogue
-  and all 48 hulls. The body is there before any script runs, which is what a
+  and all 49 hulls. The body is there before any script runs, which is what a
   crawler that executes none of them can read
   ([`platform/published-addresses`](./openspec/specs/platform/published-addresses/spec.md)). The two benches —
   `/outfitting` and `/equipment` — state nothing until a Commander acts, so they

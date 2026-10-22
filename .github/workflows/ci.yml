@@ -300,7 +300,7 @@ jobs:
       # The failure it exists for is silent by nature. A component that stops
       # rendering a figure, a formatter that starts rounding, a publishing step
       # that writes the shell over a rendered body: each leaves a build that
-      # exits 0 with all 52 addresses answering 200 and every head correct.
+      # exits 0 with all 53 addresses answering 200 and every head correct.
       # Nothing else in this workflow compares a body to anything.
       - name: Check the generated documents against the package
         run: node scripts/check-prerendered-documents.mjs
@@ -689,7 +689,7 @@ jobs:
       # 015 `ng build` is only the middle of it: the routes file the builder
       # reads is generated before it and the documents are placed after it. Left
       # out, the build fails outright on the missing routes file — and if it did
-      # not, a preview would be a shell where production is fifty documents,
+      # not, a preview would be a shell where production is fifty-one documents,
       # which is the deployment nobody reviews.
       - name: Build the preview
         if: ${{ steps.token.outputs.available == 'true' }}
@@ -714,13 +714,13 @@ jobs:
       # Every document, not the start page alone. Since feature 015 the build
       # writes one document per content-bearing address, each with the full body
       # of its screen. Rewriting `index.html` and leaving the rest would publish
-      # 49 complete near-duplicates of production asking to rank against it,
+      # 50 complete near-duplicates of production asking to rank against it,
       # which is the exact duplicate this step exists to prevent.
       #
       # The tag is rewritten rather than added, and the rewrite is counted: an
       # `index,follow` that survived would be this deployment asking to rank
       # against the site it is a preview of, and a count is the only way to
-      # notice one document out of fifty.
+      # notice one document out of fifty-one.
       - name: Ask search engines to leave the preview alone
         if: ${{ steps.token.outputs.available == 'true' }}
         working-directory: dist/navbeacon/browser

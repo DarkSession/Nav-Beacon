@@ -200,7 +200,7 @@ test.describe('the document each published address answers with', () => {
     ).text();
     const body = await readableText(page, document);
 
-    // Counted against the sitemap rather than against 48: the set belongs to
+    // Counted against the sitemap rather than against 49: the set belongs to
     // the Almanac, and a pin move must not need this number edited (FR-003).
     const sitemap = await (await page.request.get(`${PRODUCT_URL}/sitemap.xml`)).text();
     const hulls = [...sitemap.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)]
@@ -219,7 +219,7 @@ test.describe('the document each published address answers with', () => {
     // (`responsive-catalogue-view.ts`, Commander request 2026-08-28), so they
     // are not links and cannot be relabelled into links without changing what
     // the control means. Every hull address is still reachable: the sitemap
-    // lists all 48, and each answers 200 with its own canonical, which the
+    // lists all 49, and each answers 200 with its own canonical, which the
     // tests above check. Recorded here rather than quietly asserted around,
     // because a crawler following links alone finds no hull from this page.
   });

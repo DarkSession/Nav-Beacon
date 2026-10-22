@@ -132,8 +132,8 @@ describe('projectMobilityAndJump', () => {
       // A Commander asked why roll and yaw look unaffected by the pips
       // (2026-08-27). They are not treated differently: the package
       // interpolates all four allocation-bearing readings the same way, over
-      // the hull's own two ends. On 47 of the 48 hulls the catalogue carries,
-      // `minRoll` equals `roll`; on 42 of them `minYaw` equals `yaw`. Where the
+      // the hull's own two ends. On 48 of the 49 hulls the catalogue carries,
+      // `minRoll` equals `roll`; on 43 of them `minYaw` equals `yaw`. Where the
       // two ends are one number, every allocation lands on that number.
       //
       // So this is the guard against the fix nobody should make: a flat reading

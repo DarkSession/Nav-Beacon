@@ -5,7 +5,7 @@
  * `prerender.routesFile` in `angular.json` names this file, and
  * `discoverRoutes: false` beside it means this list is the whole set: the
  * builder renders these addresses and no others. So what is written here
- * decides, exactly, which of the 52 advertised addresses answer with a body.
+ * decides, exactly, which of the 53 advertised addresses answer with a body.
  *
  * **Derived, never listed.** The addresses come from `contentBearingAddresses`,
  * which is `publishedAddresses` — the same function the sitemap is written from
@@ -50,7 +50,7 @@ export function prerenderRoutes(addresses) {
   const routes = addresses.filter((entry) => entry.contentBearing).map((entry) => `/${entry.path}`);
 
   if (routes.length === 0) {
-    // A build that rendered nothing would still exit 0 and publish 52 shells,
+    // A build that rendered nothing would still exit 0 and publish 53 shells,
     // which is today's behaviour wearing this feature's name. Refuse instead.
     throw new Error('No content-bearing addresses, so there is nothing to render.');
   }

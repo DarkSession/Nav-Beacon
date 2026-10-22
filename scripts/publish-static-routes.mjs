@@ -22,9 +22,9 @@
  * no-op here looks exactly like a published address.
  *
  * **What the head is applied to changed with feature 015.** Until then there was
- * one template — the built `index.html` — copied to all 52 addresses, which was
+ * one template — the built `index.html` — copied to all 53 addresses, which was
  * harmless because every body was an empty `<app-root>`. The build now renders a
- * body for the 50 content-bearing addresses, and copying a shell over them would
+ * body for the 51 content-bearing addresses, and copying a shell over them would
  * overwrite every one: a build that passes every head assertion here and ships
  * nothing. So the template is per address — that address's own rendered document
  * — and only the two head-only addresses are still written from the shell
@@ -299,9 +299,9 @@ async function main() {
     // `ships/` with a 301 rather than to `ships.html` with a 200 — the redirect
     // this whole layout exists to avoid.
     //
-    // The *file*, never its directory: `ships/` holds the 48 hull documents as
+    // The *file*, never its directory: `ships/` holds the 49 hull documents as
     // well as the catalogue's own `index.html`, and `ships` is published before
-    // any hull is. Removing the directory here deletes 48 documents that have
+    // any hull is. Removing the directory here deletes 49 documents that have
     // not been written yet, and the build still exits 0. The empty directories
     // are pruned after the loop instead, when there is nothing left to lose.
     if (rendered !== file) {

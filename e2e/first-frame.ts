@@ -38,7 +38,7 @@ export interface Frame {
    *
    * A generated hull document is a quarter of a megabyte, and a browser paints
    * long before it has read all of it: the earliest frames hold a catalogue
-   * that is 18 rows long on its way to 48, and the page grows underneath them.
+   * that is 18 rows long on its way to 49, and the page grows underneath them.
    * That is the document downloading, not the takeover moving anything, and the
    * two are only told apart by knowing which frames are which.
    */

@@ -135,7 +135,7 @@ export class ServedContentAdapter {
    *
    * Once a screen is presented there is nothing left to put back, and a clone
    * of a whole document is what this is holding — the catalogue address serves
-   * forty-eight hull cards. Keeping it for the life of the page costs the
+   * forty-nine hull cards. Keeping it for the life of the page costs the
    * Commander memory for a document they can no longer be returned to, so the
    * copy goes when the thing it stood in for arrives.
    *

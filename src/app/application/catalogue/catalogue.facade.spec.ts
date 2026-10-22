@@ -130,7 +130,7 @@ describe('CatalogueFacade', () => {
 
     expect(catalogue.countText()).toBe(`${SHIPS.length} ships`);
 
-    catalogue.changeSearch('anaconda');
+    catalogue.changeSearch('cutter');
     expect(catalogue.rows()).toHaveLength(1);
     expect(catalogue.countText()).toBe(`${SHIPS.length} ships`);
   });

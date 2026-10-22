@@ -2,7 +2,7 @@
  "symbol": "Asp_Scout",
  "side": "bottom",
  "viewBox": "0 0 1200 800",
- "source": "aa61d2a2396e30a7f11f52c518d27a0328c5b7e7c667ae8167ac56d8dd08b6cd",
+ "source": "2ce93e39bbfc0d7c6eb31127a2efc738b78194bc3f41e59b55c998c48b0ec8b9",
  "content": {
   "x": 207.867,
   "y": 38.4,
@@ -21,6 +21,12 @@
    "slot": "SmallHardpoint2",
    "x": 611.484,
    "y": 142.508
+  },
+  {
+   "feature": "utility_mount",
+   "slot": "TinyHardpoint3",
+   "x": 600,
+   "y": 638.065
   }
  ]
 }

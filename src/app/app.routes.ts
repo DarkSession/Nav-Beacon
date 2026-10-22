@@ -61,7 +61,7 @@ export const routes: Routes = [
         // keys change is the *document*, not the screen.
         //
         // They name the hull because an address has to say which one it is:
-        // forty-eight addresses describing themselves identically are one
+        // forty-nine addresses describing themselves identically are one
         // address as far as a search engine is concerned (011/FR-027).
         //
         // Both patterns interpolate `{{hull}}`. `RouteTitleStrategy` supplies it

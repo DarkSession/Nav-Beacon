@@ -146,7 +146,7 @@ describe('the sticky banner', () => {
     //
     // Asserted as "no reading was taken" rather than "no error was thrown",
     // because the prerenderer swallows component errors: an unguarded version
-    // exits 0 and publishes 50 documents rendered from a broken pass.
+    // exits 0 and publishes 51 documents rendered from a broken pass.
     withRootFontSize(16);
     withWindowHeight(834);
     withBarHeight(74);

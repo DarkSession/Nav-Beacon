@@ -40,17 +40,20 @@ const generatorPath = fileURLToPath(
   new URL('./generate-build-link-codec-tables.mjs', import.meta.url),
 );
 const committedTablePath = fileURLToPath(
-  new URL('../src/app/domain/ships/build-link/codec-table-2.json', import.meta.url),
+  new URL('../src/app/domain/ships/build-link/codec-table-3.json', import.meta.url),
 );
 const publishedTablePath = fileURLToPath(
   new URL('../src/app/domain/ships/build-link/codec-table-1.json', import.meta.url),
+);
+const publishedTable2Path = fileURLToPath(
+  new URL('../src/app/domain/ships/build-link/codec-table-2.json', import.meta.url),
 );
 
 test('refuses to overwrite a table whose payload does not match its declared hash', async (t) => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ednb-codec-table-'));
   t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
 
-  const tamperedTablePath = join(temporaryDirectory, 'codec-table-2.json');
+  const tamperedTablePath = join(temporaryDirectory, 'codec-table-3.json');
   const table = JSON.parse(await readFile(committedTablePath, 'utf8'));
   table.SHIPS = [...table.SHIPS, 'TamperedHull'];
   const tamperedContent = `${JSON.stringify(table, null, 2)}\n`;
@@ -77,6 +80,16 @@ test('every published table still holds the content its declared hash names', as
   assert.equal(
     generated.contentHash,
     'c3d1b5811a5eccec4e2101b82c68cf1960f7328435e8232b21082a58aabec370',
+  );
+
+  const table2 = JSON.parse(await readFile(publishedTable2Path, 'utf8'));
+  const { $generated: generated2, ...payload2 } = table2;
+
+  assert.equal(generated2.tableVersion, 2);
+  assert.equal(generated2.contentHash, contentHashOf(payload2));
+  assert.equal(
+    generated2.contentHash,
+    '12ae153d8e2296e6fef7dc4bb408adfa766498c08c06804a293884c209d32a90',
   );
 });
 
@@ -118,7 +131,7 @@ test('refuses to run at all once a published table has been edited', async (t) =
   assert.match(output, /mint a new table version/);
   // The current table was never written, because the refusal comes before the write.
   assert.equal(
-    await readFile(join(tableDirectory, 'codec-table-2.json'), 'utf8').catch(() => null),
+    await readFile(join(tableDirectory, 'codec-table-3.json'), 'utf8').catch(() => null),
     null,
   );
 });
@@ -154,7 +167,7 @@ test('refuses to run at all once a published table is missing', async (t) => {
   assert.notEqual(result.status, 0);
   assert.match(`${result.stdout}\n${result.stderr}`, /Codec table 1 is missing/);
   assert.equal(
-    await readFile(join(tableDirectory, 'codec-table-2.json'), 'utf8').catch(() => null),
+    await readFile(join(tableDirectory, 'codec-table-3.json'), 'utf8').catch(() => null),
     null,
   );
 });
@@ -166,7 +179,7 @@ test('names the next version when the catalogue moves the current table', async 
   // The table is self-consistent — its declared hash names the content it holds — and still is
   // not what this Almanac produces. That is the case a package upgrade creates, and the refusal
   // has to carry the instruction it turns on: the next version, not an edit to this one.
-  const movedTablePath = join(temporaryDirectory, 'codec-table-2.json');
+  const movedTablePath = join(temporaryDirectory, 'codec-table-3.json');
   const { $generated: generated, ...payload } = JSON.parse(
     await readFile(committedTablePath, 'utf8'),
   );
@@ -187,7 +200,7 @@ test('names the next version when the catalogue moves the current table', async 
   const output = `${result.stdout}\n${result.stderr}`;
   assert.notEqual(result.status, 0);
   assert.match(output, /content changed under Almanac/);
-  assert.match(output, /Raise TABLE_VERSION to 3/);
+  assert.match(output, /Raise TABLE_VERSION to 4/);
   assert.equal(await readFile(movedTablePath, 'utf8'), movedContent);
 });
 
