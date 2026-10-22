@@ -78,7 +78,7 @@ test.describe('offline capability', () => {
     // Both compositions, and one of each: the view draws a table and a card
     // list into every document and hides one (`responsive-catalogue-view.html`).
     // Twice this is a catalogue rendered on top of a catalogue.
-    await expect(page.locator('[data-hull-symbol]')).toHaveCount(96);
+    await expect(page.locator('[data-hull-symbol]')).toHaveCount(98);
 
     await context.setOffline(false);
   });
