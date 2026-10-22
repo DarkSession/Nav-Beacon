@@ -103,8 +103,8 @@ tag also selects the body representation. For a table with `h` hulls, its width 
   unused tag values; the arithmetic stream begins with the corresponding quotient when needed.
 
 Tables 1 and 2 have `h = 48`, so their six-bit values `0..47` are packed hulls and `48..63` are
-arithmetic markers; table 3 has `h = 49`, so `0..48` are packed hulls and `49..63` are markers. This uses capacity the hull tag already needed and preserves small packed
-bodies exactly.
+arithmetic markers; table 3 has `h = 49`, so `0..48` are packed hulls and `49..63` are markers.
+This uses capacity the hull tag already needed and preserves small packed bodies exactly.
 That no-penalty reuse applies when `h` is not a power of two; a future power-of-two hull count makes
 the combined tag one bit wider than a packed hull index alone. The writer finalises both
 representations and uses arithmetic coding only when its padded body is strictly shorter; a tie uses

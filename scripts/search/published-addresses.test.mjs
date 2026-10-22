@@ -169,7 +169,7 @@ describe('the content-bearing registry', () => {
 
     assert.ok(bearing.some((entry) => entry.path === ''));
     assert.ok(bearing.some((entry) => entry.path === HULL_PARENT));
-    // Every hull, counted against the package rather than against 48 — a pin
+    // Every hull, counted against the package rather than against 49 — a pin
     // move that adds a hull must not need this number edited (015/SC-009).
     const hulls = publishedAddresses({ origin: ORIGIN }).filter((entry) =>
       entry.path.startsWith(`${HULL_PARENT}/`),
