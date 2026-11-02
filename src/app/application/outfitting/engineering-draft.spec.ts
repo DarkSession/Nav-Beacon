@@ -11,6 +11,7 @@ import {
   packageText,
 } from '../../domain/ships/outfitting/outfitting.fixtures';
 import { WEAPON_FIGURES, weaponFigures } from '../../domain/ships/offence/weapon-figures';
+import { decodeBuildLinkFragment } from '../../domain/ships/build-link/build-link-codec-loader';
 import {
   HIGHER_IS_BETTER,
   NO_BLUEPRINT,
@@ -712,5 +713,37 @@ describe('engineering draft', () => {
       expect(HIGHER_IS_BETTER.energyPerSecond).toBe(false);
       expect(HIGHER_IS_BETTER.sustainedEnergyPerSecond).toBe(false);
     });
+  });
+});
+
+describe('engineering draft over a recipe the build spells other than the menu', () => {
+  // A shared link whose life support carries the EDSY spelling `Misc_LightWeight` at grade 5,
+  // where the life-support menu lists `LifeSupport_LightWeight`.
+  const FRAGMENT =
+    'b.19B@ugwtoEffoo:e3EqbWLWLrV,6:4sPz_k1/XLbLU/2LkojYGu05:L:Q-eeFKT@ajeGZ9sTkJ@YC./vfymEmJXZWM';
+
+  it('opens on the menu entry the fitted recipe is, with nothing to apply', async () => {
+    const loadout = await decodeBuildLinkFragment(FRAGMENT);
+    const slot = loadout
+      .fittedModules()
+      .find((module) => module.engineering?.BlueprintName === 'Misc_LightWeight')!.slot;
+    const current = engineeringView(fittedModuleView(loadout.fittedModuleAt(slot)!, TEXT));
+
+    const draft = openEngineeringDraft(loadout, slot, 1, openingSelection(current), TEXT)!;
+
+    expect(draft.selectedBlueprintFdname).toBe('LifeSupport_LightWeight');
+    expect(draft.selectedGrade).toBe(5);
+    expect(draft.current.blueprintFdname).toBe('LifeSupport_LightWeight');
+    expect(engineeringIntent(draft)).toBeNull();
+
+    // A new grade rolls the menu's recipe.
+    const regraded = openEngineeringDraft(loadout, slot, 1, withGrade(draft, 4), TEXT)!;
+    expect(engineeringIntent(regraded)).toEqual(
+      expect.objectContaining({
+        kind: 'applyEngineering',
+        blueprintFdname: 'LifeSupport_LightWeight',
+        grade: 4,
+      }),
+    );
   });
 });

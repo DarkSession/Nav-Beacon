@@ -1,3 +1,4 @@
+import { getMenuBlueprintForModule } from '@elite-dangerous-almanac/core/ships/blueprint-menu';
 import {
   getModuleBySymbol,
   type OutfittingModule,
@@ -325,7 +326,10 @@ export interface EngineeringDraft {
   /** Exactly the effects the package offers this mount. */
   readonly effects: readonly string[];
   readonly selectedEffectFdname: string | null;
-  /** What the module carries now, for the editor to show beside the choice. */
+  /**
+   * What the module carries now, for the editor to show beside the choice. Its
+   * recipe is the menu's entry for it, so the menu can mark it applied.
+   */
   readonly current: EngineeringView;
   readonly preview: EngineeringPreview;
   readonly cost: EngineeringCostView;
@@ -376,7 +380,19 @@ export function openEngineeringDraft(
   }
 
   const module = fittedModuleView(fitted, text);
-  const current = engineeringView(module);
+  // A build can spell its recipe other than the menu does — `Misc_LightWeight`
+  // for a life support's `LifeSupport_LightWeight` — so the package names the
+  // menu entry a fitted recipe is. A recipe the menu does not list keeps its id.
+  const menuEntry = (fdname: string): string =>
+    getMenuBlueprintForModule(module.symbol, fdname) ?? fdname;
+  const fittedEngineering = engineeringView(module);
+  const current: EngineeringView = {
+    ...fittedEngineering,
+    blueprintFdname:
+      fittedEngineering.blueprintFdname === null
+        ? null
+        : menuEntry(fittedEngineering.blueprintFdname),
+  };
   // The recipes this mount can actually take, filtered here rather than in the
   // component that draws them. A recipe whose grades start above 1 is a Merc-Coin
   // article's own: the Almanac sells it with the purchase and starts it at the
@@ -392,11 +408,12 @@ export function openEngineeringDraft(
     .filter((blueprint) => purchased || (blueprint.grades[0] ?? 1) <= 1);
   const effects = loadout.availableExperimentalEffects(slotKey);
 
+  const chosen = selection.blueprintFdname;
   const descriptor =
-    selection.blueprintFdname === null || selection.blueprintFdname === NO_BLUEPRINT
+    chosen === null || chosen === NO_BLUEPRINT
       ? null
       : (blueprints.find((candidate) =>
-          sameIdentity(candidate.blueprintSymbol, selection.blueprintFdname),
+          sameIdentity(candidate.blueprintSymbol, menuEntry(chosen)),
         ) ?? null);
 
   // A grade is only a grade if the selected descriptor offers it. Anything else
