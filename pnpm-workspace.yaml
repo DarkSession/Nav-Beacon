@@ -11,10 +11,5 @@ minimumReleaseAge: 10080
 #
 # Almanac is the source of truth for game data and calculations. A feature here
 # waits on its releases, so this project installs one the day it ships.
-#
-# fast-uri 3.1.7 closes GHSA-qw65-cvwx-89v3 and GHSA-58mr-gqgx-xq4g, and it is
-# younger than the delay. Without the entry `pnpm update` silently resolves
-# 3.1.6 and reopens both. Delete the entry once 3.1.7 is seven days old.
 minimumReleaseAgeExclude:
   - '@elite-dangerous-almanac/*'
-  - 'fast-uri@3.1.7'
