@@ -103,6 +103,9 @@ const ACCENTS: Readonly<Record<string, string>> = {
   Z: 'Ž',
 };
 
+/** A letter or digit: what makes a string copy rather than a glyph. */
+const WORD = /[\p{L}\p{N}]/u;
+
 /** Filler used to pad a message out to its expanded length. */
 const FILLER = 'ëẋţŕä ŵöŕðš ţö ƒïłł ţĥé łïñé ';
 
@@ -141,9 +144,13 @@ const STRUCTURAL_KEY =
  * mangled `{{count}}` would fail for a reason that has nothing to do with
  * layout. The brackets mark both ends, so a string that is cut off is visibly
  * cut off rather than merely short.
+ *
+ * A string with no letter or digit in it — a caret, a `+` — is a glyph rather
+ * than copy, and is left as it is: padded, it would gain words that the real
+ * glyph never has.
  */
 export function expandCopy(text: string): string {
-  if (text.length === 0) {
+  if (!WORD.test(text)) {
     return text;
   }
 
@@ -248,6 +255,39 @@ export function pseudoInputs(
     return { ...inputs };
   }
 
+  // A string that repeats its sibling `label` — an action label that names the
+  // visible label beside it — keeps the label as the label renders, the way a
+  // message keeps a placeholder. Expanded apart, each would gain its own filler,
+  // and the accessible name would stop containing the visible label: a failure
+  // the pseudo-locale invented rather than one it found.
+  const record = (fields: Readonly<Record<string, unknown>>): Record<string, unknown> => {
+    const label = fields['label'];
+    const quotable = typeof label === 'string' && WORD.test(label) ? label : null;
+
+    return Object.fromEntries(
+      Object.entries(fields).map(([key, value]) => {
+        if (
+          quotable === null ||
+          key === 'label' ||
+          typeof value !== 'string' ||
+          value === quotable ||
+          STRUCTURAL_KEY.test(key)
+        ) {
+          return [key, transform(key, value)];
+        }
+        const parts = value.split(wholeWord(quotable));
+        if (parts.length === 1) {
+          return [key, transform(key, value)];
+        }
+        const marker = '{{label}}';
+        return [
+          key,
+          pseudoText(parts.join(marker), mode).replaceAll(marker, pseudoText(quotable, mode)),
+        ];
+      }),
+    );
+  };
+
   const transform = (key: string, value: unknown): unknown => {
     if (STRUCTURAL_KEY.test(key)) {
       return value;
@@ -259,16 +299,18 @@ export function pseudoInputs(
       return value.map((entry) => transform(key, entry));
     }
     if (typeof value === 'object' && value !== null) {
-      return Object.fromEntries(
-        Object.entries(value).map(([nested, entry]) => [nested, transform(nested, entry)]),
-      );
+      return record(value as Record<string, unknown>);
     }
     return value;
   };
 
-  return Object.fromEntries(
-    Object.entries(inputs).map(([key, value]) => [key, transform(key, value)]),
-  );
+  return record(inputs);
+}
+
+/** Every occurrence of `words` that is not part of a longer word. */
+function wholeWord(words: string): RegExp {
+  const escaped = words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u');
 }
 
 /**

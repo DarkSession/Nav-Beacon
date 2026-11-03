@@ -500,22 +500,19 @@ describe('experimental effect menu', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it('names each option by its name line and describes it by the package’s', () => {
-    // The whole reason this control is drawn rather than taken from the
-    // platform: a native option holds one run of text, so the description could
-    // only be read as part of the name.
+  it('names each option by both lines it shows, the name first', () => {
+    // An option's name contains every word it shows (WCAG 2.5.3), so a
+    // Commander can say what they see. The two lines stay two lines on screen.
     const fixture = openMenu(renderMenu());
     const option = queryAll(fixture, '.menu__option')[1]!;
 
     expect(option.getAttribute('aria-labelledby')).toBe(
-      option.querySelector('.menu__option-name')?.id,
+      `${option.querySelector('.menu__option-name')?.id} ${option.querySelector('.menu__option-description')?.id}`,
     );
-    expect(option.getAttribute('aria-describedby')).toBe(
-      option.querySelector('.menu__option-description')?.id,
-    );
+    expect(option.getAttribute('aria-describedby')).toBeNull();
   });
 
-  it('describes an option by nothing where the catalogue has no description', () => {
+  it('names an option by its name line alone where the catalogue has no description', () => {
     const fixture = openMenu(
       renderMenu({
         effects: [
@@ -532,7 +529,10 @@ describe('experimental effect menu', () => {
       }),
     );
 
-    expect(queryAll(fixture, '.menu__option')[1]?.getAttribute('aria-describedby')).toBeNull();
+    const option = queryAll(fixture, '.menu__option')[1]!;
+    expect(option.getAttribute('aria-labelledby')).toBe(
+      option.querySelector('.menu__option-name')?.id,
+    );
   });
 
   it('draws no description line for an option the catalogue has none for', () => {

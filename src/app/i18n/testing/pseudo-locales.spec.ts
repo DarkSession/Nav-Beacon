@@ -65,6 +65,11 @@ describe('expandCopy', () => {
   it('leaves an empty string empty rather than padding nothing', () => {
     expect(expandCopy('')).toBe('');
   });
+
+  it('leaves a glyph alone, because padding would give it words', () => {
+    expect(expandCopy('▲')).toBe('▲');
+    expect(expandCopy('+')).toBe('+');
+  });
 });
 
 describe('mirrorCopy', () => {
@@ -175,6 +180,28 @@ describe('pseudoInputs', () => {
     expect(view.occurrences[0]?.item.sides).toEqual(['top']);
     // The hull's name is language, and still expands.
     expect(view.hullName).not.toBe('Anaconda');
+  });
+
+  it('keeps a sibling’s words as the sibling renders them', () => {
+    const inputs = pseudoInputs(
+      { columns: [{ label: 'Price Mcr', sortActionLabel: 'Sort by Price Mcr, ascending' }] },
+      'expanded-copy',
+    );
+
+    // The accessible name still contains the visible label, filler and all.
+    const [column] = inputs['columns'] as { label: string; sortActionLabel: string }[];
+    expect(column?.label).toBe(expandCopy('Price Mcr'));
+    expect(column?.sortActionLabel).toContain(column!.label);
+  });
+
+  it('quotes the label only as a whole word, and nothing but the label', () => {
+    const inputs = pseudoInputs(
+      { label: 'Size', hint: 'Sizes and sorts', mode: 'link', title: 'Share link' },
+      'expanded-copy',
+    );
+
+    expect(inputs['hint']).toBe(expandCopy('Sizes and sorts'));
+    expect(inputs['title']).toBe(expandCopy('Share link'));
   });
 
   it('leaves non-string values alone', () => {

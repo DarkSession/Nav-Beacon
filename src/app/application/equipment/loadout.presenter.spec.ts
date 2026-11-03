@@ -118,6 +118,25 @@ describe('LoadoutPresenter', () => {
       expect(empty.accessibleName).toContain('Primary Weapon 1');
     });
 
+    it('names every row with the words it shows, in the order it shows them (WCAG 2.5.3)', () => {
+      dominator();
+      store.dispatch({ kind: 'fitWeapon', mount: 'PrimaryWeapon1', symbol: RIFLE });
+      const ledger = presenter.ledger();
+
+      for (const row of [ledger.suit!, ...ledger.weapons]) {
+        const shown = [
+          row.badge,
+          row.name?.text ?? row.emptyLabel,
+          row.meta,
+          row.grade,
+          row.modifications,
+        ]
+          .filter((part): part is string => !!part)
+          .join(' · ');
+        expect(row.accessibleName).toContain(shown);
+      }
+    });
+
     it('states a weapon’s class, damage type and fire mode', () => {
       dominator();
       store.dispatch({ kind: 'fitWeapon', mount: 'PrimaryWeapon1', symbol: RIFLE });

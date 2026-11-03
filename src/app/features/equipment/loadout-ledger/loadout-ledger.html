@@ -49,9 +49,12 @@
 
     `aria-label` states the row as one sentence — the mount, the item, its code
     line and its slot count — because the parts read separately are a badge, a
-    name and two bare numbers.
+    name and two bare numbers. The sentence contains every word the row shows,
+    in the order it shows them (WCAG 2.5.3), and the whitespace between the
+    parts is kept so they stay separate words.
   -->
   <button
+    ngPreserveWhitespaces
     class="ledger__row"
     type="button"
     [class.ledger__row--current]="!drillsIn() && selected() === row.target"
