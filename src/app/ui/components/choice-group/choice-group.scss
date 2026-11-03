@@ -97,6 +97,10 @@
     block-size: 100%;
     margin: 0;
     opacity: 0;
+    // No native glyph: nothing shows of it. Chromium gives a natively painted
+    // radio a circular `border-radius` that author CSS cannot change, and
+    // pointer hits on the cut corners miss the input.
+    appearance: none;
     cursor: pointer;
   }
 
@@ -190,6 +194,10 @@
     block-size: 100%;
     margin: 0;
     opacity: 0;
+    // No native glyph: nothing shows of it. Chromium gives a natively painted
+    // radio a circular `border-radius` that author CSS cannot change, and
+    // pointer hits on the cut corners miss the input.
+    appearance: none;
     cursor: pointer;
   }
 

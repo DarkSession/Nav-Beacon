@@ -103,9 +103,6 @@ textarea {
   // a button inside an uppercase label draws the words as they were written.
   text-transform: inherit;
   color: inherit;
-  // Square like every other product surface: Chromium's own style sheet gives
-  // a radio a rounded `border-radius`.
-  border-radius: var(--ednb-shape-control);
 }
 
 // Numeric and technical values are monospaced and tabular so columns of figures
