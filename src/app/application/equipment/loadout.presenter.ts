@@ -199,6 +199,15 @@ const RESISTANCES = [
 ] as const;
 
 /**
+ * A ledger row's accessible name: the words the row shows, in the order it
+ * shows them, so a Commander can say what they see (WCAG 2.5.3 Label in Name).
+ * A part the row does not draw goes before or after them, never between.
+ */
+function rowName(...parts: readonly string[]): string {
+  return parts.filter((part) => part.length > 0).join(' · ');
+}
+
+/**
  * Everything the bench draws, in one view model.
  *
  * The regions ask this and nothing else: no component reaches
@@ -520,6 +529,7 @@ export class LoadoutPresenter {
   #emptySuitRow(): LedgerRowView {
     const choose = this.#message('equipment.suit.choose');
     const required = this.#message('equipment.suit.required');
+    const select = this.#message('equipment.suit.select');
     return {
       target: 'suit',
       badge: this.#message('equipment.badge.empty'),
@@ -527,10 +537,11 @@ export class LoadoutPresenter {
       emptyLabel: choose,
       meta: required,
       grade: null,
-      modifications: this.#message('equipment.suit.select'),
+      modifications: select,
       modificationsWanting: false,
       held: false,
-      accessibleName: `${choose} · ${required}`,
+      // The `+` is left out: it is not a word, and it reads as one.
+      accessibleName: rowName(choose, required, select),
     };
   }
 
@@ -538,9 +549,10 @@ export class LoadoutPresenter {
   #lockedMountRow(mount: PersonalMount): LedgerRowView {
     const mountName = this.#text.personalMountName(mount).text ?? mount.key;
     const locked = this.#message('equipment.mount.locked');
+    const badge = this.#mountBadge(mount.key);
     return {
       target: mount.key,
-      badge: this.#mountBadge(mount.key),
+      badge,
       name: null,
       emptyLabel: mountName,
       meta: locked,
@@ -548,7 +560,7 @@ export class LoadoutPresenter {
       modifications: null,
       modificationsWanting: false,
       held: true,
-      accessibleName: `${mountName} · ${locked}`,
+      accessibleName: rowName(badge, mountName, locked),
     };
   }
 
@@ -558,22 +570,27 @@ export class LoadoutPresenter {
     const name = this.#text.suitName(loadout.suitFamily);
     const meta = this.#suitMounts(loadout.suitFamily);
     const used = readings.unlocked.length;
+    const badge = this.#message('equipment.badge.suit');
+    const grade = this.#grade(loadout.suitGrade);
+    const modifications = this.#modificationCount(used, readings.modificationSlots);
     return {
       target: 'suit',
-      badge: this.#message('equipment.badge.suit'),
+      badge,
       name,
       emptyLabel: null,
       meta,
-      grade: this.#grade(loadout.suitGrade),
-      modifications: this.#modificationCount(used, readings.modificationSlots),
+      grade,
+      modifications,
       modificationsWanting: used < readings.modificationSlots,
       held: false,
-      accessibleName: [
+      accessibleName: rowName(
+        badge,
         name.text ?? '',
         meta,
-        this.#grade(loadout.suitGrade),
+        grade,
+        modifications,
         this.#modificationSummary(used, readings.modificationSlots),
-      ].join(' · '),
+      ),
     };
   }
 
@@ -595,18 +612,20 @@ export class LoadoutPresenter {
 
       if (fitted === null) {
         const empty = this.#message('equipment.mount.empty');
+        const choose = this.#message('equipment.mount.choose');
         return [
           {
             target: mount.key,
             badge,
             name: null,
             emptyLabel: empty,
-            meta: this.#message('equipment.mount.choose'),
+            meta: choose,
             grade: null,
             modifications: null,
             modificationsWanting: false,
             held: false,
-            accessibleName: `${mountName} · ${empty}`,
+            // The mount's name comes first: the row shows only its code.
+            accessibleName: rowName(mountName, badge, empty, choose),
           },
         ];
       }
@@ -618,6 +637,8 @@ export class LoadoutPresenter {
       const meta = readings === null ? '' : this.#weaponMeta(readings.weapon);
       const used = readings?.unlocked.length ?? 0;
       const total = readings?.modificationSlots ?? 0;
+      const grade = this.#grade(fitted.grade);
+      const modifications = this.#modificationCount(used, total);
       return [
         {
           target: mount.key,
@@ -625,20 +646,19 @@ export class LoadoutPresenter {
           name,
           emptyLabel: null,
           meta,
-          grade: this.#grade(fitted.grade),
-          modifications: this.#modificationCount(used, total),
+          grade,
+          modifications,
           modificationsWanting: used < total,
           held: false,
-          accessibleName: [
-            this.#messages.message('equipment.mount.selected', {
-              mount: mountName,
-              item: name.text ?? fitted.symbol,
-            }),
+          accessibleName: rowName(
+            mountName,
+            badge,
+            name.text ?? fitted.symbol,
             meta,
+            grade,
+            modifications,
             this.#modificationSummary(used, total),
-          ]
-            .filter((part) => part.length > 0)
-            .join(' · '),
+          ),
         },
       ];
     });

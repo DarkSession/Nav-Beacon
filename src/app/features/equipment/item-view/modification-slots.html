@@ -11,9 +11,12 @@
           The whole cell is the control, as the canvas draws it: nothing inside
           it is another control, and its `aria-label` says the slot, what is in
           it and what state it is in as one sentence — the parts read separately
-          are a bare number, a name and a code line.
+          are a bare number, a name and a code line. The sentence contains every
+          word the cell shows, in the order it shows them (WCAG 2.5.3), and the
+          whitespace between the parts is kept so they stay separate words.
         -->
         <button
+          ngPreserveWhitespaces
           class="slots__slot"
           type="button"
           [class.slots__slot--locked]="slot.locked"

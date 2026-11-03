@@ -78,21 +78,24 @@
 
         @for (effect of effects(); track effect.fdname; let index = $index) {
           <!--
-            Named by its own name line and described by the package's sentence
-            under it, rather than leaving both to be read as one run. That run
-            is what the native menu could only offer, and it is the whole reason
-            this control is drawn (`design/engineering-editor.md`, "The effect
-            menu is the application's own control").
+            Two lines, the name and the package's sentence under it, where the
+            native menu could only draw one run (`design/engineering-editor.md`,
+            "The effect menu is the application's own control"). The name is
+            both lines: an option's name contains every word it shows (WCAG
+            2.5.3), and the whitespace between them is kept so the two lines
+            stay separate words.
           -->
           <li
+            ngPreserveWhitespaces
             class="menu__option"
             role="option"
             [id]="optionId(index + 1)"
             [class.menu__option--active]="activeIndex() === index + 1"
             [attr.aria-selected]="selected() === effect.fdname"
-            [attr.aria-labelledby]="optionId(index + 1) + '-name'"
-            [attr.aria-describedby]="
-              effect.description.text === null ? null : optionId(index + 1) + '-description'
+            [attr.aria-labelledby]="
+              effect.description.text === null
+                ? optionId(index + 1) + '-name'
+                : optionId(index + 1) + '-name ' + optionId(index + 1) + '-description'
             "
             (click)="choose(effect.fdname)"
           >
