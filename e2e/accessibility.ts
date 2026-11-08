@@ -150,11 +150,10 @@ export async function publishedSlotKeys(page: Page): Promise<string[]> {
  * Every mount the ledger holds, across the categories it is drawn in.
  *
  * `publishedSlotKeys` reads what is on the page, which at compact width is one
- * category of it: canvas 1d offers no `ALL` and draws one category at a time
- * (`design/outfitting-workspace.md`, "No `ALL` at compact width"). A claim about
- * the *hull's* mounts rather than about this screenful walks the categories,
- * and puts back the one it started on so nothing downstream inherits a tab it
- * did not press.
+ * category of it: canvas 1d offers no `ALL` and draws one category at a time.
+ * A claim about the *hull's* mounts rather than about this screenful walks the
+ * categories, and puts back the one it started on so nothing downstream
+ * inherits a tab it did not press.
  */
 export async function everyPublishedSlotKey(page: Page): Promise<string[]> {
   const categories = page.locator('.outfitting__category');

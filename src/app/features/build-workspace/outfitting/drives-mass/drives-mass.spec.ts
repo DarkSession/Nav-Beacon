@@ -430,19 +430,16 @@ describe('DrivesMass', () => {
 
     it('draws no group of readings beside the ones the canvas draws', () => {
       // Canvas 1c's left card goes headline, bar, its two marks, the three
-      // legend rows, then the speed envelope; its right card opens with three
-      // cells and closes with three legend rows. An unladen mass or a cargo
+      // legend rows, then the speed envelope; its right card opens with the
+      // mass lock line and closes with three legend rows. An unladen mass or a cargo
       // capacity among them would be this screen adding a reading the template
       // does not have — and the main tank is already stated where the canvas
       // states it, in the fuel row's own qualifier.
       const { element } = render(build());
 
-      // Exactly one cell grid on the pair: the drive card's headline trio. The
-      // canvas draws its two legends as ruled rows, not as cells.
-      const groups = [...element.querySelectorAll('ednb-metric-group')].map((group) =>
-        [...group.classList].find((name) => name.startsWith('drives__')),
-      );
-      expect(groups).toEqual(['drives__cells']);
+      // No cell grid on the pair. The canvas draws its two legends as ruled
+      // rows and the mass lock as one line, not as cells.
+      expect(element.querySelectorAll('ednb-metric-group')).toHaveLength(0);
       expect(element.querySelectorAll('.drives__legend')).toHaveLength(2);
     });
   });
@@ -651,15 +648,9 @@ describe('DrivesMass', () => {
       const { element, component } = render(unreadableDriveBuild());
 
       expect(component.driveFacts().map((fact) => fact.value)).toEqual([null, null]);
-      expect(component.jumpCells().map((cell) => cell.value)).toEqual([
-        null,
-        null,
-        // Mass lock is the hull's own catalogue fact and the guard never
-        // touched it.
-        expect.any(String),
-      ]);
-      // Both jump cells, in the one cell grid on the pair.
-      expect(texts(element, '.metric__unavailable')).toEqual(['Incomplete', 'Incomplete']);
+      // Mass lock is the hull's own catalogue fact and the guard never
+      // touched it.
+      expect(component.massLock()).toBe(String(getShipBySymbol(HULL)?.masslock));
       // The ranges the guard refused, and the two drive constants that came
       // from the same refusal, all saying the one word.
       expect(texts(element, '.unavailable__text')).toEqual([
@@ -772,25 +763,41 @@ describe('DrivesMass', () => {
       expect(facts[2].detail).toContain(String(summary.totalUnladen.jumps));
     });
 
-    it('heads the card with the canvas’s own three cells', () => {
-      // Canvas 1c opens the card with `JUMP LADEN`, `JUMP UNLADEN` and
-      // `MASS LOCK` on one hairline ground, above `RANGE BY LOAD`. The two
-      // jumps are the ends of the list under them, and mass lock is the hull's
-      // own catalogue fact.
+    it('heads the card with the hull’s mass lock factor, above the ranges', () => {
+      // Canvas 1c opens the card with one line, `MASS LOCK FACTOR` and the
+      // hull's value, above the hairline and `RANGE BY LOAD`. The jump figures
+      // are the range rows' own, so no jump stands above them.
       const loadout = build();
-      const summary = BuildMetrics.of(loadout).jumpRangeSummary();
       const { element, component } = render(loadout);
+      const drive = card(element, 'drive');
+      const masslock = String(getShipBySymbol(loadout.shipSymbol)?.masslock);
 
-      expect(component.jumpCells().map((cell) => cell.value)).toEqual([
-        `${summary.laden.toFixed(1)} ly`,
-        `${summary.max.toFixed(1)} ly`,
-        String(getShipBySymbol(loadout.shipSymbol)?.masslock),
-      ]);
-      expect(texts(element, '.drives__cells .metric__number')).toEqual([
-        `${summary.laden.toFixed(1)} ly`,
-        `${summary.max.toFixed(1)} ly`,
-        String(getShipBySymbol(loadout.shipSymbol)?.masslock),
-      ]);
+      expect(component.massLock()).toBe(masslock);
+      expect(texts(drive, '.drives__mass-lock-label')).toEqual(['Mass lock factor']);
+      expect(texts(drive, '.drives__mass-lock-value')).toEqual([masslock]);
+
+      const line = drive.querySelector('.drives__mass-lock');
+      const ranges = drive.querySelector('.drives__ranges');
+      expect(line?.compareDocumentPosition(ranges as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(drive.querySelector('.drives__mass-lock ~ .drives__rule')).not.toBeNull();
+    });
+
+    it('says the mass lock is unavailable, never 0, for a hull the catalogue does not carry', () => {
+      // The projection reads the mass lock from the hull's catalogue record,
+      // by the build's ship symbol. A symbol the catalogue does not know gives
+      // no record, so the line states the absence in the shared wording.
+      const loadout = build();
+      const unknown = 'Nonexistent_Hull';
+      expect(getShipBySymbol(unknown)).toBeNull();
+      const { element, component, detect } = render(loadout);
+      Object.defineProperty(loadout, 'shipSymbol', { get: () => unknown, configurable: true });
+      active.commit(candidateFor(loadout));
+      detect();
+
+      const line = card(element, 'drive').querySelector('.drives__mass-lock');
+      expect(component.massLock()).toBeNull();
+      expect(texts(line, '.unavailable__text')).toEqual(['Unavailable']);
+      expect(text(line)).not.toMatch(/\b0\b/u);
     });
 
     it('says how much mass is left under the drive’s optimal, beside it', () => {

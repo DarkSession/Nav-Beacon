@@ -1,6 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
-import type { FittedWeaponMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
 import type { Convergence } from '../../../../domain/ships/offence/convergence';
 import { ActiveBuildStore } from '../../../../application/active-build/active-build.store';
 import { engineeringSummary } from '../../../../application/outfitting/engineering-summary';
@@ -9,39 +8,68 @@ import { OutfittingStore } from '../../../../application/outfitting/outfitting.s
 import type { SlotView } from '../../../../application/outfitting/slot-view';
 import { PowerConditionsStore } from '../../../../application/power-heat/power-conditions.store';
 import {
+  groupIdenticalWeapons,
   projectOffence,
   type ConventionalDamageType,
   type Endurance,
   type Offence,
+  type WeaponGroup,
 } from '../../../../domain/ships/offence/offence';
 import { Formatters } from '../../../../i18n/formatters/formatters';
 import { GameTextPresenter, type GameTextPresentation } from '../../../../i18n/game-text.presenter';
 import type { MessageKey } from '../../../../i18n/locale-registry';
 import { MessageService } from '../../../../i18n/message.service';
 import { relationId } from '../../../../ui/a11y/text-equivalence';
+import { FitText } from '../../../../ui/components/fit-text/fit-text';
 import { ModuleIdentityBadge } from '../../../../ui/outfitting/module-identity-badge';
 import { ShotConvergence } from './shot-convergence/shot-convergence';
 
 /**
- * One weapon as the canvas's six columns.
+ * The width at which the panel draws its three blocks in one row.
+ *
+ * `$container-offence-row-min` in `src/styles/_responsive.scss` is the step the
+ * stylesheet turns at, and the `composition-step` rule holds the two equal.
+ */
+export const OFFENCE_ROW_MIN_REM = 77;
+
+/**
+ * One row of the canvas's six columns: one weapon, or several identical ones.
  *
  * The row is inert, as the canvas draws it: no disclosure, no action and no
  * slot of its own (`design/canvas-contract.md`, "1. WEAPONS"). A mount is
  * reached from `HULL ANATOMY`, which is where the canvas puts that control.
+ *
+ * Weapons that are the same module in the same state share a row
+ * (`groupIdenticalWeapons`). The row draws one weapon's figures and states how
+ * many weapons it stands for.
  */
 export interface WeaponRowView {
-  /** The weapon's exact package slot key. The row's identity, and its handoff. */
+  /** The first member's exact package slot key. The row's identity, and its handoff. */
   readonly id: string;
+  /** The exact package slot key of every weapon the row stands for, in package order. */
+  readonly slots: readonly string[];
+  /** How many weapons the row stands for. */
+  readonly count: number;
+  /** The drawn count, `×2`. `null` where the row stands for one weapon. */
+  readonly countText: string | null;
+  /** The count in words, for a reader who is told. `null` where the row stands for one weapon. */
+  readonly countDescription: string | null;
   /** The module's name in the Commander's language, with its translation state. */
   readonly name: GameTextPresentation;
-  /** The canvas's `4A`: the module's class and its rating, as two package values. */
+  /**
+   * The canvas's `4A`: the module's class and its rating, as two package values.
+   *
+   * These and the mount and engineering below are set only where another row
+   * shows the same name. Elsewhere the row draws the name alone, as canvas 1c
+   * draws it.
+   */
   readonly moduleClass: number | null;
   readonly rating: string | null;
   /** The mount as the package names it, for the badge to say in words. */
   readonly mount: string | null;
-  /** What follows the mount on the canvas's code line: `OVERCHARGED G5`. */
+  /** What follows the mount on the code line: `OVERCHARGED G5`. */
   readonly engineering: string | null;
-  /** The canvas's `DPS BURST` column. */
+  /** The canvas's `DPS BURST` column, for one weapon. */
   readonly damagePerSecond: string;
   /** The canvas's `SUSTAINED` column, beside the burst figure. */
   readonly sustainedDamagePerSecond: string;
@@ -129,11 +157,14 @@ const PIP_DIGITS = 1;
 /**
  * `OFFENCE ANALYSIS`: what this build's weapons do.
  *
- * Canvas 1c draws it as the `OFFENCE` mode of the hull anatomy region — the
- * `WEAPONS` block against `DAMAGE PROFILE` in a `1fr 1fr` pair. Canvas 1d
- * stacks the same content. Same DOM at both widths; which arrangement appears
- * is decided in CSS from the space the region is given, so a 400% zoom picks
- * the stacked one for the same reason a phone does.
+ * Canvas 1c draws it as the `OFFENCE` mode of the hull anatomy region:
+ * `WEAPONS`, `DAMAGE PROFILE` and `SHOT CONVERGENCE` in three columns from
+ * `OFFENCE_ROW_MIN_REM`. From 40rem to that step, `WEAPONS` and
+ * `DAMAGE PROFILE` stand in a pair with `SHOT CONVERGENCE` under them, and
+ * below 40rem the three blocks are one column, as canvas 1d stacks them. Same
+ * DOM at every width; which arrangement appears is decided in CSS from the
+ * space the region is given, so a 400% zoom picks the stacked one for the same
+ * reason a phone does.
  *
  * Every figure here is a package answer selected by
  * `src/app/domain/ships/offence/offence.ts`, which is also where the canvas's shares,
@@ -143,12 +174,16 @@ const PIP_DIGITS = 1;
  */
 @Component({
   selector: 'ednb-offence-analysis',
-  imports: [ModuleIdentityBadge, NgTemplateOutlet, ShotConvergence],
+  imports: [FitText, ModuleIdentityBadge, NgTemplateOutlet, ShotConvergence],
   templateUrl: './offence-analysis.html',
   styleUrl: './offence-analysis.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // The three-column step, stated on the host so a test reads the width the
+  // stylesheet turns at rather than a copy of it.
+  host: { '[style.--offence-row-min]': 'rowMinimum' },
 })
 export class OffenceAnalysis {
+  readonly rowMinimum = `${OFFENCE_ROW_MIN_REM}rem`;
   readonly #active = inject(ActiveBuildStore);
   readonly #outfitting = inject(OutfittingStore);
   readonly #conditions = inject(PowerConditionsStore);
@@ -389,20 +424,24 @@ export class OffenceAnalysis {
   });
 
   /**
-   * The WEP allocation those four figures were read at.
+   * The WEP pips the four capacitor figures were read at, for the block's heading.
    *
-   * Said once under the block rather than on each row. Two of the four move
-   * when the allocation moves, and a figure that changes with a condition shown
-   * without that condition is the misleading number constitution IV forbids. It
-   * is text, not a control: the canvas draws the pip control in `POWER`, and it
-   * stays there.
+   * The pips the power and heat capability's shared conditions hold, as the
+   * projection was read at them, and never the package's echoed `weaponsPips`.
+   * Two of the four figures move when the pips move, and a figure that changes
+   * with a condition shown without that condition is the misleading number
+   * constitution IV forbids. It is text, not a control: the canvas draws the pip
+   * control in `POWER`. Where there is no capacitor figure, no pips are stated.
+   *
+   * Written at its own precision up to {@link PIP_DIGITS}, so three pips read
+   * `3` and a half step reads `2.5`, as canvas 1c writes `@ 3 PIPS`.
    */
-  readonly capacitorAllocation = computed(() => {
+  readonly capacitorPips = computed(() => {
     const capacitor = this.projection()?.capacitor;
     return capacitor === undefined
       ? null
-      : this.#messages.message('offence.capacitor.allocation', {
-          pips: this.#formatters.decimal(capacitor.allocation, PIP_DIGITS),
+      : this.#messages.message('offence.capacitor.at-pips', {
+          pips: this.#formatters.figure(capacitor.allocation, PIP_DIGITS),
         });
   });
 
@@ -452,17 +491,43 @@ export class OffenceAnalysis {
   );
 
   /**
-   * One row per returned weapon, in the package's own order.
+   * The package record of each fitted module, by its exact slot key.
    *
-   * The collection neither sorts nor merges: two mounts carrying the same
-   * module are two rows, as the canvas draws them, and each is identified by
-   * its exact slot key rather than by its position or its symbol.
+   * Read at the projection's revision, so the grouping compares the records of
+   * the build the figures came from.
    */
-  readonly weaponRows = computed<readonly WeaponRowView[]>(() =>
-    (this.projection()?.weapons ?? []).map((weapon) => this.#weaponRow(weapon)),
-  );
+  readonly #records = computed(() => {
+    this.#active.revision();
+    return new Map(
+      (this.#active.loadout()?.fittedModules() ?? []).map((module) => [module.slot, module]),
+    );
+  });
 
-  #weaponRow(fitted: FittedWeaponMetrics): WeaponRowView {
+  /**
+   * One row per group of identical weapons, in the package's own order.
+   *
+   * Nothing is sorted. Each row stands where its first weapon stands, carries
+   * the exact slot key of every weapon in it, and draws one weapon's figures.
+   * The name alone identifies a row, and where two rows show the same name the
+   * code line is added to both, so two rows never read the same.
+   */
+  readonly weaponRows = computed<readonly WeaponRowView[]>(() => {
+    const groups = groupIdenticalWeapons(this.projection()?.weapons ?? [], this.#records());
+    const rows = groups.map((group) => this.#weaponRow(group));
+    const names = new Map<string | null, number>();
+    for (const row of rows) {
+      names.set(row.name.text, (names.get(row.name.text) ?? 0) + 1);
+    }
+    return rows.map((row) =>
+      (names.get(row.name.text) ?? 0) > 1
+        ? row
+        : { ...row, moduleClass: null, rating: null, mount: null, engineering: null },
+    );
+  });
+
+  #weaponRow(group: WeaponGroup): WeaponRowView {
+    const [fitted] = group;
+    const count = group.length;
     const mount = this.#mounts().get(fitted.slot);
     // The ledger's own presentation where the mount resolved, and the package's
     // own symbol where it did not: a weapon the package measured in a slot the
@@ -470,9 +535,15 @@ export class OffenceAnalysis {
     const name = mount?.module?.displayName ?? this.#gameText.moduleName(fitted.symbol);
 
     const article = mount?.module?.article;
+    const counted = { count: this.#formatters.integer(count) };
 
     return {
       id: fitted.slot,
+      slots: group.map((weapon) => weapon.slot),
+      count,
+      countText: count > 1 ? this.#messages.message('offence.weapon.count', counted) : null,
+      countDescription:
+        count > 1 ? this.#messages.message('offence.weapon.count.description', counted) : null,
       name,
       // Three package values, never a code parsed back out of the symbol: `4A`
       // looks readable off `Hpt_MultiCannon_Gimbal_Huge` and that habit is
@@ -484,17 +555,18 @@ export class OffenceAnalysis {
         mount?.module == null
           ? null
           : engineeringSummary(mount.module, this.#gameText, this.#messages),
+      // One weapon's figure, never the group's sum: every member of a group has
+      // the same five figures as returned, and the count says how many there are.
       damagePerSecond: this.#perSecond(fitted.metrics.damagePerSecond),
-      // The canvas's `SUSTAINED` column, added by the 2026-08-29 revision
-      // together with the rename of the column beside it. The package's own
-      // per-weapon figure, which is what the headline above already states as a
-      // build total; a continuous-fire weapon carries the same number in both
-      // cells because the package returns the same number twice, not because
-      // one was copied from the other.
+      // The canvas's `SUSTAINED` column. The package's own per-weapon figure,
+      // which is what the headline above already states as a build total; a
+      // continuous-fire weapon carries the same number in both cells because
+      // the package returns the same number twice, not because one was copied
+      // from the other.
       sustainedDamagePerSecond: this.#perSecond(fitted.metrics.sustainedDamagePerSecond),
-      // The canvas's `RANGE` column, added by the 2026-08-25 revision. The
-      // package's own `maximumRange`, which the projection already carries for
-      // the range bands: nothing is derived from it here and nothing caps it.
+      // The canvas's `RANGE` column. The package's own `maximumRange`, which the
+      // projection already carries for the range bands: nothing is derived from
+      // it here and nothing caps it.
       maximumRange:
         fitted.maximumRange === undefined ? null : this.#formatters.metres(fitted.maximumRange),
       // Absent is field-specific not-stated text, never a zero and never a dash

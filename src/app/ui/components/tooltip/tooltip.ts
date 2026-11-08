@@ -189,6 +189,16 @@ export class Tooltip {
   readonly tip = input.required<string>();
 
   /**
+   * What the bubble draws in place of `tip`, where the two differ.
+   *
+   * For a trigger whose caller cuts its word short: the bubble then shows the
+   * whole word before the gloss. `tip` stays what a reader is told, so a screen
+   * reader does not hear the word again straight after the trigger's name.
+   * `null` draws `tip`.
+   */
+  readonly drawnTip = input<string | null>(null);
+
+  /**
    * Drawn open from the start.
    *
    * For a preview or a test that needs the open presentation without a

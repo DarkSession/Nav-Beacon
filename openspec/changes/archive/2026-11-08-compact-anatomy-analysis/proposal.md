@@ -13,8 +13,10 @@ its blocks stack as they do now, but nothing is left out and nothing is added at
 
 - **All four panels.** Smaller padding and gaps inside each panel, and tighter tiles, following
   canvas 1c (design.md "Screens" lists every measure).
-- **Power.** Where the panel is wide enough, the four blocks stand in one row: priority groups, draw
-  by module, heat profile, distributor. Today they stand in two rows of two. The heat profile:
+- **Power.** The four blocks stand in one row where the panel is as wide as canvas 1c draws it
+  (a 2020-pixel screen), two rows of two below that, and one column at a narrow width. At the
+  one-row width a label that does not fit is cut with `…`, and the whole label shows on hover.
+  The heat profile:
   - draws four of the package's five scenarios, and the shield cell bank's bar as now. **BREAKING
     (spec):** the drained-capacitor scenario ("Weapons alpha") is removed;
   - removes the within-limit and over-threshold key, and keeps the overheat state as the hatch and the level
@@ -27,10 +29,14 @@ SUSTAINED`.
 - **Defence.** The shield card and the armour card each offer a choice between a summary and its
   sources. The summary is shown first. It holds the pool, the damage table and the tiles. The
   sources hold the source modules, and on the shield card also the cell bank reserve. Each card
-  holds its own choice. The `0%` and `100%` scale under the damage bars is removed.
+  holds its own choice. The sources draw one unit head (`MJ` or `HP`) over bare figures, and each
+  figure keeps its unit for a screen reader. The `0%` and `100%` scale under the damage bars is
+  removed.
 - **Offence.**
-  - Where the panel is wide enough, shot convergence becomes a third column beside the weapons and
-    the damage by type, with a smaller plate and the target range under it.
+  - Shot convergence stands as a third column where the panel is as wide as canvas 1c draws it,
+    and under the weapons and the damage by type below that, with a smaller plate and the target
+    range under it. At the three-column width a label that does not fit is cut with `…`, and the
+    whole label shows on hover.
   - A weapon row draws the module name without its code line, except where two rows would otherwise
     read the same.
   - Weapons that carry the same module with the same engineering, the same enabled state and the
@@ -91,12 +97,16 @@ The change affects:
 - the offence domain projection (`src/app/domain/ships/offence/offence.ts`), which groups identical
   weapons;
 - the offence panel (`offence-analysis`, `shot-convergence`): the rows drawn from those groups, the name-only rows, the
-  three-column layout, the capacitor heading, and the gunsight measure tokens;
+  smaller gunsight plate with the readout under it, the capacitor heading, and the gunsight measure tokens;
 - the design system's `ednb-metric-group`, which gets a dense state for the tighter tiles, with a
   preview state and its component contract;
+- the design system's new `ednb-fit-text`, which cuts a label that does not fit and shows the whole
+  label in a tooltip, with a preview state and its component contract;
+- `src/styles/_responsive.scss`, which gets the power and offence row steps;
 - the English and German message catalogues: keys are removed (the drained scenario and its description,
   `power.heat.within`, the two removed tiles, `drives.fsd.jump-laden`, `drives.fsd.jump-unladen`,
-  `drives.fsd.summary` and `offence.capacitor.allocation`); keys are added (`defence.view.summary`,
+  `drives.fsd.summary`, `offence.capacitor.allocation` and `defence.format.hull-points`, which the bare
+  source figures no longer use); keys are added (`defence.view.summary`,
   `defence.view.sources`, `defence.view.shield`, `defence.view.armour`, `offence.weapon.count`,
   `offence.weapon.count.description` and `offence.capacitor.at-pips`); and `drives.fsd.mass-lock`
   is reworded;

@@ -1,12 +1,17 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import englishMessages from '../src/app/i18n/locales/en.json';
 import germanMessages from '../src/app/i18n/locales/de.json';
 import { everyPublishedSlotKey, sweepOutfittingState } from './accessibility';
+import { AXE_TAGS } from './accessibility/axe';
 import { expectNoDocumentOverflow, settled } from './accessibility/assertions';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
 import {
+  applyDraft,
   benchFollowedSelection,
+  chooseFirstRecipe,
   fitCommitted,
+  openEditor,
   revealFamilyHolding,
   revealMount,
   surfacesAreLayers,
@@ -47,6 +52,14 @@ async function openOffence(page: Page, messages = englishMessages): Promise<void
 const CAUSTIC_ARTICLE = /enzyme missile rack/iu;
 
 /**
+ * The rendered name of the longest-named weapon a medium hardpoint takes.
+ *
+ * The stock build's names all fit their column at the three-column step, in
+ * English and in German, so a cut weapon name is reached by fitting this one.
+ */
+const LONG_NAMED_ARTICLE = /remote release flechette launcher/iu;
+
+/**
  * Creates a stock build, fits the one article that deals caustic damage, and
  * opens the `OFFENCE` mode.
  *
@@ -56,6 +69,14 @@ const CAUSTIC_ARTICLE = /enzyme missile rack/iu;
  * from.
  */
 async function openOffenceDealingCaustic(page: Page): Promise<void> {
+  await openOffenceFitting(page, CAUSTIC_ARTICLE);
+}
+
+/**
+ * Creates a stock build, fits the named article to the first medium hardpoint,
+ * and opens the `OFFENCE` mode.
+ */
+async function openOffenceFitting(page: Page, article: RegExp): Promise<void> {
   await page.goto(`/ships/${HULL}`);
   await buildStockHull(page, englishMessages['hullDetail.create']);
 
@@ -67,11 +88,8 @@ async function openOffenceDealingCaustic(page: Page): Promise<void> {
   await select.click();
   await expect(select).toHaveAttribute('aria-pressed', 'true');
   await benchFollowedSelection(page);
-  await revealFamilyHolding(page, CAUSTIC_ARTICLE);
-  const row = page
-    .locator('.candidates__choices .candidate')
-    .filter({ hasText: CAUSTIC_ARTICLE })
-    .first();
+  await revealFamilyHolding(page, article);
+  const row = page.locator('.candidates__choices .candidate').filter({ hasText: article }).first();
   await expect(row).toBeVisible();
   await row.locator('.candidate__name').click();
   if (await surfacesAreLayers(page)) {
@@ -90,6 +108,64 @@ async function openOffenceDealingCaustic(page: Page): Promise<void> {
 /** Every digit in a string, so a locale's own grouping cannot change the value. */
 function digits(text: string): string {
   return text.replace(/\D/gu, '');
+}
+
+/**
+ * How many weapons the `WEAPONS` block's rows stand for.
+ *
+ * A row of identical weapons draws its count as `×2`, and a row without a count
+ * stands for one weapon. Every armed mount is in one row's count.
+ */
+async function armedCount(page: Page): Promise<number> {
+  const counts = await page
+    .locator('ednb-offence-analysis .weapon')
+    .evaluateAll((rows) =>
+      rows.map((row) => row.querySelector('.weapon__count')?.textContent?.trim() ?? ''),
+    );
+  return counts.reduce((total, count) => total + (count === '' ? 1 : Number(digits(count))), 0);
+}
+
+/**
+ * How many weapons the installed package measures on the stock build.
+ *
+ * Asked in the test process, so the panel's count is compared with the package
+ * rather than with another part of the same panel. The package is ESM-only, so
+ * it is reached by a dynamic import.
+ */
+async function packageWeaponCount(): Promise<number> {
+  const [{ ShipLoadout }, { BuildMetrics }] = await Promise.all([
+    import('@elite-dangerous-almanac/core/ships/ship-loadout'),
+    import('@elite-dangerous-almanac/core/ships/build-metrics'),
+  ]);
+  return BuildMetrics.of(ShipLoadout.default(HULL)).weaponMetrics().weapons.length;
+}
+
+/**
+ * Creates a stock build, engineers the first of its two identical weapons with
+ * the first recipe the package offers there, and opens the `OFFENCE` mode.
+ */
+async function openOffenceWithOneEngineered(page: Page): Promise<void> {
+  await page.goto(`/ships/${HULL}`);
+  await buildStockHull(page, englishMessages['hullDetail.create']);
+
+  await revealMount(page, 'SmallHardpoint1');
+  const select = page.locator('[data-slot-key="SmallHardpoint1"] button').first();
+  await select.click();
+  await expect(select).toHaveAttribute('aria-pressed', 'true');
+  await benchFollowedSelection(page);
+  await openEditor(page);
+  await chooseFirstRecipe(page);
+  const grade = page.locator('.grade').first();
+  await grade.click();
+  await expect(grade).toHaveAttribute('data-selected', 'true');
+  await applyDraft(page);
+
+  await page
+    .locator('ednb-hull-anatomy .anatomy__modes button')
+    .filter({ hasText: englishMessages['anatomy.mode.offence'] })
+    .click();
+  await expect(page.locator('ednb-offence-analysis .offence')).toBeVisible();
+  await settled(page);
 }
 
 /**
@@ -411,17 +487,18 @@ async function weaponRows(
 }
 
 test.describe('inspecting the weapons', () => {
-  test('draws one row per weapon with the canvas’s six columns', async ({ page }) => {
+  test('draws one row per group of identical weapons with the canvas’s six columns', async ({
+    page,
+  }) => {
     await openOffence(page);
 
     const rows = await weaponRows(page);
     expect(rows.length).toBeGreaterThan(0);
 
     // The mounted count beside the block heading is the same collection said as
-    // a number, so the two readings have to agree without either being written
-    // down here.
+    // a number, so it agrees with the weapons the rows stand for.
     const note = await page.locator('.offence__block--weapons .offence__note').innerText();
-    expect(digits(note)).toBe(String(rows.length));
+    expect(digits(note)).toBe(String(await armedCount(page)));
 
     for (const row of rows) {
       expect(row.module).not.toBe('');
@@ -635,14 +712,63 @@ test.describe('inspecting the weapons', () => {
     });
   }
 
-  test('keeps two mounts carrying the same module as two rows', async ({ page }) => {
+  test('draws two identical mounts as one row with ×2, and a mount engineered apart as a row of its own', async ({
+    page,
+  }) => {
     await openOffence(page);
 
-    // The stock Anaconda carries the same small pulse laser twice. The canvas
-    // draws duplicates as duplicates and this does too.
-    const modules = (await weaponRows(page)).map((row) => row.module);
-    expect(modules).toHaveLength(2);
-    expect(modules[0]).toBe(modules[1]);
+    // The stock Anaconda carries the same small pulse laser twice, in the same
+    // state, so one row stands for both and states its count.
+    const shared = page.locator('ednb-offence-analysis .weapon');
+    await expect(shared).toHaveCount(1);
+    await expect(shared.locator('.weapon__count')).toHaveText('×2');
+    await expect(shared.locator('.weapon__count')).toHaveAttribute('aria-hidden', 'true');
+    await expect(shared.locator('.weapon__module')).toContainText(
+      englishMessages['offence.weapon.count.description'].replace('{{count}}', '2'),
+    );
+
+    // Engineered apart, the same module is two modules in two states: two rows,
+    // and each names itself with its code line because the names are the same.
+    await openOffenceWithOneEngineered(page);
+    const rows = page.locator('ednb-offence-analysis .weapon');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.locator('.weapon__count')).toHaveCount(0);
+    await expect(rows.locator('.identity__code-line')).toHaveCount(2);
+    const lines = await rows.locator('.identity__code-line').allInnerTexts();
+    expect(lines[0]).not.toBe(lines[1]);
+  });
+
+  test('counts every fitted weapon beside the heading, and states the pips in the capacitor heading', async ({
+    page,
+  }) => {
+    await openOffence(page);
+
+    // Weapons, not rows: the stock build's two weapons share one row.
+    const fitted = await packageWeaponCount();
+    const note = page.locator('.offence__block--weapons .offence__note');
+    await expect(note).toHaveText(
+      englishMessages['offence.weapons.mounted'].replace('{{count}}', String(fitted)),
+    );
+    expect(await armedCount(page)).toBe(fitted);
+
+    // The pips the power dashboard opens on, stated once with the heading.
+    await expect(page.locator('ednb-offence-analysis .bars--capacitor .bars__pips')).toHaveText(
+      englishMessages['offence.capacitor.at-pips'].replace('{{pips}}', '2'),
+    );
+  });
+
+  test('passes a scan of the weapons block with a row that stands for two weapons', async ({
+    page,
+  }) => {
+    await openOffence(page);
+    await expect(page.locator('ednb-offence-analysis .weapon__count')).toHaveText('×2');
+
+    await settled(page);
+    const scan = await new AxeBuilder({ page })
+      .include('ednb-offence-analysis .offence__block--weapons')
+      .withTags([...AXE_TAGS])
+      .analyze();
+    expect(scan.violations).toEqual([]);
   });
 
   test('leaves the row itself inert, and offers no control inside it', async ({ page }) => {
@@ -661,27 +787,18 @@ test.describe('inspecting the weapons', () => {
 });
 
 test.describe('the weapon row’s second line', () => {
-  test('draws the canvas’s code line under every name, mount and all', async ({ page }) => {
+  test('draws a uniquely named row with no code line', async ({ page }) => {
     await openOffence(page);
 
-    const lines = await page
-      .locator('ednb-offence-analysis .weapon__module .identity__code-line')
-      .evaluateAll((nodes) =>
-        nodes.map((node) => {
-          const text = (node.textContent ?? '').trim();
-          return getComputedStyle(node).textTransform === 'uppercase' ? text.toUpperCase() : text;
-        }),
-      );
-
-    // One per row, never absent: the canvas draws `3E FIXED · STOCK` under an
-    // unengineered weapon too, so a row with no recipe still gets its line.
-    expect(lines).toHaveLength((await weaponRows(page)).length);
-    for (const line of lines) {
-      // A class code, then the mount joined by a space rather than by the dot —
-      // the canvas writes `4A GIMBALLED`, and takes the dot only for what comes
-      // after the mount.
-      expect(line, line).toMatch(/^\d[A-Z] (?:FIXED|GIMBALLED|TURRETED)\b/u);
-    }
+    // Canvas 1c draws the name alone. The code line is drawn only where two
+    // rows show the same name, and the stock build's one row shows its name
+    // once.
+    const rows = await weaponRows(page);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(new Set(rows.map((row) => row.module)).size).toBe(rows.length);
+    await expect(
+      page.locator('ednb-offence-analysis .weapon__module .identity__code-line'),
+    ).toHaveCount(0);
   });
 });
 
@@ -776,19 +893,22 @@ test.describe('reading the firing endurance', () => {
     expect(high[2]).not.toBe(low[2]);
   });
 
-  test('names the allocation the figures were read at, and offers no way to set it', async ({
+  test('names the pips the figures were read at in the heading, and offers no way to set them', async ({
     page,
   }) => {
     await openOffence(page);
     await setWeaponPips(page, 3);
 
     const capacitor = page.locator('ednb-offence-analysis .bars--capacitor');
-    // The allocation line itself, not the block: `DRAW` reads `2.31 MJ/s` at
-    // every allocation and `RECHARGE` reads `3.50 MJ/s` at this one, so a `3`
-    // anywhere in the block was true whether or not the line was drawn at all.
-    await expect(capacitor.locator('.bars__condition')).toHaveText(
-      englishMessages['offence.capacitor.allocation'].replace('{{pips}}', '3.0'),
+    // The pips themselves, not the block: `DRAW` reads `2.31 MJ/s` at every
+    // allocation and `RECHARGE` reads `3.50 MJ/s` at this one, so a `3`
+    // anywhere in the block was true whether or not the pips were stated at all.
+    await expect(capacitor.locator('.bars__label .bars__pips')).toHaveText(
+      englishMessages['offence.capacitor.at-pips'].replace('{{pips}}', '3'),
     );
+    // Once, and in the heading rather than as a line beneath the rows.
+    await expect(capacitor.locator('.bars__pips')).toHaveCount(1);
+    await expect(capacitor.locator('.bars__condition')).toHaveCount(0);
     // The canvas draws the pip control in `POWER`, and it stays there.
     await expect(capacitor.locator('button, input, select')).toHaveCount(0);
   });
@@ -860,7 +980,7 @@ test.describe('shot convergence', () => {
     await expect(plate).toHaveAttribute('aria-hidden', 'true');
     const shots = block.locator('.shots__entry');
     const mounts = (await hardpointKeys(page)).length;
-    const armed = await page.locator('ednb-offence-analysis .weapon').count();
+    const armed = await armedCount(page);
     expect(mounts).toBeGreaterThan(armed);
 
     // Every mark on the plate is a sentence beside it, and only those: the ring
@@ -915,52 +1035,27 @@ test.describe('shot convergence', () => {
     }
   });
 
-  test('draws the block at the canvas’s own width, with the range beside the plate', async ({
+  test('draws the 150-pixel plate centred in its block, with the range under it, in the arrangement the panel’s width asks for', async ({
     page,
-  }) => {
+  }, testInfo: TestInfo) => {
     await openOffence(page);
 
-    // Canvas 1c bounds this block at `max-width: 508px; align-self: flex-start`
-    // and puts the plate and the range side by side inside it. Both halves are
-    // asserted, and both have been wrong: built across the whole panel row it
-    // stood a small square plate in the middle of a wide frame, and bounded by
-    // `justify-self` alone it shrank to its contents and drew a *smaller* plate
-    // than the unbounded block had. A `max-inline-size` with no lower bound
-    // under it cannot tell those two apart.
-    const measured = await page.locator('ednb-offence-analysis').evaluate((panel) => {
-      const box = (selector: string): { width: number; top: number; bottom: number } => {
-        const rect = panel.querySelector(selector)?.getBoundingClientRect();
-        return { width: rect?.width ?? 0, top: rect?.top ?? 0, bottom: rect?.bottom ?? 0 };
-      };
-      return {
-        block: box('.offence__block--convergence'),
-        row: box('.offence'),
-        plate: box('.plate'),
-        readout: box('.convergence__readout'),
-      };
-    });
+    // Canvas 1c draws a 150px square plate, centred in a 190px block padded
+    // 10 by 12, with the range readout 6 pixels under it. From the panel's
+    // measured step the three blocks stand in one row; from 40rem to the step
+    // the convergence block stands under the weapons and damage pair at the
+    // leading edge; below 40rem the three blocks are one column.
+    expectConvergence(await measureConvergence(page));
 
-    expect(measured.block.width).toBeGreaterThan(0);
-    // Never wider than the bound or than the row it stands in, whichever is
-    // smaller — the bound only exists in the wide arrangement, so a narrow
-    // profile is held to the row instead. The one is the canvas's, the other
-    // the rounding a fractional layout leaves.
-    expect(measured.block.width).toBeLessThanOrEqual(Math.min(measured.row.width, 509) + 1);
-
-    // Where the row is wider than the bound, the block takes the bound — not
-    // less, and not the row.
-    if (measured.row.width > 512) {
-      expect(measured.block.width).toBeGreaterThanOrEqual(500);
-      expect(measured.block.width).toBeLessThan(measured.row.width);
-
-      // And the plate is drawn at its own token width rather than at whatever
-      // the block happened to leave it.
-      expect(measured.plate.width).toBeGreaterThanOrEqual(223);
-      expect(measured.plate.width).toBeLessThanOrEqual(225);
-
-      // The range stands beside the plate in that block, as the canvas draws
-      // it, rather than wrapping under it and leaving the plate's row empty.
-      expect(measured.readout.top).toBeLessThan(measured.plate.bottom);
+    // Canvas 1c's own width. The anatomy panel at a 2020x1228 viewport is
+    // where the canvas draws the three columns, so the desktop projects ask
+    // for that viewport and expect them.
+    if (testInfo.project.name.endsWith('-desktop')) {
+      await page.setViewportSize({ width: 2020, height: 1228 });
+      await settled(page);
+      const measured = await measureConvergence(page);
+      expect(measured.arrangement).toBe('row');
+      expectConvergence(measured);
     }
   });
 
@@ -1023,7 +1118,7 @@ test.describe('shot convergence', () => {
 
     const block = page.locator('ednb-offence-analysis .offence__block--convergence');
     const mounts = (await hardpointKeys(page)).length;
-    const armed = await page.locator('ednb-offence-analysis .weapon').count();
+    const armed = await armedCount(page);
 
     // The stock hull arms two of its hardpoints and leaves the rest empty. Where
     // a mount sits is a property of the hull rather than of what is on it, so
@@ -1356,6 +1451,121 @@ test.describe('what the panel does not touch', () => {
 });
 
 test.describe('the conditions that break layouts', () => {
+  test('pads each block 10 by 12 pixels, stacks its items 8 apart, and sets the blocks 10 apart', async ({
+    page,
+  }) => {
+    await openOffence(page);
+
+    const measured = await page.locator('ednb-offence-analysis').evaluate((panel) => {
+      const weapons = panel.querySelector('.offence__block--weapons') as HTMLElement;
+      const damage = weapons.nextElementSibling as HTMLElement;
+      const style = getComputedStyle(weapons);
+      const box = (node: Element): DOMRect => node.getBoundingClientRect();
+      const head = box(weapons.querySelector('.offence__head') as Element);
+      const headline = box(weapons.querySelector('.headline') as Element);
+      // The second block stands beside the first where the pair has room, and
+      // under it where it has none.
+      const beside = Math.abs(box(damage).top - box(weapons).top) < 1;
+      return {
+        block: style.paddingBlockStart,
+        blockEnd: style.paddingBlockEnd,
+        inline: style.paddingInlineStart,
+        inlineEnd: style.paddingInlineEnd,
+        stack: Math.round(headline.top - head.bottom),
+        between: Math.round(
+          beside ? box(damage).left - box(weapons).right : box(damage).top - box(weapons).bottom,
+        ),
+      };
+    });
+
+    expect(measured.block).toBe('10px');
+    expect(measured.blockEnd).toBe('10px');
+    expect(measured.inline).toBe('12px');
+    expect(measured.inlineEnd).toBe('12px');
+    // The heading line and the headline under it are two items stacked inside
+    // the weapons block.
+    expect(measured.stack).toBe(8);
+    expect(measured.between).toBe(10);
+  });
+
+  test('cuts a label that does not fit at the three-column step with a reachable …, and never a figure', async ({
+    page,
+  }, testInfo: TestInfo) => {
+    // The stock build's names all fit at the step in both languages, so the
+    // longest-named medium weapon is fitted to give the step a label to cut.
+    await openOffenceFitting(page, LONG_NAMED_ARTICLE);
+    const panel = page.locator('ednb-offence-analysis');
+
+    // Below the step a label wraps between words, and no English word here is
+    // too long for its box, so nothing in the panel is cut, whatever the
+    // profile.
+    const below = await measureConvergence(page);
+    expect(below.arrangement).not.toBe('row');
+    expect(await cutFigures(page)).toEqual([]);
+    expect(await unreachableCuts(page)).toEqual([]);
+    expect(await brokenWords(page)).toEqual([]);
+    await expect(panel.locator('[data-text-reachable]')).toHaveCount(0);
+
+    // A box narrower than the name's widest word, whatever the profile. The
+    // word is not broken across two lines: the name is cut, and the badge's
+    // `…` gives back the whole of it.
+    const row = panel.locator('.weapon').filter({ hasText: LONG_NAMED_ARTICLE });
+    const name = (await row.locator('.game-text__value').first().textContent())?.trim() ?? '';
+    expect(name).toMatch(LONG_NAMED_ARTICLE);
+    const widestWord = await row
+      .locator('.game-text__value')
+      .first()
+      .evaluate((value) => {
+        const text = value.firstChild as Text;
+        let widest = 0;
+        for (const word of text.data.matchAll(/\S+/gu)) {
+          const range = document.createRange();
+          range.setStart(text, word.index);
+          range.setEnd(text, word.index + word[0].length);
+          widest = Math.max(widest, range.getBoundingClientRect().width);
+        }
+        return widest;
+      });
+    await panel.evaluate((host, width) => {
+      // The block's padding and border, and the word less eight pixels.
+      const block = host.querySelector('.offence__block') as HTMLElement;
+      const chrome =
+        block.offsetWidth -
+        block.clientWidth +
+        2 * parseFloat(getComputedStyle(block).paddingInlineStart);
+      (host as HTMLElement).style.inlineSize = `${width - 8 + chrome}px`;
+    }, widestWord);
+    await settled(page);
+    expect(await brokenWords(page)).toEqual([]);
+    // The cut is measured when the box resizes, so it is asked until it settles.
+    await expect.poll(() => unreachableCuts(page)).toEqual([]);
+    const narrowMark = row.locator('.identity__more');
+    await expect(narrowMark).toHaveCount(1);
+    await expect(narrowMark.locator('.tooltip__tip')).toHaveText(name);
+    await panel.evaluate((host) => (host as HTMLElement).style.removeProperty('inline-size'));
+    await settled(page);
+    await expect(narrowMark).toHaveCount(0);
+
+    // Canvas 1c's own width, where the three columns hold each label on one
+    // line.
+    if (testInfo.project.name.endsWith('-desktop')) {
+      await page.setViewportSize({ width: 2020, height: 1228 });
+      await settled(page);
+      expect((await measureConvergence(page)).arrangement).toBe('row');
+
+      expect(await cutFigures(page)).toEqual([]);
+      expect(await unreachableCuts(page)).toEqual([]);
+      expect(await brokenWords(page)).toEqual([]);
+
+      const mark = row.locator('.identity__more');
+      await expect(mark).toHaveCount(1);
+      await expect(mark.locator('.tooltip__tip')).toHaveText(name);
+      await mark.hover();
+      await expect(mark.locator('.tooltip__tip--shown')).toBeVisible();
+      await expect(mark.locator('.tooltip__tip--shown')).toHaveText(name);
+    }
+  });
+
   test('keeps every figure at doubled text without scrolling the document', async ({ page }) => {
     await withRootTextScale(page, DOUBLED_TEXT);
     await openOffence(page);
@@ -1434,6 +1644,212 @@ test.describe('the conditions that break layouts', () => {
     await page.emulateMedia({ reducedMotion: null });
   });
 });
+
+/** What the convergence test reads off the panel at its current width. */
+interface ConvergenceMeasure {
+  arrangement: 'row' | 'pair' | 'column';
+  plate: { width: number; height: number };
+  plateInside: boolean;
+  readoutBelow: number;
+  padding: string[];
+  tops: number[];
+  starts: number[];
+  blockTop: number;
+  pairBottom: number;
+  leadingOffset: number;
+  blockWidth: number;
+  columnWidth: number;
+  measureWidth: number;
+  damageTop: number;
+  weaponsBottom: number;
+}
+
+/**
+ * Measures the convergence block and the arrangement of the three blocks.
+ *
+ * The step is read from the panel's own `--offence-row-min`, so the test turns
+ * at the width the stylesheet turns at rather than at a copy of it.
+ */
+async function measureConvergence(page: Page): Promise<ConvergenceMeasure> {
+  return page.locator('ednb-offence-analysis').evaluate((panel): ConvergenceMeasure => {
+    const box = (selector: string): DOMRect =>
+      (panel.querySelector(selector) as Element).getBoundingClientRect();
+    const block = panel.querySelector('.offence__block--convergence') as HTMLElement;
+    const style = getComputedStyle(block);
+    const rootFont = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const rowMin =
+      parseFloat(getComputedStyle(panel).getPropertyValue('--offence-row-min')) * rootFont;
+    const rtl = getComputedStyle(panel).direction === 'rtl';
+    const panelBox = panel.getBoundingClientRect();
+    const blockBox = block.getBoundingClientRect();
+    const plate = box('.plate');
+    const readout = box('.convergence__readout');
+    const weaponsBlock = panel.querySelector('.offence__block--weapons') as Element;
+    const weapons = weaponsBlock.getBoundingClientRect();
+    const damage = (weaponsBlock.nextElementSibling as Element).getBoundingClientRect();
+    // Where each block starts along the inline axis, growing in reading order.
+    const start = (rect: DOMRect): number => (rtl ? -rect.right : rect.left);
+    if (!(rowMin > 0)) {
+      throw new Error('The panel states no --offence-row-min.');
+    }
+    return {
+      arrangement:
+        panelBox.width >= rowMin ? 'row' : panelBox.width >= 40 * rootFont ? 'pair' : 'column',
+      plate: { width: plate.width, height: plate.height },
+      plateInside:
+        plate.left >= blockBox.left - 0.5 &&
+        plate.right <= blockBox.right + 0.5 &&
+        plate.top >= blockBox.top - 0.5 &&
+        plate.bottom <= blockBox.bottom + 0.5,
+      readoutBelow: readout.top - plate.bottom,
+      padding: [
+        style.paddingBlockStart,
+        style.paddingBlockEnd,
+        style.paddingInlineStart,
+        style.paddingInlineEnd,
+      ],
+      tops: [weapons.top, damage.top, blockBox.top],
+      starts: [start(weapons), start(damage), start(blockBox)],
+      blockTop: blockBox.top,
+      pairBottom: Math.max(weapons.bottom, damage.bottom),
+      leadingOffset: rtl ? panelBox.right - blockBox.right : blockBox.left - panelBox.left,
+      blockWidth: blockBox.width,
+      columnWidth: weapons.width,
+      measureWidth:
+        parseFloat(getComputedStyle(block).getPropertyValue('--ednb-layout-convergence-block')) *
+        rootFont,
+      damageTop: damage.top,
+      weaponsBottom: weapons.bottom,
+    };
+  });
+}
+
+/** The plate, the readout and the arrangement the panel's width asks for. */
+function expectConvergence(measured: ConvergenceMeasure): void {
+  expect(Math.abs(measured.plate.width - measured.plate.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(measured.plate.width - 150)).toBeLessThanOrEqual(1);
+  expect(measured.plateInside).toBe(true);
+  expect(measured.readoutBelow).toBeGreaterThan(0);
+  expect(Math.round(measured.readoutBelow)).toBe(6);
+  expect(measured.padding).toEqual(['10px', '10px', '12px', '12px']);
+
+  if (measured.arrangement === 'row') {
+    // One top edge, in the order weapons, damage, convergence, and the
+    // convergence block no wider than its own column.
+    for (const top of measured.tops) {
+      expect(Math.abs(top - measured.tops[0])).toBeLessThan(1);
+    }
+    expect(measured.starts[1]).toBeGreaterThan(measured.starts[0]);
+    expect(measured.starts[2]).toBeGreaterThan(measured.starts[1]);
+    expect(measured.blockWidth).toBeLessThanOrEqual(measured.measureWidth + 1);
+  } else if (measured.arrangement === 'pair') {
+    expect(Math.abs(measured.tops[0] - measured.tops[1])).toBeLessThan(1);
+    expect(measured.blockTop).toBeGreaterThanOrEqual(measured.pairBottom);
+    expect(Math.abs(measured.leadingOffset)).toBeLessThanOrEqual(1);
+    expect(measured.blockWidth).toBeLessThanOrEqual(measured.columnWidth + 1);
+  } else {
+    for (const start of measured.starts) {
+      expect(Math.abs(start - measured.starts[0])).toBeLessThanOrEqual(1);
+    }
+    expect(measured.damageTop).toBeGreaterThanOrEqual(measured.weaponsBottom);
+    expect(measured.blockTop).toBeGreaterThanOrEqual(measured.damageTop);
+  }
+}
+
+/**
+ * Every figure in the panel whose box is narrower than what it draws.
+ *
+ * A figure is never cut: a cut figure is a wrong figure. Read as `scrollWidth`
+ * against `clientWidth`, with a pixel of slack for sub-pixel layout.
+ */
+async function cutFigures(page: Page): Promise<string[]> {
+  return page
+    .locator('ednb-offence-analysis')
+    .locator(
+      [
+        '.headline__value',
+        '.headline__note',
+        '.offence__note:not(.offence__note--label)',
+        '.weapon__count',
+        '.weapon__figure',
+        '.bar__value',
+        '.bars--range .bar__label',
+        '.bars__pips',
+        '.split__entry',
+      ].join(', '),
+    )
+    .evaluateAll((nodes) =>
+      nodes
+        .filter((node) => (node as HTMLElement).scrollWidth > (node as HTMLElement).clientWidth + 1)
+        .map((node) => `${node.className}: ${(node.textContent ?? '').trim()}`),
+    );
+}
+
+/**
+ * Every box in the panel that clips its text with no reachable `…` beside it.
+ *
+ * A cut label is marked `data-text-reachable` by what cuts it, and draws the
+ * tooltip `…` that carries the whole label.
+ */
+async function unreachableCuts(page: Page): Promise<string[]> {
+  return page.locator('ednb-offence-analysis *').evaluateAll((nodes) =>
+    nodes
+      .filter((node) => {
+        const element = node as HTMLElement;
+        const style = getComputedStyle(element);
+        const clips = [style.overflowX, style.overflowY].some(
+          (value) => value === 'hidden' || value === 'clip',
+        );
+        if (!clips || element.clientWidth <= 1 || element.closest('.plate') !== null) {
+          return false;
+        }
+        if (element.scrollWidth <= element.clientWidth + 1) {
+          return false;
+        }
+        const owner = element.closest('[data-text-reachable]');
+        return owner === null || owner.querySelector('ednb-tooltip') === null;
+      })
+      .map((node) => `${node.className}: ${(node.textContent ?? '').trim()}`),
+  );
+}
+
+/**
+ * Every word of a label in the panel that is drawn across two lines.
+ *
+ * A label wraps between words, and a word too long for its box is cut, never
+ * broken. Overflow alone cannot show a broken word, because a word broken
+ * inside its box overflows nothing. So each word is measured as a range: a
+ * whole word draws on one line, and a broken one on two. A break after a hyphen
+ * is a break between words, so a hyphen ends a word.
+ */
+async function brokenWords(page: Page): Promise<string[]> {
+  return page
+    .locator('ednb-offence-analysis')
+    .locator('.weapon .game-text__value, .fit-text__value')
+    .evaluateAll((values) =>
+      values.flatMap((value) => {
+        const broken: string[] = [];
+        const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          const text = node as Text;
+          for (const word of text.data.matchAll(/[^\s-]+-?/gu)) {
+            const range = document.createRange();
+            range.setStart(text, word.index);
+            range.setEnd(text, word.index + word[0].length);
+            const lines = new Set(
+              [...range.getClientRects()]
+                .filter((rect) => rect.width > 0)
+                .map((rect) => Math.round(rect.top)),
+            );
+            if (lines.size > 1) {
+              broken.push(word[0]);
+            }
+          }
+        }
+        return broken;
+      }),
+    );
+}
 
 /** The three blocks the canvas draws, each still carrying its own content. */
 async function expectEveryBlock(page: Page): Promise<void> {

@@ -19,6 +19,7 @@ import {
   revealMount,
   surfacesAreLayers,
 } from './outfitting-surfaces';
+import { TARGET_BASELINE_PX, TARGET_FLOOR_PX } from './accessibility/assertions';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
 import { buildStockHull, regroupCoreMount, savedToBrowser } from './shell';
 
@@ -95,8 +96,8 @@ async function fittedIdentityAt(page: Page, slotKey: string): Promise<string | n
  *
  * Token by token rather than string against string: the ledger and the manifest
  * arrange an identity differently — the manifest gives the class its own column
- * and the ledger writes it into the row's code line — so what is compared is
- * the module, not the arrangement.
+ * and the ledger writes it into the row's code line or its class chip — so what
+ * is compared is the module, not the arrangement.
  *
  * Polled rather than read once. `fitCommitted` waits on the chooser, and the
  * chooser and the ledger are rendered from the same signal but not in the same
@@ -258,8 +259,8 @@ test.describe('the slot ledger', () => {
     // The claim belongs to the complete list, which is the one place the two
     // could disagree: a category holds one kind, so `CORE` closes with the
     // hatch and `OPTIONAL` never held it whatever this rule says. Only the wide
-    // composition draws `ALL`; the compact one offers no such list
-    // (`design/outfitting-workspace.md`, "No `ALL` at compact width"), and
+    // composition draws `ALL`; the compact one offers no such list (canvas
+    // 1d offers hardpoints, utility, core and optional), and
     // there what is left to say is that the hatch is under `CORE` and under
     // nothing else.
     const categories = page.locator('.outfitting__category');
@@ -458,11 +459,45 @@ test.describe('the slot ledger', () => {
       expect(painted, 'the whole name is drawn where nothing paints it').toBe(true);
     }
 
+    /**
+     * The class chip stays whole beside a cut name, where the rail draws one.
+     *
+     * Canvas 1c draws the chip on a dense row only. Canvas 1d keeps `4A` on the
+     * code line, so a compact row draws no chip at all.
+     */
+    async function expectTheChipIsWhole(page: Page, insideRow: boolean): Promise<void> {
+      const row = await revealMount(page, LONGEST_NAMED_MOUNT);
+      const composition = await page.locator('.outfitting').getAttribute('data-composition');
+      const chip = row.locator('.identity__chip');
+      if (composition === 'compact') {
+        await expect(chip).toHaveCount(0);
+        return;
+      }
+      await expect(chip).toHaveCount(1);
+      const fit = await chip.evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        const slot = node.closest('.slot')!.getBoundingClientRect();
+        return {
+          whole: (node as HTMLElement).scrollWidth <= (node as HTMLElement).clientWidth,
+          inside:
+            box.left >= slot.left - 1 &&
+            box.right <= slot.right + 1 &&
+            box.top >= slot.top - 1 &&
+            box.bottom <= slot.bottom + 1,
+        };
+      });
+      expect(fit.whole, 'the class chip is cut').toBe(true);
+      if (insideRow) {
+        expect(fit.inside, 'the class chip lies outside its row').toBe(true);
+      }
+    }
+
     test('never loses a module name the row is too narrow to draw', async ({ page }) => {
       // The stock Anaconda's own longest drawn name. It fits at every profile —
       // see the block comment above for where the other branch is proved.
       await openStockBuild(page, 'Anaconda', germanMessages['hullDetail.create']);
       await expectTheWholeNameIsReachable(page);
+      await expectTheChipIsWhole(page, false);
     });
 
     test('keeps the whole name reachable at doubled text', async ({ page }) => {
@@ -473,6 +508,7 @@ test.describe('the slot ledger', () => {
       await withRootTextScale(page, DOUBLED_TEXT);
       await openStockBuild(page, 'Anaconda', germanMessages['hullDetail.create']);
       await expectTheWholeNameIsReachable(page);
+      await expectTheChipIsWhole(page, true);
     });
   });
 
@@ -553,11 +589,13 @@ test.describe('the slot ledger', () => {
       nodes.flatMap((node) =>
         [...node.attributes]
           .map((attribute) => attribute.name)
-          // `data-selected` is drawn state, not identity: it says which row is
-          // marked, and it names nothing.
+          // `data-selected` and `data-density` are drawn state, not identity:
+          // they say which row is marked and how tall the rows are, and they
+          // name nothing.
           .filter(
             (name) =>
-              name.startsWith('data-') && !['data-slot-key', 'data-selected'].includes(name),
+              name.startsWith('data-') &&
+              !['data-slot-key', 'data-selected', 'data-density'].includes(name),
           ),
       ),
     );
@@ -705,6 +743,208 @@ test.describe('the slot ledger', () => {
 
     await selectMount(page, empty);
     expect(await ink(empty)).toBe(marked);
+  });
+
+  test('offers the mount kinds in the order the ledger draws them', async ({ page }) => {
+    await openStockBuild(page);
+
+    const composition = await page.locator('.outfitting').getAttribute('data-composition');
+    const kinds = [
+      englishMessages['outfitting.category.hardpoint'],
+      englishMessages['outfitting.category.utility'],
+      englishMessages['outfitting.category.core'],
+      englishMessages['outfitting.category.optional'],
+    ];
+    const labels = await page
+      .locator('.outfitting__category-label')
+      .evaluateAll((nodes) => nodes.map((node) => (node.textContent ?? '').trim()));
+    const categories = page.locator('.outfitting__category');
+
+    if (composition !== 'compact') {
+      // The choice that shows every kind comes first, then the same four.
+      expect(labels).toEqual([englishMessages['outfitting.category.all'], ...kinds]);
+      return;
+    }
+
+    expect(labels).toEqual(kinds);
+    await expect(categories.first()).toHaveAttribute('aria-pressed', 'true');
+
+    // Armour and the cargo hatch sit with the core internals.
+    const core = categories.nth(2);
+    await core.click();
+    await expect(core).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-slot-key="Armour"]')).toHaveCount(1);
+    await expect(page.locator('[data-slot-key="CargoHatch"]')).toHaveCount(1);
+  });
+
+  test('draws a utility row with its node number and no size box', async ({ page }) => {
+    await openStockBuild(page);
+
+    const show = async (label: string): Promise<void> => {
+      const category = page.locator('.outfitting__category').filter({ hasText: label });
+      await category.click();
+      await expect(category).toHaveAttribute('aria-pressed', 'true');
+    };
+
+    await show(englishMessages['outfitting.category.utility']);
+    const rows = page.locator('.slot');
+    const count = await rows.count();
+    expect(count).toBeGreaterThan(0);
+    await expect(page.locator('.slot .slot__size')).toHaveCount(0);
+    await expect(page.locator('.slot .slot__node[data-kind="utility"]')).toHaveCount(count);
+
+    await show(englishMessages['outfitting.category.hardpoint']);
+    const hardpoint = page.locator('.slot:has(.slot__node[data-kind="hardpoint"])').first();
+    await expect(hardpoint.locator('.slot__size')).toHaveCount(1);
+    await expect(hardpoint.locator('.slot__node')).toHaveCount(1);
+  });
+
+  test('draws the inline rail’s rows dense and the compact rows at the baseline', async ({
+    page,
+  }) => {
+    await openStockBuild(page);
+    const composition = await page.locator('.outfitting').getAttribute('data-composition');
+    const dense = composition !== 'compact';
+
+    /** Presses one category, so its groups are the ones drawn. */
+    const show = async (label: string): Promise<void> => {
+      const category = page.locator('.outfitting__category').filter({ hasText: label });
+      await category.click();
+      await expect(category).toHaveAttribute('aria-pressed', 'true');
+    };
+
+    await test.step('the size box, the node badge, the inset and the figure', async () => {
+      await show(englishMessages['outfitting.category.hardpoint']);
+      const fitted = page.locator('.slot:has(.identity)').first();
+      const measures = await fitted.evaluate((row) => {
+        const px = (value: string): number => Math.round(parseFloat(value));
+        const size = row.querySelector('.slot__size')!;
+        const node = row.querySelector('.slot__node')!;
+        const select = row.querySelector('.slot__select')!;
+        const rule = row.closest('.group')!.querySelector('.group__rule')!;
+        return {
+          size: Math.round(size.getBoundingClientRect().height),
+          node: Math.round(node.getBoundingClientRect().height),
+          inset: px(getComputedStyle(select).paddingInlineStart),
+          rule: px(getComputedStyle(rule).paddingInlineStart),
+          figure: px(getComputedStyle(size).fontSize),
+          chip: row.querySelector('.identity__chip') !== null,
+        };
+      });
+      expect(measures).toEqual(
+        dense
+          ? { size: 22, node: 18, inset: 14, rule: 14, figure: 10, chip: true }
+          : { size: 28, node: 22, inset: 16, rule: 16, figure: 11, chip: false },
+      );
+    });
+
+    await test.step('every row meets its target', async () => {
+      await show(
+        dense
+          ? englishMessages['outfitting.category.all']
+          : englishMessages['outfitting.category.core'],
+      );
+      const boxes = await page
+        .locator('.slot__select')
+        .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()));
+      expect(boxes.length).toBeGreaterThan(0);
+      // Where the rows are dense, an empty mount is measured with the fitted ones.
+      if (dense) {
+        expect(await page.locator('.slot__select:has(.slot__empty)').count()).toBeGreaterThan(0);
+      }
+      for (const box of boxes) {
+        expect(box.width).toBeGreaterThanOrEqual(dense ? TARGET_FLOOR_PX : TARGET_BASELINE_PX);
+        expect(box.height).toBeGreaterThanOrEqual(dense ? 36 : TARGET_BASELINE_PX);
+      }
+      if (!dense) {
+        await expect(page.locator('.identity__chip')).toHaveCount(0);
+      }
+    });
+
+    await test.step('the rail’s spacing', async () => {
+      await show(
+        dense
+          ? englishMessages['outfitting.category.all']
+          : englishMessages['outfitting.category.core'],
+      );
+      const spacing = await page.locator('.outfitting__ledger').evaluate((ledger) => {
+        ledger.scrollTop = 0;
+        const groups = [...ledger.querySelectorAll('.group')];
+        const top = ledger.getBoundingClientRect().top;
+        const first = groups[0]!.getBoundingClientRect();
+        const second = groups[1]!.getBoundingClientRect();
+        // The rule's own line ends where its clearance begins, so the gap is
+        // read from the rule's content edge to the first row.
+        const ruleNode = groups[0]!.querySelector('.group__rule')!;
+        const rule = {
+          bottom:
+            ruleNode.getBoundingClientRect().bottom -
+            parseFloat(getComputedStyle(ruleNode).paddingBlockEnd),
+        };
+        const row = groups[0]!.querySelector('.slot')!.getBoundingClientRect();
+        return {
+          beforeFirst: Math.round(first.top - top),
+          between: Math.round(second.top - first.bottom),
+          ruleToRow: Math.round(row.top - rule.bottom),
+          afterLast: Math.round(parseFloat(getComputedStyle(ledger).paddingBlockEnd)),
+        };
+      });
+      expect(spacing).toEqual(
+        dense
+          ? { beforeFirst: 10, between: 10, ruleToRow: 4, afterLast: 8 }
+          : { beforeFirst: 12, between: 12, ruleToRow: 8, afterLast: 8 },
+      );
+    });
+
+    if (!dense) {
+      return;
+    }
+
+    await test.step('a fitted row with no wrapped line is the dense target', async () => {
+      const heights = await page.locator('.slot:has(.identity)').evaluateAll((rows) =>
+        rows
+          .filter((row) => {
+            const line = row.querySelector('.identity__code-line');
+            const name = row.querySelector('.identity__line');
+            const single = (node: Element | null): boolean =>
+              node === null ||
+              node.getBoundingClientRect().height <
+                1.5 * parseFloat(getComputedStyle(node).lineHeight || '0');
+            return single(line) && single(name);
+          })
+          .map((row) => row.getBoundingClientRect().height),
+      );
+      expect(heights.length).toBeGreaterThan(0);
+      for (const height of heights) {
+        expect(height).toBeGreaterThanOrEqual(36);
+        expect(height).toBeLessThanOrEqual(37);
+      }
+    });
+
+    await test.step('the chip reads the class, in one ink whether selected or not', async () => {
+      const rows = page.locator('.slot:has(.identity__chip)');
+      const selected = rows.first();
+      const other = rows.nth(1);
+      await selected.locator('.slot__select').click();
+      await expect(selected.locator('.slot__select')).toHaveAttribute('aria-pressed', 'true');
+
+      const chip = selected.locator('.identity__chip');
+      await expect(chip).toHaveText(/^\d[A-I]$/);
+      const ink = (row: Locator) =>
+        row.locator('.identity__chip').evaluate((node) => {
+          const style = getComputedStyle(node);
+          return [style.color, style.borderTopColor];
+        });
+      expect(await ink(selected)).toEqual(await ink(other));
+
+      // The button's name holds the visible label: the name, then `4A`.
+      const name = (await selected.locator('.game-text__value').first().textContent()) ?? '';
+      const code = (await chip.textContent()) ?? '';
+      const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      await expect(selected.locator('.slot__select')).toHaveAccessibleName(
+        new RegExp(`${escape(name.trim())}.*${escape(code.trim())}`),
+      );
+    });
   });
 
   test('is accessible in every rendered ledger state', async ({ page }, testInfo) => {

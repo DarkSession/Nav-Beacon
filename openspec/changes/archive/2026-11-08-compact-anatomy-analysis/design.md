@@ -108,14 +108,16 @@ The change introduces no screen. It changes the four panels of the hull anatomy 
 **Power.** Satisfies power-and-heat "Heat scenarios" and keeps "Distributor readings" and "Pip
 allocation".
 
-- Arrangement: four blocks in one row, `minmax(0, 1.1fr)` then three `minmax(0, 1fr)`, in the order
-  priority groups, draw by module, heat profile, distributor. No block but the distributor falls to
-  its narrow arrangement at that step. They stand in one row where the panel is at
-  least `$container-power-row-min` wide, a new container step. Between `40rem` and that step they
-  stand as two rows of two, as now. Below `40rem` they are one column, as now. The step's value is
-  measured (task 2.1): the narrowest panel at which every block keeps its content in English and
-  German with nothing cut or overflowing. The panel exposes the step on its host as the custom
-  property `--power-row-min`, so the end-to-end test reads the same value the container query uses.
+- Arrangement: from the measured `$container-power-row-min` step the four blocks stand in one row,
+  as canvas 1c draws them, in the order priority groups, draw by module, heat profile,
+  distributor. From `40rem` to the step they stand as two rows of two. Below `40rem` they are one
+  column (Decisions, "One row from the canvas's width").
+- At the one-row step every label in the four blocks stands on one line. A label that does not fit
+  is cut through `ednb-fit-text`, with a reachable `…` that shows the whole label (Decisions,
+  "A label that does not fit is cut"). A heat scenario label that is cut shows the whole label in
+  its own gloss tooltip. The draw by module rows stand at the 24-pixel target floor, closer in
+  canvas 1c, so two cut names' `…` targets never overlap (SC 2.5.8). Figures are never cut. Below the step, labels wrap between words, and a
+  single word too long for its box is cut the same way rather than broken.
 - Heat profile: the bars, then the tiles under them, at every width. The block's own split (bars
   beside the key and tiles at `container-wide-up(heat)`) is removed, because a block that is a
   quarter or half of the panel never reaches it.
@@ -144,7 +146,9 @@ agree with the drive cards".
   value is `ednb-unavailable-value` with the shared unavailable wording, as the tile's was.
 - The jump figures stay in the range rows: `UNLADEN` is the package's `maximum`, `FULL CARGO` is its
   `laden`, at the same `RANGE_DIGITS`. The status rail's `JUMP` cell equals the `FULL CARGO` row.
-- The legend's gap is `--ednb-space-xs` (6 pixels), in place of 9.
+- The rows of both legends (the mass legend and the legend under the range rows) stand
+  `--ednb-space-xs` (6 pixels) apart, as canvas 1c draws both. The gap inside a row is unchanged.
+  The `RANGE BY LOAD` bars keep their `--ednb-space-2xs` gap, as built.
 - States: no drive (the card's existing absent state); loads that do not settle (the range rows'
   existing reasons). The mass lock line is drawn for every hull, as the tile was.
 
@@ -166,6 +170,10 @@ and the changed "Shield readings", "Cell bank readings" and "Armour readings".
   rows, a hairline and the cell bank reserve with every bank.
 - Armour summary: the pool, the damage table with its in-track zero line, and the tiles
   (`HARDNESS`, `MODULE PROT.`, `INTEGRITY`). Armour sources: the `HP` head and the source rows.
+- The unit head stands over the source figures, right-aligned, in the `micro-label` face. The
+  figures under it are bare numbers. Each figure carries its unit as visually hidden text, so a
+  reader who moves row by row hears it, and the head is `aria-hidden` because the hidden units
+  already say it (Decisions, "The source lists' unit head").
 - Only the chosen view is in the document (`@if`, not hidden by style), so a reader is never read
   the view that is not shown.
 - The choice is a signal per card in the panel. It lasts while the panel is drawn. Leaving the
@@ -186,15 +194,14 @@ and the changed "Shield readings", "Cell bank readings" and "Armour readings".
 **Offence.** Satisfies offence-profile "Identical weapons share a row", "The mounted count counts
 weapons", "A weapon row names its module", "Weapon list readings", "Capacitor endurance", "The gunsight plate" and "Readings the canvas does not draw".
 
-- The one-row step is the narrowest panel at which the weapons block still draws its six-column
-  rows (its own `36rem` step from archive 007's screen inventory), and no block overflows.
-- Arrangement: three columns, `minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, var(--ednb-layout-convergence-block))`
-  (the semantic token that points at `--ednb-measure-convergence-block`),
-  weapons then damage by type then shot convergence. They stand in one row where the panel is at
-  least `$container-offence-row-min` wide, a new container step measured as for power (task 5.1).
-  Between `40rem` and that step, the weapons and the damage stand as a pair with the convergence
-  under them, at the leading edge and no wider than its column. Below `40rem` they are one column. The panel exposes the step on its host as the custom property
-  `--offence-row-min`, as power does.
+- Arrangement: from the measured `$container-offence-row-min` step the weapons, the damage and the
+  convergence stand in three columns, as canvas 1c draws them. From `40rem` to the step the
+  weapons and the damage stand as a pair with the convergence under them, at the leading edge and
+  no wider than its column. Below `40rem` they are one column (Decisions, "One row from the
+  canvas's width").
+- At the three-column step the labels stand on one line, and a label that does not fit is cut
+  with the reachable `…`, as in power. A weapon name uses the badge's own cut-name tip. Figures are
+  never cut.
 - `--ednb-measure-convergence-block` becomes `11.875rem` (190 pixels), and
   `--ednb-measure-gunsight-plate` becomes `9.375rem` (150 pixels). The block is padded
   `--ednb-space-md` by `--ednb-space-lg` with an `--ednb-space-xs` gap. The plate is centred, and the
@@ -259,17 +266,33 @@ weapons", "A weapon row names its module", "Weapon list readings", "Capacitor en
   nobody sees.
 - **The mass lock wording.** `drives.fsd.mass-lock` becomes "Mass lock factor" (German
   "Massensperrfaktor"), which is the canvas's label and the game's own term.
+- **One row from the canvas's width.** Canvas 1c is drawn on a 2020-pixel artboard. There the
+  anatomy panel is about 1270 pixels wide, and in the app at a 2020×1228 viewport it is 79.875rem.
+  At the 1440×900 profile it is 44.625rem, about half. So power's single row and offence's three
+  columns are drawn from steps measured on the panel, and the two-up arrangements stay below them.
+  The steps are set by the figures and the arrangement, not by label length: measured with every
+  label on one line, English already cuts "Sustained weapon fire" at 78.5rem, as the canvas does,
+  and German cuts six labels. A step that waited for every German label would never be reached at
+  the canvas's width (98rem or more). The end-to-end layout tests set a 2020×1228 viewport in the
+  desktop projects, so the canvas's own width is under test.
+- **A label that does not fit is cut.** The Commander chose to cut a label that does not fit with
+  `…` and show the whole label on hover. The browser's own `text-overflow` ellipsis is not used,
+  because no pointer or thumb can ask a painted ellipsis what it stands for, and a `title` is not
+  reachable by touch. `ednb-fit-text` takes the pattern the ledger already uses for a cut module
+  name: the `…` is a presentational `ednb-tooltip` that opens on hover and on a press, and the whole
+  label stays in the document, so a screen reader reads it whole. At the one-row and
+  three-column steps a label stands on one line. Below them it wraps between words, and a single
+  word too long for its box (German `KRAFTWERKSLEISTUNG` in a tile at 1440 × 900) is cut the same
+  way rather than broken in the middle. Figures are never cut, because a cut figure is a wrong
+  figure.
+- **The source lists' unit head.** The Commander chose the canvas's head over bare figures. The
+  unit stays on each figure as visually hidden text, so a reader who moves from row to row, and
+  never meets the head, still hears what the figure measures.
 - **The capacitor's pips use the danger ink.** Canvas 1c draws them in `var(--hot)`, which the
   token layer names `--ednb-text-danger`, at 5.95:1 or better.
 
 ## Risks / Trade-offs
 
-- **The four-in-a-row step may exceed the panel at 1440 × 900.** If the measured
-  `$container-power-row-min` is wider than the power panel at the wide profile, the panel stays in
-  two rows there. Task 2.1 stops and reports this to the Commander rather than shrinking text or
-  cutting labels (constitution IX).
-- **The three-column step may exceed the offence panel at 1440 × 900.** Task 5.1 stops and reports
-  this as task 2.1 does for power.
 - **Grouping hides that two weapons sit in different mounts.** The hull anatomy and the ledger still
   draw each mount, and the row keeps every slot key.
 - **Removing the key moves meaning into hidden words.** The colour and hatch were explained by a

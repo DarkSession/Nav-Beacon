@@ -102,6 +102,20 @@ export const SCOPE = {
       scss: { file: 'src/styles/_responsive.scss', name: '$equipment-bench-wide-min' },
       ts: { file: 'src/app/ui/equipment/bench-composition.ts', name: 'BENCH_WIDE_MINIMUM_REM' },
     },
+    {
+      scss: { file: 'src/styles/_responsive.scss', name: '$container-offence-row-min' },
+      ts: {
+        file: 'src/app/features/build-workspace/outfitting/offence-analysis/offence-analysis.ts',
+        name: 'OFFENCE_ROW_MIN_REM',
+      },
+    },
+    {
+      scss: { file: 'src/styles/_responsive.scss', name: '$container-power-row-min' },
+      ts: {
+        file: 'src/app/features/build-workspace/outfitting/power-thermals/power-thermals.ts',
+        name: 'POWER_ROW_MIN_REM',
+      },
+    },
   ],
 };
 
@@ -3178,6 +3192,8 @@ export const REVIEWED_IDENTICAL_VALUES = {
       'A composition pattern; both the variable and the multiplication sign are language-neutral. The words the chip stands for are hullDetail.slots.run.one and .many, which are translated.',
     'drives.fsd.optimal-mass.detail':
       'A composition pattern; both variables and the separator are language-neutral.',
+    'power.heat.scenario.whole':
+      'A composition pattern; both variables are translated messages, and German sets a gloss after its term with the same colon.',
     'catalogue.title':
       'The ship tool’s own name. Ship Builder is the name of the tool in every language, ruled 2026-08-27, and a tool renamed in one language is a different tool.',
     'navigation.start':
@@ -3205,6 +3221,8 @@ export const REVIEWED_IDENTICAL_VALUES = {
       'A composition pattern; both variables and the solidus are language-neutral.',
     'equipment.attribute.dps': 'The in-game abbreviation for damage per second, not translated.',
     'offence.rail.label': 'The same in-game abbreviation, on the status rail’s offence cell.',
+    'offence.weapon.count':
+      'A multiplication sign before the count. The sign and the variable are language-neutral; the count in words is translated in `offence.weapon.count.description`.',
     'equipment.value.perSecond': 'The SI form for “per second”, identical in German.',
     'equipment.damage.plasma': 'Plasma is the ordinary German word.',
     'equipment.stats.regen':
@@ -3344,8 +3362,6 @@ export const REVIEWED_IDENTICAL_VALUES = {
       'A value and the SI symbol for the megajoule, identical in German.',
     'defence.format.megajoules-per-second':
       'A value and the SI symbol for megajoules per second, identical in German.',
-    'defence.format.hull-points':
-      'A value and the in-game abbreviation for hull points, used untranslated in the German community.',
     'defence.rail.megajoules': 'The SI symbol for the megajoule, identical in German.',
     'offence.format.seconds': 'A value and the SI symbol for the second, identical in German.',
     'offence.format.megawatts': 'A value and the SI symbol for the megawatt, identical in German.',

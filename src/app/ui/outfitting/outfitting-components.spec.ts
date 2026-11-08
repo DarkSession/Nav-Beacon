@@ -161,6 +161,36 @@ describe('module identity badge', () => {
     expect(element(fixture).querySelector('.identity__code-line')).toBeNull();
   });
 
+  it('draws the class and rating as a chip on the name line when asked', () => {
+    const inputs = { name: LOCALIZED, moduleClass: 4, rating: 'A', mount: 'Gimballed' };
+    const chip = renderComponent(ModuleIdentityBadge, { ...inputs, classChip: true });
+    const line = renderComponent(ModuleIdentityBadge, inputs);
+
+    // Canvas 1c moves the `4A` beside the name on a dense ledger row, and the
+    // code line keeps the mount. Without the chip it stays where 1d writes it.
+    expect(textOf(query(chip, '.identity__code-line'))).toBe('Gimballed');
+    expect(textOf(query(chip, '.identity__line .identity__chip'))).toBe('4A');
+    expect(textOf(query(line, '.identity__code-line'))).toBe('4A Gimballed');
+    expect(element(line).querySelector('.identity__chip')).toBeNull();
+    // The spoken class and rating do not move with the drawing.
+    expect(textOf(query(chip, '.visually-hidden'))).toBe(textOf(query(line, '.visually-hidden')));
+  });
+
+  it('draws no chip where the package gives no class or no rating', () => {
+    for (const parts of [
+      { moduleClass: null, rating: null },
+      { moduleClass: 4, rating: null },
+      { moduleClass: null, rating: 'A' },
+    ]) {
+      const fixture = renderComponent(ModuleIdentityBadge, {
+        name: LOCALIZED,
+        classChip: true,
+        ...parts,
+      });
+      expect(element(fixture).querySelector('.identity__chip')).toBeNull();
+    }
+  });
+
   it('discloses canonical package text as untranslated', () => {
     const fixture = renderComponent(ModuleIdentityBadge, { name: CANONICAL });
 
@@ -302,6 +332,26 @@ describe('slot card', () => {
     expect(textOf(element(fixture))).toContain('Hardpoints · Size 4 · Node 1');
   });
 
+  it('draws the dense row and its class chip only when asked', () => {
+    const dense = renderComponent(SlotCard, {
+      slot: slotView(),
+      capabilities: EVERY_CAPABILITY,
+      dense: true,
+    });
+    const baseline = renderComponent(SlotCard, {
+      slot: slotView(),
+      capabilities: EVERY_CAPABILITY,
+    });
+
+    // Canvas 1c's inline rail draws the dense row with `4A` beside the name;
+    // canvas 1d keeps the baseline row with `4A` on the code line.
+    expect(query(dense, '.slot').getAttribute('data-density')).toBe('dense');
+    expect(textOf(query(dense, '.identity__chip'))).toBe('4A');
+    expect(query(baseline, '.slot').hasAttribute('data-density')).toBe(false);
+    expect(element(baseline).querySelector('.identity__chip')).toBeNull();
+    expect(textOf(query(baseline, '.identity__code-line'))).toBe('4A Gimballed');
+  });
+
   it('says only Empty on an empty row, and names the mount to a reader', () => {
     const fixture = renderComponent(SlotCard, {
       slot: slotView({ module: null }),
@@ -336,6 +386,22 @@ describe('slot card', () => {
     });
 
     expect(textOf(query(fixture, '.slot__empty')).toLowerCase()).toBe('empty');
+  });
+
+  it('draws a utility row with its node number and no size box', () => {
+    const row = (overrides: Record<string, unknown>) =>
+      renderComponent(SlotCard, { slot: slotView(overrides), capabilities: EVERY_CAPABILITY });
+    const utility = row({ kind: 'utility', size: null, node: 2, module: null });
+    const hardpoint = row({ kind: 'hardpoint', node: 3 });
+    const core = row({ kind: 'core', size: 6, node: 1, module: null });
+    const armour = row({ kind: 'armour', size: null, node: 1, module: null });
+
+    expect(element(utility).querySelector('.slot__size')).toBeNull();
+    expect(textOf(query(utility, '.slot__node'))).toBe('2');
+    expect(textOf(query(hardpoint, '.slot__size'))).toBe('4');
+    expect(query(hardpoint, '.slot__node')).not.toBeNull();
+    expect(textOf(query(core, '.slot__size'))).toBe('6');
+    expect(query(armour, '.slot__size')).not.toBeNull();
   });
 
   it('numbers a utility mount as well as a hardpoint, in the anatomy\u2019s own ink', () => {
@@ -514,6 +580,17 @@ describe('slot group', () => {
     expect(textOf(query(fixture, '.group__count'))).toBe('2');
     expect(textOf(element(fixture))).toContain('2 mounts');
     expect(element(fixture).querySelector('ul')).not.toBeNull();
+  });
+});
+
+describe('dense slot group', () => {
+  it('marks the group dense only when asked', () => {
+    const group = { kind: 'hardpoint', slots: [slotView()] };
+    const dense = renderComponent(SlotGroup, { group, dense: true });
+    const baseline = renderComponent(SlotGroup, { group });
+
+    expect(query(dense, '.group').getAttribute('data-density')).toBe('dense');
+    expect(query(baseline, '.group').hasAttribute('data-density')).toBe(false);
   });
 });
 

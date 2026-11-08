@@ -12,7 +12,7 @@
 }
 
 .drives {
-  @include layout.stack(var(--ednb-space-region));
+  @include layout.stack(var(--ednb-space-md));
 
   min-inline-size: 0;
 }
@@ -32,18 +32,18 @@
     // its pair a `min-height` its own sample build happens to fill; holding a
     // real build to it would rule a card off around empty ground.
     align-items: stretch;
-    gap: var(--ednb-space-region);
+    gap: var(--ednb-space-md);
   }
 }
 
 // Each of the canvas's cards is a bounded plate on the panel ground, with the
-// same border and padding it gives the power dashboard's blocks.
+// same border, padding and stack gap the other anatomy panels give their blocks.
 .drives__card {
-  @include layout.stack(var(--ednb-space-stack));
+  @include layout.stack(var(--ednb-space-sm));
 
   min-inline-size: 0;
-  padding-block: var(--ednb-space-2xl);
-  padding-inline: var(--ednb-space-panel);
+  padding-block: var(--ednb-space-md);
+  padding-inline: var(--ednb-space-lg);
   background-color: var(--ednb-surface-panel);
   border: var(--ednb-border-width-hairline) solid var(--ednb-border-region);
 }
@@ -268,12 +268,13 @@
 // terms: the list owns the columns and every line borrows them, so swatches,
 // names and figures each stand in one column. A row sizing its own tracks lets a
 // longer value pull its bar shorter than the one above, which reads as a
-// difference in the reading when it is only a difference in digits.
+// difference in the reading when it is only a difference in digits. The rows
+// stand `--ednb-space-xs` apart, as the canvas sets both legends.
 .drives__legend {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
   align-items: center;
-  gap: var(--ednb-space-2xs) var(--ednb-space-inline);
+  gap: var(--ednb-space-xs) var(--ednb-space-inline);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -346,8 +347,27 @@
   overflow-wrap: anywhere;
 }
 
+// The hull's mass lock factor under the drive card's heading: the label at one
+// end and the value at the other, on one baseline. The row wraps rather than
+// compressing, because German sets the label as one long word.
+.drives__mass-lock {
+  @include layout.wrapping-row(var(--ednb-space-inline));
+
+  margin: 0;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.drives__mass-lock-label {
+  @include layout.micro-label(var(--ednb-text-faint), var(--ednb-text-tracking-heading));
+
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
 // Every figure on either card, in the mono metric face the canvas sets them all
-// in.
+// in. The mass lock value takes the range row's value style.
+.drives__mass-lock-value,
 .drives__legend-value,
 .drives__envelope-value,
 .drives__range-value {
@@ -382,12 +402,4 @@
   padding: 0;
   list-style: none;
   color: var(--ednb-text-muted);
-}
-
-// The canvas's headline trio, drawn by the shared metric group. It brings its
-// own cell grid; this only stops it stretching past the card at the narrow
-// arrangement.
-.drives__cells {
-  display: block;
-  min-inline-size: 0;
 }

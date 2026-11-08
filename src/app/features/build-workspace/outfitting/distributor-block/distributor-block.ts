@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { CapacitorKind } from '../../../../domain/ships/power-heat/power-heat';
 import { relationId } from '../../../../ui/a11y/text-equivalence';
+import { FitText } from '../../../../ui/components/fit-text/fit-text';
 import { UnavailableValue } from '../../../../ui/components/unavailable-value/unavailable-value';
 
 /** One of the four blocks a bank's pips are drawn and set with. */
@@ -53,7 +54,7 @@ export interface PipRequest {
  */
 @Component({
   selector: 'ednb-distributor-block',
-  imports: [UnavailableValue],
+  imports: [FitText, UnavailableValue],
   templateUrl: './distributor-block.html',
   styleUrl: './distributor-block.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

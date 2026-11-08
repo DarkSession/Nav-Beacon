@@ -82,6 +82,26 @@ Source: 007/FR-004.
 - **THEN** each row also states those of the module's class, rating, mount and engineering the
   package publishes
 
+### Requirement: An offence label that does not fit is cut
+
+Where the offence panel draws its three blocks in three columns, each label MUST stand on one line.
+A label that does not fit MUST be cut and followed by a `…` that shows the whole label on hover and
+on a press. The whole label MUST stay available to assistive technology. A figure MUST NOT be cut.
+Below the three-column width, a label MUST wrap between words, and a word MUST NOT be broken: a
+word too long for its box MUST be cut in the same way.
+
+Source: Commander decision during implementation.
+
+#### Scenario: A weapon name is too long for its column
+
+- **WHEN** the offence panel stands in three columns and a weapon name does not fit
+- **THEN** the name is cut with a `…`, and hovering the `…` shows the whole name
+
+#### Scenario: A cut label is read by a screen reader
+
+- **WHEN** a screen reader reads a cut label
+- **THEN** it reads the whole label
+
 ## MODIFIED Requirements
 
 ### Requirement: Capacitor endurance

@@ -90,10 +90,11 @@
 }
 
 .outfitting__ledger {
-  // Canvas 1c's rail: one ground from the first group rule to the last row.
-  // The canvas's own `14px 0 22px` and its 18px between groups are taken in a
-  // tighter measure — 12px between one group and the next, and 8px after the
-  // last row. Thirty-nine rows of ledger is a screen and a half at compact
+  // The rail: one ground from the first group rule to the last row. In the
+  // compact composition (canvas 1d) the canvas's own `14px 0 22px` and its 18px
+  // between groups are taken in a tighter measure — 12px between one group and
+  // the next, and 8px after the last row. The inline rail is denser still,
+  // below. Thirty-nine rows of ledger is a screen and a half at compact
   // width, and the air between the groups and under the last of them is space a
   // Commander scrolls past rather than reads (Commander request 2026-08-28).
   @include layout.stack(var(--ednb-space-lg));
@@ -104,6 +105,16 @@
 
 .outfitting__slot {
   display: block;
+}
+
+// Canvas 1c's dense rail, wherever the ledger is the inline rail beside the
+// bench: 10 pixels before the first group and between groups, and 8 pixels
+// after the last row (Commander request 2026-08-28). Keyed to the
+// composition rather than to a width, because a short viewport is compact at
+// any width and keeps canvas 1d's rail.
+.outfitting:not([data-composition='compact']) .outfitting__ledger {
+  gap: var(--ednb-space-md);
+  padding-block-start: var(--ednb-space-md);
 }
 
 .visually-hidden {

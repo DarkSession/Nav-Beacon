@@ -69,9 +69,10 @@ export class ModuleIdentityBadge {
   /**
    * What else the code line carries, after the mount.
    *
-   * Canvas 1c writes one line per fitted row — `4A GIMBALLED · OVERCHARGED G5 ·
+   * Canvas 1d writes one line per fitted row — `4A GIMBALLED · OVERCHARGED G5 ·
    * CORROSIVE` — rather than a line for the article and another for what has
-   * been done to it.
+   * been done to it. Canvas 1c draws the same line with the `4A` moved to the
+   * class chip.
    */
   readonly detail = input<string | null>(null);
 
@@ -85,6 +86,16 @@ export class ModuleIdentityBadge {
    * uses stay the only two anything can ask for.
    */
   readonly compact = input(false);
+
+  /**
+   * Whether the class and rating are drawn as a chip on the name line.
+   *
+   * Canvas 1c draws the dense ledger row's `4A` in a hairline chip after the
+   * name, and leaves the code line the mount and the engineering. Canvas 1d
+   * keeps the code at the start of the code line, and so does every panel that
+   * does not ask for the chip. The spoken description is the same either way.
+   */
+  readonly classChip = input(false);
 
   /** The canvas's `4A`: class and rating together, when the package has both. */
   readonly code = computed(() => {
@@ -111,7 +122,7 @@ export class ModuleIdentityBadge {
   /**
    * The whole code line, as one line.
    *
-   * Canvas 1c writes `4A GIMBALLED · OVERCHARGED G5 · CORROSIVE` as a single
+   * Canvas 1d writes `4A GIMBALLED · OVERCHARGED G5 · CORROSIVE` as a single
    * run of text in a single ink — not as separate chips that wrap onto lines of
    * their own. Joining here rather than in the template is what keeps the
    * separators inside the text: a `::before` on each part would be read aloud
@@ -125,7 +136,7 @@ export class ModuleIdentityBadge {
     // a mount — while a module with no mount takes the dot straight away, as in
     // `8A · CHARGE ENHANCED G5`. The code and the mount name one thing together;
     // what follows is a second fact about it.
-    const code = [this.code(), this.mountLabel()]
+    const code = [this.classChip() ? null : this.code(), this.mountLabel()]
       .filter((part): part is string => part !== null && part !== '')
       .join(' ');
     const parts = [code, this.detail()].filter(

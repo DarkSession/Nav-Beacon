@@ -1,8 +1,10 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 import englishMessages from '../src/app/i18n/locales/en.json';
 import germanMessages from '../src/app/i18n/locales/de.json';
 import { sweepOutfittingState } from './accessibility';
 import { expectNoDocumentOverflow, expectTargetSizes, settled } from './accessibility/assertions';
+import { AXE_TAGS } from './accessibility/axe';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
 import {
   fitCommitted,
@@ -154,6 +156,63 @@ async function retractHardpoints(page: Page): Promise<void> {
   );
 }
 
+/** The four scenario names the heat block draws, in order, from the catalogue. */
+const FOUR_SCENARIOS = [
+  englishMessages['power.heat.scenario.idle'],
+  englishMessages['power.heat.scenario.thrusters'],
+  englishMessages['power.heat.scenario.fsd-charging'],
+  englishMessages['power.heat.scenario.firing-sustained'],
+];
+
+/** An optional mount on the stock hull that takes a size-6 shield cell bank. */
+const BANK_SLOT = 'Slot04_Size6';
+
+/** The stock hull's huge and large weapon mounts. */
+const BEAM_SLOTS = ['HugeHardpoint1', 'LargeHardpoint1', 'LargeHardpoint2', 'LargeHardpoint3'];
+
+/** The scenario names the heat block draws, in order. */
+async function heatNames(page: Page): Promise<string[]> {
+  return page
+    .locator('.power__block--heat .heat__name button')
+    .evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim() ?? ''));
+}
+
+/**
+ * Fits the first module of one family that matches `variant` to one mount.
+ *
+ * Through the outfitting panel, as a Commander does it: the mount, the chooser,
+ * the family, the row. The name is pressed rather than the row, because a click
+ * in the gap between the identity and the figures lands on no content, and
+ * Firefox then activates nothing.
+ */
+async function fitModule(
+  page: Page,
+  slot: string,
+  family: RegExp,
+  variant: RegExp = family,
+): Promise<void> {
+  await revealMount(page, slot);
+  const mount = page.locator(`[data-slot-key="${slot}"] button`).first();
+  await mount.click();
+  await expect(mount).toHaveAttribute('aria-pressed', 'true');
+
+  // Opens the chooser too, whichever surface this width draws it on.
+  await revealFamilyHolding(page, family);
+  const row = page
+    .locator('.candidates__choices .candidate')
+    .filter({ hasText: family })
+    .filter({ hasText: variant })
+    .first();
+  await row.scrollIntoViewIfNeeded();
+  await row.locator('.candidate__name').click();
+  if (await surfacesAreLayers(page)) {
+    await page.getByRole('button', { name: /fit module/i }).click();
+  }
+  await fitCommitted(page);
+  await expect(page.locator(`[data-slot-key="${slot}"]`).first()).toContainText(family);
+  await settled(page);
+}
+
 test.describe('opening the layer', () => {
   test('retitles the region and replaces the plates with the panel', async ({ page }) => {
     await openPower(page);
@@ -266,48 +325,88 @@ test.describe('reading the build', () => {
     });
   });
 
-  test('draws the heat bars the canvas names, its threshold and its four tiles', async ({
-    page,
-  }) => {
+  test('draws the four heat scenarios in order, no key, and the two tiles', async ({ page }) => {
     await openPower(page);
 
     // The trigger's own text, which is the only thing the row draws. The gloss
-    // behind it is the tooltip's and is asserted on its own below.
-    const names = await page
-      .locator('.power__block--heat .heat__name button')
-      .evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim() ?? ''));
-    expect(names.slice(0, 5)).toEqual([
-      englishMessages['power.heat.scenario.idle'],
-      englishMessages['power.heat.scenario.thrusters'],
-      englishMessages['power.heat.scenario.fsd-charging'],
-      englishMessages['power.heat.scenario.firing-drained'],
-      englishMessages['power.heat.scenario.firing-sustained'],
-    ]);
+    // behind it is the tooltip's and is asserted on its own below. The stock
+    // build carries no shield cell bank, so the four scenarios are every bar.
+    expect(await heatNames(page)).toEqual(FOUR_SCENARIOS);
+    await expect(page.locator('.power__block--heat')).not.toContainText('Weapons alpha');
 
     // Every bar states its own reading beside itself, so nothing on this block
     // is carried by the length of a fill alone.
     const levels = await page.locator('.power__block--heat .heat__level').allInnerTexts();
-    expect(levels).toHaveLength(names.length);
+    expect(levels).toHaveLength(FOUR_SCENARIOS.length);
     for (const level of levels) {
       expect(level.trim()).not.toBe('');
     }
 
     // The line every bar is measured against is drawn through the bars and is
-    // not captioned: the canvas withdrew the caption on 2026-08-28, and the
-    // block's own figures are what say where a bar falls against it.
+    // not captioned, and no key names the two fills.
     await expect(page.locator('.heat__threshold-label')).toHaveCount(0);
+    await expect(page.locator('.power__block--heat .heat__legend')).toHaveCount(0);
+    await expect(page.locator('.power__block--heat .heat__key')).toHaveCount(0);
 
-    const keys = await page.locator('.power__block--heat .heat__key').allInnerTexts();
-    expect(keys.map((key) => caps(key.trim()))).toEqual([
-      caps(englishMessages['power.heat.within']),
-      caps(englishMessages['power.heat.over']),
+    const tiles = await page
+      .locator('.power__block--heat .power__facts .metric__label')
+      .allInnerTexts();
+    expect(tiles.map((tile) => caps(tile.trim()))).toEqual([
+      caps(englishMessages['power.heat.dissipation']),
+      caps(englishMessages['power.heat.sinks']),
     ]);
+  });
 
-    const facts = caps(await page.locator('.power__block--heat .power__facts').innerText());
-    expect(facts).toContain(caps(englishMessages['power.heat.resting']));
-    expect(facts).toContain(caps(englishMessages['power.heat.peak']));
-    expect(facts).toContain(caps(englishMessages['power.heat.dissipation']));
-    expect(facts).toContain(caps(englishMessages['power.heat.sinks']));
+  test('draws the shield cell bank bar after the four scenarios where a bank is fitted', async ({
+    page,
+  }) => {
+    await page.goto(`/ships/${HULL}`);
+    await buildStockHull(page, englishMessages['hullDetail.create']);
+    await fitModule(page, BANK_SLOT, /shield cell bank/iu);
+    await openMode(page, englishMessages['anatomy.mode.power']);
+
+    expect(await heatNames(page)).toEqual([
+      ...FOUR_SCENARIOS,
+      englishMessages['power.heat.scenario.shield-bank'],
+    ]);
+  });
+
+  test('says an overheating sustained-fire bar is over threshold, and its block passes a scan', async ({
+    page,
+  }) => {
+    // Four fits through the outfitting panel, in every layout profile.
+    test.slow();
+    await page.goto(`/ships/${HULL}`);
+    await buildStockHull(page, englishMessages['hullDetail.create']);
+    // A fixed beam laser in the huge mount and in each large one: the package
+    // states that sustained fire on this build never settles.
+    for (const slot of BEAM_SLOTS) {
+      await fitModule(page, slot, /beam laser/iu, /Fixed\s*[34][A-E]/u);
+    }
+    await openMode(page, englishMessages['anatomy.mode.power']);
+
+    const sustained = page
+      .locator('.power__block--heat .heat__bar')
+      .filter({ hasText: englishMessages['power.heat.scenario.firing-sustained'] });
+    await expect(sustained).toHaveClass(/heat__bar--over/u);
+    // The hatch beside the level figure for a reader who sees it, and the words
+    // after the level for a reader who is told.
+    await expect(sustained.locator('.heat__over')).toHaveCount(1);
+    expect(await sustained.locator('.heat__level').ariaSnapshot()).toContain(
+      englishMessages['power.heat.over'],
+    );
+
+    // A bar inside the limit carries neither.
+    const idle = page.locator('.power__block--heat .heat__bar').first();
+    await expect(idle).not.toHaveClass(/heat__bar--over/u);
+    expect(await idle.ariaSnapshot()).not.toContain(englishMessages['power.heat.over']);
+
+    await settled(page);
+    const scan = await new AxeBuilder({ page })
+      .include('ednb-power-thermals .power__block--heat')
+      .withTags([...AXE_TAGS])
+      .analyze();
+    expect(scan.violations).toEqual([]);
   });
 
   test('sets every distributor figure flush to the end of its own column', async ({ page }) => {
@@ -364,7 +463,7 @@ test.describe('reading the build', () => {
 
     const bars = page.locator('.power__block--heat .heat__bar');
     const drawn = await bars.count();
-    expect(drawn).toBeGreaterThanOrEqual(5);
+    expect(drawn).toBe(FOUR_SCENARIOS.length);
 
     // One gloss per bar, related to the name it explains and in the document
     // rather than in a `title` or a `data-tip` — those are unreachable by touch
@@ -1076,31 +1175,323 @@ test.describe('the rail’s pip control', () => {
   });
 });
 
+/** How the four blocks stand, and the panel's width against its one-row step. */
+async function powerArrangement(
+  page: Page,
+): Promise<{ panelRem: number; stepRem: number; lefts: number[]; tops: number[] }> {
+  // The distributor is a component of its own, so the fourth block carries
+  // that component's tag rather than the panel's block class.
+  return page.locator('ednb-power-thermals').evaluate((panel) => {
+    const style = getComputedStyle(panel);
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const inline =
+      panel.getBoundingClientRect().width -
+      Number.parseFloat(style.paddingInlineStart) -
+      Number.parseFloat(style.paddingInlineEnd) -
+      Number.parseFloat(style.borderInlineStartWidth) -
+      Number.parseFloat(style.borderInlineEndWidth);
+    const blocks = [...panel.querySelectorAll('.power__block, ednb-distributor-block')].map(
+      (block) => block.getBoundingClientRect(),
+    );
+    return {
+      panelRem: inline / rem,
+      stepRem: Number.parseFloat(style.getPropertyValue('--power-row-min')),
+      lefts: blocks.map((block) => Math.round(block.left)),
+      tops: blocks.map((block) => Math.round(block.top)),
+    };
+  });
+}
+
+/** One row: four blocks on one top edge, in the order the canvas draws them. */
+function expectOneRow({ lefts, tops }: { lefts: number[]; tops: number[] }): void {
+  expect(new Set(tops).size, 'the four blocks share a top edge').toBe(1);
+  expect(lefts, 'groups, modules, heat, distributor').toEqual([...lefts].sort((a, b) => a - b));
+  expect(new Set(lefts).size).toBe(4);
+}
+
+/** Every figure in the panel that its box does not hold. */
+async function cutPowerFigures(page: Page): Promise<string[]> {
+  return page
+    .locator(
+      [
+        '.power__band-draw',
+        '.power__band-share',
+        '.power__band-state',
+        '.module__draw',
+        '.modules__total-draw',
+        '.heat__level',
+        '.metric__number',
+        '.metric__unit',
+        '.distributor__cell--numeric > [data-bidi-isolate]',
+        '.distributor__cell--recharge',
+      ]
+        .map((figure) => `ednb-power-thermals ${figure}`)
+        .join(', '),
+    )
+    .evaluateAll((figures) =>
+      figures
+        .filter((figure) => figure.scrollWidth > figure.clientWidth + 1)
+        .map((figure) => figure.textContent?.trim() ?? ''),
+    );
+}
+
+/**
+ * Every label in the panel that runs past its box with no `…` after it.
+ *
+ * A label drawn by `ednb-fit-text` that does not fit is marked
+ * `data-text-reachable` and draws its `…`. One that runs past its box without
+ * them is cut out of reach, or is a word broken where it should be cut.
+ */
+async function unmarkedPowerCuts(page: Page): Promise<string[]> {
+  return page.locator('ednb-power-thermals ednb-fit-text').evaluateAll((labels) =>
+    labels
+      .filter((label) => {
+        const value = label.querySelector('.fit-text__value');
+        if (value === null || value.scrollWidth <= label.clientWidth + 1) {
+          return false;
+        }
+        return (
+          !label.hasAttribute('data-text-reachable') ||
+          label.querySelector('.fit-text__more') === null
+        );
+      })
+      .map((label) => label.textContent?.trim() ?? ''),
+  );
+}
+
+/**
+ * Every word in a panel label that runs onto a second line.
+ *
+ * A line may break between words and after a hyphen, a dash or a slash, and
+ * nowhere else: a word too long for its box is cut with its `…`. Each word is
+ * measured as a range of its own, so a word drawn on two lines gives two tops.
+ */
+async function brokenPowerWords(page: Page): Promise<string[]> {
+  return page.locator('ednb-power-thermals .fit-text__value').evaluateAll((values) =>
+    values.flatMap((value) => {
+      const broken: string[] = [];
+      const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        const parent = node.parentElement;
+        // A bubble is not on the line, and a visually hidden text is not drawn.
+        if (
+          parent === null ||
+          parent.closest('[role="tooltip"]') !== null ||
+          parent.getBoundingClientRect().width <= 1
+        ) {
+          continue;
+        }
+        for (const word of (node.textContent ?? '').matchAll(/[^\s/–—-]+[/–—-]?/gu)) {
+          const range = document.createRange();
+          range.setStart(node, word.index);
+          range.setEnd(node, word.index + word[0].length);
+          const tops = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+          if (tops.size > 1) {
+            broken.push(word[0]);
+          }
+        }
+      }
+      return broken;
+    }),
+  );
+}
+
+/**
+ * Every two panel labels, one above the other, whose lines stand less than a
+ * target apart.
+ *
+ * Any label can be cut, and a cut label draws a 24-pixel `…` target on its
+ * line. Two labels in one column whose tops are closer than that draw two
+ * targets that overlap (SC 2.5.8).
+ */
+async function crowdedPowerLabels(page: Page): Promise<string[]> {
+  return page.locator('ednb-power-thermals').evaluate((panel) => {
+    const labels = [...panel.querySelectorAll('ednb-fit-text')]
+      .map((label) => ({ box: label.getBoundingClientRect(), text: label.textContent?.trim() }))
+      .filter(({ box }) => box.width > 0);
+    return labels.flatMap((upper, index) =>
+      labels
+        .slice(index + 1)
+        .filter(({ box }) => {
+          const across = Math.min(box.right, upper.box.right) - Math.max(box.left, upper.box.left);
+          const apart = Math.abs(box.top - upper.box.top);
+          return across > 0 && apart > 0.5 && apart < 23.5;
+        })
+        .map((lower) => `${upper.text} / ${lower.text}`),
+    );
+  });
+}
+
 test.describe('the conditions that break layouts', () => {
   test('lays the four blocks out in two rows of the same width, whatever it has', async ({
+    page,
+  }, testInfo) => {
+    await openPower(page);
+
+    // The panel draws the dashboard as one row from its own measured step, as
+    // canvas 1c draws it on its 2020px artboard; as two rows of two — the
+    // groups beside the module list, the heat profile beside the distributor —
+    // from its 40rem step; and stacks all four below that. In two rows it picks
+    // the arrangement for both rows: this counts the columns each pair is drawn
+    // in and compares them, so a lower pair left running the full width under a
+    // paired upper one fails at every profile wide enough to pair anything.
+    // That is what stood the distributor a whole panel below the fold of a
+    // region bounded by the column it sits in.
+    const drawn = await powerArrangement(page);
+    const { lefts, tops } = drawn;
+    expect(lefts).toHaveLength(4);
+    expect(drawn.stepRem).toBeGreaterThan(40);
+
+    if (drawn.panelRem >= drawn.stepRem) {
+      expectOneRow(drawn);
+    } else {
+      expect(new Set(lefts.slice(2)).size).toBe(new Set(lefts.slice(0, 2)).size);
+      const paired = drawn.panelRem >= 40;
+      expect(new Set(lefts.slice(0, 2)).size).toBe(paired ? 2 : 1);
+      expect(new Set(lefts).size).toBe(paired ? 2 : 1);
+      expect(new Set(tops).size).toBe(paired ? 2 : 4);
+    }
+    if (page.viewportSize()?.width === 1440 && page.viewportSize()?.height === 900) {
+      expect(drawn.panelRem >= 40 && drawn.panelRem < drawn.stepRem).toBe(true);
+    }
+
+    // Canvas 1c's own width, where the panel stands in one row.
+    if (testInfo.project.name.endsWith('-desktop')) {
+      await page.setViewportSize({ width: 2020, height: 1228 });
+      await settled(page);
+      const wide = await powerArrangement(page);
+      expect(wide.panelRem).toBeGreaterThanOrEqual(wide.stepRem);
+      expectOneRow(wide);
+    }
+  });
+
+  test('cuts a label that does not fit in one row with a reachable mark, and never a figure', async ({
+    browser,
+    baseURL,
+  }, testInfo) => {
+    const context = await browser.newContext({ baseURL, locale: 'de-DE' });
+    const page = await context.newPage();
+    await openPower(page, germanMessages);
+    const panel = page.locator('ednb-power-thermals');
+
+    // Below the one-row step a label wraps between words. A word too long for
+    // its box is not broken: it is cut, with its `…`, like a line in one row.
+    const below = await powerArrangement(page);
+    expect(below.panelRem).toBeLessThan(below.stepRem);
+    expect(await unmarkedPowerCuts(page)).toEqual([]);
+    expect(await brokenPowerWords(page)).toEqual([]);
+    expect(await crowdedPowerLabels(page)).toEqual([]);
+    expect(await cutPowerFigures(page)).toEqual([]);
+    if (testInfo.project.name.endsWith('-desktop')) {
+      // At 1440 x 900 the summary tile is too narrow for the one German word.
+      const plantBelow = panel
+        .locator('.power__summary ednb-fit-text')
+        .filter({ hasText: germanMessages['power.summary.plant'] });
+      await expect(plantBelow).toHaveAttribute('data-text-reachable', '');
+      await expect(plantBelow.locator('.fit-text__more')).toHaveCount(1);
+    }
+
+    if (testInfo.project.name.endsWith('-desktop')) {
+      await page.setViewportSize({ width: 2020, height: 1228 });
+      await settled(page);
+      expectOneRow(await powerArrangement(page));
+
+      // The tile label is cut, and its `…` shows the whole label.
+      const plant = germanMessages['power.summary.plant'];
+      const label = panel.locator('.power__summary ednb-fit-text').filter({ hasText: plant });
+      await expect(label).toHaveAttribute('data-text-reachable', '');
+      await expect(label.locator('.fit-text__value')).toHaveText(plant);
+      // The mark's own box takes no height on the line, so the pointer goes
+      // to the target drawn on it, as a Commander's pointer does.
+      const mark = label.locator('.fit-text__more');
+      await mark.locator('.tooltip__trigger').hover();
+      await expect(mark.locator('.tooltip__tip--shown')).toBeVisible();
+      await expect(mark.locator('.tooltip__tip--shown')).toHaveText(plant);
+      await page.mouse.move(0, 0);
+
+      // A cut scenario name is the trigger of its own gloss: its `…` is a
+      // plain mark, the gloss shows the whole name before it, and a reader is
+      // told the name once and the gloss once.
+      const name = germanMessages['power.heat.scenario.firing-sustained'];
+      const gloss = germanMessages['power.heat.scenario.firing-sustained.description'];
+      const heat = panel.locator('.heat__name ednb-fit-text').filter({ hasText: name });
+      await expect(heat).toHaveAttribute('data-text-reachable', '');
+      await expect(heat.locator('.fit-text__more')).toHaveText('…');
+      await expect(heat.locator('.fit-text__more ednb-tooltip')).toHaveCount(0);
+      const trigger = heat.locator('.heat__description button');
+      await expect(trigger).toHaveAccessibleName(name);
+      await expect(trigger).toHaveAccessibleDescription(gloss);
+      await trigger.hover();
+      await expect(heat.locator('.tooltip__tip--shown')).toBeVisible();
+      // The words drawn for the eye. The gloss a reader is told stays in the
+      // bubble beside them, out of sight.
+      await expect(heat.locator('.tooltip__tip--shown > [aria-hidden="true"]')).toHaveText(
+        germanMessages['power.heat.scenario.whole']
+          .replace('{{label}}', name)
+          .replace('{{description}}', gloss),
+      );
+      await page.mouse.move(0, 0);
+
+      // Every `…` drawn is a target of its own, clear of every other.
+      expect(await crowdedPowerLabels(page)).toEqual([]);
+      const marks = await panel
+        .locator('.fit-text__more .tooltip__trigger')
+        .evaluateAll((targets) => targets.map((target) => target.getBoundingClientRect().toJSON()));
+      expect(marks.length).toBeGreaterThan(0);
+      for (const [index, mark] of marks.entries()) {
+        for (const other of marks.slice(index + 1)) {
+          const overlap =
+            Math.min(mark.right, other.right) > Math.max(mark.left, other.left) &&
+            Math.min(mark.bottom, other.bottom) > Math.max(mark.top, other.top);
+          expect(overlap, 'two `…` targets overlap').toBe(false);
+        }
+      }
+
+      expect(await cutPowerFigures(page)).toEqual([]);
+    }
+
+    await context.close();
+  });
+
+  test('pads its blocks and a DISSIPATION tile at the compact measures, with the compact gaps', async ({
     page,
   }) => {
     await openPower(page);
 
-    // The reference draws the dashboard as two rows of two — the groups beside
-    // the module list, the heat profile beside the distributor — and stacks all
-    // four where there is no room for that. Whichever it picks, it picks it for
-    // both rows: this counts the columns each pair is drawn in and compares
-    // them, so a lower pair left running the full width under a paired upper
-    // one fails at every profile wide enough to pair anything. That is what
-    // stood the distributor a whole panel below the fold of a region bounded by
-    // the column it sits in.
-    // The distributor is a component of its own — its five columns needed more
-    // stylesheet than the panel's budget allowed — so the fourth block carries
-    // that component's class rather than the panel's (`distributor-block`).
-    const columns = await page
-      .locator('ednb-power-thermals .power__block, ednb-power-thermals ednb-distributor-block')
-      .evaluateAll((blocks) =>
-        blocks.map((block) => Math.round(block.getBoundingClientRect().left)),
+    const measures = await page.locator('ednb-power-thermals').evaluate((panel) => {
+      const px = (value: string) => Number.parseFloat(value);
+      const heat = panel.querySelector('.power__block--heat') as HTMLElement;
+      const heatStyle = getComputedStyle(heat);
+      // The two items stacked first inside the heat block: its heading and the
+      // bars with their tiles.
+      const [head, body] = [...heat.children].map((child) => child.getBoundingClientRect());
+      // The first two blocks, beside each other or one above the other.
+      const [first, second] = [...panel.querySelectorAll('.power__block')].map((block) =>
+        block.getBoundingClientRect(),
       );
+      const beside = Math.round(first.top) === Math.round(second.top);
+      const tile = panel.querySelector('.power__facts .metric') as HTMLElement;
+      const tileStyle = getComputedStyle(tile);
+      return {
+        blockPaddingBlock: px(heatStyle.paddingBlockStart),
+        blockPaddingInline: px(heatStyle.paddingInlineStart),
+        stackGap: body.top - head.bottom,
+        blockGap: beside
+          ? Math.max(second.left - first.right, first.left - second.right)
+          : second.top - first.bottom,
+        tileLabel: tile.querySelector('.metric__label')?.textContent?.trim() ?? '',
+        tilePaddingBlock: px(tileStyle.paddingBlockStart),
+        tilePaddingInline: px(tileStyle.paddingInlineStart),
+      };
+    });
 
-    expect(columns).toHaveLength(4);
-    expect(new Set(columns.slice(2)).size).toBe(new Set(columns.slice(0, 2)).size);
+    expect(measures.blockPaddingBlock).toBeCloseTo(10, 0);
+    expect(measures.blockPaddingInline).toBeCloseTo(12, 0);
+    expect(measures.stackGap).toBeCloseTo(8, 0);
+    expect(measures.blockGap).toBeCloseTo(10, 0);
+    expect(caps(measures.tileLabel)).toBe(caps(englishMessages['power.heat.dissipation']));
+    expect(measures.tilePaddingBlock).toBeCloseTo(6, 0);
+    expect(measures.tilePaddingInline).toBeCloseTo(8, 0);
   });
 
   test('keeps every figure at doubled text without scrolling the document', async ({ page }) => {
@@ -1109,6 +1500,10 @@ test.describe('the conditions that break layouts', () => {
 
     expect((await bandRows(page)).length).toBeGreaterThan(0);
     expect(await rows(page, '.distributor')).toHaveLength(3);
+    // A doubled text size is where a word outgrows its box: it is cut with its
+    // `…`, never broken mid-word.
+    expect(await unmarkedPowerCuts(page)).toEqual([]);
+    expect(await brokenPowerWords(page)).toEqual([]);
     await expectNoDocumentOverflow(page);
   });
 
@@ -1120,9 +1515,12 @@ test.describe('the conditions that break layouts', () => {
     // truncates the module list to five rows under a `TOP DRAW` heading and
     // drops the distributor's capacity and rated recharge. Neither is built.
     expect((await bandRows(page)).length).toBeGreaterThan(0);
-    expect(await page.locator('.heat__bar').count()).toBeGreaterThanOrEqual(5);
+    expect(await page.locator('.heat__bar').count()).toBe(FOUR_SCENARIOS.length);
     const banks = await rows(page, '.distributor');
     expect(banks[0][1]).toMatch(/\d MW$/u);
+    // A label too long for its box is cut with its `…`, never broken mid-word.
+    expect(await unmarkedPowerCuts(page)).toEqual([]);
+    expect(await brokenPowerWords(page)).toEqual([]);
     await expectNoDocumentOverflow(page);
   });
 

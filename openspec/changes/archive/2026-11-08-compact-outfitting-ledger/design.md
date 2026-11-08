@@ -146,6 +146,13 @@ choice that is stricter than AA. It stays in force for every other control, and 
 in the compact composition. Journal import of several builds keeps its current behaviour, so the
 design's "open the first build" flow is not built.
 
+**A utility row draws its node number and no size box.** Canvas 1c draws a utility mount's row
+with the blue node badge alone, and the Commander confirmed it. A utility mount has no size the
+package states, so the box held nothing. Its module name starts where a core or optional row's
+starts after its size box, so the names no longer line up across every group, as the canvas draws
+them. Armour keeps its box. The spoken label already leaves the size out where the package states
+none. This applies in every composition.
+
 **Dense wherever the ledger is the inline rail.** `two-pane` and `wide` draw the same canvas 1c
 rail, and today they draw the same rows. Making only `wide` dense would give one rail two row
 measures, depending on whether a 306-pixel status column fits beside it. That difference has

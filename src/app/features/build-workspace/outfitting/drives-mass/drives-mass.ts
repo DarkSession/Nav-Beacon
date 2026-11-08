@@ -12,7 +12,6 @@ import type { MessageKey } from '../../../../i18n/locale-registry';
 import { MessageService } from '../../../../i18n/message.service';
 import { relationId } from '../../../../ui/a11y/text-equivalence';
 import { GameText } from '../../../../ui/components/game-text/game-text';
-import { MetricGroup, type Metric } from '../../../../ui/components/metric-group/metric-group';
 import { UnavailableValue } from '../../../../ui/components/unavailable-value/unavailable-value';
 
 /** Tonnes to none: the canvas writes every mass on the bar as a whole number. */
@@ -173,7 +172,7 @@ interface CurveMarkView {
  */
 @Component({
   selector: 'ednb-drives-mass',
-  imports: [GameText, MetricGroup, UnavailableValue],
+  imports: [GameText, UnavailableValue],
   templateUrl: './drives-mass.html',
   styleUrl: './drives-mass.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -196,8 +195,7 @@ export class DrivesMass {
   /** The mass list's accessible name. Neither canvas heads that block visibly. */
   readonly massHeading = this.#messages.messageSignal('drives.thrusters.mass');
   readonly rangeHeading = this.#messages.messageSignal('drives.fsd.range-by-load');
-  /** The headline trio's accessible name. The canvas heads the cells, not the block. */
-  readonly jumpCellsLabel = this.#messages.messageSignal('drives.fsd.summary');
+  readonly massLockLabel = this.#messages.messageSignal('drives.fsd.mass-lock');
   readonly curveMarksLabel = this.#messages.messageSignal('drives.thrusters.curve-marks');
   readonly driveFactsLabel = this.#messages.messageSignal('drives.fsd.facts');
   readonly driveUnavailableLabel = this.#messages.messageSignal('drives.fsd.unavailable');
@@ -496,56 +494,15 @@ export class DrivesMass {
   });
 
   /**
-   * The canvas's headline trio: `JUMP LADEN`, `JUMP UNLADEN` and `MASS LOCK`.
-   *
-   * Three cells on a hairline ground, above the ruled `RANGE BY LOAD` block —
-   * the card's summary, the way the loaded mass is the thruster card's. The two
-   * jumps are the ends of the list below it: `JUMP UNLADEN` is the row the
-   * canvas heads `UNLADEN`, the package's `maximum`, and `JUMP LADEN` is its
-   * fully loaded end, the package's `laden`. The canvas's own `21.4 LY` is
-   * neither — it is the figure canvas 1d puts on a `CURRENT` row, at some
-   * arbitrary present fuel and cargo state this application has no viewing
-   * condition to read one at — so the tile is filled from the load it is named
-   * for rather than from a figure nothing here can produce.
-   *
-   * Mass lock is the hull's own catalogue fact and answers whether or not the
-   * drive can be read, so the trio is drawn for every build.
+   * The hull's mass lock factor, formatted, on the line under the drive card's
+   * heading. It is the hull's own catalogue fact and answers whether or not the
+   * drive can be read, so the line is drawn for every build. `null` means the
+   * catalogue does not carry the hull, and the line then shows the shared
+   * unavailable wording, never `0`.
    */
-  readonly jumpCells = computed<readonly Metric[]>(() => {
-    const drive = this.view()?.drive;
-    if (!drive) {
-      return [];
-    }
-    // Two different absences, two different words. A jump is missing because
-    // the package could not settle the loads that guard it — the same cause the
-    // rest of the card calls incomplete. A mass lock is missing because the
-    // catalogue does not carry the hull at all.
-    const incompleteLabel = this.#messages.message('incomplete.value');
-    const jump = (load: StandardLoad): string | null => {
-      const profile = drive.profiles.find((candidate) => candidate.load === load);
-      return profile ? this.#formatters.lightYears(profile.range, RANGE_DIGITS) : null;
-    };
-
-    return [
-      {
-        id: 'jump-laden',
-        label: this.#messages.message('drives.fsd.jump-laden'),
-        value: jump('laden'),
-        unavailableLabel: incompleteLabel,
-      },
-      {
-        id: 'jump-unladen',
-        label: this.#messages.message('drives.fsd.jump-unladen'),
-        value: jump('maximum'),
-        unavailableLabel: incompleteLabel,
-      },
-      {
-        id: 'mass-lock',
-        label: this.#messages.message('drives.fsd.mass-lock'),
-        value: drive.massLock === null ? null : this.#formatters.integer(drive.massLock),
-        unavailableLabel: this.#messages.message('unavailable.value'),
-      },
-    ];
+  readonly massLock = computed(() => {
+    const massLock = this.view()?.drive.massLock ?? null;
+    return massLock === null ? null : this.#formatters.integer(massLock);
   });
 
   /**

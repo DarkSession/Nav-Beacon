@@ -61,6 +61,12 @@ const DENSE_TARGETS = [
   // system's modifier: a bare `.tooltip__trigger--dense` would let any later
   // caller take 24 pixels without anybody ruling that it may.
   '.heat__description .tooltip__trigger--dense',
+  // A ledger row in the inline rail beside the bench. Canvas 1c draws it at 36
+  // pixels so more of a thirty-nine-mount ledger fits on one screen. That is
+  // half again SC 2.5.8's 24-pixel AA minimum, which the accepted platform
+  // requirement "Contrast and target size" holds every target to. A row in the
+  // compact composition is not named here, so the 44-pixel baseline holds it.
+  ".slot[data-density='dense'] .slot__select",
 ];
 
 /**
@@ -75,9 +81,10 @@ const DENSE_TARGETS = [
  *
  * The exception is only available because the equivalent exists and is on the
  * same screen: feature 002's complete outfitting ledger carries every one of
- * these mounts at the full 44-pixel baseline, in package order, whether or not
- * the artwork arrived. `expectEquivalentControls` is what proves that, and this
- * list is inert without it.
+ * these mounts as a row at least 24 CSS pixels in both dimensions, the
+ * criterion's own minimum, in package order, whether or not the artwork
+ * arrived. `expectEquivalentControls` is what proves that, and this list is
+ * inert without it.
  */
 const EQUIVALENT_TARGETS = ['.schematic__mount'];
 
@@ -424,7 +431,9 @@ export async function expectTargetSizes(
  * SC 2.5.8's Equivalent exception is not a waiver — it is a claim that the same
  * function is reachable through another control on the same page that does meet
  * the criterion. This checks the claim: every mount drawn on a schematic has a
- * ledger row for the same slot, and that row is at least the baseline.
+ * ledger row for the same slot, and that row is at least the criterion's own
+ * 24-pixel minimum in both dimensions. The equivalent owes SC 2.5.8 and nothing
+ * stricter, so the dense rows of the inline rail meet it as the compact rows do.
  */
 export async function expectEquivalentControls(page: Page): Promise<void> {
   const outstanding = new Set(
@@ -438,7 +447,7 @@ export async function expectEquivalentControls(page: Page): Promise<void> {
 
   /** Takes the rows this screenful holds out of the claim, measuring each. */
   async function measureShownRows(): Promise<void> {
-    const rows = await page.evaluate((baseline) => {
+    const rows = await page.evaluate((floor) => {
       const measured: Record<string, boolean> = {};
       for (const node of document.querySelectorAll('[data-slot-key]')) {
         const row = node.querySelector('button');
@@ -447,16 +456,16 @@ export async function expectEquivalentControls(page: Page): Promise<void> {
         }
         const box = row.getBoundingClientRect();
         measured[node.getAttribute('data-slot-key') ?? ''] =
-          box.width >= baseline && box.height >= baseline;
+          box.width >= floor && box.height >= floor;
       }
       return measured;
-    }, TARGET_BASELINE_PX);
+    }, TARGET_FLOOR_PX);
 
-    for (const [key, atBaseline] of Object.entries(rows)) {
+    for (const [key, atFloor] of Object.entries(rows)) {
       if (!outstanding.delete(key)) {
         continue;
       }
-      if (!atBaseline) {
+      if (!atFloor) {
         undersized.push(key);
       }
     }
@@ -469,7 +478,7 @@ export async function expectEquivalentControls(page: Page): Promise<void> {
   // open. The exception asks for an equivalent on the same screen, and the
   // category strip is how this screen reaches it — so the claim is checked the
   // way a Commander would make it good, by pressing through the tabs (canvas
-  // 1d; `design/outfitting-workspace.md`, "No `ALL` at compact width").
+  // 1d, whose strip offers hardpoints, utility, core and optional).
   const categories = page.locator('.outfitting__category');
   const total = await categories.count();
   if (outstanding.size > 0 && total > 0) {
@@ -488,7 +497,7 @@ export async function expectEquivalentControls(page: Page): Promise<void> {
   }
 
   expect([...outstanding], 'a drawn mount has no equivalent in the ledger').toEqual([]);
-  expect(undersized, 'a drawn mount’s ledger row is under the baseline').toEqual([]);
+  expect(undersized, 'a drawn mount’s ledger row is under the 24-pixel minimum').toEqual([]);
 }
 
 /**

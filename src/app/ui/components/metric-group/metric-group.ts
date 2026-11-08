@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { relationId } from '../../a11y/text-equivalence';
+import { FitText } from '../fit-text/fit-text';
 
 /**
  * One measured value.
@@ -37,10 +38,15 @@ export interface Metric {
  */
 @Component({
   selector: 'ednb-metric-group',
+  imports: [FitText],
   templateUrl: './metric-group.html',
   styleUrl: './metric-group.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.metric-group--flow]': 'flow()' },
+  host: {
+    '[class.metric-group--flow]': 'flow()',
+    '[class.metric-group--dense]': 'dense()',
+    '[class.metric-group--fit]': 'fitLabels()',
+  },
 })
 export class MetricGroup {
   /** What the group of metrics describes. */
@@ -59,6 +65,25 @@ export class MetricGroup {
    * a reader still meets one named group of terms and definitions per feature.
    */
   readonly flow = input(false);
+
+  /**
+   * Whether the cells are drawn at canvas 1c's tighter padding.
+   *
+   * The anatomy analysis panels draw their tiles 6 by 8 pixels, in place of
+   * 12 all round. Nothing else about the group changes.
+   */
+  readonly dense = input(false);
+
+  /**
+   * Whether each label is drawn through `ednb-fit-text`.
+   *
+   * The caller then holds the labels on one line by setting
+   * `white-space: nowrap` on this element, and a label that does not fit is cut
+   * with a reachable `…`. The values and descriptions keep their own wrapping,
+   * so a figure is never cut. Where the caller sets nothing, the labels wrap as
+   * they do without it.
+   */
+  readonly fitLabels = input(false);
 
   readonly groupId = relationId('metric-group');
 

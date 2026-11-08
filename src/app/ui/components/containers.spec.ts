@@ -341,6 +341,40 @@ describe('MetricGroup', () => {
 
     expect(query(fixture, '.metric__value').getAttribute('aria-describedby')).toBeNull();
   });
+
+  it('pads each cell 6 by 8 pixels only when asked, and changes nothing else', () => {
+    const plain = renderComponent(MetricGroup, { label: 'Jump summary', metrics });
+    const dense = renderComponent(MetricGroup, { label: 'Jump summary', metrics, dense: true });
+    const cell = (fixture: typeof plain) => getComputedStyle(query(fixture, '.metric'));
+
+    expect(cell(plain).paddingBlock).toBe('var(--ednb-space-lg)');
+    expect(cell(plain).paddingInline).toBe('var(--ednb-space-lg)');
+    expect(cell(dense).paddingBlock).toBe('var(--ednb-space-xs)');
+    expect(cell(dense).paddingInline).toBe('var(--ednb-space-sm)');
+    expect(cell(dense).backgroundColor).toBe(cell(plain).backgroundColor);
+    expect(cell(dense).rowGap).toBe(cell(plain).rowGap);
+    expect(element(dense).querySelectorAll('dt').length).toBe(2);
+  });
+
+  it('draws each label through a fit text only when asked', () => {
+    const plain = renderComponent(MetricGroup, { label: 'Jump summary', metrics });
+    const fitted = renderComponent(MetricGroup, {
+      label: 'Jump summary',
+      metrics,
+      fitLabels: true,
+    });
+
+    expect(element(plain).querySelector('ednb-fit-text')).toBeNull();
+    expect(element(plain).classList).not.toContain('metric-group--fit');
+    const labels = [...element(fitted).querySelectorAll('dt')];
+    expect(labels.map((label) => label.querySelector('ednb-fit-text') !== null)).toEqual(
+      labels.map(() => true),
+    );
+    expect(labels.map((label) => textOf(label))).toEqual(
+      [...element(plain).querySelectorAll('dt')].map((label) => textOf(label)),
+    );
+    expect(element(fitted).classList).toContain('metric-group--fit');
+  });
 });
 
 describe('Disclosure', () => {
@@ -412,6 +446,31 @@ describe('Tooltip', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(trigger.getAttribute('aria-describedby')).toBe(tip.getAttribute('id'));
     expect(textOf(tip)).toBe('Hardpoints stowed, no throttle');
+  });
+
+  it('draws other words where asked, and still tells a reader the gloss alone', () => {
+    const fixture = renderComponent(Tooltip, {
+      label: 'Sustained weapon fire',
+      tip: 'Trigger held down continuously',
+      drawnTip: 'Sustained weapon fire: Trigger held down continuously',
+    });
+    const tip = query(fixture, '[role="tooltip"]');
+    const drawn = tip.querySelector('[aria-hidden="true"]');
+    const told = tip.querySelector('.tooltip__told');
+
+    expect(textOf(drawn)).toBe('Sustained weapon fire: Trigger held down continuously');
+    expect(textOf(told)).toBe('Trigger held down continuously');
+    expect(told?.closest('[aria-hidden="true"]')).toBeNull();
+    expect(query(fixture, 'button').getAttribute('aria-describedby')).toBe(tip.id);
+  });
+
+  it('draws the gloss alone where no other words are asked for', () => {
+    const fixture = renderComponent(Tooltip, { label: 'Idle', tip: 'Hardpoints stowed' });
+    const tip = query(fixture, '[role="tooltip"]');
+
+    expect(tip.querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(tip.querySelector('.tooltip__told')).toBeNull();
+    expect(textOf(tip)).toBe('Hardpoints stowed');
   });
 
   it('draws the gloss for a mouse that arrives, and takes it back when it leaves', () => {

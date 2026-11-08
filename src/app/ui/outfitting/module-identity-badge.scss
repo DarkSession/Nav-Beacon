@@ -56,6 +56,21 @@
   font-weight: var(--ednb-text-weight-body);
 }
 
+// Canvas 1c's class chip: the `4A` in the metric face, in the quiet ink, inside
+// a hairline. The border is decorative; the text carries the meaning. It never
+// gives way, so a cut name ends at a whole chip.
+.identity__chip {
+  flex: none;
+  padding-inline: var(--ednb-space-2xs);
+  border: var(--ednb-border-width-hairline) solid var(--ednb-border-field);
+  font-family: var(--ednb-font-metric);
+  font-size: var(--ednb-text-size-micro);
+  line-height: var(--ednb-text-leading-control);
+  color: var(--ednb-text-faint);
+  unicode-bidi: isolate;
+  white-space: nowrap;
+}
+
 .identity__code-line {
   @include layout.micro-label(var(--ednb-text-faint), var(--ednb-text-tracking-code));
 

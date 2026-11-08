@@ -37,13 +37,15 @@ export const AXE_TAGS = [
  * They take the criterion's **Equivalent** exception instead — "a function can
  * be achieved through a different control on the same page that meets the
  * minimum". Feature 002's outfitting ledger is that control: it stands beside
- * the plates, carries every mount the plates draw at the full 44-pixel
- * baseline, and reaches every one of them without the artwork.
+ * the plates, carries every mount the plates draw as a row at least 24 CSS
+ * pixels in both dimensions, and reaches every one of them without the
+ * artwork.
  *
  * The exception is asserted, not asserted-to: `expectEquivalentControls` walks
- * the mounts actually drawn and fails if any of them has no full-size row. The
- * rule stays enabled for every other node on every page, and a mount that ever
- * stops having an equivalent fails there rather than passing quietly here.
+ * the mounts actually drawn and fails if any of them has no row of at least 24
+ * CSS pixels in both dimensions. The rule stays enabled for every other node on
+ * every page, and a mount that ever stops having an equivalent fails there
+ * rather than passing quietly here.
  */
 const EQUIVALENT_TARGETS = { rule: 'target-size', selector: '.schematic__mount' } as const;
 

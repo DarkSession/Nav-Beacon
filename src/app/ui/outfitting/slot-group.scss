@@ -11,10 +11,18 @@
   @include layout.wrapping-row(var(--ednb-space-inline-tight));
 
   flex-wrap: nowrap;
-  // Canvas 1c's `0 16px 8px`: the rule is inset to the same edge its rows are,
-  // and stands clear of the first of them.
+  // The compact rail's `0 16px 8px`: the rule is inset to the same edge its
+  // rows are, and stands clear of the first of them. A dense group, below,
+  // takes canvas 1c's tighter rule.
   padding-inline: var(--ednb-space-2xl);
   padding-block-end: var(--ednb-space-sm);
+}
+
+// Canvas 1c's dense rail: the rule at the dense rows' inset and 4 pixels clear
+// of the first of them.
+.group[data-density='dense'] .group__rule {
+  padding-inline: var(--ednb-space-xl);
+  padding-block-end: var(--ednb-space-2xs);
 }
 
 .group__heading {

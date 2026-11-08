@@ -6,6 +6,7 @@ import {
   expectEquivalentControls,
   expectNoDocumentOverflow,
   settled,
+  TARGET_FLOOR_PX,
 } from './accessibility/assertions';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
 import { openChooser, revealMount } from './outfitting-surfaces';
@@ -580,13 +581,47 @@ test.describe('targets and accessibility', () => {
     expect(unselected).not.toBe(`rgb(${hardpoint.join(', ')})`);
   });
 
-  test('offers every drawn mount at the full baseline in the ledger', async ({ page }) => {
+  test('offers every drawn mount at the criterion’s minimum in the ledger', async ({ page }) => {
     await openStockBuild(page);
     await expect(mounts(page).first()).toBeVisible();
 
     // What lets the mounts take SC 2.5.8's Equivalent exception at all: the
     // same function, on the same screen, at the size the criterion asks for.
+    // At compact width this presses through the category strip from
+    // hardpoints, which is the scenario "The ledger shows another kind of
+    // mount".
     await expectEquivalentControls(page);
+
+    const composition = await page.locator('.outfitting').getAttribute('data-composition');
+    if (composition === 'compact') {
+      return;
+    }
+
+    await test.step('the utility choice is on the same screen as hardpoints', async () => {
+      const categories = page.locator('.outfitting__category');
+      const hardpoints = categories.filter({
+        hasText: englishMessages['outfitting.category.hardpoint'],
+      });
+      const utility = categories.filter({
+        hasText: englishMessages['outfitting.category.utility'],
+      });
+      await hardpoints.click();
+      await expect(hardpoints).toHaveAttribute('aria-pressed', 'true');
+      await expect(utility).toBeInViewport();
+
+      await utility.click();
+      await expect(utility).toHaveAttribute('aria-pressed', 'true');
+      const sizes = await page
+        .locator('.slot')
+        .evaluateAll((rows) =>
+          rows.map((row) => row.querySelector('.slot__select')!.getBoundingClientRect()),
+        );
+      expect(sizes.length).toBeGreaterThan(0);
+      for (const box of sizes) {
+        expect(box.width).toBeGreaterThanOrEqual(TARGET_FLOOR_PX);
+        expect(box.height).toBeGreaterThanOrEqual(TARGET_FLOOR_PX);
+      }
+    });
   });
 
   test('the capability passes an accessibility scan', async ({ page }, testInfo: TestInfo) => {

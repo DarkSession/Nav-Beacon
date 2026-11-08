@@ -12,6 +12,7 @@ import {
   disabledGeneratorBuild,
   disabledPlantBuild,
   fullyFittedBuild,
+  GENERATOR_SLOT,
   resistantBuild,
   noGeneratorBuild,
   readyBuild,
@@ -62,7 +63,27 @@ describe('DefenceAnalysis', () => {
       element: fixture.nativeElement as HTMLElement,
       component: fixture.componentInstance,
       detect: () => fixture.detectChanges(),
+      destroy: () => fixture.destroy(),
     };
+  }
+
+  /** One card's two view choices, in the order drawn. */
+  function choices(element: HTMLElement, card: string): HTMLButtonElement[] {
+    return [...element.querySelectorAll<HTMLButtonElement>(`.${card} ednb-tab-group .tab`)];
+  }
+
+  /** Presses one of a card's view choices by its drawn label. */
+  function choose(
+    rendered: ReturnType<typeof render>,
+    card: string,
+    label: 'Summary' | 'Sources',
+  ): void {
+    const choice = choices(rendered.element, card).find(
+      (button) => button.textContent?.trim() === label,
+    );
+    expect(choice, `${card} offers ${label}`).toBeDefined();
+    choice!.click();
+    rendered.detect();
   }
 
   /**
@@ -620,27 +641,17 @@ describe('DefenceAnalysis', () => {
       }
     });
 
-    it('names the far end of the scale the bars are drawn on', () => {
+    it('draws no scale row under the bars, and keeps the zero line in a signed track', () => {
       const { component, element } = render(readyBuild());
-      const table = component.armourDamage();
-      const ceiling = element.querySelector<HTMLElement>('.card--armour .scale__mark--ceiling');
 
-      // The package stops publishing a bound at `100%`, so that is where the
-      // track ends and the name stands at the end of it.
-      expect(table.ceiling).toBe(new Intl.NumberFormat('en', { style: 'percent' }).format(1));
-      expect(ceiling?.textContent?.trim()).toBe(table.ceiling);
-    });
-
-    it('prints zero at the mark on a table that reaches below it', () => {
-      const { component, element } = render(readyBuild());
-      const zero = element.querySelector<HTMLElement>('.card--armour .scale__mark--zero');
-
-      // The point the bars are measured from is the one that says which of them
-      // are resistances and which are weaknesses, and on a signed table it
-      // stands inside the track rather than at either end.
-      expect(component.armourDamage().zero).toBe('0%');
-      expect(component.armourDamage().zeroAt).toBeGreaterThan(0);
-      expect(zero?.textContent?.trim()).toBe('0%');
+      // Every bar has its own figure beside it, so no scale is drawn under
+      // them. The zero line inside a signed track stays, because it says which
+      // bars are resistances and which are weaknesses.
+      expect(element.querySelector('.damage tfoot')).toBeNull();
+      expect(element.querySelector('.scale')).toBeNull();
+      expect(component.armourDamage().signed).toBe(true);
+      const zero = element.querySelector<HTMLElement>('.card--armour .damage__zero');
+      expect(zero).not.toBeNull();
       expect(zero?.style.insetInlineStart).toBe(`${component.armourDamage().zeroAt * 100}%`);
     });
 
@@ -655,11 +666,8 @@ describe('DefenceAnalysis', () => {
       expect(table.signed).toBe(false);
       expect(table.zeroAt).toBe(0);
       expect(table.rows.every((row) => row.barStart === 0)).toBe(true);
-      // Zero is the start of the scale here, which is where the canvas prints
-      // its own `0%`: one mark, standing wherever zero happens to be.
-      const zero = element.querySelector<HTMLElement>('.card--shield .scale__mark--zero');
-      expect(zero?.textContent?.trim()).toBe(table.zero);
-      expect(zero?.style.insetInlineStart).toBe('0%');
+      // Zero is the leading edge here, so no zero line is drawn.
+      expect(element.querySelector('.card--shield .damage__zero')).toBeNull();
     });
 
     it('draws hardness, module protection and integrity as three separate facts', () => {
@@ -680,6 +688,161 @@ describe('DefenceAnalysis', () => {
     });
   });
 
+  describe('the choice of view', () => {
+    const bank = () => getModuleBySymbol('Int_ShieldCellBank_Size6_Class1')!;
+
+    it('shows both summaries at first, and offers each card its own choice', () => {
+      const { element } = render(fullyFittedBuild());
+
+      for (const [card, label] of [
+        ['card--shield', 'Shield readings'],
+        ['card--armour', 'Armour readings'],
+      ] as const) {
+        const buttons = choices(element, card);
+        expect(buttons.map((button) => button.textContent?.trim())).toEqual(['Summary', 'Sources']);
+        expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([
+          'true',
+          'false',
+        ]);
+        expect(element.querySelector(`.${card} [role="group"]`)?.getAttribute('aria-label')).toBe(
+          label,
+        );
+        expect(element.querySelector(`.${card} .card__pool`)).not.toBeNull();
+        expect(element.querySelector(`.${card} .sources`)).toBeNull();
+      }
+    });
+
+    it('shows the shield sources and every bank, and leaves the armour as it was', () => {
+      const build = bankedBuild();
+      const rendered = render(build);
+      choose(rendered, 'card--shield', 'Sources');
+      const { component, element } = rendered;
+
+      expect(choices(element, 'card--shield')[1]?.getAttribute('aria-pressed')).toBe('true');
+      expect(element.querySelectorAll('.card--shield .sources .source')).toHaveLength(
+        component.shieldSources().length,
+      );
+      expect(element.querySelector('.card--shield .reserve')).not.toBeNull();
+      expect(element.querySelectorAll('.card--shield .reserve__banks .source')).toHaveLength(
+        component.bankRow()!.banks.length,
+      );
+      expect(choices(element, 'card--armour')[0]?.getAttribute('aria-pressed')).toBe('true');
+      expect(element.querySelector('.card--armour .card__pool')).not.toBeNull();
+      expect(element.querySelector('.card--armour .sources')).toBeNull();
+    });
+
+    it('shows the bulkhead and reinforcement rows on a build with no shield', () => {
+      const rendered = render(fullyFittedBuild().removeModule(GENERATOR_SLOT));
+      choose(rendered, 'card--armour', 'Sources');
+      const { component, element } = rendered;
+
+      expect(component.armourSources().map((row) => row.id)).toEqual([
+        'bulkhead',
+        'hullReinforcement',
+      ]);
+      expect(element.querySelectorAll('.card--armour .sources .source')).toHaveLength(2);
+      expect(text(element, '.card--armour .sources')).toContain('Military Grade Composite');
+    });
+
+    it('draws no choice on a card with no sources, and shows its summary', () => {
+      // A generator switched off leaves the package no shield, so no role
+      // contribution, and the build carries no bank.
+      const { component, element } = render(disabledGeneratorBuild());
+
+      expect(element.querySelector('.card--shield ednb-tab-group')).toBeNull();
+      expect(component.shieldView()).toBe('summary');
+      expect(element.querySelector('.card--shield .issue')).not.toBeNull();
+      expect(element.querySelector('.card--armour ednb-tab-group')).not.toBeNull();
+    });
+
+    it('draws no pool and no damage table on a card that shows its sources', () => {
+      const rendered = render(bankedBuild());
+      choose(rendered, 'card--shield', 'Sources');
+      choose(rendered, 'card--armour', 'Sources');
+
+      for (const card of ['card--shield', 'card--armour']) {
+        expect(rendered.element.querySelector(`.${card} .card__pool`)).toBeNull();
+        expect(rendered.element.querySelector(`.${card} .damage`)).toBeNull();
+        expect(rendered.element.querySelector(`.${card} .card__facts`)).toBeNull();
+      }
+    });
+
+    it('shows the summary while the sources are gone, and the chosen sources when they return', () => {
+      // No generator, so the bank is the shield's only source.
+      const banked = noGeneratorBuild().setModule('Slot04_Size6', bank());
+      const rendered = render(banked);
+      choose(rendered, 'card--shield', 'Sources');
+      expect(rendered.element.querySelector('.card--shield .reserve')).not.toBeNull();
+
+      active.installEdited(banked.removeModule('Slot04_Size6'));
+      rendered.detect();
+      expect(rendered.component.shieldView()).toBe('summary');
+      expect(rendered.element.querySelector('.card--shield ednb-tab-group')).toBeNull();
+      expect(rendered.element.querySelector('.card--shield .reserve')).toBeNull();
+
+      active.installEdited(noGeneratorBuild().setModule('Slot04_Size6', bank()));
+      rendered.detect();
+      expect(rendered.component.shieldView()).toBe('sources');
+      expect(choices(rendered.element, 'card--shield')[1]?.getAttribute('aria-pressed')).toBe(
+        'true',
+      );
+      expect(rendered.element.querySelector('.card--shield .reserve')).not.toBeNull();
+    });
+
+    it('starts at the summary when the panel is drawn anew, through a source going and coming back', () => {
+      const banked = noGeneratorBuild().setModule('Slot04_Size6', bank());
+      const first = render(banked);
+      choose(first, 'card--shield', 'Sources');
+      choose(first, 'card--armour', 'Sources');
+      first.destroy();
+
+      const again = render(null);
+      for (const card of ['card--shield', 'card--armour']) {
+        expect(choices(again.element, card)[0]?.getAttribute('aria-pressed')).toBe('true');
+        expect(again.element.querySelector(`.${card} .sources`)).toBeNull();
+      }
+
+      active.installEdited(banked.removeModule('Slot04_Size6'));
+      again.detect();
+      active.installEdited(noGeneratorBuild().setModule('Slot04_Size6', bank()));
+      again.detect();
+      expect(again.component.shieldView()).toBe('summary');
+      expect(choices(again.element, 'card--shield')[0]?.getAttribute('aria-pressed')).toBe('true');
+      expect(again.element.querySelector('.card--shield .reserve')).toBeNull();
+    });
+
+    it('states an unfed generator whichever view is chosen', () => {
+      const rendered = render(shedGeneratorBuild().setModule('Slot04_Size6', bank()));
+      const reason = 'Insufficient power for the shield generator.';
+
+      expect(rendered.component.shieldHasSources()).toBe(true);
+      expect(text(rendered.element, '.card--shield .issue')).toBe(reason);
+      choose(rendered, 'card--shield', 'Sources');
+      expect(rendered.element.querySelector('.card--shield .reserve')).not.toBeNull();
+      expect(text(rendered.element, '.card--shield .issue')).toBe(reason);
+    });
+
+    it('holds the pool, the damage table and the tiles in each summary, and no source row', () => {
+      const { element } = render(bankedBuild());
+
+      for (const card of ['card--shield', 'card--armour']) {
+        expect(element.querySelector(`.${card} .card__pool`)).not.toBeNull();
+        expect(element.querySelectorAll(`.${card} .damage tbody tr`)).toHaveLength(4);
+        expect(element.querySelectorAll(`.${card} .card__facts .metric`)).toHaveLength(3);
+        expect(element.querySelector(`.${card} .source`)).toBeNull();
+      }
+    });
+
+    it('offers no choice for a shield with no role contribution and no bank', () => {
+      const { component, element } = render(noGeneratorBuild());
+
+      expect(component.shieldSources()).toEqual([]);
+      expect(component.bankRow()).toBeNull();
+      expect(component.shieldHasSources()).toBe(false);
+      expect(element.querySelector('.card--shield [role="group"]')).toBeNull();
+    });
+  });
+
   describe('the source rows', () => {
     it('carries the package aggregate for each role, the first without a sign', () => {
       const build = fullyFittedBuild();
@@ -693,8 +856,9 @@ describe('DefenceAnalysis', () => {
         'shieldBooster',
         'shieldReinforcement',
       ]);
-      expect(rows[0]?.contribution).toBe(`${whole.format(shield.generator)} MJ`);
-      expect(rows[1]?.contribution).toBe(`+${whole.format(shield.boosters)} MJ`);
+      expect(rows[0]?.contribution).toBe(whole.format(shield.generator));
+      expect(rows[1]?.contribution).toBe(`+${whole.format(shield.boosters)}`);
+      expect(rows.every((row) => row.unit === 'MJ')).toBe(true);
     });
 
     it('names a row after the module every mount in it holds, and counts them', () => {
@@ -736,8 +900,63 @@ describe('DefenceAnalysis', () => {
       expect(reinforcement?.contribution).toBe(
         `+${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(
           BuildMetrics.of(build).armourMetrics().reinforcement,
-        )} HP`,
+        )}`,
       );
+      expect(reinforcement?.unit).toBe('HP');
+    });
+
+    describe('the unit head', () => {
+      /** Both cards on their sources. */
+      function sourcesOf(build: ShipLoadout) {
+        const rendered = render(build);
+        choose(rendered, 'card--shield', 'Sources');
+        choose(rendered, 'card--armour', 'Sources');
+        return rendered.element;
+      }
+
+      it('heads each source list with its unit, hidden from assistive technology', () => {
+        const element = sourcesOf(fullyFittedBuild());
+
+        for (const [card, unit] of [
+          ['card--shield', 'MJ'],
+          ['card--armour', 'HP'],
+        ] as const) {
+          const head = element.querySelector(`.${card} .sources__unit`);
+          expect(head?.textContent?.trim()).toBe(unit);
+          expect(head?.getAttribute('aria-hidden')).toBe('true');
+        }
+      });
+
+      it('draws each figure as a bare number, with no unit in its visible text', () => {
+        const element = sourcesOf(fullyFittedBuild());
+
+        for (const card of ['card--shield', 'card--armour']) {
+          const figures = [...element.querySelectorAll(`.${card} .sources .source__value`)];
+          expect(figures.length).toBeGreaterThan(0);
+          for (const figure of figures) {
+            const drawn = figure.cloneNode(true) as HTMLElement;
+            drawn.querySelectorAll('.visually-hidden').forEach((hidden) => hidden.remove());
+            expect(drawn.textContent?.trim()).toMatch(/^\+?[\d,]+$/u);
+          }
+        }
+      });
+
+      it('reads each figure with its unit', () => {
+        const element = sourcesOf(fullyFittedBuild());
+
+        for (const [card, unit] of [
+          ['card--shield', 'MJ'],
+          ['card--armour', 'HP'],
+        ] as const) {
+          for (const figure of element.querySelectorAll(`.${card} .sources .source__value`)) {
+            expect(figure.closest('[aria-hidden="true"]')).toBeNull();
+            expect(figure.querySelector('.visually-hidden')?.textContent?.trim()).toBe(unit);
+            expect((figure.textContent ?? '').replace(/\s+/gu, ' ').trim()).toMatch(
+              new RegExp(`^\\+?[\\d,]+ ${unit}$`, 'u'),
+            );
+          }
+        }
+      });
     });
   });
 
@@ -823,7 +1042,9 @@ describe('DefenceAnalysis', () => {
     });
 
     it('hatches the bar of a bank the plant does not feed', () => {
-      const { element } = render(bankedBuild().setModuleEnabled('Slot09_Size4', false));
+      const rendered = render(bankedBuild().setModuleEnabled('Slot09_Size4', false));
+      choose(rendered, 'card--shield', 'Sources');
+      const { element } = rendered;
       const rows = [...element.querySelectorAll('.reserve__banks .source')];
 
       // The hatch is supplemental: the same row says the word in its code line.

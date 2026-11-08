@@ -1,10 +1,9 @@
 <!--
   Canvas 1c's `POWER & THERMALS` panel: the conditions, the priority groups over
   their summary, the module draw list, the heat profile and the distributor
-  table, in that order. Canvas 1d stacks the same five blocks. This is that DOM
-  at both widths; which arrangement appears is decided in CSS from the space the
-  region is given, so a 400% zoom picks the stacked one for the same reason a
-  phone does.
+  table, in that order. This is that DOM at every width; which arrangement
+  appears is decided in CSS from the space the region is given, so a 400% zoom
+  picks the single column for the same reason a phone does.
 -->
 @if (shown()) {
   <div class="power">
@@ -40,7 +39,7 @@
       <ol class="power__bands">
         @for (band of bandRows(); track band.id) {
           <li class="power__band" [class.power__band--offline]="band.offline">
-            <span class="power__band-group">{{ band.group }}</span>
+            <span class="power__band-group"><ednb-fit-text [text]="band.group" /></span>
             <!--
               Two lengths and a mark, and no reading of its own: every figure it
               draws is the text on either side of it, which is what a reader who
@@ -120,6 +119,8 @@
         class="power__summary metric-group--tight"
         [label]="summaryLabel()"
         [metrics]="summaryMetrics()"
+        [dense]="true"
+        [fitLabels]="true"
       />
     </section>
 
@@ -146,14 +147,20 @@
           @for (row of moduleRows(); track row.id) {
             <li class="module" [class.module--offline]="row.offline">
               <span class="module__name">
+                <!--
+                  The game text draws the name in its own language, and the fit
+                  text cuts it where the one-row step holds it on one line.
+                -->
                 @if (row.name; as name) {
-                  <ednb-game-text
-                    [text]="name.text"
-                    [language]="name.language"
-                    [translationState]="name.translationState"
-                  />
+                  <ednb-fit-text class="module__label" [text]="name.text ?? ''">
+                    <ednb-game-text
+                      [text]="name.text"
+                      [language]="name.language"
+                      [translationState]="name.translationState"
+                    />
+                  </ednb-fit-text>
                 } @else {
-                  {{ row.fallbackName }}
+                  <ednb-fit-text class="module__label" [text]="row.fallbackName ?? ''" />
                 }
                 @if (row.count; as count) {
                   <span class="module__count" data-bidi-isolate>{{ count }}</span>
@@ -221,12 +228,20 @@
                       related to the name by `aria-describedby`, so a reader who
                       is told the interface has it without asking.
                     -->
-                    <ednb-tooltip
-                      class="heat__description"
-                      [dense]="true"
-                      [label]="bar.label"
-                      [tip]="bar.description"
-                    />
+                    <!--
+                      The name is the trigger of its own gloss, so where the
+                      one-row step cuts it, the `…` is a plain mark and the
+                      gloss shows the whole name before it.
+                    -->
+                    <ednb-fit-text #fit [text]="bar.label" [tipped]="false">
+                      <ednb-tooltip
+                        class="heat__description"
+                        [dense]="true"
+                        [label]="bar.label"
+                        [tip]="bar.description"
+                        [drawnTip]="fit.cut() ? bar.wholeTip : null"
+                      />
+                    </ednb-fit-text>
                   </span>
 
                   <!--
@@ -236,11 +251,13 @@
                 -->
                   <span class="heat__track" aria-hidden="true">
                     <span class="heat__within" [style.inline-size.%]="bar.within * 100"></span>
-                    <span
-                      class="heat__over"
-                      [style.inset-inline-start.%]="heatThreshold() * 100"
-                      [style.inline-size.%]="bar.over * 100"
-                    ></span>
+                    @if (bar.over > 0) {
+                      <span
+                        class="heat__over"
+                        [style.inset-inline-start.%]="heatThreshold() * 100"
+                        [style.inline-size.%]="bar.over * 100"
+                      ></span>
+                    }
                     <span
                       class="heat__threshold"
                       [style.inset-inline-start.%]="heatThreshold() * 100"
@@ -257,6 +274,14 @@
                     -->
                       <span class="visually-hidden">{{ meaning }}</span>
                     }
+                    @if (bar.overheats) {
+                      <!--
+                        The state the colour and the hatch draw, in words. No
+                        key names the two fills, so a reader who is told the
+                        level hears that it is past the threshold here.
+                      -->
+                      <span class="visually-hidden">{{ heatOverLabel() }}</span>
+                    }
                   </span>
                 </li>
               }
@@ -264,22 +289,15 @@
           </div>
 
           <!--
-            The canvas's key, above the tiles since the 2026-08-25 revision. It
-            names both fills in words, because the whole difference between them
-            is a colour and a hatch — and it now reads directly under the bars it
-            explains rather than after the four figures that do not use it.
+            The two tiles stand under the bars at every width, two across.
           -->
-          <ul class="heat__legend">
-            @for (key of heatLegend(); track key.id) {
-              <li class="heat__key">
-                <span class="heat__swatch" [class.heat__swatch--over]="key.over" aria-hidden="true">
-                </span>
-                {{ key.label }}
-              </li>
-            }
-          </ul>
-
-          <ednb-metric-group class="power__facts" [label]="heatCaption()" [metrics]="heatFacts()" />
+          <ednb-metric-group
+            class="power__facts metric-group--pair"
+            [label]="heatCaption()"
+            [metrics]="heatFacts()"
+            [dense]="true"
+            [fitLabels]="true"
+          />
         </div>
       } @else {
         <!--

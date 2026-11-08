@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { afterEach, vi } from 'vitest';
 import { BuildMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
+import type { FittedWeaponMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
 import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import type { BuildCandidate } from '../../../../application/active-build/active-build.models';
 import { ActiveBuildStore } from '../../../../application/active-build/active-build.store';
@@ -12,19 +14,29 @@ import {
   OFFENCE_STATE_SLOTS,
   allDisabledBuild,
   drainingBuild,
+  engineeredPairBuild,
   everyStateBuild,
   idleZeroCapacityBuild,
+  mixedMountPairBuild,
   noWeaponsBuild,
   partlyDisabledBuild,
   populatedBuild,
   zeroCapacityBuild,
 } from '../../../../domain/ships/offence/offence.fixtures';
 import { TARGET_RANGE } from '../../../../domain/ships/offence/convergence';
+import { lockedArticleBuild } from '../../../../domain/ships/outfitting/outfitting.fixtures';
+import { GameTextPresenter } from '../../../../i18n/game-text.presenter';
 import englishMessages from '../../../../i18n/locales/en.json';
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
-import { OffenceAnalysis } from './offence-analysis';
+import { ModuleIdentityBadge } from '../../../../ui/outfitting/module-identity-badge';
+import { OFFENCE_ROW_MIN_REM, OffenceAnalysis } from './offence-analysis';
 import { suppliedFit } from '../../../../domain/ships/build/supplied-fit';
+import { groupIdenticalWeapons } from '../../../../domain/ships/offence/offence';
+import { Formatters } from '../../../../i18n/formatters/formatters';
+import germanMessages from '../../../../i18n/locales/de.json';
+import type { MessageCatalogue } from '../../../../i18n/locale-registry';
+import { LocaleStore } from '../../../../i18n/locale.store';
 
 /**
  * The offence panel, from the outside.
@@ -84,6 +96,7 @@ describe('OffenceAnalysis', () => {
       element: fixture.nativeElement as HTMLElement,
       component: fixture.componentInstance,
       detect: () => fixture.detectChanges(),
+      fixture,
     };
   }
 
@@ -165,6 +178,18 @@ describe('OffenceAnalysis', () => {
       const { component } = render(loadout);
 
       expect(component.mounted()).toContain(String(returned));
+    });
+
+    it('counts weapons, not rows, where identical weapons share a row', () => {
+      const loadout = populatedBuild();
+      const returned = BuildMetrics.of(loadout).weaponMetrics().weapons.length;
+
+      const { component } = render(loadout);
+
+      expect(component.weaponRows().length).toBeLessThan(returned);
+      expect(component.mounted()).toBe(
+        englishMessages['offence.weapons.mounted'].replace('{{count}}', String(returned)),
+      );
     });
 
     it('shows the package zero for an all-disabled build rather than an absence', () => {
@@ -280,19 +305,35 @@ describe('OffenceAnalysis', () => {
       expect(component.weaponRows().map((row) => row.id)).toEqual(returned);
     });
 
-    it('neither merges nor de-duplicates two mounts carrying the same module', () => {
+    it('makes one row per group of identical weapons, where its first weapon stands', () => {
       const loadout = populatedBuild();
-      const symbols = BuildMetrics.of(loadout)
-        .weaponMetrics()
-        .weapons.map((weapon) => weapon.symbol);
-      expect(new Set(symbols).size).toBeLessThan(symbols.length);
+      const weapons = BuildMetrics.of(loadout).weaponMetrics().weapons;
+      const records = new Map(loadout.fittedModules().map((module) => [module.slot, module]));
+      const groups = groupIdenticalWeapons(weapons, records);
 
       const { component } = render(loadout);
 
-      // Two rows, two distinct slots — the canvas draws duplicates as
-      // duplicates, and the identity is the slot rather than the symbol.
-      expect(component.weaponRows()).toHaveLength(symbols.length);
-      expect(new Set(component.weaponRows().map((row) => row.id)).size).toBe(symbols.length);
+      expect(component.weaponRows().map((row) => row.slots)).toEqual(
+        groups.map((group) => group.map((weapon) => weapon.slot)),
+      );
+      expect(component.weaponRows().map((row) => row.id)).toEqual(
+        groups.map(([first]) => first.slot),
+      );
+      expect(component.weaponRows().map((row) => row.count)).toEqual(
+        groups.map((group) => group.length),
+      );
+    });
+
+    it('carries every member’s slot key on a shared row, and draws none of them', () => {
+      const { component, element } = render(populatedBuild());
+
+      const [row] = component.weaponRows();
+      expect(component.weaponRows()).toHaveLength(1);
+      expect(row?.slots).toEqual([...OFFENCE_DEFAULT_SLOTS]);
+      const drawn = element.querySelector('.weapons')?.textContent ?? '';
+      for (const slot of OFFENCE_DEFAULT_SLOTS) {
+        expect(drawn).not.toContain(slot);
+      }
     });
 
     it('keeps a disabled weapon’s row and its own figures', () => {
@@ -311,26 +352,50 @@ describe('OffenceAnalysis', () => {
       );
     });
 
-    it('still draws the code line where the package published no recipe', () => {
+    it('draws the name alone on a row whose name no other row shows', () => {
       const { component, element } = render(populatedBuild());
 
-      // The stock Anaconda's weapons are unengineered, so no recipe follows the
-      // mount — the package published none, and a stock placeholder would be a
-      // word this application chose. The line itself is still drawn: the canvas
-      // gives every row a code line, and its first two parts are the module's
-      // class and rating and its mount, which are published for all of them.
       for (const row of component.weaponRows()) {
+        expect(row.moduleClass).toBeNull();
+        expect(row.rating).toBeNull();
+        expect(row.mount).toBeNull();
         expect(row.engineering).toBeNull();
-        expect(row.moduleClass).not.toBeNull();
-        expect(row.rating).not.toBeNull();
       }
-      for (const cell of element.querySelectorAll('.weapon__module')) {
-        expect(cell.querySelector('.identity__code-line')?.textContent?.trim()).toBeTruthy();
+      expect(element.querySelector('.weapon__module .identity__code-line')).toBeNull();
+    });
+
+    it('draws a code line on both rows of a pair with one name and different engineering', () => {
+      const { component, element } = render(engineeredPairBuild());
+
+      const rows = component.weaponRows();
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.name.text).toBe(rows[1]?.name.text);
+      // The unengineered weapon names no recipe, because the package published
+      // none. Its line still states the class, rating and mount.
+      expect(rows[0]?.engineering).not.toBeNull();
+      expect(rows[1]?.engineering).toBeNull();
+      const lines = [...element.querySelectorAll('.weapon__module')].map((cell) =>
+        cell.querySelector('.identity__code-line')?.textContent?.trim(),
+      );
+      expect(lines).toHaveLength(2);
+      for (const line of lines) {
+        expect(line).toBeTruthy();
       }
+      expect(lines[0]).not.toBe(lines[1]);
+    });
+
+    it('draws a code line on a fixed and a gimballed weapon that share a name', () => {
+      const { component, element } = render(mixedMountPairBuild());
+
+      const rows = component.weaponRows();
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.name.text).toBe(rows[1]?.name.text);
+      expect(rows[0]?.mount).not.toBe(rows[1]?.mount);
+      expect(element.querySelectorAll('.weapon__module .identity__code-line')).toHaveLength(2);
     });
 
     it('reads the code line off the package rather than out of the symbol', () => {
-      const loadout = populatedBuild();
+      const loadout = engineeredPairBuild();
       const { component } = render(loadout);
       const fitted = BuildMetrics.of(loadout).weaponMetrics().weapons[0];
       const article = outfitting.slots().find((slot) => slot.key === fitted?.slot)?.module?.article;
@@ -342,6 +407,105 @@ describe('OffenceAnalysis', () => {
       expect(row?.moduleClass).toBe(article?.class ?? null);
       expect(row?.rating).toBe(article?.rating ?? null);
       expect(row?.mount).toBe(article?.mount ?? null);
+    });
+
+    it('states the count of a shared row once, drawn and in words', () => {
+      const { element } = render(populatedBuild());
+
+      const cell = element.querySelector('.weapon__module');
+      const drawn = cell?.querySelector('.weapon__count');
+      expect(drawn?.textContent?.trim()).toBe('×2');
+      expect(drawn?.getAttribute('aria-hidden')).toBe('true');
+      expect(cell?.querySelector('.visually-hidden')?.textContent?.trim()).toBe(
+        '2 identical weapons, figures for each',
+      );
+    });
+
+    it('draws no count on a row that stands for one weapon', () => {
+      const { component, element } = render(everyStateBuild());
+
+      expect(component.weaponRows().every((row) => row.count === 1)).toBe(true);
+      expect(component.weaponRows().every((row) => row.countText === null)).toBe(true);
+      expect(element.querySelector('.weapon__count')).toBeNull();
+    });
+
+    it('draws one weapon’s burst figure on a shared row, not the sum', () => {
+      const loadout = populatedBuild();
+      const [first] = BuildMetrics.of(loadout).weaponMetrics().weapons;
+
+      const { component } = render(loadout);
+
+      const row = component.weaponRows()[0];
+      expect(row?.count).toBe(2);
+      expect(row?.damagePerSecond).toBe(
+        TestBed.inject(Formatters).decimal(first?.metrics.damagePerSecond ?? NaN, 1),
+      );
+    });
+
+    it('names a weapon with no module record from its weapon-metrics symbol', () => {
+      const loadout = populatedBuild();
+      const returned = BuildMetrics.of(loadout).weaponMetrics();
+      const [first] = returned.weapons;
+      const unrecorded: FittedWeaponMetrics = {
+        ...(first as FittedWeaponMetrics),
+        slot: 'UnmappedHardpoint',
+        symbol: 'Hpt_MultiCannon_Fixed_Large',
+      };
+      vi.spyOn(BuildMetrics.prototype, 'weaponMetrics').mockReturnValue({
+        ...returned,
+        weapons: [...returned.weapons, unrecorded],
+      });
+
+      const { component } = render(loadout);
+
+      const row = component.weaponRows().find((entry) => entry.id === 'UnmappedHardpoint');
+      expect(row?.name.text).toBe(
+        TestBed.inject(GameTextPresenter).moduleName('Hpt_MultiCannon_Fixed_Large').text,
+      );
+      expect(row?.count).toBe(1);
+    });
+
+    it('leaves out a class or rating the package does not publish', () => {
+      // Two weapons the hull layout does not name: no record and no article, so
+      // neither class nor rating is published for them. They show one name, so
+      // both rows ask for their code line.
+      const loadout = populatedBuild();
+      const returned = BuildMetrics.of(loadout).weaponMetrics();
+      const [first] = returned.weapons;
+      const unplaced = (slot: string, damagePerSecond: number): FittedWeaponMetrics => ({
+        ...(first as FittedWeaponMetrics),
+        slot,
+        metrics: { ...(first as FittedWeaponMetrics).metrics, damagePerSecond },
+      });
+      vi.spyOn(BuildMetrics.prototype, 'weaponMetrics').mockReturnValue({
+        ...returned,
+        weapons: [unplaced('UnmappedA', 1), unplaced('UnmappedB', 2)],
+      });
+
+      const { component, element } = render(loadout);
+
+      const rows = component.weaponRows();
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row.moduleClass).toBeNull();
+        expect(row.rating).toBeNull();
+      }
+      const drawn = element.querySelector('.weapons')?.textContent ?? '';
+      expect(drawn).not.toMatch(/null|undefined|NaN/u);
+    });
+
+    it('names a weapon whose record carries a pre-engineered variant by that variant', () => {
+      const { build, slot } = lockedArticleBuild();
+      const variant = build.fittedModuleAt(slot)?.preEngineeredVariant;
+      expect(variant).toBeTruthy();
+      const text = TestBed.inject(GameTextPresenter);
+
+      const { component } = render(build);
+
+      const row = component.weaponRows().find((entry) => entry.id === slot);
+      expect(row).toBeDefined();
+      expect(row?.name.text).toBe(text.preEngineeredVariantName(variant!).text);
+      expect(row?.name.text).not.toBe(text.moduleName(build.fittedModuleAt(slot)!.symbol).text);
     });
 
     it('draws a complete row for a weapon whose damage is a genuine zero', () => {
@@ -507,19 +671,75 @@ describe('OffenceAnalysis', () => {
       expect(drawn['draw']).toMatch(/ MJ\/s$/u);
     });
 
-    it('names the allocation the four figures were read at, once under the block', () => {
-      const { component } = render(populatedBuild());
+    it('states the WEP pips in the heading, read from the shared conditions', () => {
+      const { component, element, detect } = render(populatedBuild());
 
-      expect(component.capacitorAllocation()).toContain('2');
+      conditions.setPips('weapons', 3);
+      detect();
+
+      expect(component.capacitorPips()).toBe('@ 3 pips');
+      const heading = element.querySelector('.bars--capacitor .bars__label');
+      expect(heading?.querySelector('.bars__pips')?.textContent?.trim()).toBe('@ 3 pips');
+      expect(heading?.textContent?.replace(/\s+/gu, ' ').trim()).toBe(
+        `${englishMessages['offence.capacitor.heading']} @ 3 pips`,
+      );
     });
 
-    it('restates the allocation when feature 005 moves it', () => {
-      const { component, detect } = render(populatedBuild());
+    it('follows the pip control when it changes', () => {
+      const { element, detect } = render(populatedBuild());
 
       conditions.setPips('weapons', 4);
       detect();
 
-      expect(component.capacitorAllocation()).toContain('4');
+      expect(element.querySelector('.bars__pips')?.textContent?.trim()).toBe('@ 4 pips');
+    });
+
+    it('never reads the pips the package echoes back', () => {
+      const loadout = populatedBuild();
+      const metrics = BuildMetrics.of(loadout).weaponsCapacitorMetrics({ weaponsPips: 1 });
+      vi.spyOn(BuildMetrics.prototype, 'weaponsCapacitorMetrics').mockReturnValue(metrics);
+
+      const { component, detect } = render(loadout);
+      conditions.setPips('weapons', 3);
+      detect();
+
+      expect(component.capacitorPips()).toBe('@ 3 pips');
+    });
+
+    it('states its pips exactly once, and draws no condition line', () => {
+      const { element, detect } = render(populatedBuild());
+      conditions.setPips('weapons', 3);
+      detect();
+
+      const block = element.querySelector('.bars--capacitor');
+      expect(block?.querySelectorAll('.bars__pips')).toHaveLength(1);
+      expect(block?.textContent?.match(/pips/giu)).toHaveLength(1);
+      expect(block?.querySelector('.bars__condition')).toBeNull();
+    });
+
+    it('writes a half pip for the active locale', () => {
+      const { component, detect } = render(populatedBuild());
+
+      // A whole pip given to systems is paid for half a pip at a time, so the
+      // weapons bank lands on a half step.
+      conditions.setPips('systems', 1);
+      detect();
+      expect(conditions.pips().weapons).toBe(2.5);
+
+      expect(component.capacitorPips()).toBe('@ 2.5 pips');
+
+      TestBed.inject(LocaleStore).commitCandidate(
+        {
+          requested: 'de',
+          catalogue: germanMessages as unknown as MessageCatalogue,
+          source: 'asset',
+          failure: null,
+        },
+        'browser',
+      );
+      detect();
+
+      expect(component.capacitorPips()).toBe('@ 2,5 Pips');
     });
 
     it('moves the recharge and the endurance with the allocation, and nothing else', () => {
@@ -636,7 +856,8 @@ describe('OffenceAnalysis', () => {
 
     it('has no capacitor to describe without a build', () => {
       expect(render(null).component.capacitorRows()).toEqual([]);
-      expect(render(null).component.capacitorAllocation()).toBeNull();
+      // No capacitor figure, so no pips are stated either.
+      expect(render(null).component.capacitorPips()).toBeNull();
     });
   });
 
@@ -671,7 +892,8 @@ describe('OffenceAnalysis', () => {
 
       // The qualification says the list may be incomplete. It never truncates
       // the list, and it never blanks a total the package did return.
-      expect(component.weaponRows()).toHaveLength(
+      // Every returned weapon is in a row's count.
+      expect(component.weaponRows().reduce((total, row) => total + row.count, 0)).toBe(
         BuildMetrics.of(loadout).weaponMetrics().weapons.length,
       );
       expect(component.headline()?.value).toBeTruthy();
@@ -805,6 +1027,54 @@ describe('OffenceAnalysis', () => {
       expect(element.querySelector('.offence__statement')?.textContent?.trim()).toBe(
         englishMessages['offence.convergence.unavailable'],
       );
+    });
+  });
+
+  describe('the labels the three-column step cuts', () => {
+    it('draws each label through the fit text, and no figure', () => {
+      const { element } = render(populatedBuild());
+      const fitted = (selector: string): string[] =>
+        [...element.querySelectorAll(`${selector} ednb-fit-text`)].map((node) =>
+          (node.textContent ?? '').trim(),
+        );
+
+      expect(fitted('.weapons__columns')).toEqual([
+        englishMessages['offence.column.module'],
+        englishMessages['offence.column.dps'],
+        englishMessages['offence.column.sustained'],
+        englishMessages['offence.column.pierce'],
+        englishMessages['offence.column.range'],
+        englishMessages['offence.column.falloff'],
+      ]);
+      // A range band's label is a distance, which is a figure.
+      expect(fitted('.bars--range .bar__label')).toEqual([]);
+      expect(element.querySelectorAll('.bars--range .bar__label')).toHaveLength(4);
+      expect(fitted('.bars--capacitor .bar__label')).toHaveLength(4);
+      expect(fitted('.offence__head')).toEqual([englishMessages['offence.damage.note']]);
+      expect(
+        element.querySelector(
+          ':is(.headline, .bar__value, .weapon__figures, .split, .bars__pips) ednb-fit-text',
+        ),
+      ).toBeNull();
+    });
+
+    it('hands every weapon badge its whole name as the tip for a cut name', () => {
+      const { component, fixture } = render(populatedBuild());
+      const badges = fixture.debugElement
+        .queryAll(By.directive(ModuleIdentityBadge))
+        .map((node) => node.componentInstance as ModuleIdentityBadge);
+
+      expect(badges.map((badge) => badge.nameTip())).toEqual(
+        component.weaponRows().map((row) => row.name.text),
+      );
+    });
+
+    it('states the step it turns at on its own host', () => {
+      const { fixture } = render(populatedBuild());
+
+      expect(
+        (fixture.nativeElement as HTMLElement).style.getPropertyValue('--offence-row-min'),
+      ).toBe(`${OFFENCE_ROW_MIN_REM}rem`);
     });
   });
 

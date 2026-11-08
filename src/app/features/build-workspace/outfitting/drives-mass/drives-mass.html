@@ -259,24 +259,21 @@
       </div>
 
       <!--
-        The canvas's headline trio, on the hairline ground it draws them on:
-        `JUMP LADEN`, `JUMP UNLADEN` and `MASS LOCK`. The card's summary, the way
-        the loaded mass is the thruster card's, and the two jumps are the ends of
-        the `RANGE BY LOAD` list under it.
-
-        Three across on one line, at every width, as the canvas sets them —
-        `repeat(3, 1fr)` on the same smaller cell feature 005's priority footer
-        takes, and for the same reason. Left to size itself from the card's own
-        width the trio came out two across with `MASS LOCK` alone underneath,
-        which is neither artboard (Commander request 2026-08-26).
+        The hull's mass lock factor: the label at one end of the line and the
+        value at the other. The jump figures are the range rows below it, so the
+        card states each of them once. A hull the catalogue does not carry shows
+        the shared unavailable wording, never a zero.
       -->
-      <ednb-metric-group
-        class="drives__cells metric-group--tight"
-        [label]="jumpCellsLabel()"
-        [metrics]="jumpCells()"
-      />
+      <p class="drives__mass-lock">
+        <span class="drives__mass-lock-label">{{ massLockLabel() }}</span>
+        @if (massLock(); as massLock) {
+          <span class="drives__mass-lock-value" data-bidi-isolate>{{ massLock }}</span>
+        } @else {
+          <span class="drives__mass-lock-value"><ednb-unavailable-value /></span>
+        }
+      </p>
 
-      <!-- The canvas's hairline under that trio. -->
+      <!-- The canvas's hairline under the mass lock line. -->
       <span class="drives__rule" aria-hidden="true"></span>
 
       <!--
@@ -365,8 +362,8 @@
             } @else {
               <!--
                 A drive constant is missing because the package could not settle
-                the load that guards it — the same cause the trio above and the
-                envelope on the other card call incomplete.
+                the load that guards it — the same cause the range rows above and
+                the envelope on the other card call incomplete.
               -->
               <span class="drives__legend-value">
                 <ednb-unavailable-value kind="incomplete" />

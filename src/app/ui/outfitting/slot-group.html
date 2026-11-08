@@ -1,4 +1,8 @@
-<section class="group" [attr.aria-labelledby]="headingId">
+<section
+  class="group"
+  [attr.aria-labelledby]="headingId"
+  [attr.data-density]="dense() ? 'dense' : null"
+>
   <div class="group__rule">
     <h3 class="group__heading" [id]="headingId">{{ heading() }}</h3>
     <!-- Canvas 1c's `SIZE · NODE NO.` under the hardpoint rule, naming the two

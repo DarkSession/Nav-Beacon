@@ -4,7 +4,7 @@
 **Covers**: 002 FR-012; 011 FR-006, FR-007, FR-008, FR-009, FR-010, FR-013, FR-020, FR-023,
 FR-025, FR-026, SC-001; 017 FR-001, FR-002, FR-003, FR-004, FR-005, SC-001, SC-002; 018
 FR-002, FR-006, FR-007
-**Version**: 15
+**Version**: 16
 
 ## What is automated, and what is left
 
@@ -295,11 +295,11 @@ disagrees or where the announcement is correct but unusable.
     FR-005 forbids. Expect the curve marks and the drive card beside it to
     survive: what was lost is the build's mobility, not the module's stats.
 
-    In the drive card, expect the three head cells — jump laden, jump unladen
-    and mass lock — to be announced as label-and-value pairs, and expect the
-    two jump figures to be recognisable as the ends of the three ranges read
-    below them rather than as a separate answer. Expect each range row to be
-    announced as its load and one figure in light years. Expect the legend
+    In the drive card, expect the mass lock factor to be announced first, as
+    one label-and-value pair, before any range row. Expect each range row to be
+    announced as its load and one figure in light years, and expect the jump
+    figures to be the range rows' own: the unladen row and the full-cargo row
+    are the two ends, and no separate jump reading is announced before them. Expect the legend
     under them to be announced as three more pairs — optimal mass, fuel per
     jump, total range with the jumps that tank makes. Where the drive is
     Overcharge-capable, expect the badge's meaning to be announced **once**, in
@@ -492,6 +492,38 @@ disagrees or where the announcement is correct but unusable.
     Commander who cannot see the missing control can still tell that the module
     has an effect and that the application deliberately does not permit changing
     it.
+
+24. **The anatomy panels' choices and counts.** Open a build with a shield
+    generator, a shield cell bank, two identical weapons and a build whose
+    sustained fire overheats (the Anaconda with four fixed beam lasers in the
+    huge and large mounts does). Open the `DEFENCE` mode of the anatomy region.
+
+    For each of the shield card and the armour card, expect its choice to be
+    announced as two buttons, `Summary` and `Sources`, in a group named for the
+    card, with `Summary` announced as pressed. Expect the summary's pool, damage
+    readings and tiles to be read, and **no** source module. Press `Sources`.
+    Expect it to be announced as pressed, and expect the source modules to be
+    read after it, each contribution with its unit, and on the shield card the
+    cell bank reserve with every bank. Expect the armour card to be still on its
+    summary. Leave the defence mode and open it again: expect both cards to be
+    on their summary.
+
+    Open the `OFFENCE` mode. Find the row that stands for the two identical
+    weapons. Expect it to be announced with its module name and the words
+    "2 identical weapons, figures for each", and expect the count to be said
+    once, never as `×2` read out beside those words. Expect the row's figures to
+    be one weapon's, not a sum.
+
+    Open the `POWER` mode and walk the heat profile. Expect four scenario bars,
+    idle, thrusters, FSD charging and sustained fire, then the shield cell bank
+    bar. Expect the overheating bar to be announced with its level and the
+    words "Over threshold", and a bar within the limit to be announced with its
+    level alone.
+
+    The judgment this step exists for: whether a Commander who hears these
+    panels can tell which view a card shows and how to reach the other, how many
+    weapons one row stands for, and which scenario overheats, without the
+    colour, the hatch or the pressed fill that tells a sighted Commander.
 
 ## Recording the result
 

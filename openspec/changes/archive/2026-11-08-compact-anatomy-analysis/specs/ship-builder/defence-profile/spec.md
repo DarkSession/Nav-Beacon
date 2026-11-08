@@ -5,8 +5,7 @@
 Where the shield or the armour has sources, it MUST offer a choice between a summary and its
 sources. A summary holds the pool, the damage-type readings, and the shield's recovery or the
 armour's hardness, module armour and module protection. The sources hold the source modules with
-their contributions and the shield's cell bank reserve. A shield diagnosis, the generator's power
-state included, MUST be shown in both views.
+their contributions and the shield's cell bank reserve. A shield diagnosis, the generator's power state included, MUST be shown in both views.
 
 Source: 006/FR-002, 006/FR-003, 006/FR-006, 006/FR-007.
 
@@ -26,6 +25,18 @@ Source: 006/FR-002, 006/FR-003, 006/FR-006, 006/FR-007.
 
 - **WHEN** the power plant does not feed the shield generator
 - **THEN** the generator's power state is shown whether the summary or the sources are chosen
+
+### Requirement: Each source contribution is read with its unit
+
+Each source contribution the shield or the armour shows MUST be read with its unit, the shield's in
+megajoules and the armour's in hit points, wherever the unit is drawn once for the whole list.
+
+Source: 006/FR-002, 006/FR-007.
+
+#### Scenario: A source row is read on its own
+
+- **WHEN** assistive technology reads one source row of the shield or the armour
+- **THEN** the row's contribution is read with its unit
 
 ### Requirement: The shield and the armour each hold their own choice
 

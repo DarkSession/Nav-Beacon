@@ -10,13 +10,13 @@
 }
 
 // The same bounded plate on the panel ground the dashboard's other three blocks
-// stand on: `1px solid var(--amber-a2)` over `var(--panel)` at `16px 18px`.
+// stand on: `1px solid var(--amber-a2)` over `var(--panel)` at `10px 12px`.
 .block {
-  @include layout.stack(var(--ednb-space-stack));
+  @include layout.stack(var(--ednb-space-sm));
 
   min-inline-size: 0;
-  padding-block: var(--ednb-space-2xl);
-  padding-inline: var(--ednb-space-panel);
+  padding-block: var(--ednb-space-md);
+  padding-inline: var(--ednb-space-lg);
   background-color: var(--ednb-surface-panel);
   border: var(--ednb-border-width-hairline) solid var(--ednb-border-region);
 }
@@ -226,5 +226,20 @@
 
   .distributor__label {
     display: inline;
+  }
+}
+
+// The power panel's one-row step: the labels stand on one line, and a label
+// that does not fit is cut by its `ednb-fit-text` with a reachable `…`. Asked
+// of the panel rather than of this block, because the step is the panel's. The
+// figures are held on one line at every width already, and are never cut.
+@include layout.container-power-row-up(power) {
+  ednb-fit-text {
+    white-space: nowrap;
+  }
+
+  // A label beside its figure gives way, and the figure does not.
+  .distributor__label {
+    min-inline-size: 0;
   }
 }

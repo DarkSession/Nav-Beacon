@@ -34,6 +34,15 @@ export class SlotGroup {
 
   readonly group = input.required<SlotGroupView>();
 
+  /**
+   * Whether the group's rows are canvas 1c's dense rows.
+   *
+   * The rule then stands 4 pixels clear of its first row and is inset 14
+   * pixels, the dense rows' own inset. Canvas 1c draws `0 14px 5px`, and the
+   * spacing scale has no 5.
+   */
+  readonly dense = input(false);
+
   readonly headingId = relationId('slot-group-heading');
 
   readonly heading = computed(() => this.#messages.message(headingKey(this.group().kind)));

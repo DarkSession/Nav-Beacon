@@ -220,28 +220,20 @@ export interface ModuleDrawRow {
 }
 
 /**
- * The five scenarios `heatMetricsResult()` returns, in the order the canvases
- * draw them.
- *
- * `Weapons alpha` before `Sustained weapon fire`, which is the package's
- * `firingDrained` before its `firingSustained`: the drained case is the one the
- * package calls "the alpha-strike case", where every weapon makes five times
- * its thermal load. The canvas orders the two by the figures its own mock
- * carries; this orders them by what they are.
- */
-/**
  * The track canvas 1c draws its heat bars on: the damage threshold sits at 62.5%
  * of it, which is a track running to 160% of the threshold.
  */
 const CANVAS_HEAT_SCALE = 1.6;
 
-export const HEAT_SCENARIOS = [
-  'idle',
-  'thrusters',
-  'fsdCharging',
-  'firingDrained',
-  'firingSustained',
-] as const;
+/**
+ * The four of the five `heatMetricsResult()` scenarios that canvas 1c draws, in
+ * its order.
+ *
+ * The package's `firingDrained`, the alpha-strike case where every weapon makes
+ * five times its thermal load, is not drawn, so it is not projected. The track
+ * scale is set by the bars that are drawn, and a bar nobody sees never sets it.
+ */
+export const HEAT_SCENARIOS = ['idle', 'thrusters', 'fsdCharging', 'firingSustained'] as const;
 
 export type HeatScenarioKey = (typeof HEAT_SCENARIOS)[number];
 
@@ -260,7 +252,7 @@ export interface HeatView {
    */
   readonly thresholdAt: number;
   /**
-   * The canvases' sixth bar, `Shield cell bank`, or `null` with no bank fitted.
+   * The bar after the four scenarios, `Shield cell bank`, or `null` with no bank fitted.
    *
    * `heatMetricsResult()` publishes five scenarios and says outright that this is not
    * one of them: a bank states its heat per *activation* rather than per second,
@@ -619,7 +611,7 @@ function drawNow(consumer: PowerConsumerResult, deployed: boolean): number {
   return !consumer.enabled || (consumer.deployedOnly && !deployed) ? 0 : consumer.draw;
 }
 
-/** The three profile facts, the five scenarios, the spike and the sinks. */
+/** The three profile facts, the four drawn scenarios, the spike and the sinks. */
 function projectHeat(heat: HeatMetrics, fitted: readonly FittedModule[]): HeatView {
   const spike = shieldBankSpike(heat, fitted);
   const gauges = [
