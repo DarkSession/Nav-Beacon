@@ -72,13 +72,14 @@
 
       <div class="outfitting__ledger" [attr.aria-label]="ledgerLabel()">
         @for (group of groups(); track group.kind) {
-          <ednb-slot-group [group]="group">
+          <ednb-slot-group [group]="group" [dense]="ledgerDense()">
             @for (slot of group.slots; track slot.key) {
               <li class="outfitting__slot">
                 <ednb-slot-card
                   [slot]="slot"
                   [capabilities]="capabilitiesFor(slot)"
                   [selected]="selectedSlot()?.key === slot.key"
+                  [dense]="ledgerDense()"
                   [engineeringSummary]="engineeringSummaryFor(slot)"
                   (intent)="handle(slot, $event)"
                 />

@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActiveBuildStore } from '../../../../application/active-build/active-build.store';
 import { PowerConditionsStore } from '../../../../application/power-heat/power-conditions.store';
 import {
@@ -21,6 +21,7 @@ import { relationId } from '../../../../ui/a11y/text-equivalence';
 import { GameText } from '../../../../ui/components/game-text/game-text';
 import type { Metric } from '../../../../ui/components/metric-group/metric-group';
 import { MetricGroup } from '../../../../ui/components/metric-group/metric-group';
+import { TabGroup, type TabItem } from '../../../../ui/components/tab-group/tab-group';
 import { ModuleIdentityBadge } from '../../../../ui/outfitting/module-identity-badge';
 
 /** One damage line: `KINETIC`, its bar, `41%` and `3,122`, in that order. */
@@ -54,16 +55,6 @@ interface DamageRowView {
 }
 
 /**
- * One card's four damage lines and the scale they are all drawn on.
- *
- * The scale ends at `100%`, where the package stops publishing a bound, and
- * begins at whichever resistance in the table is lowest — `0%` where none of
- * them is a weakness, and below it where one is. That is what canvas 1c draws:
- * the shields, all positive, start their bars at the leading edge, and the hull,
- * with a weakness among them, carries a zero mark inside the track with the
- * weakness running back from it.
- */
-/**
  * The fifth column's heading, on the two lines the canvas sets it in.
  *
  * The unit is the reading and the allocation is the condition it was read at,
@@ -77,32 +68,23 @@ interface PipColumnView {
   readonly atPips: string;
 }
 
+/**
+ * One card's four damage lines and the track they are all drawn on.
+ *
+ * The track ends at `100%`, where the package stops publishing a bound, and
+ * begins at whichever resistance in the table is lowest: `0%` where none of
+ * them is a weakness, and below it where one is. The shields, all positive,
+ * start their bars at the leading edge. The hull, with a weakness among them,
+ * carries a zero line inside the track with the weakness running back from it.
+ */
 interface DamageTableView {
   readonly rows: readonly DamageRowView[];
   /** The fifth column's heading, or `null` for a table without one. */
   readonly pipColumn: PipColumnView | null;
   /** Where zero sits on the track, in `[0, 1]`. `0` with nothing below it. */
   readonly zeroAt: number;
-  /** Whether the scale reaches below zero at all, which draws the zero line. */
+  /** Whether the track reaches below zero at all, which draws the zero line. */
   readonly signed: boolean;
-  /** The scale's far end, printed under the end of the track it names. */
-  readonly ceiling: string;
-  /**
-   * Zero, printed at the mark the bars are measured from.
-   *
-   * The two points the scale names are the one every bar starts at and the one
-   * the track ends at. On a table with no weakness in it zero *is* the leading
-   * edge, which is where the canvas prints its `0%`; on one that reaches below
-   * zero the mark moves inside the track and its name goes with it, because
-   * that is what says which bars are resistances and which are weaknesses.
-   *
-   * The leading edge of a signed scale is left unnamed. It is the lowest
-   * resistance in the table, which the row that reaches it already prints in
-   * the `RESIST` column beside its own bar — and a third name on a scale a
-   * phone gives 104 pixels lands on top of this one (Commander request
-   * 2026-08-28).
-   */
-  readonly zero: string;
 }
 
 /** One source row: what is fitted in a role, and what the package credits the role with. */
@@ -119,8 +101,10 @@ interface SourceRowView {
   readonly rating: string | null;
   /** What has been done to it: `THERMAL RESIST G5`, `PRE-ENGINEERED`. */
   readonly detail: string | null;
-  /** The package aggregate for the whole role, formatted. */
+  /** The package aggregate for the whole role, as a bare number. The list head states the unit. */
   readonly contribution: string;
+  /** The unit of {@link contribution}, read with the figure but not drawn beside it. */
+  readonly unit: string;
   /** How far the bar runs, in `[0, 1]` of the row carrying the most. Decoration only. */
   readonly fill: number;
 }
@@ -186,6 +170,12 @@ interface IssueView {
   readonly message: GameTextPresentation | null;
 }
 
+/** The two views each card offers: its summary, and the sources behind it. */
+type DefenceView = 'summary' | 'sources';
+
+/** The tab ids of one card's two views, unique on the page. */
+type ViewIds = Readonly<Record<DefenceView, string>>;
+
 /** The role names, written out: `MessageKey` is the catalogue's own key union. */
 const ROLE_LABELS = {
   shieldGenerator: 'defence.source.shield-generator',
@@ -215,7 +205,7 @@ const RATE_DIGITS = 1;
  * being rounded to a whole one the build is not standing at.
  */
 const pipDigits = (pips: number): number => (Number.isInteger(pips) ? 0 : 1);
-/** Where every damage scale ends: the resistance at which a pool stops being bounded. */
+/** Where every damage track ends: the resistance at which a pool stops being bounded. */
 const RESISTANCE_CEILING = 1;
 
 /**
@@ -271,10 +261,11 @@ function issueKey(issue: CalculationIssueView): string {
  * `DEFENCE ANALYSIS`: what the shields hold, what the hull takes, and against what.
  *
  * Canvas 1c draws this as the `DEFENCE` mode of the hull anatomy region — two
- * equal cards, `SHIELDS` and `ARMOUR`, each of them a head with the fitted
- * article named beside it, one headline pool, the four damage lines against a
- * `0%`–`100%` scale, three labelled facts, and the source rows underneath.
- * Canvas 1d stacks the same two cards. Same DOM at both widths; which
+ * equal cards, `SHIELDS` and `ARMOUR`. Each card has a head with the fitted
+ * article named beside it and, where the card has sources, a choice of two
+ * views. The summary holds one headline pool, the four damage lines and three
+ * labelled facts. The sources hold the source rows, and on the shield the cell
+ * bank reserve. Canvas 1d stacks the same two cards. Same DOM at both widths; which
  * arrangement appears is decided in CSS from the space the region is given, so
  * a 400% zoom picks the stacked one for the same reason a phone does.
  *
@@ -293,7 +284,7 @@ function issueKey(issue: CalculationIssueView): string {
  */
 @Component({
   selector: 'ednb-defence-analysis',
-  imports: [GameText, MetricGroup, ModuleIdentityBadge, NgTemplateOutlet],
+  imports: [GameText, MetricGroup, ModuleIdentityBadge, NgTemplateOutlet, TabGroup],
   templateUrl: './defence-analysis.html',
   styleUrl: './defence-analysis.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -321,6 +312,26 @@ export class DefenceAnalysis {
   readonly recoveryLabel = this.#messages.messageSignal('defence.recovery.label');
   readonly shieldSourceLabel = this.#messages.messageSignal('defence.source.shield');
   readonly armourSourceLabel = this.#messages.messageSignal('defence.source.armour');
+  readonly shieldViewLabel = this.#messages.messageSignal('defence.view.shield');
+  readonly armourViewLabel = this.#messages.messageSignal('defence.view.armour');
+
+  readonly #shieldViewIds: ViewIds = {
+    summary: relationId('defence-shield-summary'),
+    sources: relationId('defence-shield-sources'),
+  };
+  readonly #armourViewIds: ViewIds = {
+    summary: relationId('defence-armour-summary'),
+    sources: relationId('defence-armour-sources'),
+  };
+
+  /**
+   * The view the Commander chose for each card. Summary until a choice is made.
+   *
+   * The choice lives as long as the panel. Leaving the defence mode removes the
+   * panel, so each card starts at its summary when the mode opens again.
+   */
+  readonly #shieldChoice = signal<DefenceView>('summary');
+  readonly #armourChoice = signal<DefenceView>('summary');
 
   /**
    * The projection for the active build at the standing SYS allocation.
@@ -514,11 +525,11 @@ export class DefenceAnalysis {
   });
 
   readonly shieldSources = computed<readonly SourceRowView[]>(() =>
-    this.#sourceRows(this.#projection()?.shieldRoles ?? [], (value) => this.#megajoules(value)),
+    this.#sourceRows(this.#projection()?.shieldRoles ?? [], this.megajoulesColumn()),
   );
 
   readonly armourSources = computed<readonly SourceRowView[]>(() =>
-    this.#sourceRows(this.#projection()?.armourRoles ?? [], (value) => this.#hullPoints(value)),
+    this.#sourceRows(this.#projection()?.armourRoles ?? [], this.hullPointsColumn()),
   );
 
   /**
@@ -559,15 +570,56 @@ export class DefenceAnalysis {
     };
   });
 
+  /** Whether the shield has a source to show: a role contribution or a bank. */
+  readonly shieldHasSources = computed(
+    () => this.shieldSources().length > 0 || this.bankRow() !== null,
+  );
+
+  /** Whether the armour has a source to show: a role contribution. */
+  readonly armourHasSources = computed(() => this.armourSources().length > 0);
+
   /**
-   * One card's damage lines, and the scale all four of them are drawn on.
+   * The view each card shows. A card with no sources shows its summary, and
+   * keeps the Commander's choice for when its sources come back.
+   */
+  readonly shieldView = computed<DefenceView>(() =>
+    this.shieldHasSources() ? this.#shieldChoice() : 'summary',
+  );
+  readonly armourView = computed<DefenceView>(() =>
+    this.armourHasSources() ? this.#armourChoice() : 'summary',
+  );
+
+  readonly shieldViews = computed(() => this.#viewChoices(this.#shieldViewIds));
+  readonly armourViews = computed(() => this.#viewChoices(this.#armourViewIds));
+  readonly shieldViewId = computed(() => this.#shieldViewIds[this.shieldView()]);
+  readonly armourViewId = computed(() => this.#armourViewIds[this.armourView()]);
+
+  /** Shows the shield view whose tab id the segmented choice gives. */
+  chooseShieldView(id: string): void {
+    this.#shieldChoice.set(id === this.#shieldViewIds.sources ? 'sources' : 'summary');
+  }
+
+  /** Shows the armour view whose tab id the segmented choice gives. */
+  chooseArmourView(id: string): void {
+    this.#armourChoice.set(id === this.#armourViewIds.sources ? 'sources' : 'summary');
+  }
+
+  /** The two choices of one card, summary first. */
+  #viewChoices(ids: ViewIds): readonly TabItem[] {
+    return [
+      { id: ids.summary, label: this.#messages.message('defence.view.summary') },
+      { id: ids.sources, label: this.#messages.message('defence.view.sources') },
+    ];
+  }
+
+  /**
+   * One card's damage lines, and the track all four of them are drawn on.
    *
-   * The scale is settled before any bar is: it runs to `100%`, where the
-   * package stops publishing a bound, and back to the lowest resistance in the
-   * table. With nothing below zero that is the leading edge and the canvas
-   * draws no mark; with a weakness among them, zero moves inside the track and
-   * the weakness runs back from it, which is the ground a negative bar needs to
-   * be drawn on at all.
+   * The track is set before any bar is: it runs to `100%`, where the package
+   * stops publishing a bound, and back to the lowest resistance in the table.
+   * With nothing below zero that is the leading edge and no zero line is drawn.
+   * With a weakness among them, zero moves inside the track and the weakness
+   * runs back from it.
    */
   #damageTable(values: readonly DamageDefenceValue[]): DamageTableView {
     const lowest = Math.min(0, ...values.map((value) => value.resistance));
@@ -580,8 +632,6 @@ export class DefenceAnalysis {
       pipColumn: null,
       zeroAt,
       signed: lowest < 0,
-      ceiling: this.#formatters.percent(RESISTANCE_CEILING),
-      zero: this.#formatters.percent(0),
     };
   }
 
@@ -641,10 +691,7 @@ export class DefenceAnalysis {
    * The bars are measured against the largest figure in the same list, which is
    * what makes them comparable with each other and with nothing else.
    */
-  #sourceRows(
-    groups: readonly DefenceRoleGroup[],
-    format: (value: number) => string,
-  ): readonly SourceRowView[] {
+  #sourceRows(groups: readonly DefenceRoleGroup[], unit: string): readonly SourceRowView[] {
     const largest = Math.max(0, ...groups.map((group) => group.contribution));
 
     return groups.map((group, index) => {
@@ -670,10 +717,11 @@ export class DefenceAnalysis {
         detail: shared === null ? null : this.#engineering(shared),
         contribution:
           index === 0
-            ? format(group.contribution)
+            ? this.#formatters.decimal(group.contribution, POOL_DIGITS)
             : this.#messages.message('defence.source.added', {
-                value: format(group.contribution),
+                value: this.#formatters.decimal(group.contribution, POOL_DIGITS),
               }),
+        unit,
         fill: this.#barLength(group.contribution, largest) ?? 0,
       };
     });
@@ -847,12 +895,6 @@ export class DefenceAnalysis {
 
   #megajoules(value: number): string {
     return this.#messages.message('defence.format.megajoules', {
-      value: this.#formatters.decimal(value, POOL_DIGITS),
-    });
-  }
-
-  #hullPoints(value: number): string {
-    return this.#messages.message('defence.format.hull-points', {
       value: this.#formatters.decimal(value, POOL_DIGITS),
     });
   }

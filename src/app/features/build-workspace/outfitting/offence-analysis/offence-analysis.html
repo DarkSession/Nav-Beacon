@@ -1,9 +1,19 @@
 <!--
-  Canvas 1c's `OFFENCE ANALYSIS` panel: `WEAPONS` against `DAMAGE PROFILE` in a
-  `1fr 1fr` pair, with `SHOT CONVERGENCE` on its own row beneath them, bounded at the canvas's 508px.
-  Canvas 1d stacks the same three blocks. This is that DOM at both widths; which
-  arrangement appears is decided in CSS from the space the region is given, so a
-  400% zoom picks the stacked one for the same reason a phone does.
+  Canvas 1c's `OFFENCE ANALYSIS` panel: `WEAPONS`, `DAMAGE PROFILE` and
+  `SHOT CONVERGENCE` in three columns where the panel is wide enough. Narrower,
+  `WEAPONS` against `DAMAGE PROFILE` in a pair, with `SHOT CONVERGENCE` on its
+  own row beneath them at the leading edge, bounded at the
+  `--ednb-layout-convergence-block` measure. Canvas 1d stacks the same three
+  blocks. This is that DOM at every width; which arrangement appears is decided
+  in CSS from the space the region is given, so a 400% zoom picks the stacked
+  one for the same reason a phone does.
+
+  The labels are drawn through `ednb-fit-text`, and a weapon name through the
+  badge's own cut name. At the three-column step the stylesheet holds them on
+  one line, and a label that does not fit is cut with a reachable `…`. Below
+  it a label wraps between words, and a word too long for its box is cut in
+  the same way. Figures are never drawn through either, so a figure is never
+  cut: the range bands' distances among them.
 -->
 @if (shown()) {
   <div class="offence">
@@ -44,14 +54,14 @@
       }
 
       <!--
-        The canvas's six columns, one row per returned weapon in package order.
-        The rows are inert, as the canvas draws them: no disclosure, no action
-        and no slot. A mount is opened from `HULL ANATOMY`, which is where the
-        canvas puts that control.
+        The canvas's six columns, one row per group of identical weapons in
+        package order. The rows are inert, as the canvas draws them: no
+        disclosure, no action and no slot. A mount is opened from `HULL ANATOMY`,
+        which is where the canvas puts that control.
 
-        A list rather than a table, because a row's module cell is two lines —
-        the name over its code line, `4A GIMBALLED · OVERCHARGED G5` — and the
-        five figure cells are one each. The column heads are drawn as the canvas draws them and marked
+        A list rather than a table, because a row's module cell can be two lines
+        — the name over its code line, `4A GIMBALLED · OVERCHARGED G5`, where two
+        rows show the same name — and the five figure cells are one each. The column heads are drawn as the canvas draws them and marked
         decorative, because every figure under them carries the same word in its
         own row: a reader is told which column a figure is in where the figure
         is, rather than having to hold five heads in mind while moving down.
@@ -65,41 +75,62 @@
           -->
           <div class="weapons__table">
             <p class="weapons__columns" aria-hidden="true">
-              <span class="weapons__column">{{ columns().module }}</span>
+              <span class="weapons__column"><ednb-fit-text [text]="columns().module" /></span>
               <span class="weapons__column weapons__column--figure">
-                {{ columns().damagePerSecond }}
+                <ednb-fit-text [text]="columns().damagePerSecond" />
               </span>
               <span class="weapons__column weapons__column--figure">
-                {{ columns().sustainedDamagePerSecond }}
+                <ednb-fit-text [text]="columns().sustainedDamagePerSecond" />
               </span>
-              <span class="weapons__column weapons__column--figure">{{ columns().piercing }}</span>
               <span class="weapons__column weapons__column--figure">
-                {{ columns().maximumRange }}
+                <ednb-fit-text [text]="columns().piercing" />
               </span>
-              <span class="weapons__column weapons__column--figure">{{ columns().falloff }}</span>
+              <span class="weapons__column weapons__column--figure">
+                <ednb-fit-text [text]="columns().maximumRange" />
+              </span>
+              <span class="weapons__column weapons__column--figure">
+                <ednb-fit-text [text]="columns().falloff" />
+              </span>
             </p>
 
             <ul class="weapons__list">
               @for (row of weaponRows(); track row.id) {
                 <li class="weapon">
                   <!--
-                    The canvas draws every row's module cell as a name over a
-                    tracked mono code line — `4A GIMBALLED · OVERCHARGED G5 ·
-                    CORROSIVE` — and that line is the ledger's own badge, drawn
-                    for the same module from the same three package values. It
-                    is composed here rather than re-set, so a weapon reads the
-                    same way in this panel as it does in the mount it came from.
+                    The ledger's own badge, so a weapon reads the same way in
+                    this panel as in the mount it came from. Canvas 1c draws the
+                    name alone. The class, rating, mount and engineering are
+                    passed only where another row shows the same name, so two
+                    rows never read the same.
+
+                    A row that stands for several weapons follows the name with
+                    the drawn count, `×2`, and the same count in words for a
+                    reader who is told. The drawn count is hidden from assistive
+                    technology, so the count is read once.
+
+                    The whole name is the badge's tip. Where the three-column
+                    step holds the name on one line and it does not fit, or a
+                    word of it is too long for its box at any width, the name
+                    is cut and the badge draws a reachable `…`.
                   -->
                   <p class="weapon__module">
                     <ednb-module-identity-badge
                       class="weapon__identity"
                       [compact]="true"
                       [name]="row.name"
+                      [nameTip]="row.name.text"
                       [moduleClass]="row.moduleClass"
                       [rating]="row.rating"
                       [mount]="row.mount"
                       [detail]="row.engineering"
-                    />
+                    >
+                      @if (row.countText; as count) {
+                        <span class="weapon__count" aria-hidden="true" data-bidi-isolate>{{
+                          count
+                        }}</span>
+                        <span class="visually-hidden">{{ row.countDescription }}</span>
+                      }
+                    </ednb-module-identity-badge>
                     @if (row.off) {
                       <span class="weapon__state">{{ row.offLabel }}</span>
                     }
@@ -154,7 +185,9 @@
     <section class="offence__block" [attr.aria-labelledby]="damageHeadingId">
       <div class="offence__head">
         <h4 class="offence__heading" [id]="damageHeadingId">{{ damageHeading() }}</h4>
-        <p class="offence__note">{{ damageNote() }}</p>
+        <p class="offence__note offence__note--label">
+          <ednb-fit-text [text]="damageNote()" />
+        </p>
       </div>
 
       <!--
@@ -204,6 +237,7 @@
         <ul class="bars__list" [attr.aria-labelledby]="rangeBandsHeadingId">
           @for (band of rangeBands(); track band.id) {
             <li class="bar">
+              <!-- A distance, which is a figure, so it is never cut. -->
               <span class="bar__label" data-bidi-isolate>{{ band.label }}</span>
               <ng-container
                 [ngTemplateOutlet]="track"
@@ -218,19 +252,24 @@
       <hr class="offence__rule" />
 
       <!--
-        `WEAPON CAPACITOR`. Only the draw and the recharge get a bar: they are
-        the same quantity in the same unit and which is larger is the question
-        the block answers, so they are drawn against the larger of the two. A
-        stored pool and a duration share a scale with nothing here, and a length
-        measuring nothing is not a reading (`design/canvas-contract.md`, review
-        note 6).
+        `WEAPON CAPACITOR`, with the WEP pips its figures were read at in the
+        heading. Only the draw and the recharge get a bar: they are the same
+        quantity in the same unit and which is larger is the question the block
+        answers, so they are drawn against the larger of the two. A stored pool
+        and a duration share a scale with nothing here, and a length measuring
+        nothing is not a reading (`design/canvas-contract.md`, review note 6).
       -->
       <div class="bars bars--capacitor">
-        <p class="bars__label" [id]="capacitorHeadingId">{{ capacitorHeading() }}</p>
+        <p class="bars__label" [id]="capacitorHeadingId">
+          {{ capacitorHeading() }}
+          @if (capacitorPips(); as pips) {
+            <span class="bars__pips" data-bidi-isolate>{{ pips }}</span>
+          }
+        </p>
         <ul class="bars__list" [attr.aria-labelledby]="capacitorHeadingId">
           @for (row of capacitorRows(); track row.id) {
             <li class="bar">
-              <span class="bar__label">{{ row.label }}</span>
+              <span class="bar__label"><ednb-fit-text [text]="row.label" /></span>
               <ng-container
                 [ngTemplateOutlet]="track"
                 [ngTemplateOutletContext]="{ fill: row.fill }"
@@ -248,10 +287,6 @@
             </li>
           }
         </ul>
-
-        @if (capacitorAllocation(); as allocation) {
-          <p class="bars__condition">{{ allocation }}</p>
-        }
       </div>
     </section>
 

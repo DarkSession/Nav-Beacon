@@ -2,9 +2,15 @@ import { expect, test, type Locator, type Page, type TestInfo } from '@playwrigh
 import englishMessages from '../src/app/i18n/locales/en.json';
 import germanMessages from '../src/app/i18n/locales/de.json';
 import { sweepOutfittingState } from './accessibility';
-import { expectNoDocumentOverflow, settled } from './accessibility/assertions';
+import { expectNoDocumentOverflow, settled, TARGET_FLOOR_PX } from './accessibility/assertions';
 import { DOUBLED_TEXT, withRootTextScale } from './accessibility/text-scale';
-import { openChooser, revealMount, surfacesAreLayers } from './outfitting-surfaces';
+import {
+  fitCommitted,
+  openChooser,
+  revealFamilyHolding,
+  revealMount,
+  surfacesAreLayers,
+} from './outfitting-surfaces';
 import { buildStockHull } from './shell';
 
 /**
@@ -28,6 +34,9 @@ const HULL = 'Anaconda';
 
 /** The mount the stock hull carries its shield generator in. */
 const GENERATOR_SLOT = 'Slot03_Size6';
+
+/** An optional mount on the stock hull that takes a size-6 shield cell bank. */
+const BANK_SLOT = 'Slot04_Size6';
 
 /** Creates a stock build and opens the anatomy region's `DEFENCE` mode. */
 async function openDefence(page: Page, messages = englishMessages): Promise<void> {
@@ -81,6 +90,62 @@ function digits(text: string): string {
  */
 function caps(text: string): string {
   return text.toLocaleUpperCase('en');
+}
+
+/** One card's choice of view, as drawn in its head. */
+function viewChoice(page: Page, card: string): Locator {
+  return page.locator(`ednb-defence-analysis .${card} .card__head ednb-tab-group`);
+}
+
+/** Presses one view of a card and waits for its pressed state. */
+async function chooseView(
+  page: Page,
+  card: string,
+  label: string = englishMessages['defence.view.sources'],
+): Promise<void> {
+  const choice = viewChoice(page, card).getByRole('button', { name: label, exact: true });
+  await choice.click();
+  await expect(choice).toHaveAttribute('aria-pressed', 'true');
+  await settled(page);
+}
+
+/**
+ * Fits a shield cell bank to {@link BANK_SLOT}, before the defence mode opens.
+ *
+ * The stock hull carries no bank, and the shield's reserve is drawn only where
+ * one is aboard.
+ */
+async function fitCellBank(page: Page): Promise<void> {
+  await revealMount(page, BANK_SLOT);
+  const mount = page.locator(`[data-slot-key="${BANK_SLOT}"] button`).first();
+  await mount.click();
+  await expect(mount).toHaveAttribute('aria-pressed', 'true');
+
+  // Opens the chooser as well.
+  await revealFamilyHolding(page, /shield cell bank/iu);
+  const row = page
+    .locator('.candidates__choices .candidate')
+    .filter({ hasText: /shield cell bank/iu })
+    .first();
+  await expect(row).toBeVisible();
+  // The name, not the row: a click in the gap between the identity and the
+  // figures lands on no content, and Firefox then activates nothing.
+  await row.locator('.candidate__name').click();
+  if (await surfacesAreLayers(page)) {
+    await page.getByRole('button', { name: /fit module/i }).click();
+  }
+  await fitCommitted(page);
+  await expect(page.locator(`[data-slot-key="${BANK_SLOT}"]`)).toContainText(/cell bank/iu);
+  await settled(page);
+}
+
+/** Creates a stock build with a shield cell bank and opens the `DEFENCE` mode. */
+async function openBankedDefence(page: Page): Promise<void> {
+  await page.goto(`/ships/${HULL}`);
+  await buildStockHull(page, englishMessages['hullDetail.create']);
+  await fitCellBank(page);
+  await openMode(page, englishMessages['anatomy.mode.defence']);
+  await expect(page.locator('ednb-defence-analysis .defence')).toBeVisible();
 }
 
 /** One card's headline figure, as drawn. */
@@ -184,6 +249,8 @@ test.describe('reading the build', () => {
       }
     });
     await test.step('names every source row and closes it with the package aggregate', async () => {
+      await chooseView(page, 'card--shield');
+      await chooseView(page, 'card--armour');
       const rows = page.locator('ednb-defence-analysis .sources .source');
       expect(await rows.count()).toBeGreaterThan(0);
       for (const row of await rows.all()) {
@@ -311,7 +378,7 @@ test.describe('reading the build', () => {
     });
   });
 
-  test('draws a weakness back from the zero mark the scale states', async ({ page }) => {
+  test('draws a weakness back from the zero line inside its track', async ({ page }) => {
     await openDefence(page);
 
     // The stock hull is kinetically weak, so the armour table reaches below
@@ -332,34 +399,17 @@ test.describe('reading the build', () => {
     expect(Math.abs(fill.x + fill.width - mark)).toBeLessThanOrEqual(1);
   });
 
-  test('lines the scale up with the bars and prints zero at the mark', async ({ page }) => {
+  test('draws no scale row under the bars, and keeps the zero line', async ({ page }) => {
     await openDefence(page);
 
-    const track = (await page
-      .locator('ednb-defence-analysis .card--armour .damage__track')
-      .first()
-      .boundingBox())!;
-    const scale = (await page.locator('ednb-defence-analysis .card--armour .scale').boundingBox())!;
-
-    // A scale a length above it cannot be read off is measuring something else,
-    // so it is the bar column's own width rather than the card's.
-    expect(Math.abs(scale.x - track.x)).toBeLessThanOrEqual(1);
-    expect(Math.abs(scale.width - track.width)).toBeLessThanOrEqual(1);
-
-    const mark = (await page
-      .locator('ednb-defence-analysis .card--armour .damage__zero')
-      .first()
-      .boundingBox())!;
-    const label = (await page
-      .locator('ednb-defence-analysis .card--armour .scale__mark--zero .scale__label')
-      .boundingBox())!;
-
-    // And zero is named where the mark stands, not only at the ends: it is what
-    // says which of the bars above are resistances and which are weaknesses.
+    // Every bar has its figure beside it, so no scale stands under the bars.
+    await expect(page.locator('ednb-defence-analysis .damage tfoot')).toHaveCount(0);
+    await expect(page.locator('ednb-defence-analysis .scale')).toHaveCount(0);
+    // The stock hull is kinetically weak, so the armour track is signed and
+    // keeps its zero line.
     await expect(
-      page.locator('ednb-defence-analysis .card--armour .scale__mark--zero'),
-    ).toContainText(/\d/u);
-    expect(Math.abs(label.x + label.width / 2 - (mark.x + mark.width / 2))).toBeLessThanOrEqual(2);
+      page.locator('ednb-defence-analysis .card--armour .damage__zero').first(),
+    ).toBeVisible();
   });
 
   test('sets the metric cells apart with their gaps and no box around them', async ({ page }) => {
@@ -394,6 +444,202 @@ test.describe('reading the build', () => {
       const width = await rule.evaluate((node) => node.getBoundingClientRect().width);
       expect(width).toBeGreaterThan(card / 2);
     }
+  });
+});
+
+test.describe('the choice of view', () => {
+  test('offers each card its summary and its sources, and shows only the one chosen', async ({
+    page,
+  }, testInfo: TestInfo) => {
+    await openBankedDefence(page);
+    const summary = englishMessages['defence.view.summary'];
+    const sources = englishMessages['defence.view.sources'];
+
+    await test.step('names both views on each card, with the summary pressed and no source read', async () => {
+      for (const [card, label] of [
+        ['card--shield', englishMessages['defence.view.shield']],
+        ['card--armour', englishMessages['defence.view.armour']],
+      ] as const) {
+        const group = viewChoice(page, card).getByRole('group', { name: label });
+        await expect(group).toBeVisible();
+        const buttons = group.getByRole('button');
+        await expect(buttons).toHaveCount(2);
+        expect((await buttons.allInnerTexts()).map((text) => caps(text.trim()))).toEqual([
+          caps(summary),
+          caps(sources),
+        ]);
+        await expect(buttons.nth(0)).toHaveAttribute('aria-pressed', 'true');
+        await expect(buttons.nth(1)).toHaveAttribute('aria-pressed', 'false');
+      }
+      // The sources are not in the document at all, so not in the
+      // accessibility tree either.
+      for (const name of [
+        englishMessages['defence.source.shield'],
+        englishMessages['defence.source.armour'],
+        englishMessages['defence.banks.label'],
+      ]) {
+        await expect(page.getByRole('list', { name, exact: true })).toHaveCount(0);
+      }
+    });
+
+    await test.step('shows the shield sources and its reserve, and leaves the armour on its summary', async () => {
+      await chooseView(page, 'card--shield');
+      const shield = page.locator('ednb-defence-analysis .card--shield');
+      await expect(
+        shield.getByRole('list', { name: englishMessages['defence.source.shield'], exact: true }),
+      ).toBeVisible();
+      expect(await shield.locator('.sources .source').count()).toBeGreaterThan(0);
+      await expect(shield.locator('.reserve')).toBeVisible();
+      expect(await shield.locator('.reserve__banks .source').count()).toBeGreaterThan(0);
+      await expect(shield.locator('.card__pool')).toHaveCount(0);
+      await expect(shield.locator('.damage')).toHaveCount(0);
+
+      const armour = viewChoice(page, 'card--armour').getByRole('button');
+      await expect(armour.nth(0)).toHaveAttribute('aria-pressed', 'true');
+      await expect(pool(page, 'card--armour')).toBeVisible();
+      await expect(page.locator('ednb-defence-analysis .card--armour .sources')).toHaveCount(0);
+    });
+
+    await test.step('sizes each choice at the 24-pixel floor', async () => {
+      for (const card of ['card--shield', 'card--armour']) {
+        for (const button of await viewChoice(page, card).getByRole('button').all()) {
+          const box = (await button.boundingBox())!;
+          expect(box.width).toBeGreaterThanOrEqual(TARGET_FLOOR_PX);
+          expect(box.height).toBeGreaterThanOrEqual(TARGET_FLOOR_PX);
+        }
+      }
+    });
+
+    await test.step('passes a scan with each card on its sources', async () => {
+      await chooseView(page, 'card--armour');
+      await expect(page.locator('ednb-defence-analysis .card--armour .sources')).toBeVisible();
+      await sweepOutfittingState(page, testInfo, 'defence-analysis/sources');
+    });
+  });
+
+  test('heads each source list with its unit and reads every figure with it', async ({
+    page,
+  }, testInfo: TestInfo) => {
+    await openDefence(page);
+    await chooseView(page, 'card--shield');
+    await chooseView(page, 'card--armour');
+
+    for (const [card, unit, name] of [
+      [
+        'card--shield',
+        englishMessages['defence.damage.column.megajoules'],
+        englishMessages['defence.source.shield'],
+      ],
+      [
+        'card--armour',
+        englishMessages['defence.damage.column.hull-points'],
+        englishMessages['defence.source.armour'],
+      ],
+    ] as const) {
+      const head = page.locator(`ednb-defence-analysis .${card} .sources__unit`);
+      await expect(head).toHaveText(unit);
+      await expect(head).toHaveAttribute('aria-hidden', 'true');
+
+      // Read through the accessibility tree: each row is a list item, and its
+      // figure is the last thing in it, so the unit closes what is read.
+      const list = page.getByRole('list', { name, exact: true });
+      const items = (await list.ariaSnapshot())
+        .split('\n')
+        .filter((line) => line.trim().startsWith('- listitem'));
+      expect(items.length).toBeGreaterThan(0);
+      for (const item of items) {
+        expect(item.replace(/["']/gu, '').trim()).toMatch(new RegExp(`\\d\\s${unit}$`, 'u'));
+      }
+    }
+
+    await sweepOutfittingState(page, testInfo, 'defence-analysis/source-units');
+  });
+
+  test('keeps each card head whole in German at the mobile portrait profile', async ({
+    browser,
+    baseURL,
+  }) => {
+    const context = await browser.newContext({
+      baseURL,
+      locale: 'de-DE',
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    await openDefence(page, germanMessages);
+
+    for (const card of ['card--shield', 'card--armour']) {
+      const head = page.locator(`ednb-defence-analysis .${card} .card__head`);
+      const fit = await head.evaluate((node) => {
+        const strip = node.querySelector('.tab-group')!;
+        const outer = node.getBoundingClientRect();
+        const inner = strip.getBoundingClientRect();
+        return {
+          head: node.scrollWidth <= node.clientWidth,
+          strip: strip.scrollWidth <= strip.clientWidth,
+          inside: inner.left >= outer.left - 1 && inner.right <= outer.right + 1,
+        };
+      });
+      expect(fit).toEqual({ head: true, strip: true, inside: true });
+      expect(
+        (await viewChoice(page, card).getByRole('button').allInnerTexts()).map((text) =>
+          caps(text.trim()),
+        ),
+      ).toEqual([
+        caps(germanMessages['defence.view.summary']),
+        caps(germanMessages['defence.view.sources']),
+      ]);
+    }
+
+    await context.close();
+  });
+
+  test('starts both cards at their summary when the defence mode opens again', async ({ page }) => {
+    await openDefence(page);
+    await chooseView(page, 'card--shield');
+    await chooseView(page, 'card--armour');
+
+    await openMode(page, englishMessages['anatomy.mode.mounts']);
+    await openMode(page, englishMessages['anatomy.mode.defence']);
+
+    for (const card of ['card--shield', 'card--armour']) {
+      await expect(viewChoice(page, card).getByRole('button').nth(0)).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      await expect(page.locator(`ednb-defence-analysis .${card} .card__pool`)).toBeVisible();
+      await expect(page.locator(`ednb-defence-analysis .${card} .sources`)).toHaveCount(0);
+    }
+  });
+
+  test('shows the bulkhead row in the armour sources on a build with no shield', async ({
+    page,
+  }) => {
+    // The mount is emptied before the mode is opened, because the chooser is a
+    // layer at compact width and the mode strip is behind it.
+    await page.goto(`/ships/${HULL}`);
+    await buildStockHull(page, englishMessages['hullDetail.create']);
+    await revealMount(page, GENERATOR_SLOT);
+    await page.locator(`[data-slot-key="${GENERATOR_SLOT}"] button`).first().click();
+    await openChooser(page);
+    await page.getByRole('button', { name: /remove module/i }).click();
+    await expect(page.locator(`[data-slot-key="${GENERATOR_SLOT}"]`)).toContainText(/empty/i);
+    if (await surfacesAreLayers(page)) {
+      await expect(page.locator('.replacement')).toHaveCount(0);
+    }
+    await openMode(page, englishMessages['anatomy.mode.defence']);
+
+    // No shield, so no shield sources and no choice on that card.
+    await expect(viewChoice(page, 'card--shield')).toHaveCount(0);
+    await chooseView(page, 'card--armour');
+
+    // The bulkhead row is named by the module, so it is found by the armour
+    // the card's head names.
+    const identity = (
+      await page.locator('ednb-defence-analysis .card--armour .card__identity').innerText()
+    ).trim();
+    const rows = page.locator('ednb-defence-analysis .card--armour .sources .source');
+    await expect(rows.first()).toContainText(identity);
   });
 });
 
@@ -595,8 +841,47 @@ test.describe('the conditions that break layouts', () => {
     await expect(
       page.locator('ednb-defence-analysis .card--armour .card__facts .metric'),
     ).toHaveCount(3);
+    await chooseView(page, 'card--shield');
     expect(await page.locator('ednb-defence-analysis .sources .source').count()).toBeGreaterThan(0);
     await expectNoDocumentOverflow(page);
+  });
+
+  test('pads each card 10 by 12, stacks its items 8 apart, sets the cards 10 apart and pads a shield tile 6 by 8', async ({
+    page,
+  }) => {
+    await openDefence(page);
+
+    const measures = await page.locator('ednb-defence-analysis .defence').evaluate((panel) => {
+      const box = (selector: string) => panel.querySelector(selector)!.getBoundingClientRect();
+      const padding = (selector: string) => {
+        const style = getComputedStyle(panel.querySelector(selector)!);
+        return {
+          block: parseFloat(style.paddingBlockStart),
+          inline: parseFloat(style.paddingInlineStart),
+        };
+      };
+      const shield = box('.card--shield');
+      const armour = box('.card--armour');
+      // Side by side where the armour starts at or after the shield's end,
+      // and one above the other where it does not.
+      const sideBySide = armour.left >= shield.right || armour.right <= shield.left;
+      const between = sideBySide
+        ? Math.max(armour.left - shield.right, shield.left - armour.right)
+        : armour.top - shield.bottom;
+      return {
+        card: padding('.card--shield'),
+        stack: box('.card--shield .table-scroller').top - box('.card--shield .card__pool').bottom,
+        between,
+        tile: padding('.card--shield .card__facts .metric'),
+      };
+    });
+
+    expect(measures.card.block).toBeCloseTo(10, 0);
+    expect(measures.card.inline).toBeCloseTo(12, 0);
+    expect(measures.stack).toBeCloseTo(8, 0);
+    expect(measures.between).toBeCloseTo(10, 0);
+    expect(measures.tile.block).toBeCloseTo(6, 0);
+    expect(measures.tile.inline).toBeCloseTo(8, 0);
   });
 
   test('loses no figure in an expanded translation', async ({ browser, baseURL }) => {

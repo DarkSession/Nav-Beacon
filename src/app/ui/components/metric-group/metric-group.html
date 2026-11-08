@@ -6,7 +6,13 @@
   <dl class="metric-group" [attr.aria-label]="label()">
     @for (metric of metrics(); track metric.id) {
       <div class="metric">
-        <dt class="metric__label">{{ metric.label }}</dt>
+        <dt class="metric__label">
+          @if (fitLabels()) {
+            <ednb-fit-text [text]="metric.label" />
+          } @else {
+            {{ metric.label }}
+          }
+        </dt>
         <dd class="metric__value" [attr.aria-describedby]="describedBy(metric)">
           @if (metric.value !== null) {
             <span class="metric__number" data-bidi-isolate>{{ metric.value }}</span>

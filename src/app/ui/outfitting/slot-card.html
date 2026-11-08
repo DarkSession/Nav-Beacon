@@ -11,6 +11,7 @@
 <div
   class="slot"
   [attr.data-selected]="selected() ? 'true' : null"
+  [attr.data-density]="dense() ? 'dense' : null"
   [attr.data-slot-key]="slot().key"
 >
   <span class="visually-hidden" [id]="identityId">{{ identityText() }}</span>
@@ -25,14 +26,14 @@
   >
     <span class="slot__mount">
       <!--
-        Drawn on every row, empty where the package states no size. Utility
-        mounts and armour are sized `0`, which is not a size a Commander has —
-        but omitting the box moved their module names a box's width left of
-        every other group's, and a ledger column that only lines up in some
-        groups is not a column (canvas 1c, which draws the box on its utility
-        rows too).
+        Drawn on every row but a utility mount's, empty where the package
+        states no size. Canvas 1c draws a utility row with its blue node number
+        alone, because a utility mount has no size to show. Armour keeps the
+        box.
       -->
-      <span class="slot__size">{{ slot().size }}</span>
+      @if (nodeKind() !== 'utility') {
+        <span class="slot__size">{{ slot().size }}</span>
+      }
       <!--
         The mount's number on the hull anatomy. Hardpoints carry it in the
         canvas's amber; utility mounts carry the same number in the anatomy's
@@ -55,6 +56,7 @@
           [rating]="slot().module!.article?.rating ?? null"
           [mount]="slot().module!.article?.mount ?? null"
           [detail]="engineeringSummary()"
+          [classChip]="dense()"
         >
           <!--
             How the module in this mount is obtained, drawn exactly as the

@@ -227,9 +227,12 @@ be measured rather than assumed (openspec/changes/archive/010-hull-anatomy/desig
 
 The marks are drawn at the canvas's own size, below the project's 44-pixel baseline: the size
 criterion is met through SC 2.5.8's Equivalent exception, by feature 002's complete ledger offering
-every one of the same mounts at the full baseline on the same screen, whether or not the artwork
-arrived (openspec/changes/archive/010-hull-anatomy/design/hull-anatomy.md, "Divergence from FR-012"). Nothing pans, because every plate is
-drawn whole at the hull's own proportions.
+every one of the same mounts on the same screen, whether or not the artwork arrived
+(openspec/changes/archive/010-hull-anatomy/design/hull-anatomy.md, "Divergence from FR-012", for the
+exception). The equivalent need meet only the criterion's own minimum: each ledger row MUST be at
+least 24 CSS pixels in both dimensions (SC 2.5.8). Where the ledger shows one kind
+of mount at a time, the choice that shows a mount's kind MUST be on the same screen as the plate.
+Nothing pans, because every plate is drawn whole at the hull's own proportions.
 
 Source: 010/FR-012.
 
@@ -266,3 +269,16 @@ Source: 010/FR-012.
 
 - **WHEN** the same hull is drawn twice at the same plate size
 - **THEN** every mark takes the same position
+
+#### Scenario: The ledger is the size equivalent
+
+- **WHEN** the plate draws a mark smaller than 24 by 24 CSS pixels
+- **AND** the ledger shows that mount's kind
+- **THEN** the ledger on the same screen offers the same mount as a control at least 24 by 24 CSS
+  pixels
+
+#### Scenario: The ledger shows another kind of mount
+
+- **WHEN** the plate draws a utility mount and the ledger shows only the hardpoints
+- **THEN** the choice that shows the utility mounts is on the same screen
+- **AND** after that choice the ledger offers the mount as a control at least 24 by 24 CSS pixels

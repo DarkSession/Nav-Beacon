@@ -112,10 +112,9 @@ export function distributorOffBuild(): ShipLoadout {
  * A build that cooks itself on a drained weapons capacitor.
  *
  * The huge beam laser's alpha strike puts more load into the hull than it can
- * shed, so `firingDrained` reports `Infinity` heat level, `Infinity` gauge,
- * `overheats: true` and a finite `secondsToOverheat`, while `firingSustained`
- * beside it stays finite and never overheats. Both sentinels, and their
- * absence, in one profile.
+ * shed, so the package's `firingDrained` reports `Infinity` heat level and
+ * gauge, while `firingSustained` stays finite and never overheats. The panel
+ * draws only the second.
  */
 export function overheatingBuild(): ShipLoadout {
   const build = defaultBuild(POWER_FIXTURE_HULL);
@@ -139,6 +138,36 @@ export function sustainedOverheatBuild(): ShipLoadout {
   build.setModule('HugeHardpoint1', packageModule('Hpt_BeamLaser_Fixed_Huge'));
   for (const slot of ['LargeHardpoint1', 'LargeHardpoint2', 'LargeHardpoint3']) {
     build.setModule(slot, packageModule('Hpt_BeamLaser_Fixed_Large'));
+  }
+  return build;
+}
+
+/**
+ * The default build with an A-rated shield cell bank in its largest optional
+ * slot.
+ *
+ * `heatMetricsResult()` publishes no scenario for a bank, so this is the build
+ * whose heat block draws the bank's bar after the four scenarios. The bank's
+ * spike runs the gauge past the module-damage threshold.
+ */
+export function overheatingBankBuild(): ShipLoadout {
+  const build = defaultBuild(POWER_FIXTURE_HULL);
+  build.setModule('Slot01_Size7', packageModule('Int_ShieldCellBank_Size7_Class5'));
+  return build;
+}
+
+/**
+ * The default build with every weapon mount emptied.
+ *
+ * `weaponMetrics()` returns nothing for it, and `heatMetricsResult()` still
+ * returns its sustained-fire scenario. Utility mounts keep what they carry.
+ */
+export function unarmedBuild(): ShipLoadout {
+  const build = defaultBuild(POWER_FIXTURE_HULL);
+  for (const { slot } of build.fittedModules()) {
+    if (/^(?:Small|Medium|Large|Huge)Hardpoint/u.test(slot)) {
+      build.removeModule(slot);
+    }
   }
   return build;
 }

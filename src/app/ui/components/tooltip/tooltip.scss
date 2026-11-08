@@ -74,6 +74,11 @@
   @include layout.visually-hidden;
 }
 
+// The gloss a reader is told, where the bubble draws other words for the eye.
+.tooltip__told {
+  @include layout.visually-hidden;
+}
+
 .tooltip__tip--shown {
   position: absolute;
   z-index: 3;

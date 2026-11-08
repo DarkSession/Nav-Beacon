@@ -13,8 +13,11 @@ import {
   distributorOffBuild,
   divergentBandBuild,
   noPlantOutputBuild,
+  overheatingBankBuild,
   overheatingBuild,
   shedBandBuild,
+  sustainedOverheatBuild,
+  unarmedBuild,
   withinBudgetBuild,
 } from './power-heat.fixtures';
 
@@ -444,7 +447,7 @@ describe('projectPowerHeat', () => {
   });
 
   describe('the heat profile', () => {
-    it('returns the three profile facts and exactly the five scenarios in order', () => {
+    it('returns the three profile facts and the four drawn scenarios in order', () => {
       const build = withinBudgetBuild();
       const heat = BuildMetrics.of(build).heatMetricsResult().value;
       const view = project(build).heat;
@@ -452,7 +455,23 @@ describe('projectPowerHeat', () => {
       expect(view?.efficiency).toBe(heat?.heatEfficiency);
       expect(view?.hullHeatCapacity).toBe(heat?.hullHeatCapacity);
       expect(view?.hullHeatDissipation).toBe(heat?.hullHeatDissipation);
+      expect(view?.scenarios.map((scenario) => scenario.key)).toEqual([
+        'idle',
+        'thrusters',
+        'fsdCharging',
+        'firingSustained',
+      ]);
+      expect([...HEAT_SCENARIOS]).not.toContain('firingDrained');
+    });
+
+    it('states the shield cell bank spike beside the four scenarios, not as one of them', () => {
+      const view = project(overheatingBankBuild()).heat;
+
+      // The spike is its own field, so the four scenarios stay four and the
+      // panel draws the bank's bar after them.
       expect(view?.scenarios.map((scenario) => scenario.key)).toEqual([...HEAT_SCENARIOS]);
+      expect(view?.shieldBankSpike).not.toBeNull();
+      expect(view?.shieldBankSpike?.overheats).toBe(true);
     });
 
     it('reads every field of every scenario from the package', () => {
@@ -470,17 +489,17 @@ describe('projectPowerHeat', () => {
     });
 
     it('states a non-settling scenario as such on its level and its gauge alone', () => {
-      const drained = project(overheatingBuild()).heat?.scenarios[3];
+      const sustained = project(sustainedOverheatBuild()).heat?.scenarios[3];
 
-      expect(drained?.key).toBe('firingDrained');
-      expect(drained?.heatLevel).toEqual({ kind: 'doesNotSettle' });
-      expect(drained?.gauge).toEqual({ kind: 'doesNotSettle' });
-      expect(drained?.overheats).toBe(true);
-      expect(drained?.timeToOverheat.kind).toBe('seconds');
+      expect(sustained?.key).toBe('firingSustained');
+      expect(sustained?.heatLevel).toEqual({ kind: 'doesNotSettle' });
+      expect(sustained?.gauge).toEqual({ kind: 'doesNotSettle' });
+      expect(sustained?.overheats).toBe(true);
+      expect(sustained?.timeToOverheat.kind).toBe('seconds');
     });
 
     it('leaves the settling scenarios of the same build finite', () => {
-      const sustained = project(overheatingBuild()).heat?.scenarios[4];
+      const sustained = project(overheatingBuild()).heat?.scenarios[3];
 
       expect(sustained?.key).toBe('firingSustained');
       expect(sustained?.heatLevel.kind).toBe('level');
@@ -503,11 +522,69 @@ describe('projectPowerHeat', () => {
     });
 
     it('runs a bar that never settles to the end of the track', () => {
-      const view = project(overheatingBuild()).heat;
-      const drained = view?.scenarios[3];
+      const view = project(sustainedOverheatBuild()).heat;
+      const sustained = view?.scenarios[3];
 
-      expect(drained?.gauge.kind).toBe('doesNotSettle');
-      expect((drained?.within ?? 0) + (drained?.over ?? 0)).toBeCloseTo(1, 10);
+      expect(sustained?.gauge.kind).toBe('doesNotSettle');
+      expect((sustained?.within ?? 0) + (sustained?.over ?? 0)).toBeCloseTo(1, 10);
+    });
+
+    it('sets the track by the four drawn scenarios, never by the drained capacitor', () => {
+      // The package answer for a real build, with the drained-capacitor
+      // scenario given the largest load of all and sustained fire the largest
+      // of the four drawn ones. Both are past the canvas's own track, so the
+      // track has to grow, and only a drawn bar may grow it.
+      const build = withinBudgetBuild();
+      const real = BuildMetrics.of(build).heatMetricsResult();
+      const package_ = real.value;
+      expect(package_).not.toBeNull();
+      if (package_ === null) {
+        return;
+      }
+      const heat = {
+        ...package_,
+        firingSustained: { ...package_.firingSustained, gauge: 2, overheats: true },
+        firingDrained: {
+          ...package_.firingDrained,
+          thermalLoad: package_.firingSustained.thermalLoad * 10,
+          heatLevel: 3,
+          gauge: 3,
+          overheats: true,
+        },
+      };
+      vi.spyOn(BuildMetrics.prototype, 'heatMetricsResult').mockReturnValue({
+        ...real,
+        value: heat,
+      });
+
+      const view = project(build).heat;
+      const largest = Math.max(
+        ...(view?.scenarios ?? []).map((scenario) =>
+          scenario.gauge.kind === 'level' ? scenario.gauge.value : 0,
+        ),
+      );
+
+      // A build with no bank, so nothing but the four scenarios can set it.
+      expect(view?.shieldBankSpike).toBeNull();
+      expect(largest).toBe(2);
+      expect(view?.thresholdAt).toBeCloseTo(1 / largest, 10);
+    });
+
+    it('keeps the sustained-fire scenario on a build with no weapons, as the package states it', () => {
+      const build = unarmedBuild();
+      expect(BuildMetrics.of(build).weaponMetrics().weapons).toEqual([]);
+      const state = BuildMetrics.of(build).heatMetricsResult().value?.firingSustained;
+      const view = project(build).heat;
+      const sustained = view?.scenarios.find((scenario) => scenario.key === 'firingSustained');
+
+      // The package still returns the scenario, and the projection carries it
+      // as returned: no absent state stands in for a build that cannot fire.
+      expect(view).not.toBeNull();
+      expect(state).toBeDefined();
+      expect(sustained?.thermalLoad).toBe(state?.thermalLoad);
+      expect(sustained?.heatLevel).toEqual({ kind: 'level', value: state?.heatLevel });
+      expect(sustained?.gauge).toEqual({ kind: 'level', value: state?.gauge });
+      expect(sustained?.overheats).toBe(state?.overheats);
     });
 
     it('states the cell bank spike the package declines to publish as a scenario', () => {

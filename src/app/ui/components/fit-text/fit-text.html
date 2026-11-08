@@ -1,0 +1,18 @@
+<span #value class="fit-text__value"
+  ><ng-content>{{ text() }}</ng-content></span
+>
+<!--
+  A span trigger, not a button, because a label is often inside a control. It
+  is hidden from the accessibility tree, because the whole text is beside it.
+  Where the caller hands the whole text back itself, or there is no text to
+  show, the `…` is a plain mark.
+-->
+@if (cut()) {
+  @if (tipped() && text()) {
+    <ednb-tooltip class="fit-text__more" aria-hidden="true" [presentational]="true" [tip]="text()"
+      >…</ednb-tooltip
+    >
+  } @else {
+    <span class="fit-text__more" aria-hidden="true">…</span>
+  }
+}

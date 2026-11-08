@@ -180,6 +180,46 @@ $viewport-short-max: 30rem;
   }
 }
 
+// Where the power panel draws its four blocks in one row, as canvas 1c does on
+// its 2020px artboard. Measured on the running app in Chromium and Firefox,
+// with the Anaconda's default build in English and in German: the panel is
+// narrowed in 0.5rem steps with the one-row rules in force, and the step is the
+// narrowest width at which, in both languages, no block's `scrollWidth`
+// exceeds its `clientWidth`, no figure is cut or stands past its cell, the
+// summary tiles stand three across and the heat tiles two across, and no block
+// but the distributor has fallen to its narrow arrangement. A label may be cut.
+// The heat tiles are the condition that binds: at 78rem the heat block is too
+// narrow for two tiles (the metric group's own 17rem step) in both languages
+// and both engines. The panel is 79.875rem at a 2020x1228 viewport, so the step
+// is reached there. `POWER_ROW_MIN_REM` in the power panel states the same
+// figure, and the panel exposes it as `--power-row-min`.
+$container-power-row-min: 78.5rem;
+
+@mixin container-power-row-up($name) {
+  @container #{$name} (min-width: #{$container-power-row-min}) {
+    @content;
+  }
+}
+
+// Where the offence panel draws its three blocks in one row, as canvas 1c does
+// on its 2020px artboard. Measured on the running app in Chromium and Firefox,
+// with the Anaconda's default build in English and in German: the panel is
+// narrowed in 0.5rem steps with the three columns forced, and the step is the
+// narrowest width at which, in both languages, no block's `scrollWidth`
+// exceeds its `clientWidth`, no figure is cut and the weapons list still draws
+// its six columns (its own 36rem step). A label may be cut. The weapons list is
+// the condition that binds: at 76.5rem its block is too narrow for the six
+// columns in both languages and both engines, and no label is cut at 77rem.
+// The panel is 79.875rem at a 2020x1228 viewport, so the step is reached there.
+// `OFFENCE_ROW_MIN_REM` in the offence panel states the same figure.
+$container-offence-row-min: 77rem;
+
+@mixin container-offence-row-up($name) {
+  @container #{$name} (min-width: #{$container-offence-row-min}) {
+    @content;
+  }
+}
+
 // Where the outfitting workspace stops being one flow: canvas 1c's ledger beside
 // its bench. It is the ledger's and the bench's own content minimums added up
 // rather than a rounded figure, so the region and anything asking about it change

@@ -52,7 +52,7 @@ type Category = 'all' | SlotKind;
  * Armour joins it for the same reason and one more: without `ALL` there is no
  * other tab it could be reached from (Commander request 2026-08-26).
  */
-const CATEGORY_KINDS: Readonly<Record<SlotKind, SlotKind>> = {
+export const CATEGORY_KINDS: Readonly<Record<SlotKind, SlotKind>> = {
   hardpoint: 'hardpoint',
   utility: 'utility',
   optional: 'optional',
@@ -64,10 +64,15 @@ const CATEGORY_KINDS: Readonly<Record<SlotKind, SlotKind>> = {
 /** The strip segment that opens the status rail at compact width. */
 const STATUS_MODE = 'status';
 
-/** The tabs canvas 1d draws, in its order. It offers no `ALL`. */
-const COMPACT_CATEGORIES = ['hardpoint', 'core', 'optional', 'utility'] as const;
+/**
+ * The kinds a Commander can narrow the ledger to, in the order the ledger draws
+ * them. It is the order in which the kinds first appear in `ShipLoadout.slots()`
+ * for every hull, and a unit test walks the catalogue to hold the two together.
+ * Canvas 1d offers these with no `ALL`.
+ */
+export const COMPACT_CATEGORIES = ['hardpoint', 'utility', 'core', 'optional'] as const;
 
-/** The chips canvas 1c draws, in its order. */
+/** Canvas 1c's chips: `ALL`, then the same kinds in the same order. */
 const WIDE_CATEGORIES = ['all', ...COMPACT_CATEGORIES] as const;
 
 /**
@@ -174,6 +179,14 @@ export class OutfittingWorkspace {
 
   /** True where the bench has to become a layer rather than sit inline. */
   readonly benchIsLayer = computed(() => this.composition() === 'compact');
+
+  /**
+   * Whether the ledger draws canvas 1c's dense rows.
+   *
+   * The two-pane and wide compositions both draw 1c's inline rail beside the
+   * bench, so both draw its rows. The compact composition keeps canvas 1d's.
+   */
+  readonly ledgerDense = computed(() => this.composition() !== 'compact');
 
   /**
    * Whether the status rail is the strip's guest segment rather than a column.
@@ -303,7 +316,7 @@ export class OutfittingWorkspace {
    * The category controls, in the order the canvas draws them.
    *
    * Four at compact width and five at wide. Canvas 1d draws `HARDPOINTS`,
-   * `CORE`, `OPTIONAL` and `UTILITY` and no `ALL`: at that width the ledger is
+   * `UTILITY`, `CORE` and `OPTIONAL` and no `ALL`: at that width the ledger is
    * one category at a time and a Commander says which, rather than being handed
    * thirty-four mounts to scroll (Commander request 2026-08-26).
    */

@@ -174,7 +174,8 @@
   }
 
   .slot__select {
-    // One measure for every row, and it is the project's target baseline: with
+    // One measure for every compact row, and it is the project's target
+    // baseline (a dense row takes the dense target, below): with
     // the canvas's block padding taken off, two lines of identity come to 33px
     // and the baseline is what the row is. A row that carries its own padding
     // as well comes out at 52px, and eight pixels over thirty-nine mounts is
@@ -296,6 +297,31 @@
   border-style: dashed;
   border-color: var(--ednb-border-strong);
   color: var(--ednb-text-faint);
+}
+
+// Canvas 1c's dense row, where the ledger is the inline rail beside the bench.
+// The row is the 36-pixel dense target, which is half again SC 2.5.8's 24-pixel
+// minimum. The compact rows (canvas 1d) keep to the 44-pixel baseline. The
+// size box and the node badge take canvas 1c's 22 and 18 pixels, and the row's
+// inset its 14.
+.slot[data-density='dense'] {
+  padding-inline-end: var(--ednb-space-xl);
+
+  .slot__select {
+    min-block-size: var(--ednb-target-size-dense);
+    padding-inline: var(--ednb-space-xl);
+  }
+
+  .slot__size {
+    inline-size: var(--ednb-layout-mount-box-dense);
+    block-size: var(--ednb-layout-mount-box-dense);
+    font-size: var(--ednb-text-size-label);
+  }
+
+  .slot__node {
+    inline-size: var(--ednb-layout-node-box-dense);
+    block-size: var(--ednb-layout-node-box-dense);
+  }
 }
 
 .slot__drawn-label {

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
+import { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { ActiveBuildStore } from '../../../../application/active-build/active-build.store';
 import type { BuildCandidate } from '../../../../application/active-build/active-build.models';
 import { OutfittingStore } from '../../../../application/outfitting/outfitting.store';
@@ -10,7 +10,8 @@ import {
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { ScreenChrome } from '../../../shared/screen-chrome';
-import { OutfittingWorkspace } from './outfitting-workspace';
+import { CATEGORY_KINDS, COMPACT_CATEGORIES, OutfittingWorkspace } from './outfitting-workspace';
+import { SHIPS } from '@elite-dangerous-almanac/core/ships/ships';
 import { declareMeasurement, declareResizeObserver } from '../../../../ui/measurement.spec-helpers';
 import { provideRouter } from '@angular/router';
 import type { PartialEngineeringFailure } from '../../../../domain/ships/build/build-ingress-result';
@@ -187,14 +188,14 @@ describe('the compact workspace', () => {
     active.commit(candidateFor(defaultBuild()));
   });
 
-  it('offers four categories and no “all”, as canvas 1d’s tabs do', () => {
+  it('offers four categories and no “all”, in the order the ledger draws them', () => {
     const fixture = render();
 
     const values = fixture.componentInstance.categories().map((entry) => entry.value);
 
     // At this width the ledger is one category at a time and a Commander says
     // which, rather than being handed thirty-four mounts to scroll.
-    expect(values).toEqual(['hardpoint', 'core', 'optional', 'utility']);
+    expect(values).toEqual(['hardpoint', 'utility', 'core', 'optional']);
     expect(fixture.componentInstance.category()).toBe('hardpoint');
   });
 
@@ -320,9 +321,9 @@ describe('the wide workspace’s categories', () => {
       expect(workspace.categories().map((entry) => entry.value)).toEqual([
         'all',
         'hardpoint',
+        'utility',
         'core',
         'optional',
-        'utility',
       ]);
       expect(workspace.category()).toBe('all');
     } finally {
@@ -341,7 +342,159 @@ describe('the wide workspace’s categories', () => {
       wide();
     }
   });
+
+  it('holds a chosen kind while the region changes between compact and wide', () => {
+    const region = resizableRegion(0);
+    try {
+      const fixture = render();
+      const workspace = fixture.componentInstance;
+      expect(workspace.composition()).toBe('compact');
+
+      workspace.showCategory('optional');
+      region.resize(1440);
+      fixture.detectChanges();
+      expect(workspace.composition()).toBe('wide');
+      expect(workspace.category()).toBe('optional');
+
+      region.resize(320);
+      fixture.detectChanges();
+      expect(workspace.composition()).toBe('compact');
+      expect(workspace.category()).toBe('optional');
+    } finally {
+      region.restore();
+    }
+  });
+
+  it('shows hardpoints where “all” goes, and “all” again where it returns', () => {
+    const region = resizableRegion(1440);
+    try {
+      const fixture = render();
+      const workspace = fixture.componentInstance;
+      expect(workspace.category()).toBe('all');
+
+      region.resize(320);
+      fixture.detectChanges();
+      expect(workspace.category()).toBe('hardpoint');
+
+      region.resize(1440);
+      fixture.detectChanges();
+      expect(workspace.category()).toBe('all');
+    } finally {
+      region.restore();
+    }
+  });
 });
+
+describe('the ledger’s row density', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideLocalization(), ...provideIsolatedLocaleEnvironment()],
+    });
+    TestBed.inject(ActiveBuildStore).commit(candidateFor(defaultBuild()));
+  });
+
+  /** Whether every drawn card and group is dense, none is, or they disagree. */
+  function density(element: HTMLElement): 'dense' | 'baseline' | 'mixed' {
+    const marks = [...element.querySelectorAll('.slot, .group')].map((node) =>
+      node.getAttribute('data-density'),
+    );
+    expect(marks.length).toBeGreaterThan(0);
+    if (marks.every((mark) => mark === 'dense')) {
+      return 'dense';
+    }
+    return marks.every((mark) => mark === null) ? 'baseline' : 'mixed';
+  }
+
+  it('draws dense cards and groups in the two-pane and wide compositions only', () => {
+    const region = resizableRegion(320);
+    try {
+      const fixture = TestBed.createComponent(OutfittingWorkspace);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(fixture.componentInstance.composition()).toBe('compact');
+      expect(density(element)).toBe('baseline');
+
+      // 47rem holds the ledger and the bench side by side, without the rail.
+      region.resize(800);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.composition()).toBe('two-pane');
+      expect(density(element)).toBe('dense');
+
+      region.resize(1440);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.composition()).toBe('wide');
+      expect(density(element)).toBe('dense');
+    } finally {
+      region.restore();
+    }
+  });
+});
+
+describe('the category order against the package catalogue', () => {
+  it('follows the order in which every hull’s slots first show each kind', () => {
+    for (const ship of SHIPS) {
+      const kinds = ShipLoadout.default(ship.symbol)
+        .slots()
+        .map((slot) => CATEGORY_KINDS[slot.kind]);
+      const firstSeen = kinds.filter((kind, index) => kinds.indexOf(kind) === index);
+
+      // Every hull carries all four kinds, so no tab is offered with no mounts.
+      // A hull without one needs a decision before it ships.
+      expect({ hull: ship.symbol, kinds: firstSeen }).toEqual({
+        hull: ship.symbol,
+        kinds: [...COMPACT_CATEGORIES],
+      });
+    }
+  });
+
+  it('puts armour and the cargo hatch under core', () => {
+    expect(CATEGORY_KINDS.armour).toBe('core');
+    expect(CATEGORY_KINDS.cargoHatch).toBe('core');
+  });
+});
+
+/**
+ * A region whose width a test can change after the workspace is drawn.
+ *
+ * The observer stub keeps its callback, so a resize is the same call the
+ * browser makes. The rect declaration covers the synchronous first reading.
+ */
+function resizableRegion(width: number): {
+  resize(width: number): void;
+  restore(): void;
+} {
+  let current = width;
+  const callbacks: ResizeObserverCallback[] = [];
+  const own = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
+  const measured = declareMeasurement({ width });
+
+  (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+    constructor(callback: ResizeObserverCallback) {
+      callbacks.push(callback);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  };
+
+  return {
+    resize(next: number): void {
+      current = next;
+      const entry = { contentRect: { width: current } } as ResizeObserverEntry;
+      for (const callback of callbacks) {
+        callback([entry], {} as ResizeObserver);
+      }
+    },
+    restore(): void {
+      measured();
+      if (own === undefined) {
+        delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+      } else {
+        Object.defineProperty(globalThis, 'ResizeObserver', own);
+      }
+    },
+  };
+}
 
 /**
  * Reports one region width to `observeComposition`, and gives back the undo.

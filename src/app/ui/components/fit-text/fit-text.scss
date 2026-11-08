@@ -1,0 +1,34 @@
+// The text and its `…` on one flex line. The host never grows past its
+// container, and it can shrink to nothing as a flex or grid item.
+:host {
+  display: inline-flex;
+  align-items: baseline;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+// The text gives way, and the `…` does not. Only the inline axis is clipped, so
+// an accent or a descender past the line box is still drawn. Where the
+// caller's rule lets the text wrap, it wraps between words. A word too long for
+// the box is not broken: it overflows, and is cut with its `…`.
+.fit-text__value {
+  min-inline-size: 0;
+  overflow-x: clip;
+  overflow-wrap: normal;
+}
+
+// The `…` keeps its 24-pixel target, but it takes no height on the line: its
+// box is zero tall and the target is centred on it. So a cut label stands as
+// tall as an uncut one beside it, and the figure under it does not move. The
+// box stands half a line above the end of the text, which is the middle of the
+// last line: in a wrapped label the `…` follows the word it cuts rather than
+// the middle of the label. A caller whose last line is taller than one line of
+// text moves the box to that line's middle.
+.fit-text__more {
+  flex: none;
+  display: flex;
+  align-items: center;
+  align-self: flex-end;
+  block-size: 0;
+  margin-block-end: calc(1lh / 2);
+}

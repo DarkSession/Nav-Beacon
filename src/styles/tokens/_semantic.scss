@@ -549,6 +549,9 @@
 
   --ednb-layout-mount-box: var(--ednb-measure-mount-box);
   --ednb-layout-node-box: var(--ednb-measure-node-box);
+  // Canvas 1c's dense ledger row: the 22px size square and the 18px node badge.
+  --ednb-layout-mount-box-dense: var(--ednb-measure-mount-box-dense);
+  --ednb-layout-node-box-dense: var(--ednb-measure-node-box-dense);
   --ednb-layout-plate-ratio: var(--ednb-measure-plate-ratio);
   --ednb-layout-anatomy-plate: var(--ednb-measure-anatomy-plate);
   --ednb-layout-node-mark: var(--ednb-measure-node-mark);

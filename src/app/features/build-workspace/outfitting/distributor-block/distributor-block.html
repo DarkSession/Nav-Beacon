@@ -43,7 +43,9 @@
         <tbody role="rowgroup">
           @for (bank of rows(); track bank.kind) {
             <tr role="row" [attr.data-bank]="bank.kind">
-              <th role="rowheader" scope="row" class="distributor__bank">{{ bank.name }}</th>
+              <th role="rowheader" scope="row" class="distributor__bank">
+                <ednb-fit-text [text]="bank.name" />
+              </th>
               <td role="cell" class="distributor__cell--numeric distributor__cell--capacity">
                 <!--
                   The column's own name beside the figure, drawn only where the
@@ -52,11 +54,15 @@
                   header cannot label them they label themselves. Hidden from a
                   reader, who still has the header row either way.
                 -->
-                <span class="distributor__label" aria-hidden="true">{{ columns().capacity }}</span>
+                <span class="distributor__label" aria-hidden="true"
+                  ><ednb-fit-text [text]="columns().capacity"
+                /></span>
                 <span data-bidi-isolate>{{ bank.capacity }}</span>
               </td>
               <td role="cell" class="distributor__cell--numeric distributor__cell--rated">
-                <span class="distributor__label" aria-hidden="true">{{ columns().rated }}</span>
+                <span class="distributor__label" aria-hidden="true"
+                  ><ednb-fit-text [text]="columns().rated"
+                /></span>
                 <span data-bidi-isolate>{{ bank.ratedRecharge }}</span>
               </td>
               <td role="cell" class="distributor__pips">

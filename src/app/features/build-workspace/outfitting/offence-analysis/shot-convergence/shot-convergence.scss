@@ -10,38 +10,22 @@
   min-inline-size: 0;
 }
 
-// The plate beside its readout, as the canvas sets them, and stacked when the
-// readout has no room to stand there. A wrapping row rather than a query,
-// because the only question is whether the two fit side by side — which is the
-// available space asking itself, and answers the same way for a phone, a 400%
-// zoom and an expanded translation.
+// Canvas 1c's column: the plate centred, and the readout under it at the
+// block's full width (`flex-direction: column; align-items: stretch`, with the
+// plate at `align-self: center`). One arrangement at every width, so a phone, a
+// 400% zoom and an expanded translation draw the same block.
 .convergence {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--ednb-space-region);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ednb-space-xs);
   min-inline-size: 0;
 }
 
-// The range: a column beside the plate, and the whole width beneath it once it
-// cannot be.
-//
-// The basis is what is actually left beside the plate in the block the canvas
-// bounds: a 470px content box, less the 224px plate and the 22px gap, is 224px.
-// A flex line breaks on the *un-shrunk* basis rather than on what the item would
-// shrink to, so the 15rem this asked for — 16px more than the line has — dropped
-// the range under the plate at exactly the width the canvas draws the two side
-// by side, and left the plate's own row half empty. Below that the row wraps,
-// which is the compact arrangement.
-//
-// `13.5rem` rather than the 224px exactly, and the eight pixels are the point: a
-// basis equal to the space leaves the arrangement one pixel of a hairline or one
-// step of a spacing token away from wrapping again. It grows into the 224px it
-// is given either way, so the drawn layout is the same one.
+// The range: the target range field under the plate.
 .convergence__readout {
   @include layout.stack(var(--ednb-space-stack));
 
-  flex: 1 1 13.5rem;
   min-inline-size: 0;
 }
 
@@ -53,7 +37,7 @@
 // ---------------------------------------------------------------------------
 // The gunsight plate
 
-// Canvas 1c's `172px` square box on hatched ground, inside an amber hairline.
+// Canvas 1c's `150px` square box on hatched ground, inside an amber hairline.
 //
 // Square in pixels because the plate is square in *angle*: the 2026-08-25
 // revision maps both axes over the same field of view, so a milliradian has to
@@ -65,9 +49,8 @@
 // the earlier `16 / 6` band went with the earlier mapping that levelled it
 // (`design/canvas-contract.md`, "3. SHOT CONVERGENCE").
 //
-// It is drawn at `--ednb-measure-gunsight-plate` — 224px, against the canvas's
-// own 172 — and shrinks with the block rather than growing to fill it: a square
-// plate given a whole panel's width is a diagram several screens tall, and the
+// It is drawn at `--ednb-measure-gunsight-plate`, the canvas's 150px, centred
+// in the block, and shrinks with the block rather than growing to fill it: the
 // field of view it draws does not get wider for having more room.
 //
 // Every mark on it is placed with physical `left` and `top`, deliberately, as
@@ -77,6 +60,7 @@
 .plate {
   position: relative;
   flex: none;
+  align-self: center;
   inline-size: min(100%, var(--ednb-layout-gunsight-plate));
   aspect-ratio: 1;
   overflow: hidden;

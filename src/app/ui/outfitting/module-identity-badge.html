@@ -38,14 +38,25 @@
         }
       }
     </ednb-game-text>
+    <!--
+      Canvas 1c's class chip on a dense ledger row. Its text stays inside the
+      row's button, so the button's name reads the module name and then `4A`,
+      and the spoken class and rating below follow it.
+    -->
+    @if (classChip()) {
+      @if (code(); as chip) {
+        <span class="identity__chip" data-bidi-isolate>{{ chip }}</span>
+      }
+    }
     <ng-content />
   </span>
 
   <!--
-    One line, one ink, as canvas 1c writes it: `4A GIMBALLED · OVERCHARGED G5 ·
-    CORROSIVE`. The class and rating are read out in words beside it rather than
-    left as a code, and a package symbol is bidi-isolated so two different
-    modules cannot look like one in a right-to-left reading.
+    One line, one ink, as canvas 1d writes it: `4A GIMBALLED · OVERCHARGED G5 ·
+    CORROSIVE`. With the class chip, the `4A` is on the name line instead. The
+    class and rating are read out in words beside it rather than left as a code,
+    and a package symbol is bidi-isolated so two different modules cannot look
+    like one in a right-to-left reading.
   -->
   @if (codeLine(); as line) {
     <span class="identity__code-line" data-bidi-isolate>{{ line }}</span>

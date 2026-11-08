@@ -17,9 +17,9 @@ import { RangeField } from '../../../../../ui/components/range-field/range-field
  * One mark, and one only: a dot where the shot lands (Commander request
  * 2026-08-27). The hardpoint numeral beside it is withdrawn, and with it the
  * placement arithmetic, the leaders and the ring a crowded plate used to put
- * them out on — a plate 172px across carrying eight numerals was a page of
- * digits over a diagram, and every one of them was already the first word of
- * that mount's own sentence beside the plate.
+ * them out on. On a plate 150px across, eight numerals are a page of digits
+ * over a diagram, and each of them is already the first word of that mount's
+ * own sentence beside the plate.
  *
  * What each mark carries — whether a weapon is on it, and whether it is the
  * mount the workspace currently has selected — is drawn as three inks and
@@ -78,8 +78,8 @@ const HALF_PLATE_PERCENT = 50;
  * `SHOT CONVERGENCE`: where this build's shots land at a chosen range.
  *
  * Canvas 1c draws it beneath the `WEAPONS` and `DAMAGE PROFILE` pair, in a
- * block of its own that stops at 508px rather than running the panel's width:
- * a gunsight plate and, beside it, the range it is drawn at. It is its own
+ * block of its own that stops at 190px rather than running the panel's width:
+ * a gunsight plate and, under it, the range it is drawn at. It is its own
  * component because it is its own block — the plate, its marks and the range
  * share nothing with the two blocks above but the panel ground they sit on.
  *

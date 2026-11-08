@@ -1,11 +1,12 @@
 @use '../../../../../styles/responsive' as layout;
 
 // Canvas 1c draws the panel in the space the plates leave, on the same page
-// ground the anatomy region uses: `WEAPONS` beside `DAMAGE PROFILE` in a
-// `1fr 1fr` pair. Canvas 1d stacks the same content. Which arrangement appears
-// is decided from the region's own inline size rather than the viewport's, so a
-// 400% zoom and an expanded translation choose the stacked one for the same
-// reason a phone does.
+// ground the anatomy region uses: `WEAPONS`, `DAMAGE PROFILE` and
+// `SHOT CONVERGENCE` in three columns. A narrower panel takes `WEAPONS` beside
+// `DAMAGE PROFILE` in a `1fr 1fr` pair, and canvas 1d stacks the same content.
+// Which arrangement appears is decided from the region's own inline size rather
+// than the viewport's, so a 400% zoom and an expanded translation choose the
+// stacked one for the same reason a phone does.
 :host {
   display: block;
   container-type: inline-size;
@@ -14,7 +15,7 @@
 }
 
 .offence {
-  @include layout.stack(var(--ednb-space-stack));
+  @include layout.stack(var(--ednb-space-md));
 
   min-inline-size: 0;
 }
@@ -39,24 +40,21 @@
     // happens to fill, and holding a real build to it would leave one plate
     // ruled off around empty ground.
     align-items: stretch;
-    gap: var(--ednb-space-region);
+    gap: var(--ednb-space-md);
   }
 
-  // Canvas 1c puts `SHOT CONVERGENCE` on its own row beneath the pair, at
-  // `max-width: 508px; align-self: flex-start` — a row of its own, but not the
+  // `SHOT CONVERGENCE` stands on its own row beneath the pair, at the leading
+  // edge and bounded at canvas 1c's 190px block — a row of its own, but not the
   // panel's whole width. The plate inside it is a fixed square that does not
-  // grow with the block, so a block given the full row stood a 172px plate in
-  // the middle of an 862px frame with the range field stretched out beside it
-  // (Commander request 2026-08-27). Bounded and set at the leading edge, the
-  // block is the plate, the range beside it and the canvas's own air.
+  // grow with the block, so the bound keeps the 150px plate and the range under
+  // it together rather than in a frame the width of the panel.
   .offence__block--convergence {
     grid-column: 1 / -1;
     justify-self: start;
     // Both, and neither is redundant. `justify-self: start` puts the block at
     // the row's leading edge, and on its own it also makes the block size to
     // its contents — a grid item that is not stretched is shrink-to-fit, so the
-    // bound below never binds and the block came out 203px wide with a 165px
-    // plate inside it, which is *smaller* than the unbounded block it replaced.
+    // bound below never binds and the block takes the width of its contents.
     // The explicit `100%` is what asks for the row's width; the bound is what
     // stops it there.
     inline-size: 100%;
@@ -64,15 +62,114 @@
   }
 }
 
+// Canvas 1c's own arrangement: the three blocks in one row, `WEAPONS` the
+// widest, then `DAMAGE PROFILE`, then `SHOT CONVERGENCE` at its 190px measure.
+// The step is measured, not argued (`$container-offence-row-min`): below it the
+// weapons list cannot draw its six columns in the share of the row it gets.
+@include layout.container-offence-row-up(offence) {
+  .offence {
+    grid-template-columns:
+      minmax(0, 1.45fr)
+      minmax(0, 1fr)
+      minmax(0, var(--ednb-layout-convergence-block));
+  }
+
+  // The third column, not a row of its own. The track is the block's measure,
+  // so the block fills it.
+  .offence__block--convergence {
+    grid-column: auto;
+  }
+
+  // Each label stands on one line, as the canvas draws it. A label that does
+  // not fit is cut, and `ednb-fit-text` draws the reachable `…` that gives it
+  // back. Only labels are drawn through it, so no figure is held to one line.
+  .offence ednb-fit-text {
+    white-space: nowrap;
+  }
+
+  // The heading and its note on one line. The heading keeps its width, and the
+  // damage note is what gives way to it. The weapons note is a count, which is
+  // a figure, so it keeps its own width.
+  .offence__head {
+    flex-wrap: nowrap;
+  }
+
+  .offence__heading {
+    flex: none;
+  }
+
+  // A weapon name stands on one line, as a ledger row's does, and the badge
+  // draws the reachable `…` from the tip the row passes it. The badge and the
+  // game text inside it are separate components, so the rule reaches them from
+  // here, as the ledger's does: the measure is this row's, not theirs. The code
+  // line under the name is not cut, because it is where the engineering is
+  // written in words. The `×2` beside the name does not give way either.
+  .weapon__module {
+    flex-wrap: nowrap;
+  }
+
+  .weapon__identity ::ng-deep {
+    .identity__name {
+      white-space: nowrap;
+    }
+
+    // The disclosure is a sentence, and one line beside a name has no room for
+    // it. It is spoken instead: the value names it through
+    // `aria-describedby`, as on a ledger row at its own one-line step.
+    .identity__name .game-text__disclosure {
+      @include layout.visually-hidden;
+    }
+  }
+}
+
+// The damage note is a label drawn through `ednb-fit-text`, so it may give way
+// to the heading: at the three-column step it is cut on its line, and below it a
+// word too long for the row is cut rather than overflowing.
+.offence__note--label {
+  min-inline-size: 0;
+}
+
+// A weapon name wraps between words and never breaks inside one, at every
+// width. A word too long for its box is cut, and the badge draws the reachable
+// `…` from the tip the row passes it, as it does for a name cut at the
+// three-column step. The game text breaks a word anywhere by default, so the
+// rule reaches into the badge from here, as the ledger's does: the measure is
+// this row's, not the badge's.
+//
+// The name fills its line and gives way to the `…`, which never shrinks. The
+// untranslated-name disclosure, where there is one, takes the line under it.
+.weapon__identity ::ng-deep {
+  .identity__name {
+    display: block;
+    min-inline-size: 0;
+  }
+
+  .identity__name .game-text {
+    display: flex;
+    max-inline-size: 100%;
+  }
+
+  .identity__name .game-text__value {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    overflow-x: clip;
+    overflow-wrap: normal;
+  }
+
+  .identity__name .game-text__disclosure {
+    flex-basis: 100%;
+  }
+}
+
 // Each of the canvas's blocks is a bounded plate on the panel ground, with the
 // same border and the same padding: `1px solid var(--amber-a2)` over
-// `var(--panel)` at `16px 18px`.
+// `var(--panel)` at `10px 12px`, with an 8-pixel stack inside it.
 .offence__block {
-  @include layout.stack(var(--ednb-space-stack));
+  @include layout.stack(var(--ednb-space-sm));
 
   min-inline-size: 0;
-  padding-block: var(--ednb-space-2xl);
-  padding-inline: var(--ednb-space-panel);
+  padding-block: var(--ednb-space-md);
+  padding-inline: var(--ednb-space-lg);
   background-color: var(--ednb-surface-panel);
   border: var(--ednb-border-width-hairline) solid var(--ednb-border-region);
 }
@@ -182,7 +279,8 @@
 
   // A head is decorative — every figure under it carries the same word in its
   // own row — so a long translation wraps inside its own column rather than
-  // standing over the neighbouring one.
+  // standing over the neighbouring one. At the three-column step it is held on
+  // one line and cut with a reachable `…` instead.
   min-inline-size: 0;
   overflow-wrap: break-word;
 }
@@ -370,6 +468,12 @@
   min-inline-size: 0;
 }
 
+// The drawn `×2` of a row that stands for several identical weapons, in the
+// name's own line and voice. The figures in the row are each weapon's own.
+.weapon__count {
+  white-space: nowrap;
+}
+
 .weapon__state {
   @include layout.micro-label;
 
@@ -553,10 +657,16 @@
   text-align: end;
 }
 
-.bars__condition {
-  @include layout.micro-label;
+// The capacitor's heading carries the WEP pips its figures were read at, set
+// against the heading's baseline in the danger ink, as canvas 1c draws them.
+.bars--capacitor .bars__label {
+  @include layout.wrapping-row(var(--ednb-space-inline-tight));
 
-  margin: 0;
+  align-items: baseline;
+}
+
+.bars__pips {
+  color: var(--ednb-text-danger);
 }
 
 // The spoken half of a symbol. `∞` is a figure a screen reader cannot say, so

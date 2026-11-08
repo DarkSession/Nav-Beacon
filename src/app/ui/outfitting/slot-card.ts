@@ -55,6 +55,15 @@ export class SlotCard {
   readonly capabilities = input.required<SlotCapabilities>();
   readonly selected = input(false);
 
+  /**
+   * Whether the row is drawn at canvas 1c's dense measure.
+   *
+   * The workspace sets it where the ledger is the inline rail beside the bench.
+   * A dense row is the 36-pixel target with the smaller size box and node
+   * badge, and it draws the class and rating as a chip beside the name.
+   */
+  readonly dense = input(false);
+
   /** The engineering summary the code line carries, already localized. */
   readonly engineeringSummary = input<string | null>(null);
 

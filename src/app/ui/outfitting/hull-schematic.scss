@@ -143,8 +143,9 @@
 // stepped apart. These
 // marks therefore take SC 2.5.8's **Equivalent** exception: feature 002's
 // complete ledger stands beside the plates, carries every one of these mounts
-// at the full 44px baseline, and does not depend on the artwork
-// (design/hull-anatomy.md, "Divergence from FR-012").
+// as a row at least 24 CSS pixels in both dimensions, the criterion's own
+// minimum, and does not depend on the artwork (design/hull-anatomy.md,
+// "Divergence from FR-012", for the exception).
 .schematic__mount {
   position: absolute;
   z-index: 2;

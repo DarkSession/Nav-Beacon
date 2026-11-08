@@ -281,11 +281,11 @@ describe('ShotConvergence', () => {
     expect(parts).toEqual(['label', 'value', 'track', 'scale']);
   });
 
-  it('leaves the range alone in the column beside the plate', () => {
+  it('leaves the range alone in the readout under the plate', () => {
     const { element } = render();
 
     // The 2026-08-26 revision withdrew the four cells that used to stand under
-    // the range, so the readout column carries the range field and nothing
+    // the range, so the readout carries the range field and nothing
     // else. Everything the cells reported is still in the plate's sentences.
     const readout = element.querySelector('.convergence__readout');
     expect(readout).not.toBeNull();

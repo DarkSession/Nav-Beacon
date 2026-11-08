@@ -50,5 +50,14 @@
   [id]="tipId"
   [class.tooltip__tip--shown]="shown()"
 >
-  {{ tip() }}
+  @if (drawnTip(); as drawn) {
+    <!--
+      The drawn words are hidden from a reader, and the gloss is kept for one,
+      so the description stays the gloss alone.
+    -->
+    <span aria-hidden="true">{{ drawn }}</span>
+    <span class="tooltip__told">{{ tip() }}</span>
+  } @else {
+    {{ tip() }}
+  }
 </span>

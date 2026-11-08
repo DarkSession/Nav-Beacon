@@ -1,8 +1,11 @@
 import { afterEach, vi } from 'vitest';
 import { BuildMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
+import type { FittedWeaponMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
+import type { FittedModule } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import type { DamageSplit } from '@elite-dangerous-almanac/core/ships/weapons';
 import {
   collectionMeaning,
+  groupIdenticalWeapons,
   projectCapacitor,
   projectDamageSegments,
   projectEndurance,
@@ -367,5 +370,188 @@ describe('projectRangeBands', () => {
       // reads as a figure of nothing, which is a different statement.
       expect(band.fill).toBeNull();
     }
+  });
+});
+
+describe('groupIdenticalWeapons', () => {
+  /**
+   * The stock build's two identical weapons and their package records.
+   *
+   * The variations below change one field of a real package answer, so each
+   * test proves the comparison of that one field and nothing else.
+   */
+  function stock(): {
+    first: FittedWeaponMetrics;
+    second: FittedWeaponMetrics;
+    records: Map<string, FittedModule>;
+  } {
+    const loadout = populatedBuild();
+    const [first, second] = BuildMetrics.of(loadout).weaponMetrics().weapons;
+    if (first === undefined || second === undefined) {
+      throw new Error('The stock fixture build no longer carries two weapons.');
+    }
+    return {
+      first,
+      second,
+      records: new Map(loadout.fittedModules().map((module) => [module.slot, module])),
+    };
+  }
+
+  /** Changes the record of one weapon, and keeps every other record. */
+  function withRecord(
+    records: Map<string, FittedModule>,
+    slot: string,
+    change: Partial<FittedModule>,
+  ): Map<string, FittedModule> {
+    const record = records.get(slot);
+    if (record === undefined) {
+      throw new Error(`No record for ${slot}.`);
+    }
+    return new Map(records).set(slot, { ...record, ...change });
+  }
+
+  const slots = (groups: readonly (readonly FittedWeaponMetrics[])[]): string[][] =>
+    groups.map((group) => group.map((weapon) => weapon.slot));
+
+  it('gives two identical weapons one group, at the first one’s position', () => {
+    const { first, second, records } = stock();
+    expect(first.symbol).toBe(second.symbol);
+
+    const groups = groupIdenticalWeapons([first, second], records);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.[0]).toBe(first);
+    expect(groups[0]).toEqual([first, second]);
+  });
+
+  it('lists every member’s slot key in a shared group', () => {
+    const { first, second, records } = stock();
+
+    expect(slots(groupIdenticalWeapons([first, second], records))).toEqual([
+      [first.slot, second.slot],
+    ]);
+  });
+
+  it.each<
+    [string, (records: Map<string, FittedModule>, slot: string) => Map<string, FittedModule>]
+  >([
+    [
+      'engineering',
+      (records, slot) =>
+        withRecord(records, slot, {
+          engineering: { BlueprintName: 'Weapon_Overcharged', Level: 5, Quality: 1 },
+        }),
+    ],
+    ['enabled state', (records, slot) => withRecord(records, slot, { on: false })],
+    [
+      'pre-engineered variant',
+      (records, slot) =>
+        withRecord(records, slot, {
+          preEngineeredVariant: {
+            symbol: records.get(slot)?.symbol ?? '',
+            name: 'Variant',
+            blueprintSymbol: 'Weapon_Overcharged',
+            grade: 5,
+          } as unknown as NonNullable<FittedModule['preEngineeredVariant']>,
+        }),
+    ],
+  ])('gives two weapons that differ only in %s two groups', (_, change) => {
+    const { first, second, records } = stock();
+
+    const groups = groupIdenticalWeapons([first, second], change(records, second.slot));
+
+    expect(slots(groups)).toEqual([[first.slot], [second.slot]]);
+  });
+
+  it('compares engineering by value, not by reference', () => {
+    const { first, second, records } = stock();
+    const engineering = (): FittedModule['engineering'] => ({
+      BlueprintName: 'Weapon_Overcharged',
+      Level: 5,
+      Quality: 1,
+      Modifiers: [{ Label: 'Damage', Value: 2, OriginalValue: 1 }],
+    });
+    const changed = withRecord(
+      withRecord(records, first.slot, { engineering: engineering() }),
+      second.slot,
+      { engineering: engineering() },
+    );
+
+    expect(groupIdenticalWeapons([first, second], changed)).toHaveLength(1);
+  });
+
+  it.each<[string, (weapon: FittedWeaponMetrics) => FittedWeaponMetrics]>([
+    [
+      'burst damage',
+      (weapon) => ({
+        ...weapon,
+        metrics: { ...weapon.metrics, damagePerSecond: weapon.metrics.damagePerSecond + 1 },
+      }),
+    ],
+    [
+      'sustained damage',
+      (weapon) => ({
+        ...weapon,
+        metrics: {
+          ...weapon.metrics,
+          sustainedDamagePerSecond: weapon.metrics.sustainedDamagePerSecond + 1,
+        },
+      }),
+    ],
+    ['armour piercing', (weapon) => ({ ...weapon, armourPiercing: undefined })],
+    ['maximum range', (weapon) => ({ ...weapon, maximumRange: undefined })],
+    ['falloff range', (weapon) => ({ ...weapon, falloffRange: undefined })],
+  ])('gives two weapons that differ only in their %s two groups', (_, change) => {
+    const { first, second, records } = stock();
+
+    expect(slots(groupIdenticalWeapons([first, change(second)], records))).toEqual([
+      [first.slot],
+      [second.slot],
+    ]);
+  });
+
+  it('compares the figures as returned, not as they are drawn', () => {
+    const { first, second, records } = stock();
+    // Both draw as one figure to one place, and they are not the same figure.
+    const drawnAlike = (weapon: FittedWeaponMetrics, value: number): FittedWeaponMetrics => ({
+      ...weapon,
+      metrics: { ...weapon.metrics, damagePerSecond: value },
+    });
+
+    const groups = groupIdenticalWeapons(
+      [drawnAlike(first, 10.01), drawnAlike(second, 10.04)],
+      records,
+    );
+
+    expect(slots(groups)).toEqual([[first.slot], [second.slot]]);
+  });
+
+  it('keeps a shared group where its first member stands', () => {
+    const { first, second, records } = stock();
+    const other: FittedWeaponMetrics = { ...first, slot: 'MediumHardpoint1', symbol: 'Other' };
+    const withOther = new Map(records).set('MediumHardpoint1', {
+      ...(records.get(first.slot) as FittedModule),
+      slot: 'MediumHardpoint1',
+      symbol: 'Other',
+    });
+
+    const groups = groupIdenticalWeapons([first, other, second], withOther);
+
+    expect(slots(groups)).toEqual([[first.slot, second.slot], [other.slot]]);
+  });
+
+  it('gives a weapon with no record a group of its own', () => {
+    const { first, second, records } = stock();
+    const without = new Map(records);
+    without.delete(second.slot);
+
+    expect(slots(groupIdenticalWeapons([first, second], without))).toEqual([
+      [first.slot],
+      [second.slot],
+    ]);
+    // And where the first weapon has no record, the second does not join it.
+    const firstWithout = new Map(records);
+    firstWithout.delete(first.slot);
+    expect(groupIdenticalWeapons([first, second], firstWithout)).toHaveLength(2);
   });
 });

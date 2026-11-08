@@ -472,6 +472,10 @@
   // badge, canvas 1d's 30px size square at touch scale.
   --ednb-measure-mount-box: 1.75rem;
   --ednb-measure-node-box: 1.375rem;
+  // The same two boxes on a dense ledger row: canvas 1c's 22px size square and
+  // 18px node badge, where the ledger is the inline rail beside the bench.
+  --ednb-measure-mount-box-dense: 1.375rem;
+  --ednb-measure-node-box-dense: 1.125rem;
 
   // Canvas 1c's anatomy plate, `aspect-ratio: 720/292`. One shape for every
   // hull, so the region reserves its height before a schematic is fetched.
@@ -586,8 +590,8 @@
   // `e2e/offence-profile.spec.ts` in both languages.
   --ednb-measure-weapon-module: 9.6875rem;
 
-  // Canvas 1c's gunsight plate, as its 2026-08-25 revision draws it: a `172px`
-  // box square in pixels, with a 7px dot where each shot lands.
+  // Canvas 1c's gunsight plate: a `150px` box square in pixels, with a 7px dot
+  // where each shot lands.
   //
   // The box is square because the plate is square in *angle* — the script maps
   // both axes over the same field of view and corrects a ring's height by the
@@ -598,33 +602,25 @@
   // drawing kept a `16 / 6` box level by dividing its vertical axis by a
   // narrower field; the revision squares the box instead, and this follows it.
   //
-  // Drawn at `14rem` — 224px — rather than the canvas's own 172px, from
-  // 2026-08-27 (Commander request). The size has moved twice before: `8rem` on
-  // 2026-08-26, because at the canvas's width the plate was the tallest thing in
-  // an offence panel that then ran the full width of the column, and back to
-  // 172px later the same day with the block still unbounded. Now that the block
-  // stops at the canvas's own 508px, the plate is no longer setting a whole
-  // panel's height, and 172px inside a 508px frame is a small drawing with air
-  // around it. 224px is exactly half of what the bounded block holds: 508 less
-  // its two 18px insets and its two hairlines is a 470px content box, and less
-  // the 22px gap that is 448px for the plate and the range column to share.
+  // Canvas 1c's own 150px plate. It is centred in the 190px convergence block,
+  // and the range readout stands under it: 190 less the block's two 12px insets
+  // and its two hairlines is a 164px content box, which holds the plate with
+  // room to spare.
   //
   // Squareness is the property that matters, not the number of pixels: every
   // mark is placed as a fraction of the plate rather than in pixels, so it is
   // the same diagram at every size it has been drawn at
   // (`design/canvas-contract.md`, review notes 18 and 21).
-  --ednb-measure-gunsight-plate: 14rem;
+  --ednb-measure-gunsight-plate: 9.375rem;
   --ednb-measure-shot-dot: 0.4375rem;
 
   // How wide the `SHOT CONVERGENCE` block itself is allowed to get.
   //
-  // Canvas 1c's own `max-width: 508px; align-self: flex-start` on the block
-  // (@660195): it is drawn beneath the `WEAPONS` and `DAMAGE PROFILE` pair and
-  // spans neither of them, so a plate 172px across stands in a block a little
-  // over half the panel's width rather than in one running its whole 862px.
-  // The application gave it the full row and drew the canvas's plate marooned
-  // in the middle of it (Commander request 2026-08-27).
-  --ednb-measure-convergence-block: 31.75rem;
+  // Canvas 1c's 190px block: the 150px plate with the range under it, set
+  // beneath the `WEAPONS` and `DAMAGE PROFILE` pair at the leading edge. It
+  // spans neither of them, so the plate never stands marooned in a frame the
+  // width of the panel.
+  --ednb-measure-convergence-block: 11.875rem;
   --ednb-measure-node-mark-text: clamp(0.4375rem, 1.39cqw, 0.625rem);
   --ednb-measure-node-mark-icon: clamp(0.5625rem, 1.8cqw, 0.8125rem);
 

@@ -35,7 +35,12 @@
           <!-- prettier-ignore -->
           <p class="preview-cell__stage" [attr.data-preview-stage]="cell.address">{{ sentence[0] }}<ng-container *ngComponentOutlet="cell.declaration.component; inputs: inputsFor(cell.state)" />{{ sentence[1] }}</p>
         } @else {
-          <div class="preview-cell__stage" [attr.data-preview-stage]="cell.address">
+          <div
+            class="preview-cell__stage"
+            [class.preview-cell__stage--narrow]="cell.state.narrow !== undefined"
+            [class.preview-cell__stage--one-line]="cell.state.narrow === 'one-line'"
+            [attr.data-preview-stage]="cell.address"
+          >
             <ng-container
               *ngComponentOutlet="cell.declaration.component; inputs: inputsFor(cell.state)"
             />

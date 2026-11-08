@@ -3,7 +3,7 @@ import type {
   FittedWeaponMetrics,
 } from '@elite-dangerous-almanac/core/ships/build-metrics';
 import { BuildMetrics } from '@elite-dangerous-almanac/core/ships/build-metrics';
-import type { ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
+import type { FittedModule, ShipLoadout } from '@elite-dangerous-almanac/core/ships/ship-loadout';
 import { damageFalloff, type DamageSplit } from '@elite-dangerous-almanac/core/ships/weapons';
 import type { WeaponsCapacitorMetrics } from '@elite-dangerous-almanac/core/ships/weapons-capacitor';
 import type { HardpointCoverage } from '../outfitting/hardpoint-coverage';
@@ -268,6 +268,98 @@ export function projectRangeBands(weapons: readonly FittedWeaponMetrics[]): read
     ...band,
     fill: strongest > 0 ? band.damagePerSecond / strongest : null,
   }));
+}
+
+/**
+ * The weapons that one row of the `WEAPONS` block stands for.
+ *
+ * At least one weapon, in package order. The first member is where the group
+ * stands in the list, and its slot key is the row's identity.
+ */
+export type WeaponGroup = readonly [FittedWeaponMetrics, ...FittedWeaponMetrics[]];
+
+/**
+ * Group the weapons that are the same module in the same state.
+ *
+ * Two weapons share a group when their package records give the same symbol,
+ * pre-engineered variant, engineering (compared by value) and enabled state,
+ * and the package returns the same five figures for both, exactly as returned.
+ * The figures are part of the comparison because a shared row draws one
+ * weapon's figures for all of its members, so they must all be the same. A
+ * weapon that has no record has a group of its own.
+ *
+ * The groups are in package order, and each group stands where its first member
+ * stands. Nothing is sorted, and no figure is changed or added.
+ */
+export function groupIdenticalWeapons(
+  weapons: readonly FittedWeaponMetrics[],
+  records: ReadonlyMap<string, FittedModule>,
+): readonly WeaponGroup[] {
+  const groups: [FittedWeaponMetrics, ...FittedWeaponMetrics[]][] = [];
+  for (const weapon of weapons) {
+    const record = records.get(weapon.slot);
+    const group =
+      record === undefined
+        ? undefined
+        : groups.find(([first]) => {
+            const other = records.get(first.slot);
+            return other !== undefined && sameRecord(record, other) && sameFigures(weapon, first);
+          });
+    if (group === undefined) {
+      groups.push([weapon]);
+    } else {
+      group.push(weapon);
+    }
+  }
+  return groups;
+}
+
+/** Whether two package records are the same module in the same state. */
+function sameRecord(left: FittedModule, right: FittedModule): boolean {
+  return (
+    left.symbol === right.symbol &&
+    left.on === right.on &&
+    sameValue(left.preEngineeredVariant, right.preEngineeredVariant) &&
+    sameValue(left.engineering, right.engineering)
+  );
+}
+
+/** Whether the package returned the same five drawn figures for two weapons. */
+function sameFigures(left: FittedWeaponMetrics, right: FittedWeaponMetrics): boolean {
+  return (
+    left.metrics.damagePerSecond === right.metrics.damagePerSecond &&
+    left.metrics.sustainedDamagePerSecond === right.metrics.sustainedDamagePerSecond &&
+    left.armourPiercing === right.armourPiercing &&
+    left.maximumRange === right.maximumRange &&
+    left.falloffRange === right.falloffRange
+  );
+}
+
+/**
+ * Whether two package values are equal by value.
+ *
+ * Objects and arrays are compared member by member. A member that is absent
+ * and a member that is `undefined` are the same, because both say that the
+ * package states nothing there.
+ */
+function sameValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) {
+    return true;
+  }
+  if (
+    typeof left !== 'object' ||
+    typeof right !== 'object' ||
+    left === null ||
+    right === null ||
+    Array.isArray(left) !== Array.isArray(right)
+  ) {
+    return false;
+  }
+  const a = left as Record<string, unknown>;
+  const b = right as Record<string, unknown>;
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].every((key) =>
+    sameValue(a[key], b[key]),
+  );
 }
 
 /**

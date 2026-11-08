@@ -30,6 +30,17 @@ h2 {
   background-color: var(--ednb-surface-panel);
 }
 
+// A caller's narrow column for a label, as wide as the offence panel's
+// convergence block. The stage plays the caller here, so the rule that holds
+// the label on one line is the caller's rule, set on the stage.
+.preview-cell__stage--narrow {
+  max-inline-size: var(--ednb-layout-convergence-block);
+}
+
+.preview-cell__stage--one-line {
+  white-space: nowrap;
+}
+
 .preview-cell__expectations {
   margin-block-start: var(--ednb-space-stack);
   list-style: none;

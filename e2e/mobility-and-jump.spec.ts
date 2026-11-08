@@ -403,7 +403,7 @@ test.describe('Drives & Mass', () => {
 
     // The canvas's legend under the ranges — optimal mass, fuel per jump and the
     // whole tank. Three rows, because that is what the canvas draws; mass lock
-    // is in the headline trio, where the canvas puts it.
+    // is on its own line under the card's heading, where the canvas puts it.
     const facts = page.locator('ednb-drives-mass .drives__card:last-child .drives__legend-row');
     await expect(facts).toHaveCount(3);
 
@@ -427,7 +427,7 @@ test.describe('Drives & Mass', () => {
 
     // Canvas 1c draws one hairline in the thruster card — under the legend,
     // over `SPEED ENVELOPE AT THIS MASS` — and two in the drive card, under the
-    // headline trio and under `RANGE BY LOAD`. Without them the blocks run into
+    // mass lock line and under `RANGE BY LOAD`. Without them the blocks run into
     // one another and a card reads as one long list.
     const thrusters = page.locator('ednb-drives-mass .drives__card:first-child .drives__rule');
     const drive = page.locator('ednb-drives-mass .drives__card:last-child .drives__rule');
@@ -523,30 +523,42 @@ test.describe('Drives & Mass', () => {
     expect(Math.abs(geometry.max.right - geometry.bar.right)).toBeLessThanOrEqual(4);
   });
 
-  test('the drive card opens with the canvas’s own three cells', async ({ page }) => {
+  test('the drive card opens with the mass lock line, above the ranges', async ({ page }) => {
     await openDrives(page);
+    const drive = page.locator('ednb-drives-mass .drives__card').last();
 
-    // Canvas 1c heads the card `JUMP LADEN`, `JUMP UNLADEN`, `MASS LOCK` on one
-    // hairline ground, above `RANGE BY LOAD`.
-    const cells = page.locator('ednb-drives-mass .drives__cells .metric');
-    await expect(cells).toHaveCount(3);
-
-    const labels = await cells.locator('.metric__label').allTextContents();
-    expect(labels.map((label) => label.trim())).toEqual([
-      englishMessages['drives.fsd.jump-laden'],
-      englishMessages['drives.fsd.jump-unladen'],
+    // Canvas 1c heads the card with one line, `MASS LOCK FACTOR` and the hull's
+    // value, above the hairline and `RANGE BY LOAD`. The jump figures are the
+    // range rows' own, so no jump tile stands above them.
+    const line = drive.locator('.drives__mass-lock');
+    await expect(line).toHaveCount(1);
+    await expect(line.locator('.drives__mass-lock-label')).toHaveText(
       englishMessages['drives.fsd.mass-lock'],
-    ]);
-    for (const value of await cells.locator('.metric__value').allTextContents()) {
-      expect(value).toMatch(/\d/u);
-    }
+    );
+    await expect(line.locator('.drives__mass-lock-value')).toHaveText(/^\d+$/u);
+    await expect(page.locator('ednb-drives-mass ednb-metric-group')).toHaveCount(0);
+    await expect(page.locator('ednb-drives-mass .metric')).toHaveCount(0);
 
-    // The two jumps are the ends of the list below them, so the card can never
-    // head itself with a figure its own rows disagree with.
-    const ranges = await page.locator('ednb-drives-mass .drives__range-value').allTextContents();
-    const cellValues = await cells.locator('.metric__number').allTextContents();
-    expect(cellValues[1]?.trim()).toBe(ranges[0]?.trim());
-    expect(cellValues[0]?.trim()).toBe(ranges[2]?.trim());
+    const firstRange = drive.locator('.drives__range').first();
+    const lineBox = await line.boundingBox();
+    const rangeBox = await firstRange.boundingBox();
+    expect(lineBox && rangeBox && lineBox.y + lineBox.height <= rangeBox.y).toBe(true);
+    expect(
+      await line.evaluate(
+        (node, range) =>
+          Boolean(node.compareDocumentPosition(range!) & Node.DOCUMENT_POSITION_FOLLOWING),
+        await firstRange.elementHandle(),
+      ),
+    ).toBe(true);
+
+    // The legend under the ranges sets its rows the canvas's 6 pixels apart.
+    const gaps = await drive.locator('.drives__legend').evaluate((legend) => {
+      const rows = [...legend.querySelectorAll('.drives__legend-row')].map((row) =>
+        row.getBoundingClientRect(),
+      );
+      return rows.slice(1).map((row, index) => Math.round(row.top - rows[index]!.bottom));
+    });
+    expect(gaps).toEqual([6, 6]);
   });
 
   test('the three loads are drawn once each, with what each carries', async ({ page }) => {
@@ -689,6 +701,34 @@ test.describe('Drives & Mass', () => {
       page.locator('ednb-drives-mass .drives__card:first-child .drives__legend-value'),
     ).toHaveCount(3);
     await page.emulateMedia({ reducedMotion: null });
+  });
+
+  test('pads each card 10 by 12, stacks its blocks 8 apart and sets the cards 10 apart', async ({
+    page,
+  }) => {
+    await openDrives(page);
+
+    const measures = await page.locator('ednb-drives-mass .drives').evaluate((pair) => {
+      const px = (value: string) => Math.round(parseFloat(value));
+      const [first, second] = [...pair.querySelectorAll('.drives__card')];
+      const style = getComputedStyle(first!);
+      const header = first!.querySelector('.drives__card-header')!.getBoundingClientRect();
+      const headline = first!.querySelector('.drives__headline')!.getBoundingClientRect();
+      const a = first!.getBoundingClientRect();
+      const b = second!.getBoundingClientRect();
+      // Side by side the cards share a top edge; stacked, the second stands
+      // under the first.
+      const sideBySide = Math.abs(a.top - b.top) < 1;
+      return {
+        block: [px(style.paddingBlockStart), px(style.paddingBlockEnd)],
+        inline: [px(style.paddingInlineStart), px(style.paddingInlineEnd)],
+        stack: Math.round(headline.top - header.bottom),
+        between: Math.round(
+          sideBySide ? Math.max(b.left - a.right, a.left - b.right) : b.top - a.bottom,
+        ),
+      };
+    });
+    expect(measures).toEqual({ block: [10, 10], inline: [12, 12], stack: 8, between: 10 });
   });
 
   test('selects the stacked arrangement at 400% zoom rather than scrolling sideways', async ({
@@ -872,10 +912,14 @@ test.describe('the status rail', () => {
 
     // The same projection reaches the rail and the cards, so the readings have
     // to agree without either being written down here. `JUMP` is the drive
-    // card's laden cell, `SPEED` its top-speed row, `MASS` the thruster card's
-    // headline.
-    const ladenCell = page.locator('ednb-drives-mass .drives__cells .metric').first();
-    expect(digits(await ladenCell.locator('.metric__number').innerText())).toBe(railFigures[0]);
+    // card's `FULL CARGO` range row, `SPEED` its top-speed row, `MASS` the
+    // thruster card's headline.
+    const fullCargo = page
+      .locator('ednb-drives-mass .drives__range')
+      .filter({ hasText: englishMessages['drives.load.laden'] });
+    expect(digits(await fullCargo.locator('.drives__range-value').innerText())).toBe(
+      railFigures[0],
+    );
 
     const topSpeed = page.locator('ednb-drives-mass .drives__envelope-row').first();
     expect(digits(await topSpeed.locator('.drives__envelope-value').innerText())).toBe(

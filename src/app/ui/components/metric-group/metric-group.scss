@@ -186,7 +186,9 @@
 // size that is 85px, and `SPRUNG BELADEN` is wider than that as one word — so
 // the words break rather than the page scrolling sideways under them. A broken
 // word is read; a document a Commander has to pan across to finish a line is
-// the reflow failure this suite measures (WCAG 1.4.10).
+// the reflow failure this suite measures (WCAG 1.4.10). A label drawn through
+// `ednb-fit-text` (`fitLabels`) is not broken: its fit text cuts a word too
+// long for the cell, with a reachable `…`.
 :host(.metric-group--tight) .metric__label,
 :host(.metric-group--tight) .metric__number,
 :host(.metric-group--tight) .metric__unit,
@@ -220,4 +222,26 @@
 // across its own two or three.
 :host(.metric-group--flow) .metric {
   grid-column: auto;
+}
+
+// Canvas 1c's anatomy tiles: 6 pixels in the block direction and 8 in the
+// inline direction. Only the padding changes.
+:host(.metric-group--dense) .metric {
+  padding-block: var(--ednb-space-xs);
+  padding-inline: var(--ednb-space-sm);
+}
+
+// Labels drawn through `ednb-fit-text`. The caller's `white-space: nowrap` on
+// this element reaches the labels, and the values and descriptions keep their
+// own wrapping, so only a label is cut.
+:host(.metric-group--fit) .metric__value,
+:host(.metric-group--fit) .metric__description {
+  white-space: normal;
+}
+
+// A label held on one line gives way to its cell rather than widening the
+// cell's column: a whole label sized the grid's automatic tracks past a narrow
+// group's own width.
+:host(.metric-group--fit) .metric {
+  min-inline-size: 0;
 }

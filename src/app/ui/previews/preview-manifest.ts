@@ -62,6 +62,14 @@ export interface PreviewStateDeclaration {
    * catalogue scans is the shape the product ships.
    */
   readonly sentence?: readonly [string, string];
+  /**
+   * A narrow stage, for a label whose caller decides whether it wraps.
+   *
+   * `wrapping` lets the label wrap. `one-line` adds `white-space: nowrap`, as a
+   * panel's own rule does at its container step, so a label that does not fit
+   * is cut.
+   */
+  readonly narrow?: 'wrapping' | 'one-line';
 }
 
 /** Everything the preview application needs to render one component. */
@@ -212,6 +220,7 @@ import { Collection } from '../components/collection/collection';
 import { Disclosure } from '../components/disclosure/disclosure';
 import { FileDrop } from '../components/file-drop/file-drop';
 import { Tooltip } from '../components/tooltip/tooltip';
+import { FitText } from '../components/fit-text/fit-text';
 import { GameText } from '../components/game-text/game-text';
 import { Layer } from '../components/layer/layer';
 import { MetricGroup } from '../components/metric-group/metric-group';
@@ -1000,6 +1009,125 @@ registerPreview({
 });
 
 registerPreview({
+  componentId: 'metric-group-dense',
+  group: 'Values',
+  component: MetricGroup,
+  contract: contract(
+    'metric-group-dense',
+    {
+      role: 'group',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: [],
+      relationships: ['label', 'description', 'unit', 'viewing-condition'],
+      textEquivalents: ['unavailable value'],
+    },
+    ['default'],
+  ),
+  states: [
+    state(
+      'default',
+      {
+        label: 'Power summary',
+        dense: true,
+        metrics: [
+          {
+            id: 'draw',
+            label: 'Power draw',
+            value: '18.40',
+            unit: 'MW',
+            condition: 'Deployed',
+            description: 'Draw with every fitted module powered.',
+          },
+          {
+            id: 'heat',
+            label: 'Heat level',
+            value: null,
+            unavailableLabel: 'Unavailable',
+          },
+        ],
+      },
+      [
+        'the cells are drawn 6 by 8 pixels, as on canvas 1c, with nothing else changed',
+        'each value is related to its unit and measurement condition',
+        'an unavailable value is stated, never rendered as a zero',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'german-format', 'unavailable-text'],
+    ),
+    notApplicable(
+      'empty',
+      'The dense cells change only padding; the metric-group preview shows the empty group.',
+    ),
+    notApplicable(
+      'loading',
+      'Metrics render the values they are given; loading belongs to the source.',
+    ),
+    notApplicable(
+      'error',
+      'An absent value is an unavailable value, which this component renders honestly. It is not an error the group reports.',
+    ),
+    notApplicable('disabled', 'A description list is not interactive, so it cannot be disabled.'),
+  ],
+});
+
+/**
+ * Dense cells whose labels are drawn through `ednb-fit-text`, in a narrow box
+ * whose rule holds them on one line: a label that does not fit is cut with the
+ * reachable `…`, and the figures are whole.
+ */
+registerPreview({
+  componentId: 'metric-group-fit',
+  group: 'Values',
+  component: MetricGroup,
+  contract: contract(
+    'metric-group-fit',
+    {
+      role: 'group',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: [],
+      relationships: ['label', 'description', 'unit', 'viewing-condition'],
+      textEquivalents: ['the whole label, kept in the document while the drawing cuts it'],
+    },
+    ['default'],
+  ),
+  states: [
+    {
+      ...state(
+        'default',
+        {
+          label: 'Power budget',
+          dense: true,
+          fitLabels: true,
+          metrics: [
+            { id: 'plant', label: 'Power plant output', value: '36.00', unit: 'MW' },
+            { id: 'draw', label: 'Powered draw with hardpoints deployed', value: '18.40' },
+          ],
+        },
+        [
+          'a label held on one line and too long for its cell is cut, with a drawn `…` after it',
+          'the `…` shows the whole label on hover and on a press',
+          'every figure and unit is drawn whole',
+        ],
+        ['normal', 'expanded-copy', 'rtl', 'german-format'],
+      ),
+      narrow: 'one-line',
+    },
+    notApplicable(
+      'empty',
+      'The fitted labels change only how a label is drawn; the metric-group preview shows the empty group.',
+    ),
+    notApplicable(
+      'loading',
+      'Metrics render the values they are given; loading belongs to the source.',
+    ),
+    notApplicable(
+      'error',
+      'An absent value is an unavailable value, which this component renders honestly. It is not an error the group reports.',
+    ),
+    notApplicable('disabled', 'A description list is not interactive, so it cannot be disabled.'),
+  ],
+});
+
+registerPreview({
   componentId: 'status-notice',
   group: 'Feedback',
   component: StatusNotice,
@@ -1157,6 +1285,126 @@ registerPreview({
       'disabled',
       'The gloss is available whether or not it is drawn, so there is nothing a disabled state could withhold.',
     ),
+  ],
+});
+
+/**
+ * A tooltip whose bubble draws other words than the gloss it tells a reader:
+ * the whole name before the gloss, as a cut heat scenario name shows it.
+ */
+registerPreview({
+  componentId: 'tooltip-drawn-tip',
+  group: 'Containers',
+  component: Tooltip,
+  contract: contract(
+    'tooltip-drawn-tip',
+    {
+      role: 'button',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: ['expanded'],
+      relationships: ['description'],
+      textEquivalents: ['the gloss the trigger stands for'],
+    },
+    ['default'],
+  ),
+  states: [
+    state(
+      'default',
+      {
+        label: 'Sustained weapon fire',
+        tip: 'Trigger held down continuously',
+        drawnTip: 'Sustained weapon fire: Trigger held down continuously',
+        open: true,
+      },
+      [
+        'the bubble draws the whole name before the gloss',
+        'a reader is told the gloss alone, so the name is not heard twice in a row',
+      ],
+      ['normal', 'expanded-copy', 'rtl', 'reduced-motion'],
+    ),
+    notApplicable(
+      'empty',
+      'The drawn words change only what the bubble shows; the tooltip preview shows the undrawn gloss.',
+    ),
+    notApplicable('loading', 'A gloss is text the component is handed; it never waits for one.'),
+    notApplicable('error', 'A tooltip reports no error of its own.'),
+    notApplicable(
+      'disabled',
+      'The gloss is available whether or not it is drawn, so there is nothing a disabled state could withhold.',
+    ),
+  ],
+});
+
+/**
+ * A label held on one line in a box too narrow for it: cut, with the `…` that
+ * shows the whole label.
+ */
+registerPreview({
+  componentId: 'fit-text',
+  group: 'Values',
+  component: FitText,
+  contract: contract(
+    'fit-text',
+    {
+      role: 'text',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: [],
+      relationships: [],
+      textEquivalents: ['the whole label, kept in the document while the drawing cuts it'],
+    },
+    ['default'],
+  ),
+  states: [
+    {
+      ...state(
+        'default',
+        { text: 'Sustained weapon fire with every hardpoint deployed' },
+        [
+          'a label held on one line and too long for its box is cut, with a drawn `…` after it',
+          'the `…` shows the whole label on hover and on a press',
+          'the whole label stays in the accessibility tree, and the `…` is hidden from it',
+        ],
+        ['normal', 'expanded-copy', 'rtl', 'long-identity'],
+      ),
+      narrow: 'one-line',
+    },
+    notApplicable('empty', 'A label with no text is not drawn by its caller.'),
+    notApplicable('loading', 'A label draws the text it is given; it never waits for one.'),
+    notApplicable('error', 'A label reports no error of its own.'),
+    notApplicable('disabled', 'A label is not interactive, so it cannot be disabled.'),
+  ],
+});
+
+/** The same label in the same narrow box where its caller lets it wrap. */
+registerPreview({
+  componentId: 'fit-text-wrapping',
+  group: 'Values',
+  component: FitText,
+  contract: contract(
+    'fit-text-wrapping',
+    {
+      role: 'text',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: [],
+      relationships: [],
+      textEquivalents: [],
+    },
+    ['default'],
+  ),
+  states: [
+    {
+      ...state(
+        'default',
+        { text: 'Sustained weapon fire with every hardpoint deployed' },
+        ['a label its caller lets wrap is drawn whole on as many lines as it needs, with no `…`'],
+        ['normal', 'expanded-copy', 'rtl', 'long-identity'],
+      ),
+      narrow: 'wrapping',
+    },
+    notApplicable('empty', 'A label with no text is not drawn by its caller.'),
+    notApplicable('loading', 'A label draws the text it is given; it never waits for one.'),
+    notApplicable('error', 'A label reports no error of its own.'),
+    notApplicable('disabled', 'A label is not interactive, so it cannot be disabled.'),
   ],
 });
 
@@ -2818,6 +3066,57 @@ registerPreview({
   ],
 });
 
+/**
+ * The badge with canvas 1c's class chip, as a dense ledger row draws it.
+ *
+ * A second registration rather than a second state, as `tab-group-segmented`
+ * is: a preview state name comes from a closed vocabulary, and the chip is a
+ * presentation rather than a state.
+ */
+registerPreview({
+  componentId: 'module-identity-badge-class-chip',
+  group: 'Outfitting',
+  component: ModuleIdentityBadge,
+  contract: contract(
+    'module-identity-badge-class-chip',
+    {
+      role: 'group',
+      visibleNameMatchesAccessibleName: false,
+      exposedStates: [],
+      relationships: ['untranslated-disclosure'],
+      textEquivalents: ['the class and rating code, spelled out for a reader'],
+    },
+    ['default', 'empty'],
+  ),
+  states: [
+    state(
+      'default',
+      {
+        name: localized('Multi-Cannon'),
+        moduleClass: 4,
+        rating: 'A',
+        mount: 'Gimballed',
+        detail: 'Overcharged G5 · Corrosive Shell',
+        classChip: true,
+      },
+      [
+        'the class and rating are a chip on the name line, and the code line keeps the mount',
+        'the code is also spelled out for anyone reading it aloud',
+      ],
+      CONTROL_VARIANTS,
+    ),
+    state(
+      'empty',
+      { name: localized('Multi-Cannon'), moduleClass: null, rating: null, classChip: true },
+      ['a missing class or rating draws no chip rather than inventing one'],
+      ['normal', 'expanded-copy', 'rtl', 'long-identity'],
+    ),
+    notApplicable('loading', 'An identity is read from a build already in memory.'),
+    notApplicable('error', 'An unresolved name is an unavailable name, which it renders honestly.'),
+    notApplicable('disabled', 'An identity is read, never operated.'),
+  ],
+});
+
 registerPreview({
   componentId: 'slot-card',
   group: 'Outfitting',
@@ -2936,6 +3235,141 @@ registerPreview({
     state('empty', { group: { kind: 'utility', slots: [] } }, [
       'a kind with no mounts still names itself and its count',
     ]),
+    notApplicable('loading', 'The ledger is read from the committed build.'),
+    notApplicable('error', 'A group reports no error of its own.'),
+    notApplicable('disabled', 'A heading and a list are content, not controls.'),
+  ],
+});
+
+/**
+ * The ledger row at canvas 1c's dense measure, where the ledger is the inline
+ * rail beside the bench. A second registration for the same reason as the
+ * badge's class chip above.
+ */
+registerPreview({
+  componentId: 'slot-card-dense',
+  group: 'Outfitting',
+  component: SlotCard,
+  contract: contract(
+    'slot-card-dense',
+    {
+      role: 'button',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: ['pressed'],
+      relationships: ['label', 'description'],
+      textEquivalents: [
+        'selection, as pressed state and hidden text beside the amber marker',
+        'the class and rating code, spelled out for a reader',
+      ],
+    },
+    ['default', 'empty'],
+  ),
+  states: [
+    state(
+      'default',
+      {
+        slot: slotFixture(),
+        capabilities: EVERY_CAPABILITY,
+        selected: true,
+        dense: true,
+        engineeringSummary: 'Overcharged G5 · Corrosive Shell',
+      },
+      [
+        'a fitted engineered mount, selected, at the 36-pixel dense target',
+        'the class chip keeps its ink and its border on the selected ground',
+      ],
+      CONTROL_VARIANTS,
+    ),
+    state(
+      'empty',
+      { slot: slotFixture({ module: null }), capabilities: EVERY_CAPABILITY, dense: true },
+      ['an empty mount still meets the dense target and draws no chip'],
+      ['normal', 'expanded-copy', 'rtl', 'long-identity'],
+    ),
+    notApplicable('loading', 'A ledger row is read from the committed build; it is never pending.'),
+    notApplicable(
+      'error',
+      'A refusal is about an attempted edit and belongs to the refusal notice, not to a row.',
+    ),
+    notApplicable(
+      'disabled',
+      'The cargo hatch is the one disabled row, and the baseline preview already sweeps it.',
+    ),
+  ],
+});
+
+/**
+ * The same dense engineered mount, not selected, so the chip is swept on the
+ * rail's resting ground as well as on the selected one.
+ */
+registerPreview({
+  componentId: 'slot-card-dense-unselected',
+  group: 'Outfitting',
+  component: SlotCard,
+  contract: contract(
+    'slot-card-dense-unselected',
+    {
+      role: 'button',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: ['pressed'],
+      relationships: ['label', 'description'],
+      textEquivalents: ['the class and rating code, spelled out for a reader'],
+    },
+    ['default'],
+  ),
+  states: [
+    state(
+      'default',
+      {
+        slot: slotFixture(),
+        capabilities: EVERY_CAPABILITY,
+        selected: false,
+        dense: true,
+        engineeringSummary: 'Overcharged G5 · Corrosive Shell',
+      },
+      ['the same engineered mount, not selected, draws its chip in the same ink'],
+      CONTROL_VARIANTS,
+    ),
+    notApplicable('empty', 'The empty dense mount is the dense row’s own empty state.'),
+    notApplicable('loading', 'A ledger row is read from the committed build; it is never pending.'),
+    notApplicable(
+      'error',
+      'A refusal is about an attempted edit and belongs to the refusal notice, not to a row.',
+    ),
+    notApplicable('disabled', 'The dense row’s disabled reading is the baseline row’s.'),
+  ],
+});
+
+/** The group rule at canvas 1c's dense inset, beside dense rows. */
+registerPreview({
+  componentId: 'slot-group-dense',
+  group: 'Outfitting',
+  component: SlotGroup,
+  contract: contract(
+    'slot-group-dense',
+    {
+      role: 'region',
+      visibleNameMatchesAccessibleName: true,
+      exposedStates: [],
+      relationships: ['label'],
+      textEquivalents: ['the mount count beside the heading'],
+    },
+    ['default'],
+  ),
+  states: [
+    state(
+      'default',
+      {
+        group: {
+          kind: 'hardpoint',
+          slots: [slotFixture(), slotFixture({ key: 'LargeHardpoint1' })],
+        },
+        dense: true,
+      },
+      ['the rule stands at the dense rows’ inset and 4 pixels clear of the first of them'],
+      CONTROL_VARIANTS,
+    ),
+    notApplicable('empty', 'An empty kind draws the same rule at either density.'),
     notApplicable('loading', 'The ledger is read from the committed build.'),
     notApplicable('error', 'A group reports no error of its own.'),
     notApplicable('disabled', 'A heading and a list are content, not controls.'),

@@ -1,18 +1,12 @@
 @use '../../../../../styles/responsive' as layout;
 
-// Canvas 1c draws the dashboard in the space the plates leave, on the same page
-// ground the anatomy region uses: two fluid columns, the priority groups beside
-// the module list and the heat profile beside the distributor. Canvas 1d stacks
-// all four. Which arrangement appears is decided from the region's own inline
-// size rather than the viewport's, so a 400% zoom and an expanded translation
-// choose the stacked one for the same reason a phone does.
-//
-// **Corrected 2026-08-26 (Commander request).** The lower pair used to run the
-// full width, one under the other. The reference draws the four blocks as two
-// rows of two — `grid-template-columns: 1fr 1fr` twice over — and stacking the
-// lower pair stood the distributor a full panel below the fold of a region that
-// is bounded by the column it sits in, where a Commander looking for the pips
-// found the module list and nothing under it.
+// The dashboard stands in the space the plates leave, on the same page ground
+// the anatomy region uses, as four blocks in the order priority groups, draw by
+// module, heat profile, distributor: one row from the one-row step, two rows of
+// two from the wide step, and one column below it. Which arrangement appears is
+// decided from the panel's own inline size rather than the viewport's, so a
+// 400% zoom and an expanded translation choose the column for the same reason a
+// phone does.
 :host {
   display: block;
   container-type: inline-size;
@@ -21,25 +15,80 @@
 }
 
 .power {
-  @include layout.stack(var(--ednb-space-stack));
+  @include layout.stack(var(--ednb-space-md));
 
   min-inline-size: 0;
 }
 
-// The wide arrangement. The two rows the canvas draws are a grid rather than a
-// wrapping row, because a row that wrapped mid-block would put the module list
-// under the summary tiles it does not belong to.
+// Two rows of two. A grid rather than a wrapping row, because a row that
+// wrapped mid-block would put the module list under the summary tiles it does
+// not belong to.
 @include layout.container-wide-up(power) {
   .power {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    // Stretched so the two blocks in a row square up against each other, and no
-    // taller than that: canvas 1c gives each pair a `min-height` its own sample
-    // build happens to fill, and holding a real build to it would leave one
-    // plate ruled off around empty ground.
+    // Stretched so the blocks in a row square up against each other, and no
+    // taller than that: canvas 1c gives each block a `min-height` its own
+    // sample build happens to fill, and holding a real build to it would leave
+    // one plate ruled off around empty ground.
     align-items: stretch;
-    gap: var(--ednb-space-region);
+    gap: var(--ednb-space-md);
   }
+}
+
+// One row, as canvas 1c draws the panel on its 2020px artboard. The priority
+// groups take a little more than the other three, because their tiles stand
+// three across.
+//
+// Every label in the four blocks stands on one line here. A label that does not
+// fit is cut by its `ednb-fit-text`, with a reachable `…`. Only the labels are
+// held: a figure keeps its own wrapping and is never cut. The distributor holds
+// its own labels from the same step (`../distributor-block`).
+@include layout.container-power-row-up(power) {
+  .power {
+    grid-template-columns: minmax(0, 1.1fr) repeat(3, minmax(0, 1fr));
+  }
+
+  .power__block ednb-fit-text,
+  .power__summary,
+  .power__facts {
+    white-space: nowrap;
+  }
+
+  // The name gives way, and the count and the group after it do not.
+  .module__name {
+    display: flex;
+    align-items: baseline;
+    column-gap: var(--ednb-space-inline-tight);
+  }
+
+  .module__count,
+  .module__group {
+    flex: none;
+  }
+
+  // The untranslated-name disclosure is a sentence, and one line beside a name
+  // has no room for it. It is spoken instead: the name names it through
+  // `aria-describedby`, as on a ledger row and in the offence panel.
+  .module__label ::ng-deep .game-text__disclosure {
+    @include layout.visually-hidden;
+  }
+
+  // A scenario name on one line is its trigger, which is at least a target
+  // tall with the name at its middle. The `…` goes to that middle, not to the
+  // middle of one line of text at the trigger's end.
+  .heat__name ::ng-deep .fit-text__more {
+    margin-block-end: calc(max(1lh, var(--ednb-target-size-floor)) / 2);
+  }
+}
+
+// A label's words are never broken, at any width. The game text and the
+// tooltip trigger each let a long word break on their own element, so the
+// panel sets that back for the ones its fit texts hold, and a word too long for
+// its box is cut with the `…` instead.
+.module__label ::ng-deep .game-text__value,
+.heat__name ::ng-deep .tooltip__trigger {
+  overflow-wrap: normal;
 }
 
 // The condition sits inside the priority groups, on its own line under that
@@ -53,13 +102,13 @@
 
 // Each of the canvas's four blocks is a bounded plate on the panel ground, with
 // the same border and the same padding: `1px solid var(--amber-a2)` over
-// `var(--panel)` at `16px 18px`.
+// `var(--panel)` at `10px 12px`.
 .power__block {
-  @include layout.stack(var(--ednb-space-stack));
+  @include layout.stack(var(--ednb-space-sm));
 
   min-inline-size: 0;
-  padding-block: var(--ednb-space-2xl);
-  padding-inline: var(--ednb-space-panel);
+  padding-block: var(--ednb-space-md);
+  padding-inline: var(--ednb-space-lg);
   background-color: var(--ednb-surface-panel);
   border: var(--ednb-border-width-hairline) solid var(--ednb-border-region);
 }
@@ -149,6 +198,14 @@
   list-style: none;
 }
 
+// A cut name's `…` is a 24-pixel target, so the lines stand at least that far
+// apart, top to top: two cut names one above the other then draw two targets
+// that do not overlap (SC 2.5.8). Each line is the pitch, with no gap of its
+// own.
+.modules {
+  row-gap: 0;
+}
+
 .modules__head-draw,
 .modules__total-draw {
   grid-column: 3;
@@ -171,6 +228,7 @@
 // fixed width, and this list has no second line to run onto. The tracks come
 // from the list above, so every line is measured against the same three.
 .module {
+  min-block-size: var(--ednb-target-size-floor);
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
@@ -225,55 +283,10 @@
   color: var(--ednb-text-danger);
 }
 
-// Canvas 1c lays the heat block out as the bars beside their tiles, and stacks
-// the two at every width that cannot hold both.
+// Canvas 1c draws the heat block as the bars with the two tiles under them, at
+// every width.
 .heat {
-  @include layout.stack(var(--ednb-space-stack));
-}
-
-// The block measures itself rather than the panel around it. Half of a wide
-// panel is not a wide block, and the split below is decided by whether the bars
-// and the tiles both have room — which is a question about this box, not about
-// the two columns it is one of.
-.power__block--heat {
-  container-type: inline-size;
-  container-name: heat;
-}
-
-// The split opens at the same wide step the panel around it uses. The medium
-// one is 24rem, and a 430-pixel phone gives this block about 25rem, so the bars
-// went beside the tiles there while every canvas draws this block as one column
-// (reported 2026-08-26).
-@include layout.container-wide-up(heat) {
-  // One box split down the middle: the bars and the caption that belongs to them
-  // down one side, and the key over the four tiles down the other. Every
-  // position is stated, because leaving the tiles to auto-placement puts them
-  // under the bars rather than beside them the moment anything in the first
-  // column takes two rows.
-  //
-  // The key sits above the tiles rather than across the foot of both since the
-  // 2026-08-25 canvas revision, which is also the order the stacked arrangement
-  // reads it in: it explains the bars, and it explained them from below four
-  // figures that do not use it.
-  .heat {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
-    column-gap: var(--ednb-space-region);
-    row-gap: var(--ednb-space-stack);
-  }
-
-  .heat__profile {
-    grid-area: 1 / 1 / span 2 / auto;
-  }
-
-  .heat__legend {
-    grid-area: 1 / 2;
-  }
-
-  .power__facts {
-    grid-area: 2 / 2;
-  }
+  @include layout.stack(var(--ednb-space-sm));
 }
 
 // Every bar shares one set of columns, so each track starts and ends on the same
@@ -323,7 +336,14 @@
   // The whole of the name's cell rather than a word inside a line: this is the
   // only thing in it, so the trigger wraps against the column the bars are laid
   // out on and the bubble hangs from that column's leading edge.
-  display: block;
+  //
+  // A column of one flex item rather than a block, so the closed gloss stands
+  // at the cell's leading edge. In a line of text it stands after the trigger,
+  // past the end of a name that fills its line, and the name's fit text then
+  // measures that overflow as a cut.
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   min-inline-size: 0;
 }
 
@@ -341,7 +361,8 @@
 
 // The part of the bar past the threshold. The canvas hatches it; the hatch is
 // what tells the two fills apart for a reader who cannot tell amber from red,
-// and the key beside them names both in words as well.
+// beside the level figure, and the level carries hidden words for a reader who
+// is told.
 .heat__over {
   background-image: var(--ednb-surface-overheat);
 }
@@ -367,28 +388,6 @@
 
 .heat__bar--over .heat__level {
   color: var(--ednb-text-danger);
-}
-
-.heat__legend {
-  @include layout.wrapping-row(var(--ednb-space-inline));
-
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.heat__key {
-  @include layout.micro-label;
-  @include layout.wrapping-row(var(--ednb-space-inline-tight));
-
-  align-items: center;
-}
-
-.heat__swatch {
-  display: block;
-  inline-size: var(--ednb-layout-power-bar);
-  block-size: var(--ednb-layout-power-bar);
-  background-color: var(--ednb-surface-accent-solid);
 }
 
 // The distributor and its pips are their own component
@@ -539,14 +538,12 @@
 
 // Everything the plant does not carry, hatched at the canvas's own 135 degrees.
 // A shed group and a shed line keep their length — it still says how much demand
-// sits there — and the hatch says the plant is not carrying it; the key's second
-// swatch is the same hatch, standing for itself. The hatch is what tells these
-// from a lit length for a reader who cannot tell amber from red, and each one is
-// worded as well: `OFFLINE` on the group, the group's name on the line, and the
-// key's own label on the swatch.
+// sits there — and the hatch says the plant is not carrying it. The hatch is
+// what tells these from a lit length for a reader who cannot tell amber from
+// red, and each one is worded as well: `OFFLINE` on the group and the group's
+// name on the line.
 .module--offline .module__fill,
-.power__band--offline .power__band-fill,
-.heat__swatch--over {
+.power__band--offline .power__band-fill {
   background-color: transparent;
   background-image: var(--ednb-surface-overheat);
 }

@@ -12,8 +12,10 @@
   min-inline-size: 0;
 }
 
+// The two cards stand `--ednb-space-md` apart, side by side or one above the
+// other, as canvas 1c sets its blocks.
 .defence {
-  @include layout.stack(var(--ednb-space-region));
+  @include layout.stack(var(--ednb-space-md));
 
   min-inline-size: 0;
 }
@@ -37,29 +39,38 @@
     // fill, and holding a real build to it would leave a card ruled off around
     // empty ground.
     align-items: stretch;
-    gap: var(--ednb-space-region);
+    gap: var(--ednb-space-md);
   }
 }
 
 // Each card is a bounded plate on the panel ground, with the same border and the
 // same padding the canvas gives it: `1px solid var(--amber-a2)` over
-// `var(--panel)` at `16px 18px`.
+// `var(--panel)` at `10px 12px`, with its items `8px` apart.
 .card {
-  @include layout.stack(var(--ednb-space-stack));
+  @include layout.stack(var(--ednb-space-sm));
 
   min-inline-size: 0;
-  padding-block: var(--ednb-space-2xl);
-  padding-inline: var(--ednb-space-panel);
+  padding-block: var(--ednb-space-md);
+  padding-inline: var(--ednb-space-lg);
   background-color: var(--ednb-surface-panel);
   border: var(--ednb-border-width-hairline) solid var(--ednb-border-region);
 }
 
-// The canvas's header row: the card's name against the article it is reading.
+// The canvas's header row: the card's name and the article it is reading on
+// one side, and the choice of view on the other. Where the row is too narrow
+// for both (German, a narrow card, 400% zoom), the choice wraps under the
+// heading rather than cutting or overflowing.
 .card__head {
+  @include layout.wrapping-row(var(--ednb-space-sm));
+
+  justify-content: space-between;
+}
+
+.card__title {
   @include layout.wrapping-row(var(--ednb-space-inline));
 
   align-items: baseline;
-  justify-content: space-between;
+  min-inline-size: 0;
 }
 
 .card__heading {
@@ -225,7 +236,7 @@
   background-color: var(--ednb-surface-inset);
 }
 
-// Where the scale crosses zero, marked only on a table that reaches below it.
+// Where the track crosses zero, marked only on a table that reaches below it.
 // It is what says which side of nothing a length is drawn on, for a reader who
 // is looking at the bars rather than reading the signed figure beside them.
 .damage__zero {
@@ -272,43 +283,6 @@
   }
 }
 
-// The canvas's scale under the bars. It names what every bar above it is
-// measured against and carries no figure of its own — each row's own resistance
-// is set beside it in the table. It is the bar column's own width, because it is
-// the bar column it describes.
-//
-// The scale is the track's own width, and every name on it stands on the point
-// it names. It draws no rule of its own: the lengths above it are what the
-// names are read against, and a second line under them was a rule the canvas
-// does not have.
-.scale {
-  position: relative;
-  display: block;
-  block-size: var(--ednb-text-size-micro);
-  min-inline-size: 0;
-}
-
-// A box of no width centring what it holds, so a name straddles its mark
-// without a transform that would have to know which way the document runs.
-.scale__mark {
-  position: absolute;
-  inset-block: 0;
-  inline-size: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scale__mark--ceiling {
-  inset-inline-start: 100%;
-}
-
-.scale__label {
-  @include layout.micro-label;
-
-  white-space: nowrap;
-}
-
 // ---------------------------------------------------------------------------
 // The source rows
 
@@ -327,6 +301,14 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+// The unit every figure in the list below is read in, over their end edge.
+.sources__unit {
+  @include layout.micro-label;
+
+  margin: 0;
+  text-align: end;
 }
 
 .source {
@@ -393,6 +375,9 @@
 
 .source__value {
   @include layout.metric-value(var(--ednb-text-size-body));
+
+  // The containing block of the hidden unit, so its box stays inside the row.
+  position: relative;
 
   text-align: end;
   white-space: nowrap;

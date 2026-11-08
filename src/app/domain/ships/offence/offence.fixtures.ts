@@ -99,6 +99,31 @@ export function allDisabledBuild(): ShipLoadout {
 }
 
 /**
+ * The stock build with one of its two identical weapons engineered.
+ *
+ * The two weapons are then one module in two states, so they draw two rows
+ * with the same name. The recipe is the package's own, rolled by the package.
+ */
+export function engineeredPairBuild(): ShipLoadout {
+  const build = populatedBuild();
+  build.applyBlueprint(OFFENCE_DEFAULT_SLOTS[0], 'Weapon_Overcharged', { grade: 1 });
+  return build;
+}
+
+/**
+ * The stock build with its second weapon replaced by the gimballed mount of
+ * the same weapon.
+ *
+ * The package names both modules the same, so the two rows show one name with
+ * two different mounts.
+ */
+export function mixedMountPairBuild(): ShipLoadout {
+  const build = populatedBuild();
+  build.setModule(OFFENCE_DEFAULT_SLOTS[1], packageModule('Hpt_PulseLaser_Gimbal_Small'));
+  return build;
+}
+
+/**
  * One build carrying every weapon state this feature draws differently.
  *
  * Eight mounts, eight articles: an anti-xeno overlay, a caustic amount, a

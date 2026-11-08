@@ -7,11 +7,13 @@ import { PowerConditionsStore } from '../../../../application/power-heat/power-c
 import {
   distributorOffBuild,
   noPlantOutputBuild,
-  overheatingBuild,
+  overheatingBankBuild,
   overloadedPlantBuild,
   shedBandBuild,
+  sustainedOverheatBuild,
   withinBudgetBuild,
 } from '../../../../domain/ships/power-heat/power-heat.fixtures';
+import { projectPowerHeat } from '../../../../domain/ships/power-heat/power-heat';
 import { provideLocalization } from '../../../../i18n/i18n.providers';
 import { provideIsolatedLocaleEnvironment } from '../../../../i18n/testing/localization-harness';
 import { PowerThermals } from './power-thermals';
@@ -454,19 +456,30 @@ describe('PowerThermals', () => {
       const names = [...element.querySelectorAll('.heat__name')].map((node) =>
         node.querySelector('button')?.textContent?.trim(),
       );
-      // The five the package returns plus the cell-bank spike it declines to
-      // publish as one, where a bank is fitted to spike.
-      expect(names.slice(0, 5)).toEqual([
+      // Four of the five the package returns. The stock build carries no
+      // cell bank, so no fifth bar follows them.
+      expect(names).toEqual([
         'Idle · retracted',
         'Cruise · full throttle',
         'FSD charging',
-        'Weapons alpha',
         'Sustained weapon fire',
       ]);
-      expect(names.length).toBeLessThanOrEqual(6);
-      if (names.length === 6) {
-        expect(names[5]).toBe('Shield cell bank');
-      }
+      expect(names).not.toContain('Weapons alpha');
+    });
+
+    it('draws the cell bank’s bar after the four scenarios where a bank is fitted', () => {
+      const { element } = render(overheatingBankBuild());
+
+      const names = [...element.querySelectorAll('.heat__name')].map((node) =>
+        node.querySelector('button')?.textContent?.trim(),
+      );
+      expect(names).toEqual([
+        'Idle · retracted',
+        'Cruise · full throttle',
+        'FSD charging',
+        'Sustained weapon fire',
+        'Shield cell bank',
+      ]);
     });
 
     it('says what each scenario name is shorthand for, in a tooltip rather than a title', () => {
@@ -533,18 +546,18 @@ describe('PowerThermals', () => {
       ).toBe(true);
     });
 
-    it('draws the key above the four tiles it does not explain', () => {
+    it('draws no key, and stands the tiles under the bars', () => {
       const { element } = render(withinBudgetBuild());
 
       const heat = element.querySelector('.heat');
-      const legend = heat?.querySelector('.heat__legend');
+      const bars = heat?.querySelector('.heat__profile');
       const facts = heat?.querySelector('.power__facts');
 
-      // Document order is what the stacked arrangement reads and what the wide
-      // one places from, so the key reading before the tiles is the assertion.
-      expect(legend).not.toBeNull();
-      expect(facts).not.toBeNull();
-      expect(legend?.compareDocumentPosition(facts as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(heat?.querySelector('.heat__legend')).toBeNull();
+      expect(heat?.querySelector('.heat__key')).toBeNull();
+      expect(heat?.querySelector('.heat__swatch')).toBeNull();
+      expect(element.textContent).not.toContain('Within limit');
+      expect(bars?.compareDocumentPosition(facts as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
     it('reads each bar as the gauge reads it, beside the bar it drew', () => {
@@ -563,10 +576,10 @@ describe('PowerThermals', () => {
     });
 
     it('reads a load that never settles as the symbol, worded beside it', () => {
-      const build = overheatingBuild();
+      const build = sustainedOverheatBuild();
       const { element } = render(build);
 
-      expect(BuildMetrics.of(build).heatMetricsResult().value?.firingDrained.heatLevel).toBe(
+      expect(BuildMetrics.of(build).heatMetricsResult().value?.firingSustained.heatLevel).toBe(
         Infinity,
       );
       const bar = [...element.querySelectorAll('.heat__bar')][3];
@@ -579,20 +592,50 @@ describe('PowerThermals', () => {
       expect(bar?.classList).toContain('heat__bar--over');
     });
 
-    it('names both fills in words, not by colour alone', () => {
-      const { element } = render(withinBudgetBuild());
+    it('says in hidden words that an overheating bar is past the threshold', () => {
+      const { element } = render(sustainedOverheatBuild());
+      const bars = [...element.querySelectorAll<HTMLElement>('.heat__bar')];
+      const over = bars[3];
+      const within = bars[0];
 
       // The line the bars are measured against is drawn through them and carries
-      // no caption: the canvas withdrew it on 2026-08-28, and each bar's own
-      // gauge beside it is what says where it falls against the line.
+      // no caption: each bar's own level beside it says where it falls.
       expect(element.querySelector('.heat__threshold-label')).toBeNull();
-      const keys = [...element.querySelectorAll('.heat__key')].map((node) =>
-        node.textContent?.trim(),
+
+      // Past the threshold: the hatch with a length, the level figure, and the
+      // words after it for a reader who is told.
+      expect(over.classList).toContain('heat__bar--over');
+      expect(percent(over.querySelector<HTMLElement>('.heat__over'))).toBeGreaterThan(0);
+      expect(over.querySelector('.heat__level')?.firstChild?.textContent?.trim()).toBe('∞');
+      const overWords = [...over.querySelectorAll('.heat__level .visually-hidden')].map(
+        (node) => node.textContent,
       );
-      expect(keys).toEqual(['Within limit', 'Over threshold']);
+      expect(overWords).toContain('Over threshold');
+
+      // Inside the limit: neither the words nor the hatch.
+      expect(within.classList).not.toContain('heat__bar--over');
+      expect(within.querySelector('.heat__over')).toBeNull();
+      expect(within.textContent).not.toContain('Over threshold');
     });
 
-    it('draws the canvas’s four tiles, the sinks counted from the build', () => {
+    it('says the same of an overheating cell bank bar', () => {
+      const build = overheatingBankBuild();
+      const { element } = render(build);
+      const bank = [...element.querySelectorAll<HTMLElement>('.heat__bar')][4];
+      const gauge = projectPowerHeat(build, conditions.conditions()).heat?.shieldBankSpike?.gauge;
+
+      expect(gauge?.kind).toBe('level');
+      expect(bank.classList).toContain('heat__bar--over');
+      expect(percent(bank.querySelector<HTMLElement>('.heat__over'))).toBeGreaterThan(0);
+      expect(bank.querySelector('.heat__level')?.firstChild?.textContent?.trim()).toBe(
+        gauge?.kind === 'level' ? `${Math.round(gauge.value * 100)}%` : '',
+      );
+      expect(bank.querySelector('.heat__level .visually-hidden')?.textContent).toBe(
+        'Over threshold',
+      );
+    });
+
+    it('draws the canvas’s two tiles, the sinks counted from the build', () => {
       const build = withinBudgetBuild();
       const { element, component } = render(build);
       const launchers = build
@@ -600,12 +643,10 @@ describe('PowerThermals', () => {
         .filter((module) => /heatsinklauncher/iu.test(module.symbol));
 
       expect(component.heatFacts().map((fact) => fact.label)).toEqual([
-        'Resting heat',
-        'Peak sustained',
         'Dissipation',
         'Heat sinks',
       ]);
-      expect(component.heatFacts()[3]?.value).toBe(
+      expect(component.heatFacts()[1]?.value).toBe(
         String(launchers.reduce((total, module) => total + (module.ammunition?.total ?? 0), 0)),
       );
       expect(element.querySelector('.power__block--heat .power__facts')).not.toBeNull();
@@ -802,6 +843,148 @@ describe('PowerThermals', () => {
       );
       expect(element.querySelector('.power__summary')?.textContent).toContain(
         budget.retracted.toFixed(2),
+      );
+    });
+  });
+
+  describe('the labels the one-row step holds on one line', () => {
+    /** The observers the panel's fit texts started, by the element each watches. */
+    let watched: { element: Element; report: ResizeObserverCallback }[];
+    let own: PropertyDescriptor | undefined;
+
+    beforeEach(() => {
+      watched = [];
+      own = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
+      (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+        readonly #report: ResizeObserverCallback;
+        constructor(report: ResizeObserverCallback) {
+          this.#report = report;
+        }
+        observe(element: Element): void {
+          watched.push({ element, report: this.#report });
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      };
+    });
+
+    afterEach(() => {
+      if (own === undefined) {
+        delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+      } else {
+        Object.defineProperty(globalThis, 'ResizeObserver', own);
+      }
+    });
+
+    /** States what jsdom will not: the whole label's width and its box's. */
+    function measure(fit: Element, whole: number, box: number): void {
+      Object.defineProperty(fit.querySelector('.fit-text__value'), 'scrollWidth', {
+        configurable: true,
+        value: whole,
+      });
+      for (const entry of watched.filter((candidate) => candidate.element === fit)) {
+        entry.report(
+          [{ contentRect: { width: box, height: 20 } }] as unknown as ResizeObserverEntry[],
+          {} as ResizeObserver,
+        );
+      }
+    }
+
+    function sustainedFire(element: HTMLElement): Element {
+      const bar = [...element.querySelectorAll('.heat__bar')].find(
+        (row) => row.querySelector('button')?.textContent?.trim() === 'Sustained weapon fire',
+      );
+      return bar!.querySelector('.heat__name ednb-fit-text')!;
+    }
+
+    it('draws every label in the four blocks through a fit text', () => {
+      const { element } = render(withinBudgetBuild());
+      const fitted = (selector: string) =>
+        [...element.querySelectorAll(selector)].map(
+          (node) => node.querySelector('ednb-fit-text') !== null,
+        );
+
+      for (const selector of [
+        '.power__band-group',
+        '.module__name',
+        '.heat__name',
+        '.power__summary dt',
+        '.power__facts dt',
+        '.distributor__bank',
+        '.distributor__label',
+      ]) {
+        const labels = fitted(selector);
+        expect(labels.length, selector).toBeGreaterThan(0);
+        expect(labels, selector).toEqual(labels.map(() => true));
+      }
+      // A module name keeps its game text, so its language and its disclosure
+      // are drawn as before.
+      expect(element.querySelector('.module__name ednb-fit-text ednb-game-text')).not.toBeNull();
+      expect(element.querySelector('.heat__name ednb-fit-text ednb-tooltip button')).not.toBeNull();
+    });
+
+    it('draws no figure through a fit text', () => {
+      const { element } = render(withinBudgetBuild());
+      const figures = element.querySelectorAll(
+        '.power__band-draw, .power__band-share, .module__draw, .modules__total-draw, ' +
+          '.heat__level, .metric__number, .metric__unit, ' +
+          '.distributor__cell--numeric > [data-bidi-isolate], .distributor__cell--recharge',
+      );
+
+      expect(figures.length).toBeGreaterThan(0);
+      for (const figure of figures) {
+        expect(figure.closest('ednb-fit-text')).toBeNull();
+        expect(figure.querySelector('ednb-fit-text')).toBeNull();
+      }
+    });
+
+    it('cuts no label while each one fits', () => {
+      const { element } = render(withinBudgetBuild());
+
+      expect(element.querySelector('[data-text-reachable]')).toBeNull();
+      expect(element.querySelector('.fit-text__more')).toBeNull();
+      expect(element.querySelector('.heat__description .tooltip__told')).toBeNull();
+    });
+
+    it('shows a cut scenario name whole before its gloss, in the gloss it already has', () => {
+      const { element, detect } = render(withinBudgetBuild());
+      const fit = sustainedFire(element);
+
+      measure(fit, 300, 100);
+      detect();
+
+      // The `…` is a plain mark, so the name's own gloss is the only tooltip.
+      const mark = fit.querySelector('.fit-text__more');
+      expect(mark?.textContent?.trim()).toBe('…');
+      expect(mark?.getAttribute('aria-hidden')).toBe('true');
+      expect(fit.querySelectorAll('ednb-tooltip')).toHaveLength(1);
+      // The bubble draws the whole name and the gloss, and tells a reader the
+      // gloss alone: the name is the trigger's own name already.
+      const tip = fit.querySelector('[role="tooltip"]');
+      expect(tip?.querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe(
+        'Sustained weapon fire: Trigger held down continuously',
+      );
+      expect(tip?.querySelector('.tooltip__told')?.textContent?.trim()).toBe(
+        'Trigger held down continuously',
+      );
+      expect(fit.querySelector('button')?.textContent?.trim()).toBe('Sustained weapon fire');
+      // Only the cut name draws its whole name in its gloss.
+      expect(element.querySelectorAll('.heat__description .tooltip__told')).toHaveLength(1);
+    });
+
+    it('draws the gloss alone again once the scenario name fits', () => {
+      const { element, detect } = render(withinBudgetBuild());
+      const fit = sustainedFire(element);
+
+      measure(fit, 300, 100);
+      detect();
+      measure(fit, 300, 400);
+      detect();
+
+      expect(fit.querySelector('.fit-text__more')).toBeNull();
+      expect(fit.querySelector('.tooltip__told')).toBeNull();
+      expect(fit.querySelector('[role="tooltip"]')?.textContent?.trim()).toBe(
+        'Trigger held down continuously',
       );
     });
   });

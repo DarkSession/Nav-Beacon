@@ -16,6 +16,7 @@ import { GameTextPresenter, type GameTextPresentation } from '../../../../i18n/g
 import type { MessageKey } from '../../../../i18n/locale-registry';
 import { MessageService } from '../../../../i18n/message.service';
 import { relationId } from '../../../../ui/a11y/text-equivalence';
+import { FitText } from '../../../../ui/components/fit-text/fit-text';
 import { GameText } from '../../../../ui/components/game-text/game-text';
 import type { Metric } from '../../../../ui/components/metric-group/metric-group';
 import { MetricGroup } from '../../../../ui/components/metric-group/metric-group';
@@ -66,6 +67,8 @@ interface HeatBarView {
   readonly label: string;
   /** What the scenario's name is shorthand for, glossed on the name itself. */
   readonly description: string;
+  /** The whole name before the gloss, drawn in the gloss where the name is cut. */
+  readonly wholeTip: string;
   /** The gauge reading, or the symbol for the level that never settles. */
   readonly level: string;
   /** What that symbol stands for, in words. `null` on a level that settles. */
@@ -89,7 +92,6 @@ const SCENARIO_LABELS = {
   thrusters: 'power.heat.scenario.thrusters',
   fsdCharging: 'power.heat.scenario.fsd-charging',
   firingSustained: 'power.heat.scenario.firing-sustained',
-  firingDrained: 'power.heat.scenario.firing-drained',
 } as const satisfies Record<HeatScenarioKey, MessageKey>;
 
 /**
@@ -106,7 +108,6 @@ const SCENARIO_DESCRIPTIONS = {
   thrusters: 'power.heat.scenario.thrusters.description',
   fsdCharging: 'power.heat.scenario.fsd-charging.description',
   firingSustained: 'power.heat.scenario.firing-sustained.description',
-  firingDrained: 'power.heat.scenario.firing-drained.description',
 } as const satisfies Record<HeatScenarioKey, MessageKey>;
 
 /** The bank names, likewise written out. */
@@ -121,6 +122,14 @@ const HARDPOINT_LABELS = {
   deployed: 'power.hardpoints.deployed',
   retracted: 'power.hardpoints.retracted',
 } as const satisfies Record<HardpointState, MessageKey>;
+
+/**
+ * The width at which the panel draws its four blocks in one row.
+ *
+ * `$container-power-row-min` in `src/styles/_responsive.scss` is the step the
+ * stylesheet turns at, and the `composition-step` rule holds the two equal.
+ */
+export const POWER_ROW_MIN_REM = 78.5;
 
 /** Megawatts to two places, as the canvas sets every power figure. */
 const MW_DIGITS = 2;
@@ -172,10 +181,10 @@ function clamp(share: number): number {
  *
  * Canvas 1c draws this as the `POWER` mode of the hull anatomy region — the
  * conditions, the priority groups over their summary, the module draw list, the
- * heat profile and the distributor table, in that order, paired into two fluid
- * columns. Canvas 1d stacks the same five blocks. Same DOM at both widths;
- * which arrangement appears is decided in CSS from the space the region is
- * given, so a 400% zoom picks the stacked one for the same reason a phone does.
+ * heat profile and the distributor table, in that order. Same DOM at every
+ * width; the stylesheet lays the blocks out in one row, two rows of two or one
+ * column from the space the region is given, so a 400% zoom picks the column
+ * for the same reason a phone does.
  *
  * Every figure here is a package answer selected by
  * `src/app/domain/ships/power-heat/power-heat.ts`. This component formats and names
@@ -192,12 +201,16 @@ function clamp(share: number): number {
  */
 @Component({
   selector: 'ednb-power-thermals',
-  imports: [DistributorBlock, GameText, MetricGroup, TabGroup, Tooltip, UnavailableValue],
+  imports: [DistributorBlock, FitText, GameText, MetricGroup, TabGroup, Tooltip, UnavailableValue],
   templateUrl: './power-thermals.html',
   styleUrl: './power-thermals.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // The one-row step, stated on the host so a test reads the width the
+  // stylesheet turns at rather than a copy of it.
+  host: { '[style.--power-row-min]': 'rowMinimum' },
 })
 export class PowerThermals {
+  readonly rowMinimum = `${POWER_ROW_MIN_REM}rem`;
   readonly #active = inject(ActiveBuildStore);
   readonly #conditions = inject(PowerConditionsStore);
   readonly #messages = inject(MessageService);
@@ -216,6 +229,14 @@ export class PowerThermals {
   readonly modulesHeading = this.#messages.messageSignal('power.modules.heading');
   readonly heatCaption = this.#messages.messageSignal('power.heat.heading');
   readonly heatUnavailableLabel = this.#messages.messageSignal('power.heat.heading');
+  /**
+   * The words after the level of a bar past the module-damage threshold.
+   *
+   * The bar's colour and hatch carry the state for a reader who sees it, beside
+   * the level figure. No key names them, so these words carry it for a reader
+   * who is told.
+   */
+  readonly heatOverLabel = this.#messages.messageSignal('power.heat.over');
   readonly distributorCaption = this.#messages.messageSignal('power.distributor.heading');
   readonly distributorUnavailableLabel = this.#messages.messageSignal('power.distributor.heading');
 
@@ -395,8 +416,7 @@ export class PowerThermals {
 
     const scenarios = heat.scenarios.map((scenario) => ({
       id: scenario.key,
-      label: this.#messages.message(SCENARIO_LABELS[scenario.key]),
-      description: this.#messages.message(SCENARIO_DESCRIPTIONS[scenario.key]),
+      ...this.#heatName(SCENARIO_LABELS[scenario.key], SCENARIO_DESCRIPTIONS[scenario.key]),
       level: this.#heatLevel(scenario.gauge),
       levelMeaning: this.#heatLevelMeaning(scenario.gauge),
       within: scenario.within,
@@ -405,7 +425,7 @@ export class PowerThermals {
     }));
     const spike = heat.shieldBankSpike;
 
-    // The sixth bar only where there is a bank to spike. A build with none has
+    // The fifth bar only where there is a bank to spike. A build with none has
     // no cell-bank heat, which is not the same as a cell-bank heat of zero.
     return spike === null
       ? scenarios
@@ -413,8 +433,10 @@ export class PowerThermals {
           ...scenarios,
           {
             id: 'shieldBank',
-            label: this.#messages.message('power.heat.scenario.shield-bank'),
-            description: this.#messages.message('power.heat.scenario.shield-bank.description'),
+            ...this.#heatName(
+              'power.heat.scenario.shield-bank',
+              'power.heat.scenario.shield-bank.description',
+            ),
             level: this.#heatLevel(spike.gauge),
             levelMeaning: this.#heatLevelMeaning(spike.gauge),
             within: spike.within,
@@ -424,46 +446,28 @@ export class PowerThermals {
         ];
   });
 
+  /** A bar's name, its gloss, and the two together for a gloss under a cut name. */
+  #heatName(
+    labelKey: MessageKey,
+    descriptionKey: MessageKey,
+  ): Pick<HeatBarView, 'label' | 'description' | 'wholeTip'> {
+    const label = this.#messages.message(labelKey);
+    const description = this.#messages.message(descriptionKey);
+    return {
+      label,
+      description,
+      wholeTip: this.#messages.message('power.heat.scenario.whole', { label, description }),
+    };
+  }
+
   /** Where on the track the canvas draws its `100% MODULE DAMAGE` line. */
   readonly heatThreshold = computed(() => this.#projection()?.heat?.thresholdAt ?? 0);
 
   /**
-   * The hottest of the readings the bars carry.
+   * The canvas's two tiles under the bars: `DISSIPATION` and `HEAT SINKS`.
    *
-   * Longest bar first, then the largest settled level: a bar that runs the whole
-   * track because its level never settles is the hottest thing on the block, and
-   * it says so in the package's own words rather than as a percentage.
-   */
-  readonly #hottestBar = computed<HeatLevelValue | null>(() => {
-    const heat = this.#projection()?.heat ?? null;
-    if (heat === null) {
-      return null;
-    }
-
-    const gauges = [
-      ...heat.scenarios.map((scenario) => scenario.gauge),
-      ...(heat.shieldBankSpike === null ? [] : [heat.shieldBankSpike.gauge]),
-    ];
-
-    return gauges.reduce<HeatLevelValue | null>((hottest, gauge) => {
-      if (hottest === null || hottest.kind === 'level') {
-        return gauge.kind === 'doesNotSettle' ||
-          hottest === null ||
-          (hottest.kind === 'level' && gauge.kind === 'level' && gauge.value > hottest.value)
-          ? gauge
-          : hottest;
-      }
-      return hottest;
-    }, null);
-  });
-
-  /**
-   * The canvas's four tiles: `RESTING HEAT`, `PEAK SUSTAINED`, `DISSIPATION`
-   * and `HEAT SINKS`.
-   *
-   * The peak is the hottest of the bars beside them, which is the reading the
-   * canvas puts there; the sinks are a count of what is fitted, over the
-   * multiplication the canvas writes under it.
+   * The sinks are a count of what is fitted, over the multiplication the canvas
+   * writes under it.
    */
   readonly heatFacts = computed<readonly Metric[]>(() => {
     const heat = this.#projection()?.heat ?? null;
@@ -471,29 +475,9 @@ export class PowerThermals {
       return [];
     }
 
-    const resting = heat.scenarios.find((scenario) => scenario.key === 'idle')?.gauge;
-    // The hottest bar's own reading, picked out rather than worked out: the
-    // canvas puts the peak of the bars beside them in this tile, and picking the
-    // largest of a set of published figures publishes none of its own.
-    const peak = this.#hottestBar();
     const sinks = heat.heatSinks;
 
     return [
-      {
-        id: 'resting',
-        label: this.#messages.message('power.heat.resting'),
-        value: resting === undefined ? null : this.#heatLevel(resting),
-        // What the symbol stands for, tied to the tile's own value, so a tile
-        // reading a level that never settles says so in words as well.
-        description:
-          resting === undefined ? undefined : (this.#heatLevelMeaning(resting) ?? undefined),
-      },
-      {
-        id: 'peak',
-        label: this.#messages.message('power.heat.peak'),
-        value: peak === null ? null : this.#heatLevel(peak),
-        description: peak === null ? undefined : (this.#heatLevelMeaning(peak) ?? undefined),
-      },
       {
         id: 'dissipation',
         label: this.#messages.message('power.heat.dissipation'),
@@ -516,12 +500,6 @@ export class PowerThermals {
       },
     ];
   });
-
-  /** The canvas's two-key legend under the tiles. */
-  readonly heatLegend = computed<readonly { id: string; label: string; over: boolean }[]>(() => [
-    { id: 'within', label: this.#messages.message('power.heat.within'), over: false },
-    { id: 'over', label: this.#messages.message('power.heat.over'), over: true },
-  ]);
 
   readonly heatAvailable = computed(() => (this.#projection()?.heat ?? null) !== null);
 
