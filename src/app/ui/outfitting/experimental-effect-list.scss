@@ -206,6 +206,12 @@
   box-shadow: var(--ednb-elevation-menu);
 }
 
+// Over the trigger, where there is no room for the list under it (`#place`).
+.menu__list--above {
+  inset-block-start: auto;
+  inset-block-end: 100%;
+}
+
 // One option: the effect's name, and the package's description under it a step
 // down and a wash quieter. The two steps are the card list's own, so the menu
 // and the cards read alike.

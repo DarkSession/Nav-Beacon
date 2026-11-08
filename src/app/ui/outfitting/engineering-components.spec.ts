@@ -500,6 +500,47 @@ describe('experimental effect menu', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  describe('placement against the window (issue #107)', () => {
+    /** Lays the menu box out at `top`…`bottom` in a window `windowHeight` tall. */
+    function layOut(top: number, bottom: number, windowHeight: number, listHeight: number) {
+      vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(windowHeight);
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(listHeight);
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.classList.contains('menu')
+          ? DOMRect.fromRect({ y: top, height: bottom - top })
+          : DOMRect.fromRect();
+      });
+    }
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('hangs the list under the menu where it fits there', () => {
+      layOut(100, 150, 900, 336);
+      const list = query(openMenu(renderMenu()), '.menu__list');
+
+      expect(list.classList).not.toContain('menu__list--above');
+      expect(list.style.maxBlockSize).toBe('');
+    });
+
+    it('lifts the list over the menu where the window’s foot would cut it off', () => {
+      layOut(600, 650, 900, 336);
+      const list = query(openMenu(renderMenu()), '.menu__list');
+
+      expect(list.classList).toContain('menu__list--above');
+      expect(list.style.maxBlockSize).toBe('');
+    });
+
+    it('holds the list to the room on its side where neither side fits it whole', () => {
+      layOut(200, 250, 400, 336);
+      const list = query(openMenu(renderMenu()), '.menu__list');
+
+      expect(list.classList).toContain('menu__list--above');
+      expect(list.style.maxBlockSize).toBe('200px');
+    });
+  });
+
   it('names each option by both lines it shows, the name first', () => {
     // An option's name contains every word it shows (WCAG 2.5.3), so a
     // Commander can say what they see. The two lines stay two lines on screen.

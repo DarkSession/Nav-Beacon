@@ -227,6 +227,11 @@ export class ExperimentalEffectList {
     if (!list || !active) {
       return;
     }
+    // Placed before it is scrolled, because placing it can shorten the box.
+    if (list !== this.#placed) {
+      this.#placed = list;
+      this.#place(list);
+    }
 
     // `clientTop` is the scroller's own block-start border, which stands
     // between the box a rect measures from and the padding box `clientHeight`
@@ -242,6 +247,37 @@ export class ExperimentalEffectList {
       list.scrollTop += below;
     }
   });
+
+  /** The list `#place` last measured; each opening draws a new one. */
+  #placed: HTMLElement | null = null;
+
+  /**
+   * Where the drawn list goes: under the trigger, or over it.
+   *
+   * A trigger low on the screen would hang the list past the window's foot,
+   * where its last options cannot be reached (issue #107). So, as the tooltip
+   * does, the list goes over the trigger when it does not fit under it and there
+   * is more room over it, and it is held to the room on whichever side it takes
+   * — it scrolls inside itself, so every option stays reachable.
+   */
+  #place(list: HTMLElement): void {
+    // The menu box, which the list hangs from: under it is under the trigger,
+    // and over it is over the label too.
+    const menu = list.parentElement;
+    if (!menu) {
+      return;
+    }
+    const anchor = menu.getBoundingClientRect();
+    const under = list.ownerDocument.documentElement.clientHeight - anchor.bottom;
+    const over = anchor.top;
+    const height = list.offsetHeight;
+    const above = height > under && over > under;
+    list.classList.toggle('menu__list--above', above);
+    const room = Math.floor(above ? over : under);
+    if (height > room) {
+      list.style.maxBlockSize = `${room}px`;
+    }
+  }
 
   toggle(): void {
     const opening = !this.#open();
